@@ -1,0 +1,17 @@
+[
+  { "type": "call", "name": "court_entry" },
+  { "type": "dialogue", "speaker": "judge", "text": "Is the defense ready?" },
+  {
+    "type": "if",
+    "key": "has_badge",
+    "value": true,
+    "then":[
+      { "type": "dialogue", "speaker": "phoenix", "text": "Yes, Your Honor. I have my badge right here." }
+    ],
+    "else":[
+      { "type": "dialogue", "speaker": "phoenix", "text": "(Oh no... I forgot my badge!)" },
+      { "type": "call", "name": "phoenix_objection" },
+      { "type": "dialogue", "speaker": "phoenix", "text": "The defense is ready anyway!" }
+    ]
+  }
+]

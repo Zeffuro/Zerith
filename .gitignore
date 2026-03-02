@@ -1,1 +1,17 @@
-/games/
+# Node & Build Outputs
+node_modules/
+dist/
+npm-debug.log
+yarn-error.log
+
+# Vite & IDEs
+.vite/
+.vite-temp/
+.idea/
+.vscode/
+
+# Game Assets
+games/test-game/assets/bg/*
+games/test-game/assets/sprites/*
+games/test-game/assets/bgm/*
+games/test-game/assets/sfx/*

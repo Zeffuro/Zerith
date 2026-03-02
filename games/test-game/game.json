@@ -1,0 +1,30 @@
+{
+  "title": "My Awesome Test Game",
+  "startScene": "intro",
+  "characters": {
+    "judge": {
+      "displayName": "The Judge",
+      "nameColor": "#ffffff"
+    },
+    "phoenix": {
+      "displayName": "Phoenix Wright",
+      "nameColor": "#3399ff",
+      "portraitUrl": "/assets/sprites/phoenix.png"
+    }
+  },
+  "macros": {
+    "court_entry":[
+      { "type": "transition", "action": "fade_out", "duration": 400 },
+      { "type": "background", "assetUrl": "/assets/bg/courtroom.png" },
+      { "type": "transition", "action": "fade_in", "duration": 400 }
+    ],
+    "phoenix_objection":[
+      { "type": "bgm", "action": "pause" },
+      { "type": "sfx", "assetUrl": "/assets/sfx/objection.mp3" },
+      { "type": "shake", "intensity": 15, "duration": 800, "wait": false },
+      { "type": "custom_flash", "color": "white" },
+      { "type": "dialogue", "speaker": "phoenix", "text": "OBJECTION!" },
+      { "type": "bgm", "action": "resume" }
+    ]
+  }
+}

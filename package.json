@@ -1,0 +1,10 @@
+{
+  "name": "zerith",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=player"
+  }
+}

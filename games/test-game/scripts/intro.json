@@ -1,0 +1,26 @@
+[
+  { "type": "bgm", "action": "play", "assetUrl": "/assets/bgm/court.mp3", "volume": 0.4 },
+  { "type": "background", "assetUrl": "/assets/bg/office.png" },
+  { "type": "dialogue", "speaker": "phoenix", "text": "What should I do today?" },
+  {
+    "type": "choice",
+    "options":[
+      {
+        "label": "Water the plant",
+        "commands":[
+          { "type": "dialogue", "speaker": "phoenix", "text": "Charlie looks thirsty." },
+          { "type": "set", "key": "watered_plant", "value": true }
+        ]
+      },
+      {
+        "label": "Grab my attorney badge",
+        "commands":[
+          { "type": "dialogue", "speaker": "phoenix", "text": "Better safe than sorry." },
+          { "type": "set", "key": "has_badge", "value": true }
+        ]
+      }
+    ]
+  },
+  { "type": "dialogue", "speaker": "phoenix", "text": "Okay, enough stalling. To the courthouse!" },
+  { "type": "jump", "to": "courtroom" }
+]
