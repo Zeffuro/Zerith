@@ -15,7 +15,10 @@ export interface ChoiceCommand extends BaseCommand {
 export interface ChoiceConfig {
     backgroundColor?: number;
     backgroundAlpha?: number;
+    selectedBackgroundColor?: number;
+    selectedBackgroundAlpha?: number;
     borderColor?: number;
+    selectedBorderColor?: number;
     borderWidth?: number;
     textStyle?: Partial<TextStyleOptions>;
 }
@@ -23,14 +26,18 @@ export interface ChoiceConfig {
 export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
     public type = 'choice';
     public autoNext = true;
-    private config: ChoiceConfig;
+    private config: Required<ChoiceConfig>;
 
     constructor(config: ChoiceConfig = {}) {
         this.config = {
             backgroundColor: 0x000000,
             backgroundAlpha: 0.8,
+            selectedBackgroundColor: 0x333399,
+            selectedBackgroundAlpha: 0.95,
             borderColor: 0xffffff,
+            selectedBorderColor: 0xffaaaa,
             borderWidth: 2,
+            textStyle: {},
             ...config
         };
     }
@@ -39,24 +46,50 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
         return new Promise((resolve) => {
             const choiceContainer = new Container();
 
-            const buttonWidth = 600;
+            const w = engine.display.width;
+            const h = engine.display.height;
+
+            const buttonWidth = Math.min(600, w * 0.75);
             const buttonHeight = 60;
             const spacing = 15;
             const totalHeight = command.options.length * (buttonHeight + spacing);
-            let currentY = (engine.app.screen.height / 2) - (totalHeight / 2);
+            let currentY = (h / 2) - (totalHeight / 2);
 
-            command.options.forEach((option) => {
+            let selectedIndex = 0;
+            const buttons: Container[] = [];
+            const backgrounds: Graphics[] = [];
+
+            const updateSelection = (newIndex: number) => {
+                if (newIndex < 0) newIndex = command.options.length - 1;
+                if (newIndex >= command.options.length) newIndex = 0;
+
+                this.styleButton(backgrounds[selectedIndex], buttonWidth, buttonHeight, false);
+                buttons[selectedIndex].alpha = 1.0;
+
+                selectedIndex = newIndex;
+                this.styleButton(backgrounds[selectedIndex], buttonWidth, buttonHeight, true);
+                buttons[selectedIndex].alpha = 1.0;
+            };
+
+            const confirmSelection = () => {
+                cleanup();
+                choiceContainer.destroy({ children: true });
+
+                const option = command.options[selectedIndex];
+                if (option.commands) {
+                    engine.injectCommands(option.commands);
+                }
+                resolve();
+            };
+
+            command.options.forEach((option, index) => {
                 const btn = new Container();
                 btn.eventMode = 'static';
                 btn.cursor = 'pointer';
 
                 const bg = new Graphics();
-                bg.roundRect(0, 0, buttonWidth, buttonHeight, 10);
-                bg.fill({ color: this.config.backgroundColor, alpha: this.config.backgroundAlpha });
-
-                if (this.config.borderWidth! > 0) {
-                    bg.stroke({ color: this.config.borderColor, width: this.config.borderWidth });
-                }
+                this.styleButton(bg, buttonWidth, buttonHeight, index === 0);
+                backgrounds.push(bg);
 
                 const text = new Text({
                     text: option.label,
@@ -72,26 +105,95 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
                 text.position.set(buttonWidth / 2, buttonHeight / 2);
 
                 btn.addChild(bg, text);
-                btn.position.set((engine.app.screen.width / 2) - (buttonWidth / 2), currentY);
+                btn.position.set((w / 2) - (buttonWidth / 2), currentY);
 
-                btn.on('pointerover', () => { btn.alpha = 0.7; });
-                btn.on('pointerout', () => { btn.alpha = 1.0; });
-
-                btn.on('pointerdown', async () => {
-                    choiceContainer.eventMode = 'none';
-                    choiceContainer.destroy();
-
-                    if (option.commands) {
-                        engine.injectCommands(option.commands);
-                    }
-                    resolve();
+                btn.on('pointerover', () => {
+                    updateSelection(index);
                 });
 
+                btn.on('pointerdown', () => {
+                    selectedIndex = index;
+                    confirmSelection();
+                });
+
+                buttons.push(btn);
                 choiceContainer.addChild(btn);
                 currentY += buttonHeight + spacing;
             });
 
+            // Keyboard handling
+            const onKeyDown = (e: KeyboardEvent) => {
+                switch (e.key) {
+                    case 'ArrowUp':
+                    case 'w':
+                    case 'W':
+                        e.preventDefault();
+                        updateSelection(selectedIndex - 1);
+                        break;
+                    case 'ArrowDown':
+                    case 's':
+                    case 'S':
+                        e.preventDefault();
+                        updateSelection(selectedIndex + 1);
+                        break;
+                    case 'Enter':
+                    case ' ':
+                        e.preventDefault();
+                        confirmSelection();
+                        break;
+                }
+            };
+            window.addEventListener('keydown', onKeyDown);
+
+            // Gamepad handling
+            let prevDpadUp = false;
+            let prevDpadDown = false;
+            let prevConfirm = false;
+            let gamepadPollId: number | null = null;
+
+            const pollGamepad = () => {
+                const gamepad = navigator.getGamepads()[0];
+                if (gamepad) {
+                    const dpadUp = gamepad.buttons[12]?.pressed || gamepad.axes[1] < -0.5;
+                    const dpadDown = gamepad.buttons[13]?.pressed || gamepad.axes[1] > 0.5;
+                    const confirm = gamepad.buttons[0]?.pressed ?? false;
+
+                    if (dpadUp && !prevDpadUp) updateSelection(selectedIndex - 1);
+                    if (dpadDown && !prevDpadDown) updateSelection(selectedIndex + 1);
+                    if (confirm && !prevConfirm) confirmSelection();
+
+                    prevDpadUp = dpadUp;
+                    prevDpadDown = dpadDown;
+                    prevConfirm = confirm;
+                }
+                gamepadPollId = requestAnimationFrame(pollGamepad);
+            };
+            gamepadPollId = requestAnimationFrame(pollGamepad);
+
+            const cleanup = () => {
+                window.removeEventListener('keydown', onKeyDown);
+                if (gamepadPollId !== null) {
+                    cancelAnimationFrame(gamepadPollId);
+                    gamepadPollId = null;
+                }
+            };
+
             engine.layers.ui.addChild(choiceContainer);
         });
     };
+
+    private styleButton(bg: Graphics, w: number, h: number, selected: boolean) {
+        bg.clear();
+        bg.roundRect(0, 0, w, h, 10);
+        bg.fill({
+            color: selected ? this.config.selectedBackgroundColor : this.config.backgroundColor,
+            alpha: selected ? this.config.selectedBackgroundAlpha : this.config.backgroundAlpha
+        });
+        if (this.config.borderWidth > 0) {
+            bg.stroke({
+                color: selected ? this.config.selectedBorderColor : this.config.borderColor,
+                width: this.config.borderWidth
+            });
+        }
+    }
 }

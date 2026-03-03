@@ -13,5 +13,18 @@
       { "type": "call", "name": "phoenix_objection" },
       { "type": "dialogue", "speaker": "phoenix", "text": "The defense is ready anyway!" }
     ]
+  },
+  { "type": "label", "name": "interrogation_start" },
+  { "type": "dialogue", "speaker": "phoenix", "text": "Tell me what happened." },
+  { "type": "dialogue", "speaker": "Witness", "text": "I don't remember." },
+  {
+    "type": "choice",
+    "options": [
+      { "label": "Press further", "commands": [
+        { "type": "set", "key": "press_count", "op": "add", "value": 1 },
+        { "type": "goto", "label": "interrogation_start" }
+      ]},
+      { "label": "Move on", "commands": [] }
+    ]
   }
 ]

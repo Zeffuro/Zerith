@@ -23,17 +23,20 @@ export class BackgroundHandler implements CommandHandler<BackgroundCommand> {
             this.sprite.texture = texture;
         }
 
-        this.sprite.x = engine.app.screen.width / 2;
-        this.sprite.y = engine.app.screen.height / 2;
+        const w = engine.display.width;
+        const h = engine.display.height;
 
-        const screenAspect = engine.app.screen.width / engine.app.screen.height;
+        this.sprite.x = w / 2;
+        this.sprite.y = h / 2;
+
+        const screenAspect = w / h;
         const textureAspect = texture.width / texture.height;
 
         if (textureAspect > screenAspect) {
-            this.sprite.height = engine.app.screen.height;
+            this.sprite.height = h;
             this.sprite.scale.x = this.sprite.scale.y;
         } else {
-            this.sprite.width = engine.app.screen.width;
+            this.sprite.width = w;
             this.sprite.scale.y = this.sprite.scale.x;
         }
         engine.setState('__sys_bg', command.assetUrl);

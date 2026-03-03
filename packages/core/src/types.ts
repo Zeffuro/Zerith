@@ -9,6 +9,7 @@ export interface CommandHandler<TCmd extends BaseCommand = BaseCommand> {
     type: string;
     autoNext?: boolean;
     execute: (command: TCmd, engine: Engine) => Promise<void>;
+    reset?: () => void;
 }
 
 export type Script = BaseCommand[];

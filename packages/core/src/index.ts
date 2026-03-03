@@ -1,7 +1,5 @@
 /* Handlers */
 import { BackgroundHandler } from './handlers/BackgroundHandler';
-import { DialogueHandler } from './handlers/DialogueHandler';
-import { ChoiceHandler } from "./handlers/ChoiceHandler.ts";
 import { TransitionHandler } from './handlers/TransitionHandler';
 import { JumpHandler } from './handlers/JumpHandler';
 import { SceneChangeHandler } from './handlers/SceneChangeHandler';
@@ -12,9 +10,13 @@ import { SfxHandler } from './handlers/SfxHandler';
 import { SetHandler } from './handlers/SetHandler';
 import { IfHandler } from './handlers/IfHandler';
 import { ShakeHandler } from './handlers/ShakeHandler';
+import { WaitHandler } from './handlers/WaitHandler';
+import { LabelHandler } from './handlers/LabelHandler';
+import { GotoHandler } from './handlers/GotoHandler';
 
 /* Root */
 export * from './Engine';
+export * from './EngineConfig';
 export * from './types';
 
 /* Handlers */
@@ -31,17 +33,31 @@ export * from './handlers/SfxHandler';
 export * from './handlers/SetHandler';
 export * from './handlers/IfHandler';
 export * from './handlers/ShakeHandler';
+export * from './handlers/WaitHandler';
+export * from './handlers/LabelHandler';
+export * from './handlers/GotoHandler';
 
 /* Managers */
-export * from './managers/SaveManager'
+export * from './managers/SaveManager';
+export * from './managers/AudioManager';
+export * from './managers/InputManager';
+export * from './managers/SceneManager';
+export * from './managers/NotificationManager';
+export * from './managers/DisplayManager';
+export * from './managers/EventBus';
+export * from './managers/StartScreenManager';
 
 /* Utils */
-export * from './utils/TextParser'
+export * from './utils/TextParser';
+export * from './utils/Theme';
 
+/**
+ * Handlers that require no constructor config.
+ * DialogueHandler and ChoiceHandler need config objects,
+ * so they must be instantiated manually.
+ */
 export const BuiltInHandlers = [
     BackgroundHandler,
-    DialogueHandler,
-    ChoiceHandler,
     TransitionHandler,
     JumpHandler,
     SceneChangeHandler,
@@ -51,5 +67,8 @@ export const BuiltInHandlers = [
     SfxHandler,
     SetHandler,
     IfHandler,
-    ShakeHandler
+    ShakeHandler,
+    WaitHandler,
+    LabelHandler,
+    GotoHandler
 ];

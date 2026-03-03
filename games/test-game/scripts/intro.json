@@ -3,18 +3,23 @@
   { "type": "background", "assetUrl": "/assets/bg/office.png" },
   { "type": "dialogue", "speaker": "phoenix", "text": "What should I do today?" },
   {
+    "type": "dialogue",
+    "speaker": "phoenix",
+    "text": "This is <b>Bold</b> and this is <i>Italic</i>. {wait:1000} \nAnd now... {u color='red'}Underlined and Red!{/u}"
+  },
+  {
     "type": "choice",
-    "options":[
+    "options": [
       {
         "label": "Water the plant",
-        "commands":[
+        "commands": [
           { "type": "dialogue", "speaker": "phoenix", "text": "Charlie looks thirsty." },
           { "type": "set", "key": "watered_plant", "value": true }
         ]
       },
       {
         "label": "Grab my attorney badge",
-        "commands":[
+        "commands": [
           { "type": "dialogue", "speaker": "phoenix", "text": "Better safe than sorry." },
           { "type": "set", "key": "has_badge", "value": true }
         ]

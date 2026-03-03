@@ -13,12 +13,16 @@ export class TransitionHandler implements CommandHandler<TransitionCommand> {
     public autoNext = true;
     private fadeRect: Graphics | null = null;
 
+    reset = () => {
+        this.fadeRect = null;
+    };
+
     execute = async (command: TransitionCommand, engine: Engine) => {
         const duration = command.duration || 500;
 
         if (!this.fadeRect) {
             this.fadeRect = new Graphics();
-            this.fadeRect.rect(0, 0, engine.app.screen.width, engine.app.screen.height);
+            this.fadeRect.rect(0, 0, engine.display.width, engine.display.height);
             this.fadeRect.fill(0x000000);
             engine.layers.overlay.addChild(this.fadeRect);
         }

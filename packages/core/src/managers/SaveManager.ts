@@ -7,7 +7,11 @@ export interface SaveState {
 }
 
 export class SaveManager {
-    constructor(private engine: Engine) {}
+    private engine: Engine;
+
+    constructor(engine: Engine) {
+        this.engine = engine;
+    }
 
     public save(slot: number = 1) {
         const saveData: SaveState = {
@@ -29,6 +33,8 @@ export class SaveManager {
 
         const saveData: SaveState = JSON.parse(saveStr);
         this.engine.logger.info(`Loading save from slot ${slot}...`);
+
+        this.engine.clear();
 
         this.engine.state = saveData.state;
 

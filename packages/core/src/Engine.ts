@@ -1,8 +1,16 @@
 import { Application, Container } from 'pixi.js';
-import { sound } from '@pixi/sound';
 import type { BaseCommand, CommandHandler, Script, SceneMap } from './types';
+import type { EngineConfig } from './EngineConfig';
 import { Logger } from './utils/Logger';
 import { SaveManager } from './managers/SaveManager';
+import { AudioManager } from './managers/AudioManager';
+import { DisplayManager } from './managers/DisplayManager';
+import { InputManager } from './managers/InputManager';
+import { SceneManager } from './managers/SceneManager';
+import { EventBus } from './managers/EventBus';
+import { NotificationManager } from './managers/NotificationManager';
+import { StartScreenManager } from './managers/StartScreenManager';
+import { DefaultTheme, type Theme } from './utils/Theme';
 
 export class Engine {
     public app: Application;
@@ -13,31 +21,24 @@ export class Engine {
         overlay: Container;
     };
 
-    public audio = {
-        bgmVolume: 1.0,
-        sfxVolume: 1.0,
-        voiceVolume: 1.0,
-        masterVolume: 1.0,
-        setMasterVolume: (v: number) => { sound.volumeAll = v; }
-    };
-
-    public state: Record<string, any> = {};
-
-    public logger: Logger = new Logger('[Engine]');
-
+    public audio: AudioManager;
+    public display: DisplayManager;
+    public input: InputManager;
+    public scenes: SceneManager;
     public saves: SaveManager;
-
-    public currentIndex: number = 0;
-    public currentSceneName: string = "";
+    public events: EventBus;
+    public notifications: NotificationManager;
+    public startScreen: StartScreenManager;
+    public logger: Logger = new Logger('[Engine]');
+    public theme: Theme = DefaultTheme;
+    public state: Record<string, any> = {};
+    public manifest: any = {};
 
     private handlers: Map<string, CommandHandler<any>> = new Map();
-    private templates: Map<string, Script> = new Map();
-
-    private script: Script =[];
-    private scenes: SceneMap = {};
     private isExecuting = false;
+    private _isStarted = false;
 
-    constructor() {
+    constructor(config: EngineConfig = {}) {
         this.app = new Application();
         this.layers = {
             background: new Container(),
@@ -45,84 +46,100 @@ export class Engine {
             ui: new Container(),
             overlay: new Container()
         };
+
+        if (config.theme) {
+            this.theme = { ...DefaultTheme, ...config.theme };
+        }
+
+        this.events = new EventBus();
+        this.audio = new AudioManager(config.audio);
+        this.display = new DisplayManager(this.app, config.display);
+        this.input = new InputManager(this, config.input);
+        this.scenes = new SceneManager(this);
         this.saves = new SaveManager(this);
+        this.notifications = new NotificationManager(this, config.notifications);
+        this.startScreen = new StartScreenManager(this, config.startScreen);
     }
 
-    public setState(key: string, value: any) {
-        this.state[key] = value;
-        this.logger.info(`State changed: ${key} = ${value}`);
+    // --- Lifecycle ---
+
+    public async init(canvasElement: HTMLCanvasElement) {
+        await this.display.init(canvasElement);
+        this.audio.init();
+
+        this.app.stage.addChild(
+            this.layers.background,
+            this.layers.sprites,
+            this.layers.ui,
+            this.layers.overlay
+        );
+
+        this.input.attach(canvasElement);
     }
 
-    public getState(key: string): any {
-        return this.state[key];
+    public start() {
+        this._isStarted = true;
+        this.playNext();
     }
 
-    public registerTemplate(name: string, script: Script) {
-        this.templates.set(name, script);
-        this.logger.info(`Template '${name}' registered.`);
+    public get isStarted(): boolean {
+        return this._isStarted;
     }
 
-    public getTemplate(name: string): Script | undefined {
-        return this.templates.get(name);
+    public clear() {
+        this.layers.ui.removeChildren().forEach(c => c.destroy({ children: true }));
+        this.layers.sprites.removeChildren().forEach(c => c.destroy({ children: true }));
+        this.layers.overlay.removeChildren().forEach(c => c.destroy({ children: true }));
+        this.handlers.forEach(h => h.reset?.());
+        this.isExecuting = false;
     }
 
-    public registerHandler<T extends BaseCommand>(handler: CommandHandler<T>) {
-        this.handlers.set(handler.type, handler);
-        this.logger.info(`Handler for '${handler.type}' linked.`);
+    public destroy() {
+        this.input.detach();
+        this.display.destroy();
+        this.clear();
     }
 
-    public registerHandlers(handlers: (new () => CommandHandler<any>)[] | CommandHandler<any>[]) {
-        handlers.forEach(h => {
-            const instance = typeof h === 'function' ? new (h as any)() : h;
-            this.registerHandler(instance);
-        });
+    // --- Handler Registration ---
+
+    public registerHandler<T extends BaseCommand>(h: CommandHandler<T>) {
+        this.handlers.set(h.type, h);
     }
 
-    async init(canvasElement: HTMLCanvasElement) {
-        await this.app.init({
-            canvas: canvasElement,
-            width: 800,
-            height: 600,
-            backgroundColor: 0x222222,
-        });
-
-        sound.init();
-
-        this.app.stage.addChild(this.layers.background);
-        this.app.stage.addChild(this.layers.sprites);
-        this.app.stage.addChild(this.layers.ui);
-        this.app.stage.addChild(this.layers.overlay);
-
-        canvasElement.addEventListener('pointerdown', () => this.playNext());
-        this.logger.info("Initialized successfully.");
+    public registerHandlers(hs: any[]) {
+        hs.forEach(h => this.registerHandler(typeof h === 'function' ? new h() : h));
     }
 
-    public injectCommands(commands: BaseCommand[]) {
-        this.script.splice(this.currentIndex, 0, ...commands);
+    // --- State ---
+
+    public getState(k: string) {
+        return this.state[k];
     }
+
+    public setState(k: string, v: any) {
+        this.state[k] = v;
+    }
+
+    // --- Command Execution ---
 
     public async runCommand(command: BaseCommand) {
         const handler = this.handlers.get(command.type);
         if (handler) {
             await handler.execute(command, this);
         } else {
-            this.logger.warn(`No handler for type: ${command.type}`);
+            this.logger.warn(`No handler registered for command type '${command.type}'`);
         }
     }
 
-    async playNext() {
-        if (this.isExecuting) return;
+    public async playNext() {
+        if (this.isExecuting || !this._isStarted) return;
         this.isExecuting = true;
 
-        while (this.currentIndex < this.script.length) {
-            const command = this.script[this.currentIndex++];
-
+        while (this.scenes.currentIndex < this.scenes.script.length) {
+            const command = this.scenes.script[this.scenes.currentIndex++];
             await this.runCommand(command);
-
-            const handler  = this.handlers.get(command.type);
-            const shouldWait = handler && !handler.autoNext;
-
-            if (shouldWait) {
+            const handler = this.handlers.get(command.type);
+            if (handler && !handler.autoNext) {
                 this.isExecuting = false;
                 return;
             }
@@ -130,22 +147,50 @@ export class Engine {
         this.isExecuting = false;
     }
 
-    public loadScenes(scenes: SceneMap) { this.scenes = scenes; }
+    // --- Scene Delegation ---
+
+    public loadScenes(scenes: SceneMap) {
+        this.scenes.loadScenes(scenes);
+    }
+
+    public registerTemplate(name: string, script: Script) {
+        this.scenes.registerTemplate(name, script);
+    }
+
+    public getTemplate(name: string): Script | undefined {
+        return this.scenes.getTemplate(name);
+    }
+
+    public injectCommands(commands: BaseCommand[]) {
+        this.scenes.injectCommands(commands);
+    }
 
     public async jumpToScene(sceneName: string, startIndex: number = 0) {
-        if (!this.scenes[sceneName]) {
-            this.logger.error(`Scene '${sceneName}' not found.`);
-            return;
-        }
+        await this.scenes.jumpToScene(sceneName, startIndex);
+        if (this._isStarted) await this.playNext();
+    }
 
-        this.currentSceneName = sceneName;
-        this.script = [...this.scenes[sceneName]];
-        this.currentIndex = startIndex;
+    // --- Convenience Getters ---
 
-        this.logger.info(`Jumped to scene: ${sceneName} (Index: ${startIndex})`);
+    public get currentSceneName(): string {
+        return this.scenes.currentSceneName;
+    }
 
-        if (!this.isExecuting) {
-            await this.playNext();
-        }
+    public get currentIndex(): number {
+        return this.scenes.currentIndex;
+    }
+
+    // --- Events ---
+
+    public on(event: string, listener: (...args: any[]) => void) {
+        this.events.on(event, listener);
+    }
+
+    public off(event: string, listener: (...args: any[]) => void) {
+        this.events.off(event, listener);
+    }
+
+    public emit(event: string, ...args: any[]) {
+        this.events.emit(event, ...args);
     }
 }
