@@ -4,28 +4,46 @@ export interface SaveState {
     sceneName: string;
     index: number;
     state: Record<string, any>;
+    meta: SaveMeta;
+}
+
+export interface SaveMeta {
+    slot: number;
+    savedAt: number;
+    sceneName: string;
+    label?: string;
 }
 
 export class SaveManager {
     private engine: Engine;
+    private prefix: string;
 
-    constructor(engine: Engine) {
+    constructor(engine: Engine, prefix: string = 'zerith_save') {
         this.engine = engine;
+        this.prefix = prefix;
     }
 
-    public save(slot: number = 1) {
+    public save(slot: number = 1, label?: string) {
+        const meta: SaveMeta = {
+            slot,
+            savedAt: Date.now(),
+            sceneName: this.engine.currentSceneName,
+            label
+        };
+
         const saveData: SaveState = {
             sceneName: this.engine.currentSceneName,
             index: Math.max(0, this.engine.currentIndex - 1),
-            state: JSON.parse(JSON.stringify(this.engine.state))
+            state: JSON.parse(JSON.stringify(this.engine.state)),
+            meta
         };
 
-        localStorage.setItem(`zerith_save_${slot}`, JSON.stringify(saveData));
+        localStorage.setItem(`${this.prefix}_${slot}`, JSON.stringify(saveData));
         this.engine.logger.info(`Game saved to slot ${slot}`);
     }
 
     public async load(slot: number = 1) {
-        const saveStr = localStorage.getItem(`zerith_save_${slot}`);
+        const saveStr = localStorage.getItem(`${this.prefix}_${slot}`);
         if (!saveStr) {
             this.engine.logger.warn(`No save found in slot ${slot}`);
             return;
@@ -45,5 +63,38 @@ export class SaveManager {
         if (bgmUrl) await this.engine.runCommand({ type: 'bgm', action: 'play', assetUrl: bgmUrl });
 
         await this.engine.jumpToScene(saveData.sceneName, saveData.index);
+    }
+
+    public getMeta(slot: number): SaveMeta | null {
+        const saveStr = localStorage.getItem(`${this.prefix}_${slot}`);
+        if (!saveStr) return null;
+
+        try {
+            const saveData: SaveState = JSON.parse(saveStr);
+            return saveData.meta ?? {
+                slot,
+                savedAt: 0,
+                sceneName: saveData.sceneName
+            };
+        } catch {
+            return null;
+        }
+    }
+
+    public listSlots(maxSlots: number = 10): (SaveMeta | null)[] {
+        const slots: (SaveMeta | null)[] = [];
+        for (let i = 1; i <= maxSlots; i++) {
+            slots.push(this.getMeta(i));
+        }
+        return slots;
+    }
+
+    public hasSlot(slot: number): boolean {
+        return localStorage.getItem(`${this.prefix}_${slot}`) !== null;
+    }
+
+    public deleteSlot(slot: number) {
+        localStorage.removeItem(`${this.prefix}_${slot}`);
+        this.engine.logger.info(`Save slot ${slot} deleted`);
     }
 }

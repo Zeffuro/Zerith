@@ -13,7 +13,7 @@ export class GotoHandler implements CommandHandler<GotoCommand> {
     execute = async (command: GotoCommand, engine: Engine) => {
         const script = engine.scenes.script;
         const targetIndex = script.findIndex(
-            cmd => cmd.type === 'label' && (cmd as any).name === command.label
+            cmd => cmd.type === 'label' && 'name' in cmd && cmd.name === command.label
         );
 
         if (targetIndex !== -1) {

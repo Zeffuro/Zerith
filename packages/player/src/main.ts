@@ -61,11 +61,6 @@ async function bootstrap() {
 
     await engine.init(canvas);
 
-    engine.on('menu:toggle', () => {
-        engine.logger.info('Menu toggled');
-        // TODO: implement pause menu
-    });
-
     const startScene = manifest.startScene ?? 'intro';
     await engine.startScreen.show(startScene);
 }

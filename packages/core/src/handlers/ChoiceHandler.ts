@@ -79,7 +79,10 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
                 if (option.commands) {
                     engine.injectCommands(option.commands);
                 }
-                resolve();
+                requestAnimationFrame(() => {
+                    engine.consumeSkip();
+                    resolve();
+                });
             };
 
             command.options.forEach((option, index) => {
@@ -111,7 +114,8 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
                     updateSelection(index);
                 });
 
-                btn.on('pointerdown', () => {
+                btn.on('pointerdown', (e: any) => {
+                    e.stopPropagation();
                     selectedIndex = index;
                     confirmSelection();
                 });
@@ -139,6 +143,7 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
                     case 'Enter':
                     case ' ':
                         e.preventDefault();
+                        e.stopImmediatePropagation();
                         confirmSelection();
                         break;
                 }

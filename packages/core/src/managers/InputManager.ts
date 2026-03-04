@@ -35,14 +35,15 @@ export class InputManager {
         this.canvas = canvas;
 
         this.boundOnPointerDown = () => {
-            if (this.engine.isStarted) {
+            if (this.engine.isStarted && !this.engine.pauseMenu.isOpen) {
+                this.engine.requestSkip();
                 this.engine.playNext();
             }
         };
+
         canvas.addEventListener('pointerdown', this.boundOnPointerDown);
 
         this.boundOnKeyDown = (e: KeyboardEvent) => {
-            // Before game starts, emit start event for start screen
             if (!this.engine.isStarted) {
                 if (this.config.advanceKeys.includes(e.key)) {
                     e.preventDefault();
@@ -53,7 +54,10 @@ export class InputManager {
 
             if (this.config.advanceKeys.includes(e.key)) {
                 e.preventDefault();
-                this.engine.playNext();
+                if (!this.engine.pauseMenu.isOpen) {
+                    this.engine.requestSkip();
+                    this.engine.playNext();
+                }
                 return;
             }
 
@@ -97,9 +101,10 @@ export class InputManager {
                 const menuBtn = this.config.gamepadMenuButton;
 
                 if (buttons[advanceBtn] && !this.prevGamepadButtons[advanceBtn]) {
-                    if (this.engine.isStarted) {
+                    if (this.engine.isStarted && !this.engine.pauseMenu.isOpen) {
+                        this.engine.requestSkip();
                         this.engine.playNext();
-                    } else {
+                    } else if (!this.engine.isStarted) {
                         this.engine.emit('input:start');
                     }
                 }

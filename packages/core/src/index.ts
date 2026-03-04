@@ -13,11 +13,13 @@ import { ShakeHandler } from './handlers/ShakeHandler';
 import { WaitHandler } from './handlers/WaitHandler';
 import { LabelHandler } from './handlers/LabelHandler';
 import { GotoHandler } from './handlers/GotoHandler';
+import { SpriteHandler } from './handlers/SpriteHandler';
 
 /* Root */
 export * from './Engine';
 export * from './EngineConfig';
 export * from './types';
+export * from './commands';
 
 /* Handlers */
 export * from './handlers/BackgroundHandler';
@@ -36,6 +38,7 @@ export * from './handlers/ShakeHandler';
 export * from './handlers/WaitHandler';
 export * from './handlers/LabelHandler';
 export * from './handlers/GotoHandler';
+export * from './handlers/SpriteHandler';
 
 /* Managers */
 export * from './managers/SaveManager';
@@ -46,6 +49,8 @@ export * from './managers/NotificationManager';
 export * from './managers/DisplayManager';
 export * from './managers/EventBus';
 export * from './managers/StartScreenManager';
+export * from './managers/HistoryManager';
+export * from './managers/PauseMenuManager';
 
 /* Utils */
 export * from './utils/TextParser';
@@ -70,5 +75,6 @@ export const BuiltInHandlers = [
     ShakeHandler,
     WaitHandler,
     LabelHandler,
-    GotoHandler
+    GotoHandler,
+    SpriteHandler,
 ];

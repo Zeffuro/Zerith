@@ -10,6 +10,8 @@ import { SceneManager } from './managers/SceneManager';
 import { EventBus } from './managers/EventBus';
 import { NotificationManager } from './managers/NotificationManager';
 import { StartScreenManager } from './managers/StartScreenManager';
+import { HistoryManager } from './managers/HistoryManager';
+import { PauseMenuManager } from './managers/PauseMenuManager';
 import { DefaultTheme, type Theme } from './utils/Theme';
 
 export class Engine {
@@ -29,6 +31,8 @@ export class Engine {
     public events: EventBus;
     public notifications: NotificationManager;
     public startScreen: StartScreenManager;
+    public history: HistoryManager = new HistoryManager();
+    public pauseMenu: PauseMenuManager;
     public logger: Logger = new Logger('[Engine]');
     public theme: Theme = DefaultTheme;
     public state: Record<string, any> = {};
@@ -37,6 +41,8 @@ export class Engine {
     private handlers: Map<string, CommandHandler<any>> = new Map();
     private isExecuting = false;
     private _isStarted = false;
+    private _skipRequested = false;
+    private _autoAdvanceDelay: number | null = null;
 
     constructor(config: EngineConfig = {}) {
         this.app = new Application();
@@ -59,6 +65,7 @@ export class Engine {
         this.saves = new SaveManager(this);
         this.notifications = new NotificationManager(this, config.notifications);
         this.startScreen = new StartScreenManager(this, config.startScreen);
+        this.pauseMenu = new PauseMenuManager(this, config.pauseMenu);
     }
 
     // --- Lifecycle ---
@@ -91,6 +98,7 @@ export class Engine {
         this.layers.sprites.removeChildren().forEach(c => c.destroy({ children: true }));
         this.layers.overlay.removeChildren().forEach(c => c.destroy({ children: true }));
         this.handlers.forEach(h => h.reset?.());
+        this.history.clear();
         this.isExecuting = false;
     }
 
@@ -106,7 +114,7 @@ export class Engine {
         this.handlers.set(h.type, h);
     }
 
-    public registerHandlers(hs: any[]) {
+    public registerHandlers(hs: (CommandHandler<any> | (new (...args: any[]) => CommandHandler<any>))[]) {
         hs.forEach(h => this.registerHandler(typeof h === 'function' ? new h() : h));
     }
 
@@ -120,14 +128,45 @@ export class Engine {
         this.state[k] = v;
     }
 
+    // --- Text Control ---
+
+    public requestSkip() {
+        if (this.isExecuting) {
+            this._skipRequested = true;
+        }
+    }
+
+    public consumeSkip(): boolean {
+        if (this._skipRequested) {
+            this._skipRequested = false;
+            return true;
+        }
+        return false;
+    }
+
+    public get autoAdvanceDelay(): number | null {
+        return this._autoAdvanceDelay;
+    }
+
+    public setAutoAdvance(delayMs: number | null) {
+        this._autoAdvanceDelay = delayMs;
+    }
+
     // --- Command Execution ---
 
     public async runCommand(command: BaseCommand) {
         const handler = this.handlers.get(command.type);
-        if (handler) {
-            await handler.execute(command, this);
-        } else {
+        if (!handler) {
             this.logger.warn(`No handler registered for command type '${command.type}'`);
+            return;
+        }
+
+        try {
+            await handler.execute(command, this);
+        } catch (err) {
+            this.logger.error(
+                `Handler '${command.type}' threw during execute: ${err}`
+            );
         }
     }
 
@@ -135,16 +174,25 @@ export class Engine {
         if (this.isExecuting || !this._isStarted) return;
         this.isExecuting = true;
 
-        while (this.scenes.currentIndex < this.scenes.script.length) {
-            const command = this.scenes.script[this.scenes.currentIndex++];
-            await this.runCommand(command);
-            const handler = this.handlers.get(command.type);
-            if (handler && !handler.autoNext) {
-                this.isExecuting = false;
-                return;
+        try {
+            while (this.scenes.currentIndex < this.scenes.script.length) {
+                const command = this.scenes.script[this.scenes.currentIndex++];
+                await this.runCommand(command);
+                const handler = this.handlers.get(command.type);
+                if (handler && !handler.autoNext) {
+                    this.isExecuting = false;
+                    return;
+                }
             }
+        } catch (err) {
+            const index = this.scenes.currentIndex - 1;
+            const command = this.scenes.script[index];
+            this.logger.error(
+                `Error executing command at index ${index} (type: '${command?.type}'): ${err}`
+            );
+        } finally {
+            this.isExecuting = false;
         }
-        this.isExecuting = false;
     }
 
     // --- Scene Delegation ---

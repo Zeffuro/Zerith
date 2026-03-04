@@ -52,6 +52,8 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
 
     execute = async (command: DialogueCommand, engine: Engine) => {
         const session = ++this.currentSession;
+        engine.consumeSkip();
+        engine.history.push(command.speaker, command.text);
         if (!this.container) this.buildUI(engine);
 
         const speakerKey = command.speaker.toLowerCase();
@@ -106,10 +108,28 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
 
         for (const token of tokens) {
             if (session !== this.currentSession) return;
+
+            if (engine.consumeSkip()) {
+                const remaining = tokens
+                    .slice(tokens.indexOf(token))
+                    .filter((t): t is { type: 'text'; val: string } => t.type === 'text')
+                    .map(t => t.val)
+                    .join('');
+                this.messageText.text = this.messageText.text + remaining;
+                break;
+            }
+
             if (token.type === 'wait') await new Promise(r => setTimeout(r, token.ms));
             else if (token.type === 'speed') currentSpeed = token.speed;
             else if (token.type === 'text') {
                 await this.typewrite(token.val, currentSpeed, blipUrl, engine, session);
+            }
+        }
+
+        if (session === this.currentSession && engine.autoAdvanceDelay !== null) {
+            await new Promise(r => setTimeout(r, engine.autoAdvanceDelay!));
+            if (session === this.currentSession) {
+                engine.playNext();
             }
         }
     };
@@ -119,6 +139,12 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         let i = 0;
         while (i < t.length) {
             if (session !== this.currentSession) return;
+
+            if (engine.consumeSkip()) {
+                current += t.slice(i);
+                this.messageText.text = current;
+                return;
+            }
 
             if (t[i] === '<') {
                 const end = t.indexOf('>', i);
