@@ -179,15 +179,16 @@ export const FlashCommandSchema = z.object({
     wait: z.boolean().optional(),
 });
 
-/* Items */
+/* Item */
 
 export const ItemCommandSchema = z.object({
     type: z.literal('item'),
     action: z.enum(['add', 'remove', 'update']),
-    manager: z.string().optional(),
     id: z.string(),
     changes: z.record(z.string(), z.any()).optional(),
 });
+
+/* Discriminated Union */
 
 export const CommandSchema = z.discriminatedUnion('type', [
     DialogueCommandSchema,
@@ -239,7 +240,6 @@ export const CommandSchemaRegistry: Record<string, z.ZodType> = {
 
 /**
  * Validates an entire script array. Returns parsed commands or throws.
- * Use this when loading JSON from disk or from the editor.
  */
 export function validateScript(script: unknown[]): z.infer<typeof CommandSchema>[] {
     return script.map((cmd, i) => {

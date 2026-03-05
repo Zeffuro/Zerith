@@ -72,8 +72,8 @@ async function bootstrap() {
     }
 
     // Load items
-    if (Object.keys(items).length > 0) {
-        engine.evidence.loadDefinitions(items);
+    if (items && Object.keys(items).length > 0) {
+        engine.items.loadDefinitions(items);
     }
 
     engine.registerHandlers(BuiltInHandlers);

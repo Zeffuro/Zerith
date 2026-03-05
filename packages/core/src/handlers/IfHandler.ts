@@ -48,8 +48,8 @@ export class IfHandler implements CommandHandler<IfCommand> {
     };
 
     private evaluate(condition: Condition, engine: Engine): boolean {
-        if (condition.source === 'evidence') {
-            const hasItem = engine.evidence.has(condition.key);
+        if (condition.source === 'items' || condition.source === 'evidence') {
+            const hasItem = engine.items.has(condition.key);
             if (condition.value === undefined) return hasItem;
             return condition.op === 'neq' ? hasItem !== condition.value : hasItem === condition.value;
         }

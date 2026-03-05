@@ -57,7 +57,7 @@ export class SaveManager {
         this.engine.state = saveData.state;
         const itemIds = this.engine.getState('__sys_items');
         if (Array.isArray(itemIds)) {
-            this.engine.evidence.deserialize(itemIds);
+            this.engine.items.deserialize(itemIds);
         }
 
         const bgUrl = this.engine.getState('__sys_bg');

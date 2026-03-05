@@ -4,7 +4,6 @@ import type { Engine } from '../Engine';
 export interface ItemCommand extends BaseCommand {
     type: 'item';
     action: 'add' | 'remove' | 'update';
-    manager?: string;
     id: string;
     changes?: Record<string, any>;
 }
@@ -14,9 +13,7 @@ export class ItemHandler implements CommandHandler<ItemCommand> {
     public autoNext = true;
 
     execute = async (command: ItemCommand, engine: Engine) => {
-        const manager = command.manager === 'evidence' || !command.manager
-            ? engine.evidence
-            : engine.evidence; // TODO: Make a more generic version later
+        const manager = engine.items;
 
         switch (command.action) {
             case 'add':

@@ -34,7 +34,7 @@ export class Engine {
     public startScreen: StartScreenManager;
     public pauseMenu: PauseMenuManager;
     public history: HistoryManager = new HistoryManager();
-    public evidence: EvidenceManager = new EvidenceManager();
+    public items: EvidenceManager = new EvidenceManager();
     public logger: Logger = new Logger('[Engine]');
     public theme: Theme = DefaultTheme;
     public state: Record<string, any> = {};
