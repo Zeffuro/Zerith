@@ -1,6 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import type { Theme } from '../utils/Theme';
 import type { OverlayConfig } from '../managers/OverlayManager';
+import type { PanelFocusManager } from './PanelFocusManager';
 
 export interface UIContext {
     theme: Theme;
@@ -399,4 +400,33 @@ export function createSelectableList(ctx: UIContext, opts: ListRowOptions): List
     });
 
     return { container: content, select };
+}
+
+export function registerFocusableButton(
+    ctx: UIContext,
+    focus: PanelFocusManager,
+    btn: Container,
+    action: () => void,
+    opts?: { width?: number; height?: number }
+) {
+    const cfg = ctx.overlayConfig;
+    const bg = btn.children[0] as Graphics;
+    const w = opts?.width ?? cfg.buttonWidth;
+    const h = opts?.height ?? cfg.buttonHeight;
+
+    focus.register({
+        focus: () => {
+            bg.clear();
+            bg.roundRect(0, 0, w, h, 8);
+            bg.fill({ color: cfg.buttonHoverColor, alpha: 1 });
+            bg.stroke({ color: ctx.theme.accentColor, width: 2 });
+        },
+        blur: () => {
+            bg.clear();
+            bg.roundRect(0, 0, w, h, 8);
+            bg.fill({ color: cfg.buttonColor, alpha: cfg.buttonAlpha });
+            bg.stroke({ color: ctx.theme.borderColor, width: 2 });
+        },
+        activate: action,
+    });
 }

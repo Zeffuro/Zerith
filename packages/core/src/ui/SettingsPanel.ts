@@ -1,7 +1,7 @@
+import { Graphics } from "pixi.js";
 import type { Engine } from '../Engine';
 import type { MenuPanel } from '../types';
-import type { Graphics } from 'pixi.js';
-import { createPanelTitle, createSlider, createToggle, createButton } from './UIComponents';
+import { createPanelTitle, createSlider, createToggle, createButton, registerFocusableButton } from './UIComponents';
 import type { SliderResult, ToggleResult } from './UIComponents';
 
 export class SettingsPanel implements MenuPanel {
@@ -21,6 +21,15 @@ export class SettingsPanel implements MenuPanel {
         let yPos = 100;
         const spacing = 70;
         const cleanups: (() => void)[] = [];
+
+        const createFocusIndicator = (atY: number): Graphics => {
+            const indicator = new Graphics();
+            indicator.roundRect(contentStartX - 15, atY, 4, 40, 2);
+            indicator.fill({ color: ctx.theme.accentColor, alpha: 0.9 });
+            indicator.visible = false;
+            root.addChild(indicator);
+            return indicator;
+        };
 
         const sliderDefs: { label: string; getValue: () => number; setValue: (v: number) => void }[] = [
             { label: 'Master Volume', getValue: () => engine.audio.masterVolume, setValue: (v) => engine.audio.setMasterVolume(v) },
@@ -60,11 +69,29 @@ export class SettingsPanel implements MenuPanel {
         toggleResult.container.position.set(contentStartX, yPos);
         root.addChild(toggleResult.container);
 
-        //const toggleFocusIndex = sliderResults.length;
+        // ── Dialogue Font Size ──
+        yPos += spacing;
+        const fontSizeSlider = createSlider(ctx, {
+            label: 'Text Size',
+            value: (engine.theme.fontSize - 14) / 26,
+            onChange: (v) => {
+                const newSize = Math.round(14 + v * 26);
+                engine.theme.fontSize = newSize;
+
+                const dh = engine.getHandler('dialogue') as any;
+                if (dh) { dh.container = null; }
+            },
+        });
+        fontSizeSlider.container.position.set(contentStartX, yPos);
+        root.addChild(fontSizeSlider.container);
+        cleanups.push(fontSizeSlider.cleanup);
+        sliderResults.push(fontSizeSlider);
+
+        const fontSizeIndicator = createFocusIndicator(yPos);
         focus.register({
-            focus: () => {},
-            blur: () => {},
-            activate: () => toggleResult.toggle(),
+            focus: () => { fontSizeIndicator.visible = true; },
+            blur: () => { fontSizeIndicator.visible = false; },
+            activate: () => {},
         });
 
         const backMargin = 20;
@@ -75,36 +102,24 @@ export class SettingsPanel implements MenuPanel {
         }, onClose);
         root.addChild(backBtn);
 
-        const backBg = backBtn.children[0] as Graphics;
-        const bw = cfg.buttonWidth;
-        const bh = cfg.buttonHeight;
-        focus.register({
-            focus: () => {
-                backBg.clear();
-                backBg.roundRect(0, 0, bw, bh, 8);
-                backBg.fill({ color: cfg.buttonHoverColor, alpha: 1 });
-                backBg.stroke({ color: ctx.theme.accentColor, width: 2 });
-            },
-            blur: () => {
-                backBg.clear();
-                backBg.roundRect(0, 0, bw, bh, 8);
-                backBg.fill({ color: cfg.buttonColor, alpha: cfg.buttonAlpha });
-                backBg.stroke({ color: ctx.theme.borderColor, width: 2 });
-            },
-            activate: onClose,
-        });
+        registerFocusableButton(ctx, focus, backBtn, onClose);
 
         const sliderStep = 0.05;
         focus.onNavigateRaw = (direction: 'up' | 'down' | 'left' | 'right') => {
             const idx = focus.selectedIndex;
-            if (idx < sliderResults.length) {
+            const sliderFocusMap: Record<number, number> = {
+                0: 0, 1: 1, 2: 2, 3: 3,
+                5: 4,
+            };
+            if (idx in sliderFocusMap) {
+                const sIdx = sliderFocusMap[idx];
                 if (direction === 'left') {
-                    const s = sliderResults[idx];
+                    const s = sliderResults[sIdx];
                     s.applyValue(s.getValue() - sliderStep);
                     return true;
                 }
                 if (direction === 'right') {
-                    const s = sliderResults[idx];
+                    const s = sliderResults[sIdx];
                     s.applyValue(s.getValue() + sliderStep);
                     return true;
                 }

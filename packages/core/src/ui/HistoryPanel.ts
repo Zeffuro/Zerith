@@ -1,7 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import type { Engine } from '../Engine';
 import type { MenuPanel } from '../types';
-import { createPanelTitle, createButton } from './UIComponents';
+import { createPanelTitle, createButton, registerFocusableButton } from './UIComponents';
 
 export interface HistoryPanelConfig {
     maxLines?: number;
@@ -117,24 +117,7 @@ export class HistoryPanel implements MenuPanel {
         const backBtn = createButton(ctx, { label: 'Back', x: w / 2, y: h - backHeight - backMargin }, onClose);
         root.addChild(backBtn);
 
-        const backBg = backBtn.children[0] as Graphics;
-        const bw = cfg.buttonWidth;
-        const bh = cfg.buttonHeight;
-        focus.register({
-            focus: () => {
-                backBg.clear();
-                backBg.roundRect(0, 0, bw, bh, 8);
-                backBg.fill({ color: cfg.buttonHoverColor, alpha: 1 });
-                backBg.stroke({ color: ctx.theme.accentColor, width: 2 });
-            },
-            blur: () => {
-                backBg.clear();
-                backBg.roundRect(0, 0, bw, bh, 8);
-                backBg.fill({ color: cfg.buttonColor, alpha: cfg.buttonAlpha });
-                backBg.stroke({ color: ctx.theme.borderColor, width: 2 });
-            },
-            activate: onClose,
-        });
+        registerFocusableButton(ctx, focus, backBtn, onClose);
 
         return {
             container: root,

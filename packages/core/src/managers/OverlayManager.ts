@@ -1,7 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import type { Engine } from '../Engine';
 import type { MenuPanel } from '../types';
-import { createButton, type UIContext } from '../ui/UIComponents';
+import { createButton, registerFocusableButton, type UIContext } from '../ui/UIComponents';
 import { PanelFocusManager } from '../ui/PanelFocusManager';
 
 export interface OverlayConfig {
@@ -228,26 +228,7 @@ export class OverlayManager {
         buttons.forEach(({ label, action }) => {
             const btn = createButton(ctx, { label, x: w / 2, y }, action);
             this.container!.addChild(btn);
-
-            const btnBg = btn.children[0] as Graphics;
-            const bw = this.config.buttonWidth;
-            const bh = this.config.buttonHeight;
-            this._focus!.register({
-                focus: () => {
-                    btnBg.clear();
-                    btnBg.roundRect(0, 0, bw, bh, 8);
-                    btnBg.fill({ color: this.config.buttonHoverColor, alpha: 1 });
-                    btnBg.stroke({ color: ctx.theme.accentColor, width: 2 });
-                },
-                blur: () => {
-                    btnBg.clear();
-                    btnBg.roundRect(0, 0, bw, bh, 8);
-                    btnBg.fill({ color: this.config.buttonColor, alpha: this.config.buttonAlpha });
-                    btnBg.stroke({ color: ctx.theme.borderColor, width: 2 });
-                },
-                activate: action,
-            });
-
+            registerFocusableButton(ctx, this._focus!, btn, action);
             y += this.config.buttonHeight + this.config.buttonSpacing;
         });
 

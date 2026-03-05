@@ -135,6 +135,10 @@ export class Engine {
         hs.forEach(h => this.registerHandler(typeof h === 'function' ? new h() : h));
     }
 
+    public getHandler(type: string): CommandHandler<any> | undefined {
+        return this.handlers.get(type);
+    }
+
     /* State */
 
     public getState(k: string) {

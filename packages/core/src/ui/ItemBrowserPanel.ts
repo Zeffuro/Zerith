@@ -1,7 +1,7 @@
 import { Assets, Container, Graphics, Sprite, Text } from 'pixi.js';
 import type { Engine } from '../Engine';
 import type { MenuPanel } from '../types';
-import { createPanelTitle, createButton, createSelectableList } from './UIComponents';
+import { createPanelTitle, createButton, createSelectableList, registerFocusableButton } from './UIComponents';
 
 export class ItemBrowserPanel implements MenuPanel {
     public id = 'evidence';
@@ -33,22 +33,7 @@ export class ItemBrowserPanel implements MenuPanel {
             const backBtn = createButton(ctx, { label: 'Back', x: w / 2, y: h - cfg.buttonHeight - backMargin }, onClose);
             root.addChild(backBtn);
 
-            const backBg = backBtn.children[0] as Graphics;
-            focus.register({
-                focus: () => {
-                    backBg.clear();
-                    backBg.roundRect(0, 0, cfg.buttonWidth, cfg.buttonHeight, 8);
-                    backBg.fill({ color: cfg.buttonHoverColor, alpha: 1 });
-                    backBg.stroke({ color: ctx.theme.accentColor, width: 2 });
-                },
-                blur: () => {
-                    backBg.clear();
-                    backBg.roundRect(0, 0, cfg.buttonWidth, cfg.buttonHeight, 8);
-                    backBg.fill({ color: cfg.buttonColor, alpha: cfg.buttonAlpha });
-                    backBg.stroke({ color: ctx.theme.borderColor, width: 2 });
-                },
-                activate: onClose,
-            });
+            registerFocusableButton(ctx, focus, backBtn, onClose);
 
             return { container: root };
         }
@@ -225,24 +210,7 @@ export class ItemBrowserPanel implements MenuPanel {
         const backBtn = createButton(ctx, { label: 'Back', x: w / 2, y: h - cfg.buttonHeight - backMargin }, onClose);
         root.addChild(backBtn);
 
-        const backBg = backBtn.children[0] as Graphics;
-        const bw = cfg.buttonWidth;
-        const bh = cfg.buttonHeight;
-        focus.register({
-            focus: () => {
-                backBg.clear();
-                backBg.roundRect(0, 0, bw, bh, 8);
-                backBg.fill({ color: cfg.buttonHoverColor, alpha: 1 });
-                backBg.stroke({ color: ctx.theme.accentColor, width: 2 });
-            },
-            blur: () => {
-                backBg.clear();
-                backBg.roundRect(0, 0, bw, bh, 8);
-                backBg.fill({ color: cfg.buttonColor, alpha: cfg.buttonAlpha });
-                backBg.stroke({ color: ctx.theme.borderColor, width: 2 });
-            },
-            activate: onClose,
-        });
+        registerFocusableButton(ctx, focus, backBtn, onClose);
 
         return {
             container: root,
