@@ -1,5 +1,5 @@
 import { Assets, Sprite, type Texture } from 'pixi.js';
-import type { BaseCommand, CommandHandler } from '../types';
+import type { BaseCommand, CommandHandler, CharacterDefinition } from '../types';
 import type { Engine } from '../Engine';
 
 export interface SpriteCommand extends BaseCommand {
@@ -215,7 +215,7 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
         return engine.spritesheets.getFrame(sheetConfig.atlasUrl, frameName) ?? null;
     }
 
-    private findCharacter(spriteId: string, engine: Engine): any | null {
+    private findCharacter(spriteId: string, engine: Engine): CharacterDefinition | null {
         const chars = engine.manifest?.characters;
         if (!chars) return null;
         return chars[spriteId] ||

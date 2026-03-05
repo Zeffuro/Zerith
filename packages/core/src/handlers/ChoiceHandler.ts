@@ -97,9 +97,9 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
                 const text = new Text({
                     text: option.label,
                     style: {
-                        fontFamily: 'Arial',
+                        fontFamily: engine.theme.fontFamily,
                         fill: 0xffffff,
-                        fontSize: 24,
+                        fontSize: engine.theme.fontSize,
                         align: 'center',
                         ...this.config.textStyle
                     }
@@ -125,62 +125,22 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
                 currentY += buttonHeight + spacing;
             });
 
-            // Keyboard handling
-            const onKeyDown = (e: KeyboardEvent) => {
-                switch (e.key) {
-                    case 'ArrowUp':
-                    case 'w':
-                    case 'W':
-                        e.preventDefault();
-                        updateSelection(selectedIndex - 1);
-                        break;
-                    case 'ArrowDown':
-                    case 's':
-                    case 'S':
-                        e.preventDefault();
-                        updateSelection(selectedIndex + 1);
-                        break;
-                    case 'Enter':
-                    case ' ':
-                        e.preventDefault();
-                        e.stopImmediatePropagation();
-                        confirmSelection();
-                        break;
-                }
+            // Subscribe to InputManager events
+            const onNavigate = (direction: string) => {
+                if (direction === 'up') updateSelection(selectedIndex - 1);
+                if (direction === 'down') updateSelection(selectedIndex + 1);
             };
-            window.addEventListener('keydown', onKeyDown);
 
-            // Gamepad handling
-            let prevDpadUp = false;
-            let prevDpadDown = false;
-            let prevConfirm = false;
-            let gamepadPollId: number | null = null;
-
-            const pollGamepad = () => {
-                const gamepad = navigator.getGamepads()[0];
-                if (gamepad) {
-                    const dpadUp = gamepad.buttons[12]?.pressed || gamepad.axes[1] < -0.5;
-                    const dpadDown = gamepad.buttons[13]?.pressed || gamepad.axes[1] > 0.5;
-                    const confirm = gamepad.buttons[0]?.pressed ?? false;
-
-                    if (dpadUp && !prevDpadUp) updateSelection(selectedIndex - 1);
-                    if (dpadDown && !prevDpadDown) updateSelection(selectedIndex + 1);
-                    if (confirm && !prevConfirm) confirmSelection();
-
-                    prevDpadUp = dpadUp;
-                    prevDpadDown = dpadDown;
-                    prevConfirm = confirm;
-                }
-                gamepadPollId = requestAnimationFrame(pollGamepad);
+            const onConfirm = () => {
+                confirmSelection();
             };
-            gamepadPollId = requestAnimationFrame(pollGamepad);
+
+            engine.on('input:navigate', onNavigate);
+            engine.on('input:confirm', onConfirm);
 
             const cleanup = () => {
-                window.removeEventListener('keydown', onKeyDown);
-                if (gamepadPollId !== null) {
-                    cancelAnimationFrame(gamepadPollId);
-                    gamepadPollId = null;
-                }
+                engine.off('input:navigate', onNavigate);
+                engine.off('input:confirm', onConfirm);
             };
 
             engine.layers.ui.addChild(choiceContainer);

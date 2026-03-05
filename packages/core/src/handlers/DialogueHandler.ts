@@ -203,10 +203,10 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         const h = engine.display.height;
 
         const margin = 20;
-        const boxWidth = w - (margin * 2);
-        const boxHeight = h * 0.3;
-        const boxX = margin;
-        const boxY = h - boxHeight - margin;
+        const boxWidth = this.config.boxWidth ?? (w - margin * 2);
+        const boxHeight = this.config.boxHeight ?? (h * 0.3);
+        const boxX = this.config.boxX ?? margin;
+        const boxY = this.config.boxY ?? (h - boxHeight - margin);
         const padding = 20;
 
         this.container = new Container();
@@ -215,8 +215,14 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
 
         const bg = new Graphics()
             .roundRect(boxX, boxY, boxWidth, boxHeight, 10)
-            .fill({ color: t.boxColor, alpha: t.boxAlpha })
-            .stroke({ color: t.borderColor, width: t.borderWidth });
+            .fill({
+                color: this.config.backgroundColor ?? t.boxColor,
+                alpha: this.config.backgroundAlpha ?? t.boxAlpha
+            })
+            .stroke({
+                color: this.config.borderColor ?? t.borderColor,
+                width: this.config.borderWidth ?? t.borderWidth
+            });
 
         this.nameText = new Text({
             text: '',

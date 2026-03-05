@@ -75,15 +75,22 @@ export class SaveManager {
                     id,
                     action: 'show',
                     assetUrl: s.assetUrl,
-                    x: s.x,
-                    y: s.y,
-                    anchorX: s.anchorX,
-                    anchorY: s.anchorY,
-                    scaleX: s.scaleX,
-                    scaleY: s.scaleY,
+                    pose: s.pose,
+                    x: s.x, y: s.y,
+                    anchorX: s.anchorX, anchorY: s.anchorY,
+                    scaleX: s.scaleX, scaleY: s.scaleY,
                     flip: s.flip,
                     transition: 'instant',
                 });
+
+                if (s.animation) {
+                    await this.engine.runCommand({
+                        type: 'sprite',
+                        id,
+                        action: 'animate',
+                        animation: s.animation,
+                    });
+                }
             }
         }
 

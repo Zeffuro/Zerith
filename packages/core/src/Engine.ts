@@ -114,6 +114,8 @@ export class Engine {
         this.layers.overlay.removeChildren().forEach(c => c.destroy({ children: true }));
         this.handlers.forEach(h => h.reset?.());
         this.history.clear();
+        this.items.clear();
+        this.state = {};
         this.isExecuting = false;
     }
 
