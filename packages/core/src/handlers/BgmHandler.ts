@@ -14,45 +14,40 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
     public type = 'bgm';
     public autoNext = true;
     private currentBgmUrl: string | null = null;
-    private lastBgmUrl: string | null = null;
+    private isPaused = false;
 
     execute = async (command: BgmCommand, engine: Engine) => {
         if (command.action === 'stop') {
             if (this.currentBgmUrl) {
                 sound.stop(this.currentBgmUrl);
-                this.lastBgmUrl = this.currentBgmUrl;
-                this.currentBgmUrl = null;
-                engine.audio.currentBgmUrl = null;
                 engine.logger.info('BGM stopped.');
             }
+            this.currentBgmUrl = null;
+            this.isPaused = false;
             return;
         }
 
         if (command.action === 'pause') {
             if (this.currentBgmUrl) {
                 sound.pause(this.currentBgmUrl);
+                this.isPaused = true;
                 engine.logger.info('BGM paused.');
             }
             return;
         }
 
         if (command.action === 'resume') {
-            const targetUrl = this.currentBgmUrl || this.lastBgmUrl;
-            if (targetUrl) {
-                sound.resume(targetUrl);
+            if (!this.currentBgmUrl) {
+                engine.logger.warn('Tried to resume BGM, but no track is active.');
+                return;
+            }
 
-                if (!this.currentBgmUrl) {
-                    sound.play(targetUrl, {
-                        loop: command.loop ?? true,
-                        volume: (command.volume ?? 0.5) * engine.audio.bgmVolume,
-                        singleInstance: true
-                    });
-                }
-                this.currentBgmUrl = targetUrl;
-                engine.audio.currentBgmUrl = targetUrl;
-                engine.logger.info(`BGM resumed: ${targetUrl}`);
+            if (this.isPaused) {
+                sound.resume(this.currentBgmUrl);
+                this.isPaused = false;
+                engine.logger.info(`BGM resumed: ${this.currentBgmUrl}`);
             } else {
-                engine.logger.warn('Tried to resume BGM, but no previous track was found.');
+                engine.logger.warn('BGM is not paused, nothing to resume.');
             }
             return;
         }
@@ -77,8 +72,7 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
                 }
 
                 this.currentBgmUrl = url;
-                this.lastBgmUrl = url;
-                engine.audio.currentBgmUrl = url;
+                this.isPaused = false;
 
                 sound.play(url, {
                     loop: command.loop ?? true,

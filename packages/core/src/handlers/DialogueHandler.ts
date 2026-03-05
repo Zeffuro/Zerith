@@ -1,16 +1,9 @@
 import {Assets, Container, Graphics, HTMLText, Sprite, Text, type TextStyleOptions} from 'pixi.js';
 import {sound} from '@pixi/sound';
 import type {CommandHandler} from '../types';
+import type {CharacterDefinition} from '../types';
 import type {Engine} from '../Engine';
 import {parseTextTags, transformShorthands} from '../utils/TextParser';
-
-export interface CharacterConfig {
-    displayName: string;
-    nameColor?: string;
-    portraitUrl?: string;
-    blipUrl?: string;
-    talkAnimation?: string;
-}
 
 export interface DialogueCommand {
     type: 'dialogue';
@@ -33,7 +26,7 @@ export interface DialogueConfig {
     defaultBlipUrl?: string;
     nameStyle?: Partial<TextStyleOptions>;
     messageStyle?: Partial<TextStyleOptions>;
-    characters?: Record<string, CharacterConfig>;
+    characters?: Record<string, CharacterDefinition>;
 }
 
 export class DialogueHandler implements CommandHandler<DialogueCommand> {

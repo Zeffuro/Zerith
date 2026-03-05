@@ -1,5 +1,5 @@
 import { Application, Container } from 'pixi.js';
-import type { BaseCommand, CommandHandler, Script, SceneMap } from './types';
+import type { BaseCommand, CommandHandler, Script, SceneMap, GameManifest } from './types';
 import type { EngineConfig } from './EngineConfig';
 import { Logger } from './utils/Logger';
 import { SaveManager } from './managers/SaveManager';
@@ -44,7 +44,7 @@ export class Engine {
     public logger: Logger = new Logger('[Engine]');
     public theme: Theme = DefaultTheme;
     public state: Record<string, any> = {};
-    public manifest: any = {};
+    public manifest: GameManifest = {};
 
     private handlers: Map<string, CommandHandler<any>> = new Map();
     private isExecuting = false;

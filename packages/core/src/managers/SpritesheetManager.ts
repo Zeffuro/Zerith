@@ -1,11 +1,6 @@
 import { Spritesheet, Texture, ImageSource, type SpritesheetData } from 'pixi.js';
 import { applyChromaKey } from '../utils/ChromaKey';
-
-export interface SpritesheetConfig {
-    atlasUrl: string;
-    chromaKey?: string;
-    chromaTolerance?: number;
-}
+import type { SpritesheetConfig } from '../types';
 
 export class SpritesheetManager {
     private sheets: Map<string, Spritesheet> = new Map();

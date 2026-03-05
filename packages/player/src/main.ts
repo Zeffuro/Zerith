@@ -1,9 +1,9 @@
-import { Engine, BuiltInHandlers, DialogueHandler, ChoiceHandler, validateScript, resolveManifestValue, resolveScenes } from 'core';
+import { Engine, BuiltInHandlers, DialogueHandler, ChoiceHandler, validateScript, resolveManifestValue, resolveScenes, type GameManifest } from 'core';
 
 async function bootstrap() {
     const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 
-    const manifest = await fetch('/game.json').then(r => r.json());
+    const manifest: GameManifest = await fetch('/game.json').then(r => r.json());
 
     const [characters, items, macros, scenes] = await Promise.all([
         manifest.characters ? resolveManifestValue(manifest.characters) : Promise.resolve({}),
