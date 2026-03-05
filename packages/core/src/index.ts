@@ -20,6 +20,7 @@ export * from './Engine';
 export * from './EngineConfig';
 export * from './types';
 export * from './commands';
+export * from './schemas';
 
 /* Handlers */
 export * from './handlers/BackgroundHandler';
