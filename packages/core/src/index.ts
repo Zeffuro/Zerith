@@ -14,6 +14,8 @@ import { WaitHandler } from './handlers/WaitHandler';
 import { LabelHandler } from './handlers/LabelHandler';
 import { GotoHandler } from './handlers/GotoHandler';
 import { SpriteHandler } from './handlers/SpriteHandler';
+import { FlashHandler } from './handlers/FlashHandler';
+import { ItemHandler } from "./handlers/ItemHandler";
 
 /* Root */
 export * from './Engine';
@@ -40,6 +42,8 @@ export * from './handlers/WaitHandler';
 export * from './handlers/LabelHandler';
 export * from './handlers/GotoHandler';
 export * from './handlers/SpriteHandler';
+export * from './handlers/FlashHandler';
+export * from './handlers/ItemHandler';
 
 /* Managers */
 export * from './managers/SaveManager';
@@ -52,10 +56,14 @@ export * from './managers/EventBus';
 export * from './managers/StartScreenManager';
 export * from './managers/HistoryManager';
 export * from './managers/PauseMenuManager';
+export * from './managers/ItemManager'
+export * from './managers/EvidenceManager'
 
 /* Utils */
 export * from './utils/TextParser';
 export * from './utils/Theme';
+export * from './utils/AssetPreloader';
+export * from './utils/ManifestResolver';
 
 /**
  * Handlers that require no constructor config.
@@ -78,4 +86,6 @@ export const BuiltInHandlers = [
     LabelHandler,
     GotoHandler,
     SpriteHandler,
+    FlashHandler,
+    ItemHandler,
 ];

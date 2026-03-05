@@ -1,6 +1,6 @@
-import { Assets, Sprite } from 'pixi.js';
-import type { BaseCommand, CommandHandler } from '../types';
-import type { Engine } from '../Engine';
+import {Assets, Sprite} from 'pixi.js';
+import type {BaseCommand, CommandHandler} from '../types';
+import type {Engine} from '../Engine';
 
 export interface SpriteCommand extends BaseCommand {
     type: 'sprite';
@@ -83,6 +83,19 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
         } else {
             sprite.alpha = 1;
         }
+
+        const sprites = engine.getState('__sys_sprites') ?? {};
+        sprites[command.id] = {
+            assetUrl: command.assetUrl,
+            x: sprite.x,
+            y: sprite.y,
+            anchorX: command.anchorX ?? 0.5,
+            anchorY: command.anchorY ?? 1,
+            scaleX: sprite.scale.x,
+            scaleY: sprite.scale.y,
+            flip: command.flip ?? false,
+        };
+        engine.setState('__sys_sprites', sprites);
     }
 
     private async hide(command: SpriteCommand, engine: Engine) {
@@ -96,6 +109,10 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
         engine.layers.sprites.removeChild(sprite);
         sprite.destroy();
         this.sprites.delete(command.id);
+
+        const sprites = engine.getState('__sys_sprites') ?? {};
+        delete sprites[command.id];
+        engine.setState('__sys_sprites', sprites);
     }
 
     private async move(command: SpriteCommand, engine: Engine) {
@@ -144,6 +161,13 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             };
             requestAnimationFrame(animate);
         });
+
+        const sprites = engine.getState('__sys_sprites') ?? {};
+        if (sprites[command.id]) {
+            sprites[command.id].x = sprite.x;
+            sprites[command.id].y = sprite.y;
+            engine.setState('__sys_sprites', sprites);
+        }
     }
 
     private async changePose(command: SpriteCommand, engine: Engine) {
@@ -158,13 +182,18 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             return;
         }
 
-        const texture = await Assets.load(command.assetUrl);
-        sprite.texture = texture;
+        sprite.texture = await Assets.load(command.assetUrl);
 
         if (command.flip !== undefined) {
             sprite.scale.x = command.flip
                 ? -Math.abs(sprite.scale.x)
                 : Math.abs(sprite.scale.x);
+        }
+
+        const sprites = engine.getState('__sys_sprites') ?? {};
+        if (sprites[command.id]) {
+            sprites[command.id].assetUrl = command.assetUrl;
+            engine.setState('__sys_sprites', sprites);
         }
     }
 

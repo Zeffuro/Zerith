@@ -1,5 +1,6 @@
 import type { BaseCommand, Script, SceneMap } from '../types';
 import type { Engine } from '../Engine';
+import { preloadSceneAssets } from '../utils/AssetPreloader';
 
 export class SceneManager {
     private engine: Engine;
@@ -9,6 +10,8 @@ export class SceneManager {
     public script: Script = [];
     public currentIndex: number = 0;
     public currentSceneName: string = "";
+
+    private originMap: number[] = [];
 
     constructor(engine: Engine) {
         this.engine = engine;
@@ -35,7 +38,21 @@ export class SceneManager {
     }
 
     public injectCommands(commands: BaseCommand[]) {
+        const injectedOrigins = commands.map(() => -1);
         this.script.splice(this.currentIndex, 0, ...commands);
+        this.originMap.splice(this.currentIndex, 0, ...injectedOrigins);
+    }
+
+    public getOriginalIndex(runtimeIndex: number): number {
+        return this.originMap[runtimeIndex] ?? -1;
+    }
+
+    public getLastOriginalIndex(runtimeIndex: number): number {
+        for (let i = runtimeIndex; i >= 0; i--) {
+            const orig = this.originMap[i];
+            if (orig !== -1) return orig;
+        }
+        return 0;
     }
 
     public async jumpToScene(sceneName: string, startIndex: number = 0) {
@@ -43,8 +60,12 @@ export class SceneManager {
             this.engine.logger.error(`Scene '${sceneName}' missing.`);
             return;
         }
+
+        await preloadSceneAssets(this.scenes[sceneName]);
+
         this.currentSceneName = sceneName;
         this.script = [...this.scenes[sceneName]];
+        this.originMap = this.script.map((_, i) => i);
         this.currentIndex = startIndex;
     }
 }

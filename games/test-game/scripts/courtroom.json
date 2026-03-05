@@ -3,8 +3,8 @@
   { "type": "dialogue", "speaker": "judge", "text": "Is the defense ready?" },
   {
     "type": "if",
-    "key": "has_badge",
-    "value": true,
+    "source": "evidence",
+    "key": "attorney_badge",
     "then":[
       { "type": "dialogue", "speaker": "phoenix", "text": "Yes, Your Honor. I have my badge right here." }
     ],

@@ -1,0 +1,14 @@
+{
+  "autopsy_report": {
+    "name": "Autopsy Report",
+    "description": "Time of death: between 4PM and 5PM.",
+    "imageUrl": "/assets/items/autopsy.png",
+    "type": "evidence"
+  },
+  "attorney_badge": {
+    "name": "Attorney's Badge",
+    "description": "My precious badge.",
+    "imageUrl": "/assets/items/badge.png",
+    "type": "profile"
+  }
+}

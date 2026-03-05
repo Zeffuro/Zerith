@@ -1,8 +1,8 @@
-import { Assets, Container, Graphics, Sprite, Text, HTMLText, type TextStyleOptions } from 'pixi.js';
-import { sound } from '@pixi/sound';
-import type { CommandHandler } from '../types';
-import type { Engine } from '../Engine';
-import { parseTextTags, transformShorthands } from '../utils/TextParser';
+import {Assets, Container, Graphics, HTMLText, Sprite, Text, type TextStyleOptions} from 'pixi.js';
+import {sound} from '@pixi/sound';
+import type {CommandHandler} from '../types';
+import type {Engine} from '../Engine';
+import {parseTextTags, transformShorthands} from '../utils/TextParser';
 
 export interface CharacterConfig {
     displayName: string;
@@ -16,6 +16,7 @@ export interface DialogueCommand {
     speaker: string;
     text: string;
     portraitSide?: 'left' | 'right';
+    instant?: boolean;
 }
 
 export interface DialogueConfig {
@@ -80,8 +81,21 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
                 command.portraitSide === 'right' ? -scale : scale,
                 scale
             );
+
+            engine.setState('__sys_dialogue', {
+                speaker: command.speaker,
+                text: command.text,
+                portraitUrl: charData.portraitUrl,
+                portraitSide: command.portraitSide ?? 'left',
+            });
         } else {
             this.portraitSprite.visible = false;
+            engine.setState('__sys_dialogue', {
+                speaker: command.speaker,
+                text: command.text,
+                portraitUrl: null,
+                portraitSide: null,
+            });
         }
 
         const blipUrl = charData?.blipUrl || this.config.defaultBlipUrl;
@@ -105,6 +119,14 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         const transformed = transformShorthands(command.text);
         const tokens = parseTextTags(transformed);
         let currentSpeed = this.config.typewriterSpeed!;
+
+        if (command.instant) {
+            this.messageText.text = tokens
+                .filter((t): t is { type: 'text'; val: string } => t.type === 'text')
+                .map(t => t.val)
+                .join('');
+            return;
+        }
 
         for (const token of tokens) {
             if (session !== this.currentSession) return;

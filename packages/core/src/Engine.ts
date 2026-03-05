@@ -12,6 +12,7 @@ import { NotificationManager } from './managers/NotificationManager';
 import { StartScreenManager } from './managers/StartScreenManager';
 import { HistoryManager } from './managers/HistoryManager';
 import { PauseMenuManager } from './managers/PauseMenuManager';
+import { EvidenceManager } from './managers/EvidenceManager';
 import { DefaultTheme, type Theme } from './utils/Theme';
 
 export class Engine {
@@ -31,8 +32,9 @@ export class Engine {
     public events: EventBus;
     public notifications: NotificationManager;
     public startScreen: StartScreenManager;
-    public history: HistoryManager = new HistoryManager();
     public pauseMenu: PauseMenuManager;
+    public history: HistoryManager = new HistoryManager();
+    public evidence: EvidenceManager = new EvidenceManager();
     public logger: Logger = new Logger('[Engine]');
     public theme: Theme = DefaultTheme;
     public state: Record<string, any> = {};
@@ -43,6 +45,7 @@ export class Engine {
     private _isStarted = false;
     private _skipRequested = false;
     private _autoAdvanceDelay: number | null = null;
+    private _lastSavePoint: number = 0;
 
     constructor(config: EngineConfig = {}) {
         this.app = new Application();
@@ -68,7 +71,7 @@ export class Engine {
         this.pauseMenu = new PauseMenuManager(this, config.pauseMenu);
     }
 
-    // --- Lifecycle ---
+    /* Lifecycle */
 
     public async init(canvasElement: HTMLCanvasElement) {
         await this.display.init(canvasElement);
@@ -108,7 +111,7 @@ export class Engine {
         this.clear();
     }
 
-    // --- Handler Registration ---
+    /* Handler Registration */
 
     public registerHandler<T extends BaseCommand>(h: CommandHandler<T>) {
         this.handlers.set(h.type, h);
@@ -118,7 +121,7 @@ export class Engine {
         hs.forEach(h => this.registerHandler(typeof h === 'function' ? new h() : h));
     }
 
-    // --- State ---
+    /* State */
 
     public getState(k: string) {
         return this.state[k];
@@ -128,7 +131,7 @@ export class Engine {
         this.state[k] = v;
     }
 
-    // --- Text Control ---
+    /* Text Control */
 
     public requestSkip() {
         if (this.isExecuting) {
@@ -152,7 +155,7 @@ export class Engine {
         this._autoAdvanceDelay = delayMs;
     }
 
-    // --- Command Execution ---
+    /* Command Execution */
 
     public async runCommand(command: BaseCommand) {
         const handler = this.handlers.get(command.type);
@@ -176,10 +179,12 @@ export class Engine {
 
         try {
             while (this.scenes.currentIndex < this.scenes.script.length) {
+                const idx = this.scenes.currentIndex;
                 const command = this.scenes.script[this.scenes.currentIndex++];
                 await this.runCommand(command);
                 const handler = this.handlers.get(command.type);
                 if (handler && !handler.autoNext) {
+                    this._lastSavePoint = this.scenes.getLastOriginalIndex(idx);
                     this.isExecuting = false;
                     return;
                 }
@@ -195,7 +200,7 @@ export class Engine {
         }
     }
 
-    // --- Scene Delegation ---
+    /* Scene Delegation */
 
     public loadScenes(scenes: SceneMap) {
         this.scenes.loadScenes(scenes);
@@ -218,7 +223,7 @@ export class Engine {
         if (this._isStarted) await this.playNext();
     }
 
-    // --- Convenience Getters ---
+    /* Convenience Getters */
 
     public get currentSceneName(): string {
         return this.scenes.currentSceneName;
@@ -228,7 +233,11 @@ export class Engine {
         return this.scenes.currentIndex;
     }
 
-    // --- Events ---
+    public get lastSavePoint(): number {
+        return this._lastSavePoint;
+    }
+
+    /* Events */
 
     public on(event: string, listener: (...args: any[]) => void) {
         this.events.on(event, listener);

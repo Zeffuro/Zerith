@@ -1,0 +1,11 @@
+{
+  "judge": {
+    "displayName": "The Judge",
+    "nameColor": "#ffffff"
+  },
+  "phoenix": {
+    "displayName": "Phoenix Wright",
+    "nameColor": "#3399ff",
+    "portraitUrl": "/assets/sprites/phoenix.png"
+  }
+}

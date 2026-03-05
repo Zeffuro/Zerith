@@ -1,0 +1,15 @@
+{
+  "court_entry":[
+    { "type": "transition", "action": "fade_out", "duration": 400 },
+    { "type": "background", "assetUrl": "/assets/bg/courtroom.png" },
+    { "type": "transition", "action": "fade_in", "duration": 400 }
+  ],
+  "phoenix_objection":[
+    { "type": "bgm", "action": "pause" },
+    { "type": "sfx", "assetUrl": "/assets/sfx/objection.mp3" },
+    { "type": "shake", "intensity": 15, "duration": 800, "wait": false },
+    { "type": "flash", "color": 16777215, "duration": 500 },
+    { "type": "dialogue", "speaker": "phoenix", "text": "OBJECTION!" },
+    { "type": "bgm", "action": "resume" }
+  ]
+}

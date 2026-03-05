@@ -11,7 +11,4 @@ yarn-error.log
 .vscode/
 
 # Game Assets
-games/test-game/assets/bg/*
-games/test-game/assets/sprites/*
-games/test-game/assets/bgm/*
-games/test-game/assets/sfx/*
+games/test-game/assets/*

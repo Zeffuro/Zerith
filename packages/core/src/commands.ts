@@ -15,6 +15,8 @@ import type { WaitCommand } from './handlers/WaitHandler';
 import type { LabelCommand } from './handlers/LabelHandler';
 import type { GotoCommand } from './handlers/GotoHandler';
 import type { SpriteCommand } from './handlers/SpriteHandler';
+import type { FlashCommand } from './handlers/FlashHandler';
+import type { ItemCommand } from "./handlers/ItemHandler.ts";
 
 export type Command =
     | BackgroundCommand
@@ -33,6 +35,8 @@ export type Command =
     | WaitCommand
     | LabelCommand
     | GotoCommand
-    | SpriteCommand;
+    | SpriteCommand
+    | FlashCommand
+    | ItemCommand;
 
 export type TypedScript = Command[];

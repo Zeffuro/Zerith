@@ -33,7 +33,7 @@ export class SaveManager {
 
         const saveData: SaveState = {
             sceneName: this.engine.currentSceneName,
-            index: Math.max(0, this.engine.currentIndex - 1),
+            index: this.engine.lastSavePoint,
             state: JSON.parse(JSON.stringify(this.engine.state)),
             meta
         };
@@ -55,12 +55,37 @@ export class SaveManager {
         this.engine.clear();
 
         this.engine.state = saveData.state;
+        const itemIds = this.engine.getState('__sys_items');
+        if (Array.isArray(itemIds)) {
+            this.engine.evidence.deserialize(itemIds);
+        }
 
         const bgUrl = this.engine.getState('__sys_bg');
         if (bgUrl) await this.engine.runCommand({ type: 'background', assetUrl: bgUrl });
 
         const bgmUrl = this.engine.getState('__sys_bgm');
         if (bgmUrl) await this.engine.runCommand({ type: 'bgm', action: 'play', assetUrl: bgmUrl });
+
+        const sprites = this.engine.getState('__sys_sprites');
+        if (sprites && typeof sprites === 'object') {
+            for (const [id, data] of Object.entries(sprites)) {
+                const s = data as any;
+                await this.engine.runCommand({
+                    type: 'sprite',
+                    id,
+                    action: 'show',
+                    assetUrl: s.assetUrl,
+                    x: s.x,
+                    y: s.y,
+                    anchorX: s.anchorX,
+                    anchorY: s.anchorY,
+                    scaleX: s.scaleX,
+                    scaleY: s.scaleY,
+                    flip: s.flip,
+                    transition: 'instant',
+                });
+            }
+        }
 
         await this.engine.jumpToScene(saveData.sceneName, saveData.index);
     }

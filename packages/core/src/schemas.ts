@@ -1,22 +1,22 @@
 import { z } from 'zod';
 
-// --- Base ---
+/* Base */
 
 const BaseCommandSchema = z.object({
     type: z.string(),
-}).passthrough();
+}).catchall(z.unknown());
 
-// --- Dialogue ---
+/* Dialogue */
 
 export const DialogueCommandSchema = z.object({
     type: z.literal('dialogue'),
     speaker: z.string(),
     text: z.string(),
     portraitSide: z.enum(['left', 'right']).optional(),
+    instant: z.boolean().optional(),
 });
-export type DialogueCommand = z.infer<typeof DialogueCommandSchema>;
 
-// --- Choice ---
+/* Choice */
 
 export const ChoiceOptionSchema = z.object({
     label: z.string(),
@@ -27,17 +27,15 @@ export const ChoiceCommandSchema = z.object({
     type: z.literal('choice'),
     options: z.array(ChoiceOptionSchema),
 });
-export type ChoiceCommand = z.infer<typeof ChoiceCommandSchema>;
 
-// --- Background ---
+/* Background */
 
 export const BackgroundCommandSchema = z.object({
     type: z.literal('background'),
     assetUrl: z.string(),
 });
-export type BackgroundCommand = z.infer<typeof BackgroundCommandSchema>;
 
-// --- BGM ---
+/* BGM */
 
 export const BgmCommandSchema = z.object({
     type: z.literal('bgm'),
@@ -46,36 +44,32 @@ export const BgmCommandSchema = z.object({
     volume: z.number().optional(),
     loop: z.boolean().optional(),
 });
-export type BgmCommand = z.infer<typeof BgmCommandSchema>;
 
-// --- SFX ---
+/* SFX */
 
 export const SfxCommandSchema = z.object({
     type: z.literal('sfx'),
     assetUrl: z.string(),
     volume: z.number().optional(),
 });
-export type SfxCommand = z.infer<typeof SfxCommandSchema>;
 
-// --- Transition ---
+/* Transition */
 
 export const TransitionCommandSchema = z.object({
     type: z.literal('transition'),
     action: z.enum(['fade_out', 'fade_in']),
     duration: z.number().optional(),
 });
-export type TransitionCommand = z.infer<typeof TransitionCommandSchema>;
 
-// --- Scene Change ---
+/* Scene Change */
 
 export const SceneChangeCommandSchema = z.object({
     type: z.literal('scene_change'),
     assetUrl: z.string(),
     duration: z.number().optional(),
 });
-export type SceneChangeCommand = z.infer<typeof SceneChangeCommandSchema>;
 
-// --- Shake ---
+/* Shake */
 
 export const ShakeCommandSchema = z.object({
     type: z.literal('shake'),
@@ -83,17 +77,15 @@ export const ShakeCommandSchema = z.object({
     intensity: z.number().optional(),
     wait: z.boolean().optional(),
 });
-export type ShakeCommand = z.infer<typeof ShakeCommandSchema>;
 
-// --- Wait ---
+/* Wait */
 
 export const WaitCommandSchema = z.object({
     type: z.literal('wait'),
     duration: z.number(),
 });
-export type WaitCommand = z.infer<typeof WaitCommandSchema>;
 
-// --- Set ---
+/* Set */
 
 export const SetCommandSchema = z.object({
     type: z.literal('set'),
@@ -101,9 +93,8 @@ export const SetCommandSchema = z.object({
     value: z.any().optional(),
     op: z.enum(['set', 'add', 'sub', 'toggle']).optional(),
 });
-export type SetCommand = z.infer<typeof SetCommandSchema>;
 
-// --- If ---
+/* If */
 
 const ComparisonOpSchema = z.enum(['eq', 'neq', 'gt', 'gte', 'lt', 'lte']);
 
@@ -111,6 +102,7 @@ const ConditionSchema = z.object({
     key: z.string(),
     op: ComparisonOpSchema.optional(),
     value: z.any().optional(),
+    source: z.string().optional(),
 });
 
 export const IfCommandSchema = z.object({
@@ -118,54 +110,84 @@ export const IfCommandSchema = z.object({
     key: z.string().optional(),
     op: ComparisonOpSchema.optional(),
     value: z.any().optional(),
+    source: z.string().optional(),
     all: z.array(ConditionSchema).optional(),
     any: z.array(ConditionSchema).optional(),
     then: z.array(BaseCommandSchema).optional(),
     else: z.array(BaseCommandSchema).optional(),
 });
-export type IfCommand = z.infer<typeof IfCommandSchema>;
 
-// --- Jump ---
+/* Jump */
 
 export const JumpCommandSchema = z.object({
     type: z.literal('jump'),
     to: z.string(),
 });
-export type JumpCommand = z.infer<typeof JumpCommandSchema>;
 
-// --- Goto ---
+/* Goto */
 
 export const GotoCommandSchema = z.object({
     type: z.literal('goto'),
     label: z.string(),
 });
-export type GotoCommand = z.infer<typeof GotoCommandSchema>;
 
-// --- Label ---
+/* Label */
 
 export const LabelCommandSchema = z.object({
     type: z.literal('label'),
     name: z.string(),
 });
-export type LabelCommand = z.infer<typeof LabelCommandSchema>;
 
-// --- Block ---
+/* Block */
 
 export const BlockCommandSchema = z.object({
     type: z.literal('block'),
     commands: z.array(BaseCommandSchema),
 });
-export type BlockCommand = z.infer<typeof BlockCommandSchema>;
 
-// --- Call ---
+/* Call */
 
 export const CallCommandSchema = z.object({
     type: z.literal('call'),
     name: z.string(),
 });
-export type CallCommand = z.infer<typeof CallCommandSchema>;
 
-// --- Discriminated Union of all known commands ---
+/* Sprite */
+
+export const SpriteCommandSchema = z.object({
+    type: z.literal('sprite'),
+    id: z.string(),
+    action: z.enum(['show', 'hide', 'move', 'pose']),
+    assetUrl: z.string().optional(),
+    x: z.number().optional(),
+    y: z.number().optional(),
+    anchorX: z.number().optional(),
+    anchorY: z.number().optional(),
+    scaleX: z.number().optional(),
+    scaleY: z.number().optional(),
+    flip: z.boolean().optional(),
+    transition: z.enum(['instant', 'fade']).optional(),
+    duration: z.number().optional(),
+});
+
+/* Flash */
+
+export const FlashCommandSchema = z.object({
+    type: z.literal('flash'),
+    color: z.number().optional(),
+    duration: z.number().optional(),
+    wait: z.boolean().optional(),
+});
+
+/* Items */
+
+export const ItemCommandSchema = z.object({
+    type: z.literal('item'),
+    action: z.enum(['add', 'remove', 'update']),
+    manager: z.string().optional(),
+    id: z.string(),
+    changes: z.record(z.string(), z.any()).optional(),
+});
 
 export const CommandSchema = z.discriminatedUnion('type', [
     DialogueCommandSchema,
@@ -184,11 +206,14 @@ export const CommandSchema = z.discriminatedUnion('type', [
     LabelCommandSchema,
     BlockCommandSchema,
     CallCommandSchema,
+    SpriteCommandSchema,
+    FlashCommandSchema,
+    ItemCommandSchema,
 ]);
 
 export const ScriptSchema = z.array(CommandSchema);
 
-// --- Registry for editor introspection ---
+/* Registry for editor introspection */
 
 export const CommandSchemaRegistry: Record<string, z.ZodType> = {
     dialogue: DialogueCommandSchema,
@@ -207,6 +232,9 @@ export const CommandSchemaRegistry: Record<string, z.ZodType> = {
     label: LabelCommandSchema,
     block: BlockCommandSchema,
     call: CallCommandSchema,
+    sprite: SpriteCommandSchema,
+    flash: FlashCommandSchema,
+    item: ItemCommandSchema,
 };
 
 /**
@@ -217,7 +245,7 @@ export function validateScript(script: unknown[]): z.infer<typeof CommandSchema>
     return script.map((cmd, i) => {
         const result = CommandSchema.safeParse(cmd);
         if (!result.success) {
-            console.warn(`[Schema] Invalid command at index ${i}:`, result.error.format());
+            console.warn(`[Schema] Invalid command at index ${i}:`, result.error.issues);
             return cmd;
         }
         return result.data;

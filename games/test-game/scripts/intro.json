@@ -21,9 +21,20 @@
         "label": "Grab my attorney badge",
         "commands": [
           { "type": "dialogue", "speaker": "phoenix", "text": "Better safe than sorry." },
-          { "type": "set", "key": "has_badge", "value": true }
+          { "type": "item", "action": "add", "id": "attorney_badge" }
         ]
       }
+    ]
+  },
+  {
+    "type": "if",
+    "source": "evidence",
+    "key": "attorney_badge",
+    "then": [
+      { "type": "dialogue", "speaker": "phoenix", "text": "(Good, I have my badge on me.)" }
+    ],
+    "else": [
+      { "type": "dialogue", "speaker": "phoenix", "text": "(I hope I don't need my badge today...)" }
     ]
   },
   { "type": "dialogue", "speaker": "phoenix", "text": "Okay, enough stalling. To the courthouse!" },

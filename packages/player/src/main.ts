@@ -1,13 +1,21 @@
-import { Engine, BuiltInHandlers, DialogueHandler, ChoiceHandler } from 'core';
+import { Engine, BuiltInHandlers, DialogueHandler, ChoiceHandler, validateScript, resolveManifestValue, resolveScenes } from 'core';
 
 async function bootstrap() {
     const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 
-    const [manifest, intro, court] = await Promise.all([
-        fetch('/game.json').then(r => r.json()),
-        fetch('/scripts/intro.json').then(r => r.json()),
-        fetch('/scripts/courtroom.json').then(r => r.json())
+    const manifest = await fetch('/game.json').then(r => r.json());
+
+    const [characters, items, macros, scenes] = await Promise.all([
+        manifest.characters ? resolveManifestValue(manifest.characters) : Promise.resolve({}),
+        manifest.items ? resolveManifestValue(manifest.items) : Promise.resolve({}),
+        manifest.macros ? resolveManifestValue(manifest.macros) : Promise.resolve({}),
+        manifest.scenes ? resolveScenes(manifest.scenes) : Promise.resolve({}),
     ]);
+
+    const validatedScenes: Record<string, any[]> = {};
+    for (const [name, script] of Object.entries(scenes)) {
+        validatedScenes[name] = validateScript(script as unknown[]);
+    }
 
     const engine = new Engine({
         display: {
@@ -40,10 +48,38 @@ async function bootstrap() {
 
     engine.manifest = manifest;
 
+    // Preload character assets
+    if (Object.keys(characters).length > 0) {
+        const { Assets } = await import('pixi.js');
+        const { sound } = await import('@pixi/sound');
+
+        const promises: Promise<any>[] = [];
+        for (const [, char] of Object.entries(characters) as [string, any][]) {
+            if (char.portraitUrl) {
+                promises.push(Assets.load(char.portraitUrl).catch(() => {}));
+            }
+            if (char.blipUrl && !sound.exists(char.blipUrl)) {
+                promises.push(new Promise<void>(resolve => {
+                    sound.add(char.blipUrl, {
+                        url: char.blipUrl,
+                        preload: true,
+                        loaded: () => resolve()
+                    });
+                }));
+            }
+        }
+        await Promise.all(promises);
+    }
+
+    // Load items
+    if (Object.keys(items).length > 0) {
+        engine.evidence.loadDefinitions(items);
+    }
+
     engine.registerHandlers(BuiltInHandlers);
     engine.registerHandler(new DialogueHandler({
         ...engine.theme,
-        characters: manifest.characters,
+        characters,
         defaultBlipUrl: '/assets/sfx/blip.wav'
     }));
     engine.registerHandler(new ChoiceHandler({
@@ -52,12 +88,14 @@ async function bootstrap() {
         selectedBorderColor: engine.theme.accentColor
     }));
 
-    if (manifest.macros) {
-        Object.entries(manifest.macros).forEach(([n, s]) =>
+    // Register macros
+    if (Object.keys(macros).length > 0) {
+        Object.entries(macros).forEach(([n, s]) =>
             engine.registerTemplate(n, s as any)
         );
     }
-    engine.loadScenes({ intro, courtroom: court });
+
+    engine.loadScenes(validatedScenes);
 
     await engine.init(canvas);
 

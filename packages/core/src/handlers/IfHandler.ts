@@ -7,6 +7,7 @@ export interface Condition {
     key: string;
     op?: ComparisonOp;
     value?: any;
+    source?: string;
 }
 
 export interface IfCommand extends BaseCommand {
@@ -14,6 +15,7 @@ export interface IfCommand extends BaseCommand {
     key?: string;
     op?: ComparisonOp;
     value?: any;
+    source?: string;
     all?: Condition[];
     any?: Condition[];
     then?: BaseCommand[];
@@ -33,7 +35,7 @@ export class IfHandler implements CommandHandler<IfCommand> {
             conditionMet = command.any.some(c => this.evaluate(c, engine));
         } else {
             conditionMet = this.evaluate(
-                { key: command.key!, op: command.op, value: command.value },
+                { key: command.key!, op: command.op, value: command.value, source: command.source },
                 engine
             );
         }
@@ -46,6 +48,12 @@ export class IfHandler implements CommandHandler<IfCommand> {
     };
 
     private evaluate(condition: Condition, engine: Engine): boolean {
+        if (condition.source === 'evidence') {
+            const hasItem = engine.evidence.has(condition.key);
+            if (condition.value === undefined) return hasItem;
+            return condition.op === 'neq' ? hasItem !== condition.value : hasItem === condition.value;
+        }
+
         const actual = engine.getState(condition.key);
         const op = condition.op ?? 'eq';
 
