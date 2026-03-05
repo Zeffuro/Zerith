@@ -2,6 +2,7 @@ import { Container, Graphics, Text } from 'pixi.js';
 import type { Engine } from '../Engine';
 import type { MenuPanel } from '../types';
 import { createButton, type UIContext } from '../ui/UIComponents';
+import { PanelFocusManager, type FocusableItem } from '../ui/PanelFocusManager';
 
 export interface OverlayConfig {
     backgroundColor?: number;
@@ -25,6 +26,9 @@ export class OverlayManager {
     private _isOpen = false;
     private panels: MenuPanel[] = [];
     private _activeCleanup: (() => void) | null = null;
+    private _focus: PanelFocusManager | null = null;
+    private _onNavigate: ((dir: string) => void) | null = null;
+    private _onConfirm: (() => void) | null = null;
 
     constructor(engine: Engine, config: OverlayConfig = {}) {
         this.engine = engine;
@@ -60,6 +64,17 @@ export class OverlayManager {
         return this._isOpen;
     }
 
+    public get focus(): PanelFocusManager {
+        if (!this._focus) {
+            this._focus = new PanelFocusManager();
+        }
+        return this._focus;
+    }
+
+    public setFocus(fm: PanelFocusManager) {
+        this._focus = fm;
+    }
+
     public registerPanel(panel: MenuPanel) {
         if (!this.panels.find(p => p.id === panel.id)) {
             this.panels.push(panel);
@@ -77,13 +92,38 @@ export class OverlayManager {
     public open() {
         if (this._isOpen) return;
         this._isOpen = true;
+        this.subscribeInput();
         this.showMainMenu();
     }
 
     public close() {
         if (!this._isOpen) return;
         this._isOpen = false;
+        this.unsubscribeInput();
         this.clearAll();
+    }
+
+    private subscribeInput() {
+        this._onNavigate = (dir: string) => {
+            this._focus?.navigate(dir as 'up' | 'down' | 'left' | 'right');
+        };
+        this._onConfirm = () => {
+            this._focus?.confirm();
+        };
+        this.engine.on('input:navigate', this._onNavigate);
+        this.engine.on('input:confirm', this._onConfirm);
+    }
+
+    private unsubscribeInput() {
+        if (this._onNavigate) {
+            this.engine.off('input:navigate', this._onNavigate);
+            this._onNavigate = null;
+        }
+        if (this._onConfirm) {
+            this.engine.off('input:confirm', this._onConfirm);
+            this._onConfirm = null;
+        }
+        this._focus = null;
     }
 
     private clearAll() {
@@ -109,14 +149,19 @@ export class OverlayManager {
         this.closePanel();
         if (this.container) this.container.visible = false;
 
+        this._focus = new PanelFocusManager();
+
         const { container, cleanup } = panel.build(this.engine, () => {
             this.closePanel();
             if (this.container) this.container.visible = true;
+            this.rebuildMainMenuFocus();
         });
 
         this.panelContainer = container;
         this._activeCleanup = cleanup ?? null;
         this.engine.layers.overlay.addChild(this.panelContainer);
+
+        this._focus.focusInitial(0);
     }
 
     private showMainMenu() {
@@ -155,16 +200,44 @@ export class OverlayManager {
         }
         buttons.push({ label: 'Resume', action: () => this.close() });
 
+        this._focus = new PanelFocusManager();
+
         const totalHeight = buttons.length * (this.config.buttonHeight + this.config.buttonSpacing);
         let y = (h / 2) - (totalHeight / 2);
 
         buttons.forEach(({ label, action }) => {
             const btn = createButton(ctx, { label, x: w / 2, y }, action);
             this.container!.addChild(btn);
+
+            // Register as focusable — btn children[0] is the Graphics bg
+            const btnBg = btn.children[0] as Graphics;
+            const bw = this.config.buttonWidth;
+            const bh = this.config.buttonHeight;
+            this._focus!.register({
+                focus: () => {
+                    btnBg.clear();
+                    btnBg.roundRect(0, 0, bw, bh, 8);
+                    btnBg.fill({ color: this.config.buttonHoverColor, alpha: 1 });
+                    btnBg.stroke({ color: ctx.theme.accentColor, width: 2 });
+                },
+                blur: () => {
+                    btnBg.clear();
+                    btnBg.roundRect(0, 0, bw, bh, 8);
+                    btnBg.fill({ color: this.config.buttonColor, alpha: this.config.buttonAlpha });
+                    btnBg.stroke({ color: ctx.theme.borderColor, width: 2 });
+                },
+                activate: action,
+            });
+
             y += this.config.buttonHeight + this.config.buttonSpacing;
         });
 
+        this._focus.focusInitial(0);
         this.engine.layers.overlay.addChild(this.container);
+    }
+
+    private rebuildMainMenuFocus() {
+        this.showMainMenu();
     }
 
     public createPanelBase(): Container {

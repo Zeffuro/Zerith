@@ -17,7 +17,7 @@ export class SaveLoadPanel implements MenuPanel {
         this.mode = mode;
         this.id = mode === 'save' ? 'save' : 'load';
         this.label = mode === 'save' ? 'Save Game' : 'Load Game';
-        this.config = { maxSlots: 10, ...config };
+        this.config = { maxSlots: 6, ...config };
     }
 
     build(engine: Engine, onClose: () => void) {
@@ -26,6 +26,7 @@ export class SaveLoadPanel implements MenuPanel {
         const cfg = ctx.overlayConfig;
         const w = ctx.canvasWidth;
         const h = ctx.canvasHeight;
+        const focus = overlay.focus;
 
         const root = overlay.createPanelBase();
         root.addChild(createPanelTitle(ctx, this.mode === 'save' ? 'SAVE GAME' : 'LOAD GAME'));
@@ -35,7 +36,19 @@ export class SaveLoadPanel implements MenuPanel {
         const slotSpacing = 8;
         const slotWidth = Math.min(600, w * 0.8);
         const totalHeight = slots.length * (slotHeight + slotSpacing);
-        let y = Math.max(70, (h / 2) - (totalHeight / 2));
+        const backButtonHeight = 50;
+        const backButtonMargin = 20;
+        const availableHeight = h - 70 - backButtonHeight - backButtonMargin * 2;
+        let y = Math.max(70, 70 + (availableHeight - totalHeight) / 2);
+
+        const slotBgs: Graphics[] = [];
+
+        const styleSlot = (bg: Graphics, selected: boolean) => {
+            bg.clear();
+            bg.roundRect(0, 0, slotWidth, slotHeight, 8);
+            bg.fill({ color: selected ? cfg.buttonHoverColor : cfg.buttonColor, alpha: selected ? 1 : cfg.buttonAlpha });
+            bg.stroke({ color: selected ? ctx.theme.accentColor : ctx.theme.borderColor, width: selected ? 2 : 1 });
+        };
 
         slots.forEach((meta, index) => {
             const slotNum = index + 1;
@@ -44,9 +57,8 @@ export class SaveLoadPanel implements MenuPanel {
             slotContainer.cursor = 'pointer';
 
             const slotBg = new Graphics();
-            slotBg.roundRect(0, 0, slotWidth, slotHeight, 8);
-            slotBg.fill({ color: cfg.buttonColor, alpha: cfg.buttonAlpha });
-            slotBg.stroke({ color: ctx.theme.borderColor, width: 1 });
+            styleSlot(slotBg, false);
+            slotBgs.push(slotBg);
 
             let label: string;
             if (meta) {
@@ -66,20 +78,7 @@ export class SaveLoadPanel implements MenuPanel {
             slotContainer.addChild(slotBg, slotText);
             slotContainer.position.set((w - slotWidth) / 2, y);
 
-            slotContainer.on('pointerover', () => {
-                slotBg.clear();
-                slotBg.roundRect(0, 0, slotWidth, slotHeight, 8);
-                slotBg.fill({ color: cfg.buttonHoverColor, alpha: 1 });
-                slotBg.stroke({ color: ctx.theme.accentColor, width: 2 });
-            });
-            slotContainer.on('pointerout', () => {
-                slotBg.clear();
-                slotBg.roundRect(0, 0, slotWidth, slotHeight, 8);
-                slotBg.fill({ color: cfg.buttonColor, alpha: cfg.buttonAlpha });
-                slotBg.stroke({ color: ctx.theme.borderColor, width: 1 });
-            });
-            slotContainer.on('pointerdown', (e: any) => {
-                e.stopPropagation();
+            const activateSlot = () => {
                 if (this.mode === 'save') {
                     engine.saves.save(slotNum);
                     engine.notifications.show(`Saved to Slot ${slotNum}`);
@@ -91,13 +90,46 @@ export class SaveLoadPanel implements MenuPanel {
                         engine.overlay.close();
                     });
                 }
+            };
+
+            slotContainer.on('pointerover', () => styleSlot(slotBg, true));
+            slotContainer.on('pointerout', () => styleSlot(slotBg, false));
+            slotContainer.on('pointerdown', (e: any) => {
+                e.stopPropagation();
+                activateSlot();
+            });
+
+            focus.register({
+                focus: () => styleSlot(slotBg, true),
+                blur: () => styleSlot(slotBg, false),
+                activate: activateSlot,
             });
 
             root.addChild(slotContainer);
             y += slotHeight + slotSpacing;
         });
 
-        root.addChild(createButton(ctx, { label: 'Back', x: w / 2, y: h - 60 }, onClose));
+        const backBtn = createButton(ctx, { label: 'Back', x: w / 2, y: h - backButtonHeight - backButtonMargin }, onClose);
+        root.addChild(backBtn);
+
+        const backBg = backBtn.children[0] as Graphics;
+        const bw = cfg.buttonWidth;
+        const bh = cfg.buttonHeight;
+        focus.register({
+            focus: () => {
+                backBg.clear();
+                backBg.roundRect(0, 0, bw, bh, 8);
+                backBg.fill({ color: cfg.buttonHoverColor, alpha: 1 });
+                backBg.stroke({ color: ctx.theme.accentColor, width: 2 });
+            },
+            blur: () => {
+                backBg.clear();
+                backBg.roundRect(0, 0, bw, bh, 8);
+                backBg.fill({ color: cfg.buttonColor, alpha: cfg.buttonAlpha });
+                backBg.stroke({ color: ctx.theme.borderColor, width: 2 });
+            },
+            activate: onClose,
+        });
 
         return { container: root };
     }

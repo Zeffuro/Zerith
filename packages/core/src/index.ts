@@ -59,6 +59,7 @@ export * from './managers/OverlayManager';
 export * from './managers/ItemManager';
 export * from './managers/EvidenceManager';
 export * from './managers/SpritesheetManager';
+export * from './ui/PanelFocusManager';
 
 /* UI */
 export * from './ui/UIComponents';
