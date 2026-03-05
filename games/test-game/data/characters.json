@@ -11,6 +11,15 @@
       "chromaKey": "#009a00",
       "chromaTolerance": 60
     },
+    "displayDefaults": {
+      "x": 300,
+      "y": 720,
+      "scaleX": 2.5,
+      "scaleY": 2.5,
+      "anchorX": 0.5,
+      "anchorY": 1
+    },
+    "talkAnimation": "idle_blink",
     "poses": {
       "default": "phoenix_idle_blink_0",
       "thinking": "phoenix_thinking_0",

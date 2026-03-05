@@ -248,17 +248,27 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             sprite.texture = texture;
         }
 
-        sprite.anchor.set(command.anchorX ?? 0.5, command.anchorY ?? 1);
+        const charData = this.findCharacter(command.id, engine);
+        const defaults = charData?.displayDefaults;
+
+        sprite.anchor.set(
+            command.anchorX ?? defaults?.anchorX ?? 0.5,
+            command.anchorY ?? defaults?.anchorY ?? 1
+        );
         sprite.position.set(
-            command.x ?? engine.display.width / 2,
-            command.y ?? engine.display.height
+            command.x ?? defaults?.x ?? engine.display.width / 2,
+            command.y ?? defaults?.y ?? engine.display.height
         );
 
-        if (command.scaleX !== undefined || command.scaleY !== undefined) {
-            sprite.scale.set(command.scaleX ?? sprite.scale.x, command.scaleY ?? sprite.scale.y);
+        const sX = command.scaleX ?? defaults?.scaleX;
+        const sY = command.scaleY ?? defaults?.scaleY;
+        if (sX !== undefined || sY !== undefined) {
+            sprite.scale.set(sX ?? sprite.scale.x, sY ?? sprite.scale.y);
         }
 
-        if (command.flip) sprite.scale.x = -Math.abs(sprite.scale.x);
+        if (command.flip ?? defaults?.flip) {
+            sprite.scale.x = -Math.abs(sprite.scale.x);
+        }
 
         if (command.transition === 'fade') {
             await this.fadeIn(sprite, command.duration ?? 300);
@@ -271,9 +281,9 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             assetUrl: command.assetUrl,
             pose: command.pose,
             x: sprite.x, y: sprite.y,
-            anchorX: command.anchorX ?? 0.5, anchorY: command.anchorY ?? 1,
+            anchorX: sprite.anchor.x, anchorY: sprite.anchor.y,
             scaleX: sprite.scale.x, scaleY: sprite.scale.y,
-            flip: command.flip ?? false,
+            flip: command.flip ?? defaults?.flip ?? false,
         };
         engine.setState('__sys_sprites', sprites);
     }

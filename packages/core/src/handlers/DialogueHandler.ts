@@ -9,6 +9,7 @@ export interface CharacterConfig {
     nameColor?: string;
     portraitUrl?: string;
     blipUrl?: string;
+    talkAnimation?: string;
 }
 
 export interface DialogueCommand {
@@ -99,6 +100,20 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
                 portraitUrl: null,
                 portraitSide: null,
             });
+        }
+
+        const fullCharData = engine.manifest?.characters?.[speakerKey];
+        if (fullCharData?.talkAnimation) {
+            const spriteState = engine.getState('__sys_sprites');
+            if (spriteState?.[command.speaker] || spriteState?.[speakerKey]) {
+                const spriteId = spriteState[command.speaker] ? command.speaker : speakerKey;
+                await engine.runCommand({
+                    type: 'sprite',
+                    id: spriteId,
+                    action: 'animate',
+                    animation: fullCharData.talkAnimation,
+                });
+            }
         }
 
         const blipUrl = charData?.blipUrl || this.config.defaultBlipUrl;
