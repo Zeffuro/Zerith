@@ -99,6 +99,10 @@ export interface SliderOptions {
 export interface SliderResult {
     container: Container;
     cleanup: () => void;
+    /** Programmatically set the slider to a 0–1 fraction */
+    applyValue: (fraction: number) => void;
+    /** Get the current 0–1 value */
+    getValue: () => number;
 }
 
 export function createSlider(ctx: UIContext, opts: SliderOptions): SliderResult {
@@ -161,9 +165,11 @@ export function createSlider(ctx: UIContext, opts: SliderOptions): SliderResult 
 
     // State
     let dragging = false;
+    let currentValue = opts.value;
 
     const applyValue = (fraction: number) => {
         const val = Math.max(0, Math.min(1, fraction));
+        currentValue = val;
         opts.onChange(val);
         handle.x = trackX + trackWidth * val;
         drawFill(val);
@@ -181,7 +187,6 @@ export function createSlider(ctx: UIContext, opts: SliderOptions): SliderResult 
     hitArea.on('pointerdown', (e: any) => {
         e.stopPropagation();
         dragging = true;
-        // Pixi global coords → canvas-logical space, find row's absolute x
         const rowWorldX = row.getGlobalPosition().x;
         const fraction = (e.global.x - rowWorldX - trackX) / trackWidth;
         applyValue(fraction);
@@ -215,6 +220,8 @@ export function createSlider(ctx: UIContext, opts: SliderOptions): SliderResult 
             window.removeEventListener('mousemove', onMouseMove);
             window.removeEventListener('mouseup', onMouseUp);
         },
+        applyValue,
+        getValue: () => currentValue,
     };
 }
 
@@ -227,7 +234,12 @@ export interface ToggleOptions {
     onChange: (value: boolean) => void;
 }
 
-export function createToggle(ctx: UIContext, opts: ToggleOptions): Container {
+export interface ToggleResult {
+    container: Container;
+    toggle: () => void;
+}
+
+export function createToggle(ctx: UIContext, opts: ToggleOptions): ToggleResult {
     const cfg = ctx.overlayConfig;
     const labelWidth = opts.labelWidth ?? 180;
     const toggleW = 60;
@@ -266,17 +278,21 @@ export function createToggle(ctx: UIContext, opts: ToggleOptions): Container {
         knob.fill({ color: 0xffffff, alpha: 1 });
     };
 
+    const doToggle = () => {
+        on = !on;
+        opts.onChange(on);
+        draw();
+    };
+
     draw();
     toggleContainer.addChild(bg, knob);
 
     toggleContainer.on('pointerdown', (e: any) => {
         e.stopPropagation();
-        on = !on;
-        opts.onChange(on);
-        draw();
+        doToggle();
     });
 
-    return row;
+    return { container: row, toggle: doToggle };
 }
 
 /* Panel Title */

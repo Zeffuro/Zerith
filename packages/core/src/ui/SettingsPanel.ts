@@ -1,6 +1,8 @@
 import type { Engine } from '../Engine';
 import type { MenuPanel } from '../types';
+import type { Graphics } from 'pixi.js';
 import { createPanelTitle, createSlider, createToggle, createButton } from './UIComponents';
+import type { SliderResult, ToggleResult } from './UIComponents';
 
 export class SettingsPanel implements MenuPanel {
     public id = 'settings';
@@ -9,6 +11,8 @@ export class SettingsPanel implements MenuPanel {
     build(engine: Engine, onClose: () => void) {
         const overlay = engine.overlay;
         const ctx = overlay.getUIContext();
+        const cfg = ctx.overlayConfig;
+        const focus = overlay.focus;
 
         const root = overlay.createPanelBase();
         root.addChild(createPanelTitle(ctx, 'SETTINGS'));
@@ -18,36 +22,95 @@ export class SettingsPanel implements MenuPanel {
         const spacing = 70;
         const cleanups: (() => void)[] = [];
 
-        const sliders: { label: string; getValue: () => number; setValue: (v: number) => void }[] = [
+        const sliderDefs: { label: string; getValue: () => number; setValue: (v: number) => void }[] = [
             { label: 'Master Volume', getValue: () => engine.audio.masterVolume, setValue: (v) => engine.audio.setMasterVolume(v) },
             { label: 'BGM Volume', getValue: () => engine.audio.bgmVolume, setValue: (v) => engine.audio.setVolume('bgm', v) },
             { label: 'SFX Volume', getValue: () => engine.audio.sfxVolume, setValue: (v) => engine.audio.setVolume('sfx', v) },
             { label: 'Voice Volume', getValue: () => engine.audio.voiceVolume, setValue: (v) => engine.audio.setVolume('voice', v) },
         ];
 
-        sliders.forEach(({ label, getValue, setValue }) => {
-            const { container, cleanup } = createSlider(ctx, {
+        const sliderResults: SliderResult[] = [];
+
+        sliderDefs.forEach(({ label, getValue, setValue }) => {
+            const result = createSlider(ctx, {
                 label,
                 value: getValue(),
                 onChange: setValue,
             });
-            container.position.set(contentStartX, yPos);
-            root.addChild(container);
-            cleanups.push(cleanup);
+            result.container.position.set(contentStartX, yPos);
+            root.addChild(result.container);
+            cleanups.push(result.cleanup);
+            sliderResults.push(result);
+
+            focus.register({
+                focus: () => {},
+                blur: () => {},
+                activate: () => {},
+            });
+
             yPos += spacing;
         });
 
         yPos += 10;
-        const toggle = createToggle(ctx, {
+        const toggleResult: ToggleResult = createToggle(ctx, {
             label: 'Auto-Advance',
             value: engine.autoAdvanceDelay !== null,
             onChange: (on) => engine.setAutoAdvance(on ? 3000 : null),
         });
-        toggle.position.set(contentStartX, yPos);
-        root.addChild(toggle);
+        toggleResult.container.position.set(contentStartX, yPos);
+        root.addChild(toggleResult.container);
 
-        const backBtn = createButton(ctx, { label: 'Back', x: ctx.canvasWidth / 2, y: ctx.canvasHeight - 50 }, onClose);
+        //const toggleFocusIndex = sliderResults.length;
+        focus.register({
+            focus: () => {},
+            blur: () => {},
+            activate: () => toggleResult.toggle(),
+        });
+
+        const backMargin = 20;
+        const backBtn = createButton(ctx, {
+            label: 'Back',
+            x: ctx.canvasWidth / 2,
+            y: ctx.canvasHeight - cfg.buttonHeight - backMargin,
+        }, onClose);
         root.addChild(backBtn);
+
+        const backBg = backBtn.children[0] as Graphics;
+        const bw = cfg.buttonWidth;
+        const bh = cfg.buttonHeight;
+        focus.register({
+            focus: () => {
+                backBg.clear();
+                backBg.roundRect(0, 0, bw, bh, 8);
+                backBg.fill({ color: cfg.buttonHoverColor, alpha: 1 });
+                backBg.stroke({ color: ctx.theme.accentColor, width: 2 });
+            },
+            blur: () => {
+                backBg.clear();
+                backBg.roundRect(0, 0, bw, bh, 8);
+                backBg.fill({ color: cfg.buttonColor, alpha: cfg.buttonAlpha });
+                backBg.stroke({ color: ctx.theme.borderColor, width: 2 });
+            },
+            activate: onClose,
+        });
+
+        const sliderStep = 0.05;
+        focus.onNavigateRaw = (direction: 'up' | 'down' | 'left' | 'right') => {
+            const idx = focus.selectedIndex;
+            if (idx < sliderResults.length) {
+                if (direction === 'left') {
+                    const s = sliderResults[idx];
+                    s.applyValue(s.getValue() - sliderStep);
+                    return true;
+                }
+                if (direction === 'right') {
+                    const s = sliderResults[idx];
+                    s.applyValue(s.getValue() + sliderStep);
+                    return true;
+                }
+            }
+            return false;
+        };
 
         return {
             container: root,

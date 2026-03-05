@@ -2,6 +2,7 @@ import type { Engine } from '../Engine';
 
 export interface InputConfig {
     advanceKeys?: string[];
+    backKeys?: string[];
     saveKey?: string;
     loadKey?: string;
     menuKey?: string;
@@ -12,6 +13,7 @@ export interface InputConfig {
     confirmKeys?: string[];
     gamepadAdvanceButton?: number;
     gamepadMenuButton?: number;
+    gamepadBackButton?: number;
     gamepadConfirmButton?: number;
     gamepadUpButton?: number;
     gamepadDownButton?: number;
@@ -33,6 +35,7 @@ export class InputManager {
         this.engine = engine;
         this.config = {
             advanceKeys: ['Enter', ' '],
+            backKeys: ['Escape'],
             saveKey: 's',
             loadKey: 'l',
             menuKey: 'Escape',
@@ -43,6 +46,7 @@ export class InputManager {
             confirmKeys: ['Enter', ' '],
             gamepadAdvanceButton: 0,
             gamepadMenuButton: 9,
+            gamepadBackButton: 1,
             gamepadConfirmButton: 0,
             gamepadUpButton: 12,
             gamepadDownButton: 13,
@@ -64,7 +68,7 @@ export class InputManager {
         canvas.addEventListener('pointerdown', this.boundOnPointerDown);
 
         this.boundOnKeyDown = (e: KeyboardEvent) => {
-            // Navigation
+            // Navigation (always emit, panels may need it)
             if (this.config.navigateUpKeys.includes(e.key)) {
                 this.engine.emit('input:navigate', 'up');
             }
@@ -81,6 +85,17 @@ export class InputManager {
             // Confirm
             if (this.config.confirmKeys.includes(e.key)) {
                 this.engine.emit('input:confirm');
+            }
+
+            // Back / Menu key (Escape etc.)
+            if (this.config.backKeys.includes(e.key)) {
+                e.preventDefault();
+                if (this.engine.overlay.isOpen) {
+                    this.engine.emit('input:back');
+                } else if (this.engine.isStarted) {
+                    this.engine.emit('menu:toggle');
+                }
+                return;
             }
 
             // Start screen
@@ -102,7 +117,7 @@ export class InputManager {
                 return;
             }
 
-            // System keys
+            // System keys (save/load shortcuts)
             const key = e.key.toLowerCase();
             if (key === this.config.saveKey) {
                 this.engine.saves.save(1);
@@ -110,8 +125,6 @@ export class InputManager {
             } else if (key === this.config.loadKey) {
                 this.engine.saves.load(1);
                 this.engine.notifications.show('Game Loaded!');
-            } else if (key === this.config.menuKey.toLowerCase()) {
-                this.engine.emit('menu:toggle');
             }
         };
         window.addEventListener('keydown', this.boundOnKeyDown);
@@ -176,12 +189,21 @@ export class InputManager {
                     this.engine.emit('input:navigate', 'right');
                 }
 
-                // Confirm
+                // Confirm (A button)
                 if (pressed(this.config.gamepadConfirmButton)) {
                     this.engine.emit('input:confirm');
                 }
 
-                // Advance
+                // Back (B / Circle button)
+                if (pressed(this.config.gamepadBackButton)) {
+                    if (this.engine.overlay.isOpen) {
+                        this.engine.emit('input:back');
+                    } else if (this.engine.isStarted) {
+                        this.engine.emit('menu:toggle');
+                    }
+                }
+
+                // Advance (A button, only when not in overlay)
                 if (pressed(this.config.gamepadAdvanceButton)) {
                     if (this.engine.isStarted && !this.engine.overlay.isOpen) {
                         this.engine.requestSkip();
@@ -191,10 +213,14 @@ export class InputManager {
                     }
                 }
 
-                // Menu
+                // Menu (Start button)
                 if (pressed(this.config.gamepadMenuButton)) {
                     if (this.engine.isStarted) {
-                        this.engine.emit('menu:toggle');
+                        if (this.engine.overlay.isOpen) {
+                            this.engine.emit('input:back');
+                        } else {
+                            this.engine.emit('menu:toggle');
+                        }
                     }
                 }
 

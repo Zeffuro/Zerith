@@ -13,11 +13,13 @@ export class ItemBrowserPanel implements MenuPanel {
         const cfg = ctx.overlayConfig;
         const w = ctx.canvasWidth;
         const h = ctx.canvasHeight;
+        const focus = overlay.focus;
 
         const root = overlay.createPanelBase();
         root.addChild(createPanelTitle(ctx, 'COURT RECORD'));
 
         const items = engine.items.getAll();
+        const backMargin = 20;
 
         if (items.length === 0) {
             const empty = new Text({
@@ -27,7 +29,27 @@ export class ItemBrowserPanel implements MenuPanel {
             empty.anchor.set(0.5);
             empty.position.set(w / 2, h / 2);
             root.addChild(empty);
-            root.addChild(createButton(ctx, { label: 'Back', x: w / 2, y: h - 50 }, onClose));
+
+            const backBtn = createButton(ctx, { label: 'Back', x: w / 2, y: h - cfg.buttonHeight - backMargin }, onClose);
+            root.addChild(backBtn);
+
+            const backBg = backBtn.children[0] as Graphics;
+            focus.register({
+                focus: () => {
+                    backBg.clear();
+                    backBg.roundRect(0, 0, cfg.buttonWidth, cfg.buttonHeight, 8);
+                    backBg.fill({ color: cfg.buttonHoverColor, alpha: 1 });
+                    backBg.stroke({ color: ctx.theme.accentColor, width: 2 });
+                },
+                blur: () => {
+                    backBg.clear();
+                    backBg.roundRect(0, 0, cfg.buttonWidth, cfg.buttonHeight, 8);
+                    backBg.fill({ color: cfg.buttonColor, alpha: cfg.buttonAlpha });
+                    backBg.stroke({ color: ctx.theme.borderColor, width: 2 });
+                },
+                activate: onClose,
+            });
+
             return { container: root };
         }
 
@@ -125,6 +147,17 @@ export class ItemBrowserPanel implements MenuPanel {
             });
             listContainer.addChild(listContent);
             updateDetail(currentList, 0);
+
+            currentList.forEach((_, idx) => {
+                focus.register({
+                    focus: () => {
+                        (listContent as any).select?.(idx);
+                        updateDetail(currentList, idx);
+                    },
+                    blur: () => {},
+                    activate: () => updateDetail(currentList, idx),
+                });
+            });
         } else {
             const emptyTab = new Text({
                 text: activeTab === 'evidence' ? 'No evidence yet.' : 'No profiles yet.',
@@ -188,7 +221,28 @@ export class ItemBrowserPanel implements MenuPanel {
         };
         engine.app.canvas.addEventListener('wheel', onWheel, { passive: false });
 
-        root.addChild(createButton(ctx, { label: 'Back', x: w / 2, y: h - 50 }, onClose));
+        // Back button
+        const backBtn = createButton(ctx, { label: 'Back', x: w / 2, y: h - cfg.buttonHeight - backMargin }, onClose);
+        root.addChild(backBtn);
+
+        const backBg = backBtn.children[0] as Graphics;
+        const bw = cfg.buttonWidth;
+        const bh = cfg.buttonHeight;
+        focus.register({
+            focus: () => {
+                backBg.clear();
+                backBg.roundRect(0, 0, bw, bh, 8);
+                backBg.fill({ color: cfg.buttonHoverColor, alpha: 1 });
+                backBg.stroke({ color: ctx.theme.accentColor, width: 2 });
+            },
+            blur: () => {
+                backBg.clear();
+                backBg.roundRect(0, 0, bw, bh, 8);
+                backBg.fill({ color: cfg.buttonColor, alpha: cfg.buttonAlpha });
+                backBg.stroke({ color: ctx.theme.borderColor, width: 2 });
+            },
+            activate: onClose,
+        });
 
         return {
             container: root,

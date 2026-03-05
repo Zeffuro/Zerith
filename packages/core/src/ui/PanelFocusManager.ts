@@ -7,6 +7,8 @@ export interface FocusableItem {
 export class PanelFocusManager {
     private items: FocusableItem[] = [];
     private _selectedIndex = 0;
+    private _onBack: (() => void) | null = null;
+    private _onNavigateRaw: ((direction: 'up' | 'down' | 'left' | 'right') => boolean) | null = null;
 
     public get selectedIndex(): number {
         return this._selectedIndex;
@@ -25,6 +27,18 @@ export class PanelFocusManager {
         this._selectedIndex = 0;
     }
 
+    public set onBack(handler: (() => void) | null) {
+        this._onBack = handler;
+    }
+
+    public set onNavigateRaw(handler: ((direction: 'up' | 'down' | 'left' | 'right') => boolean) | null) {
+        this._onNavigateRaw = handler;
+    }
+
+    public back() {
+        this._onBack?.();
+    }
+
     public focusInitial(index: number = 0) {
         if (this.items.length === 0) return;
         this._selectedIndex = Math.min(index, this.items.length - 1);
@@ -32,6 +46,11 @@ export class PanelFocusManager {
     }
 
     public navigate(direction: 'up' | 'down' | 'left' | 'right') {
+        if (this._onNavigateRaw) {
+            const consumed = this._onNavigateRaw(direction);
+            if (consumed) return;
+        }
+
         if (this.items.length === 0) return;
 
         const prev = this._selectedIndex;

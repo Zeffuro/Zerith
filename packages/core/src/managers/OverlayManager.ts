@@ -2,7 +2,7 @@ import { Container, Graphics, Text } from 'pixi.js';
 import type { Engine } from '../Engine';
 import type { MenuPanel } from '../types';
 import { createButton, type UIContext } from '../ui/UIComponents';
-import { PanelFocusManager, type FocusableItem } from '../ui/PanelFocusManager';
+import { PanelFocusManager } from '../ui/PanelFocusManager';
 
 export interface OverlayConfig {
     backgroundColor?: number;
@@ -16,6 +16,7 @@ export interface OverlayConfig {
     fontSize?: number;
     fontFamily?: string;
     textColor?: number;
+    uiScale?: number;
 }
 
 export class OverlayManager {
@@ -29,6 +30,7 @@ export class OverlayManager {
     private _focus: PanelFocusManager | null = null;
     private _onNavigate: ((dir: string) => void) | null = null;
     private _onConfirm: (() => void) | null = null;
+    private _onBack: (() => void) | null = null;
 
     constructor(engine: Engine, config: OverlayConfig = {}) {
         this.engine = engine;
@@ -44,6 +46,7 @@ export class OverlayManager {
             fontSize: 22,
             fontFamily: 'Courier New',
             textColor: 0xffffff,
+            uiScale: 1,
             ...config
         };
 
@@ -73,6 +76,10 @@ export class OverlayManager {
 
     public setFocus(fm: PanelFocusManager) {
         this._focus = fm;
+    }
+
+    public scale(value: number): number {
+        return Math.round(value * this.config.uiScale);
     }
 
     public registerPanel(panel: MenuPanel) {
@@ -110,8 +117,12 @@ export class OverlayManager {
         this._onConfirm = () => {
             this._focus?.confirm();
         };
+        this._onBack = () => {
+            this._focus?.back();
+        };
         this.engine.on('input:navigate', this._onNavigate);
         this.engine.on('input:confirm', this._onConfirm);
+        this.engine.on('input:back', this._onBack);
     }
 
     private unsubscribeInput() {
@@ -122,6 +133,10 @@ export class OverlayManager {
         if (this._onConfirm) {
             this.engine.off('input:confirm', this._onConfirm);
             this._onConfirm = null;
+        }
+        if (this._onBack) {
+            this.engine.off('input:back', this._onBack);
+            this._onBack = null;
         }
         this._focus = null;
     }
@@ -151,11 +166,15 @@ export class OverlayManager {
 
         this._focus = new PanelFocusManager();
 
-        const { container, cleanup } = panel.build(this.engine, () => {
+        const onClose = () => {
             this.closePanel();
             if (this.container) this.container.visible = true;
             this.rebuildMainMenuFocus();
-        });
+        };
+
+        this._focus.onBack = onClose;
+
+        const { container, cleanup } = panel.build(this.engine, onClose);
 
         this.panelContainer = container;
         this._activeCleanup = cleanup ?? null;
@@ -201,6 +220,7 @@ export class OverlayManager {
         buttons.push({ label: 'Resume', action: () => this.close() });
 
         this._focus = new PanelFocusManager();
+        this._focus.onBack = () => this.close();
 
         const totalHeight = buttons.length * (this.config.buttonHeight + this.config.buttonSpacing);
         let y = (h / 2) - (totalHeight / 2);
@@ -209,7 +229,6 @@ export class OverlayManager {
             const btn = createButton(ctx, { label, x: w / 2, y }, action);
             this.container!.addChild(btn);
 
-            // Register as focusable — btn children[0] is the Graphics bg
             const btnBg = btn.children[0] as Graphics;
             const bw = this.config.buttonWidth;
             const bh = this.config.buttonHeight;
