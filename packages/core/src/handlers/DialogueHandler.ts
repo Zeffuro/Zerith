@@ -54,7 +54,6 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
     execute = async (command: DialogueCommand, engine: Engine) => {
         const session = ++this.currentSession;
         engine.consumeSkip();
-        engine.history.push(command.speaker, command.text);
         if (!this.container) this.buildUI(engine);
 
         const speakerKey = command.speaker.toLowerCase();
@@ -62,7 +61,11 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
             Object.entries(this.config.characters || {})
                 .find(([k]) => k.toLowerCase() === speakerKey)?.[1];
 
-        this.nameText.text = charData?.displayName || command.speaker;
+        const displayName = charData?.displayName || command.speaker;
+
+        engine.history.push(displayName, command.text);
+
+        this.nameText.text = displayName;
         this.nameText.style.fill = charData?.nameColor || engine.theme.accentColor;
 
         if (charData?.portraitUrl) {

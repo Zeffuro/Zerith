@@ -22,6 +22,7 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
                 sound.stop(this.currentBgmUrl);
                 this.lastBgmUrl = this.currentBgmUrl;
                 this.currentBgmUrl = null;
+                engine.audio.currentBgmUrl = null;
                 engine.logger.info('BGM stopped.');
             }
             return;
@@ -48,6 +49,7 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
                     });
                 }
                 this.currentBgmUrl = targetUrl;
+                engine.audio.currentBgmUrl = targetUrl;
                 engine.logger.info(`BGM resumed: ${targetUrl}`);
             } else {
                 engine.logger.warn('Tried to resume BGM, but no previous track was found.');
@@ -76,6 +78,7 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
 
                 this.currentBgmUrl = url;
                 this.lastBgmUrl = url;
+                engine.audio.currentBgmUrl = url;
 
                 sound.play(url, {
                     loop: command.loop ?? true,

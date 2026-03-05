@@ -1,6 +1,8 @@
 [
   { "type": "bgm", "action": "play", "assetUrl": "/assets/bgm/court.mp3", "volume": 0.4 },
   { "type": "background", "assetUrl": "/assets/bg/office.png" },
+  { "type": "sprite", "id": "phoenix", "action": "show", "pose": "default", "x": 250, "y": 480, "scaleX": 2.5, "scaleY": 2.5 },
+  { "type": "sprite", "id": "phoenix", "action": "animate", "animation": "idle_blink" },
   { "type": "dialogue", "speaker": "phoenix", "text": "What should I do today?" },
   {
     "type": "dialogue",
@@ -28,7 +30,7 @@
   },
   {
     "type": "if",
-    "source": "evidence",
+    "source": "items",
     "key": "attorney_badge",
     "then": [
       { "type": "dialogue", "speaker": "phoenix", "text": "(Good, I have my badge on me.)" }
@@ -37,6 +39,8 @@
       { "type": "dialogue", "speaker": "phoenix", "text": "(I hope I don't need my badge today...)" }
     ]
   },
+  { "type": "sprite", "id": "phoenix", "action": "animate", "animation": "coffee_sip", "wait": true },
   { "type": "dialogue", "speaker": "phoenix", "text": "Okay, enough stalling. To the courthouse!" },
+  { "type": "sprite", "id": "phoenix", "action": "hide", "transition": "fade", "duration": 300 },
   { "type": "jump", "to": "courtroom" }
 ]

@@ -1,29 +1,39 @@
 [
   { "type": "call", "name": "court_entry" },
+  { "type": "sprite", "id": "phoenix", "action": "show", "pose": "default", "x": 300, "y": 720 },
+  { "type": "sprite", "id": "phoenix", "action": "animate", "animation": "idle_blink" },
   { "type": "dialogue", "speaker": "judge", "text": "Is the defense ready?" },
   {
     "type": "if",
-    "source": "evidence",
+    "source": "items",
     "key": "attorney_badge",
-    "then":[
+    "then": [
       { "type": "dialogue", "speaker": "phoenix", "text": "Yes, Your Honor. I have my badge right here." }
     ],
-    "else":[
+    "else": [
       { "type": "dialogue", "speaker": "phoenix", "text": "(Oh no... I forgot my badge!)" },
       { "type": "call", "name": "phoenix_objection" },
+      { "type": "sprite", "id": "phoenix", "action": "animate", "animation": "idle_blink" },
       { "type": "dialogue", "speaker": "phoenix", "text": "The defense is ready anyway!" }
     ]
   },
+  { "type": "dialogue", "speaker": "judge", "text": "Very well. The autopsy report has been submitted into evidence." },
+  { "type": "item", "action": "add", "id": "autopsy_report" },
   { "type": "label", "name": "interrogation_start" },
+  { "type": "sprite", "id": "phoenix", "action": "pose", "pose": "thinking" },
   { "type": "dialogue", "speaker": "phoenix", "text": "Tell me what happened." },
+  { "type": "sprite", "id": "phoenix", "action": "animate", "animation": "idle_blink" },
   { "type": "dialogue", "speaker": "Witness", "text": "I don't remember." },
   {
     "type": "choice",
     "options": [
-      { "label": "Press further", "commands": [
-        { "type": "set", "key": "press_count", "op": "add", "value": 1 },
-        { "type": "goto", "label": "interrogation_start" }
-      ]},
+      {
+        "label": "Press further",
+        "commands": [
+          { "type": "set", "key": "press_count", "op": "add", "value": 1 },
+          { "type": "goto", "label": "interrogation_start" }
+        ]
+      },
       { "label": "Move on", "commands": [] }
     ]
   }

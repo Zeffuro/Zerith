@@ -15,7 +15,7 @@ import { LabelHandler } from './handlers/LabelHandler';
 import { GotoHandler } from './handlers/GotoHandler';
 import { SpriteHandler } from './handlers/SpriteHandler';
 import { FlashHandler } from './handlers/FlashHandler';
-import { ItemHandler } from "./handlers/ItemHandler";
+import { ItemHandler } from './handlers/ItemHandler';
 
 /* Root */
 export * from './Engine';
@@ -55,15 +55,24 @@ export * from './managers/DisplayManager';
 export * from './managers/EventBus';
 export * from './managers/StartScreenManager';
 export * from './managers/HistoryManager';
-export * from './managers/PauseMenuManager';
-export * from './managers/ItemManager'
-export * from './managers/EvidenceManager'
+export * from './managers/OverlayManager';
+export * from './managers/ItemManager';
+export * from './managers/EvidenceManager';
+export * from './managers/SpritesheetManager';
+
+/* UI */
+export * from './ui/UIComponents';
+export * from './ui/HistoryPanel';
+export * from './ui/SaveLoadPanel';
+export * from './ui/ItemBrowserPanel';
+export * from './ui/SettingsPanel';
 
 /* Utils */
 export * from './utils/TextParser';
 export * from './utils/Theme';
 export * from './utils/AssetPreloader';
 export * from './utils/ManifestResolver';
+export * from './utils/ChromaKey';
 
 /**
  * Handlers that require no constructor config.

@@ -35,7 +35,7 @@ export class InputManager {
         this.canvas = canvas;
 
         this.boundOnPointerDown = () => {
-            if (this.engine.isStarted && !this.engine.pauseMenu.isOpen) {
+            if (this.engine.isStarted && !this.engine.overlay.isOpen) {
                 this.engine.requestSkip();
                 this.engine.playNext();
             }
@@ -54,7 +54,7 @@ export class InputManager {
 
             if (this.config.advanceKeys.includes(e.key)) {
                 e.preventDefault();
-                if (!this.engine.pauseMenu.isOpen) {
+                if (!this.engine.overlay.isOpen) {
                     this.engine.requestSkip();
                     this.engine.playNext();
                 }
@@ -101,7 +101,7 @@ export class InputManager {
                 const menuBtn = this.config.gamepadMenuButton;
 
                 if (buttons[advanceBtn] && !this.prevGamepadButtons[advanceBtn]) {
-                    if (this.engine.isStarted && !this.engine.pauseMenu.isOpen) {
+                    if (this.engine.isStarted && !this.engine.overlay.isOpen) {
                         this.engine.requestSkip();
                         this.engine.playNext();
                     } else if (!this.engine.isStarted) {

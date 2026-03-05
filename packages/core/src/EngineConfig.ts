@@ -3,7 +3,7 @@ import type { DisplayConfig } from './managers/DisplayManager';
 import type { InputConfig } from './managers/InputManager';
 import type { NotificationConfig } from './managers/NotificationManager';
 import type { StartScreenConfig } from './managers/StartScreenManager';
-import type { PauseMenuConfig } from './managers/PauseMenuManager';
+import type { OverlayConfig } from './managers/OverlayManager.ts';
 import type { Theme } from './utils/Theme';
 
 export interface EngineConfig {
@@ -12,6 +12,6 @@ export interface EngineConfig {
     input?: InputConfig;
     notifications?: NotificationConfig;
     startScreen?: StartScreenConfig;
-    pauseMenu?: PauseMenuConfig;
+    overlay?: OverlayConfig;
     theme?: Partial<Theme>;
 }

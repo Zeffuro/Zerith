@@ -46,6 +46,7 @@ async function bootstrap() {
         }
     });
 
+    manifest.characters = characters;
     engine.manifest = manifest;
 
     // Preload character assets
@@ -55,9 +56,11 @@ async function bootstrap() {
 
         const promises: Promise<any>[] = [];
         for (const [, char] of Object.entries(characters) as [string, any][]) {
+            // Preload portrait (if standalone image)
             if (char.portraitUrl) {
                 promises.push(Assets.load(char.portraitUrl).catch(() => {}));
             }
+            // Preload blip sound
             if (char.blipUrl && !sound.exists(char.blipUrl)) {
                 promises.push(new Promise<void>(resolve => {
                     sound.add(char.blipUrl, {
@@ -65,6 +68,12 @@ async function bootstrap() {
                         preload: true,
                         loaded: () => resolve()
                     });
+                }));
+            }
+            // Preload spritesheet
+            if (char.spritesheet?.atlasUrl) {
+                promises.push(engine.spritesheets.load(char.spritesheet).catch((err) => {
+                    console.warn(`Failed to preload spritesheet: ${char.spritesheet.atlasUrl}`, err);
                 }));
             }
         }

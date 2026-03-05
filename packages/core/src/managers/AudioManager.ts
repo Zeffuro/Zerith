@@ -13,6 +13,8 @@ export class AudioManager {
     public voiceVolume: number;
     public masterVolume: number;
 
+    public currentBgmUrl: string | null = null;
+
     constructor(config: AudioConfig = {}) {
         this.bgmVolume = config.bgmVolume ?? 1.0;
         this.sfxVolume = config.sfxVolume ?? 1.0;
@@ -34,9 +36,24 @@ export class AudioManager {
 
     public setVolume(channel: 'bgm' | 'sfx' | 'voice', v: number) {
         switch (channel) {
-            case 'bgm': this.bgmVolume = v; break;
-            case 'sfx': this.sfxVolume = v; break;
-            case 'voice': this.voiceVolume = v; break;
+            case 'bgm':
+                this.bgmVolume = v;
+                this.applyBgmVolume();
+                break;
+            case 'sfx':
+                this.sfxVolume = v;
+                break;
+            case 'voice':
+                this.voiceVolume = v;
+                break;
+        }
+    }
+
+    private applyBgmVolume() {
+        if (!this.currentBgmUrl || !sound.exists(this.currentBgmUrl)) return;
+        const snd = sound.find(this.currentBgmUrl);
+        if (snd) {
+            snd.volume = this.bgmVolume;
         }
     }
 

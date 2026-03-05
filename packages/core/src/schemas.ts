@@ -157,8 +157,11 @@ export const CallCommandSchema = z.object({
 export const SpriteCommandSchema = z.object({
     type: z.literal('sprite'),
     id: z.string(),
-    action: z.enum(['show', 'hide', 'move', 'pose']),
+    action: z.enum(['show', 'hide', 'move', 'pose', 'animate']),
     assetUrl: z.string().optional(),
+    pose: z.string().optional(),
+    animation: z.string().optional(),
+    wait: z.boolean().optional(),
     x: z.number().optional(),
     y: z.number().optional(),
     anchorX: z.number().optional(),

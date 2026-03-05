@@ -6,6 +6,38 @@
   "phoenix": {
     "displayName": "Phoenix Wright",
     "nameColor": "#3399ff",
-    "portraitUrl": "/assets/sprites/phoenix.png"
+    "spritesheet": {
+      "atlasUrl": "/assets/sprites/phoenix.json",
+      "chromaKey": "#009a00",
+      "chromaTolerance": 60
+    },
+    "poses": {
+      "default": "phoenix_idle_blink_0",
+      "thinking": "phoenix_thinking_0",
+      "objection": "phoenix_objection_pointing_2",
+      "coffee": "phoenix_coffee_sip_0"
+    },
+    "animations": {
+      "idle_blink": {
+        "frames": ["phoenix_idle_blink_0", "phoenix_idle_blink_1", "phoenix_idle_blink_2", "phoenix_idle_blink_1", "phoenix_idle_blink_0"],
+        "speed": 120,
+        "loop": true
+      },
+      "thinking": {
+        "frames": ["phoenix_thinking_0", "phoenix_thinking_1", "phoenix_thinking_2", "phoenix_thinking_1"],
+        "speed": 150,
+        "loop": true
+      },
+      "objection": {
+        "frames": ["phoenix_objection_start", "phoenix_objection_pointing_1", "phoenix_objection_pointing_2", "phoenix_objection_pointing_3"],
+        "speed": 80,
+        "loop": false
+      },
+      "coffee_sip": {
+        "frames": ["phoenix_coffee_sip_0", "phoenix_coffee_sip_1", "phoenix_coffee_sip_2", "phoenix_coffee_sip_1", "phoenix_coffee_sip_0"],
+        "speed": 200,
+        "loop": false
+      }
+    }
   }
 }

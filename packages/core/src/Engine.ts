@@ -11,9 +11,14 @@ import { EventBus } from './managers/EventBus';
 import { NotificationManager } from './managers/NotificationManager';
 import { StartScreenManager } from './managers/StartScreenManager';
 import { HistoryManager } from './managers/HistoryManager';
-import { PauseMenuManager } from './managers/PauseMenuManager';
+import { OverlayManager } from './managers/OverlayManager';
 import { EvidenceManager } from './managers/EvidenceManager';
+import { SpritesheetManager } from './managers/SpritesheetManager';
 import { DefaultTheme, type Theme } from './utils/Theme';
+import { SettingsPanel } from './ui/SettingsPanel';
+import { HistoryPanel } from './ui/HistoryPanel';
+import { SaveLoadPanel } from './ui/SaveLoadPanel';
+import { ItemBrowserPanel } from './ui/ItemBrowserPanel';
 
 export class Engine {
     public app: Application;
@@ -32,9 +37,10 @@ export class Engine {
     public events: EventBus;
     public notifications: NotificationManager;
     public startScreen: StartScreenManager;
-    public pauseMenu: PauseMenuManager;
+    public overlay: OverlayManager;
     public history: HistoryManager = new HistoryManager();
     public items: EvidenceManager = new EvidenceManager();
+    public spritesheets: SpritesheetManager = new SpritesheetManager();
     public logger: Logger = new Logger('[Engine]');
     public theme: Theme = DefaultTheme;
     public state: Record<string, any> = {};
@@ -68,7 +74,13 @@ export class Engine {
         this.saves = new SaveManager(this);
         this.notifications = new NotificationManager(this, config.notifications);
         this.startScreen = new StartScreenManager(this, config.startScreen);
-        this.pauseMenu = new PauseMenuManager(this, config.pauseMenu);
+        this.overlay = new OverlayManager(this, config.overlay);
+
+        this.overlay.registerPanel(new HistoryPanel());
+        this.overlay.registerPanel(new ItemBrowserPanel());
+        this.overlay.registerPanel(new SettingsPanel());
+        this.overlay.registerPanel(new SaveLoadPanel('save'));
+        this.overlay.registerPanel(new SaveLoadPanel('load'));
     }
 
     /* Lifecycle */
