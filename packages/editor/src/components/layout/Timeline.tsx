@@ -2,13 +2,11 @@ import { useMemo, useState, useRef } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useScriptStore } from '../../store/useScriptStore';
 import { useEditorStore } from '../../store/useEditorStore';
-import {
-    MessageSquare, Image as ImageIcon, Music, Gamepad2,
-    ArrowRightCircle, GitFork, User, FileAudio, Workflow, Trash2,
-    Home, ChevronRight, ChevronDown
-} from 'lucide-react';
+import { Trash2, Home, ChevronRight, ChevronDown } from 'lucide-react';
 import * as React from "react";
 import type { ScriptPath } from '../../utils/scriptPathUtils';
+import { COMMAND_TYPES, createDefaultCommand, getPlugin } from '../../editor/commandPlugins';
+import { AddCommandMenu } from "./AddCommandMenu.tsx";
 
 function pathKey(path: ScriptPath) {
     return path.join('.');
@@ -27,6 +25,13 @@ export function Timeline() {
         scopePath, popScope, resetScope,
         moveNodeByPath
     } = useScriptStore();
+
+    const commandMenuItems = COMMAND_TYPES.map((type) => ({
+        type,
+        label: getPlugin(type).label,
+    }));
+
+    const quickTypes = COMMAND_TYPES.filter((t) => !!getPlugin(t).quick);
 
     const dragSourceRef = useRef<ScriptPath | null>(null);
     const [dropIndicator, setDropIndicator] = useState<{ arrayPath: ScriptPath; index: number } | null>(null);
@@ -84,15 +89,7 @@ export function Timeline() {
     };
 
     const handleAddNode = (type: string) => {
-        let newNode: any = { type };
-        if (type === 'dialogue') newNode = { type, speaker: '???', text: '...' };
-        if (type === 'sprite') newNode = { type, id: '', action: 'show' };
-        if (type === 'bgm') newNode = { type, assetUrl: '', action: 'play', volume: 0.5 };
-        if (type === 'choice') newNode = { type, choices: [{ text: 'Option 1', label: '' }] };
-        if (type === 'call') newNode = { type, name: '' };
-        if (type === 'if') newNode = { type, source: 'variable', key: '', op: 'eq', value: true, then: [], else: [] };
-
-        addNode(newNode);
+        addNode(createDefaultCommand(type));
     };
 
     const handleDeleteRootNode = (e: React.MouseEvent, index: number) => {
@@ -104,18 +101,17 @@ export function Timeline() {
 
     const getIcon = (type: string) => {
         const size = 14 * uiScale;
-        switch (type) {
-            case 'dialogue': return <MessageSquare size={size} color="#60a5fa" />;
-            case 'background': return <ImageIcon size={size} color="#34d399" />;
-            case 'sprite': return <User size={size} color="#a78bfa" />;
-            case 'bgm': return <Music size={size} color="#f472b6" />;
-            case 'sfx': return <FileAudio size={size} color="#f472b6" />;
-            case 'choice': return <GitFork size={size} color="#fbbf24" />;
-            case 'jump': return <ArrowRightCircle size={size} color="#fbbf24" />;
-            case 'call': return <Workflow size={size} color="#f472b6" />;
-            case 'if': return <GitFork size={size} color="#4ec9b0" />;
-            default: return <Gamepad2 size={size} color="#94a3b8" />;
-        }
+        return getPlugin(type).icon(size);
+    };
+
+    function getBranches(node: any): Array<{ label: string; path: ScriptPath; nodes: any[] }> {
+        if (!node?.type) return [];
+        return getPlugin(node.type).getBranches?.(node) ?? [];
+    }
+
+    const getSummary = (node: any) => {
+        const p = getPlugin(node?.type || '');
+        return p.getSummary?.(node) || (node?.id || node?.assetUrl || node?.name || node?.scene || node?.key || '');
     };
 
     const hasLikelyIssue = (node: any) => {
@@ -146,7 +142,8 @@ export function Timeline() {
     ): React.ReactNode => {
         const key = pathKey(nodePath);
         const selected = samePath(selectedNodePath, nodePath);
-        const hasBranches = node?.type === 'if';
+        const branches = getBranches(node);
+        const hasBranches = branches.length > 0;
         const isCollapsed = collapsed[key];
 
         return (
@@ -201,7 +198,7 @@ export function Timeline() {
                         {getIcon(node.type)}
                         <span style={{ fontWeight: 'bold', color: '#fff' }}>{node.type}</span>
                         <span style={{ color: '#888', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {node.type === 'dialogue' ? node.text : (node.id || node.assetUrl || node.name || node.scene || node.key)}
+                            {getSummary(node)}
                         </span>
                     </div>
                     {hasLikelyIssue(node) && (
@@ -221,51 +218,44 @@ export function Timeline() {
 
                 {hasBranches && !isCollapsed && (
                     <>
-                        <div style={{ marginLeft: `${(depth + 1) * 16 * uiScale}px`, color: '#4ec9b0', fontSize: '0.8em' }}>
-                            THEN
-                        </div>
+                        {branches.map((branch, bIdx) => {
+                            const branchArrayPath = [...nodePath, ...branch.path];
+                            const labelColor = bIdx % 2 === 0 ? '#4ec9b0' : '#f59e0b';
 
-                        {(node.then || []).map((child: any, i: number) =>
-                            renderNode(child, [...nodePath, 'then', i], [...nodePath, 'then'], i, depth + 1)
-                        )}
+                            return (
+                                <React.Fragment key={`${key}-branch-${bIdx}`}>
+                                    <div
+                                        style={{
+                                            marginLeft: `${(depth + 1) * 16 * uiScale}px`,
+                                            color: labelColor,
+                                            fontSize: '0.8em',
+                                            marginTop: bIdx === 0 ? 0 : `${4 * uiScale}px`
+                                        }}
+                                    >
+                                        {branch.label}
+                                    </div>
 
-                        <div
-                            onDragOver={(e) => handleNodeDragOver(e, [...nodePath, 'then'], (node.then || []).length)}
-                            onDrop={(e) => handleNodeDrop(e, [...nodePath, 'then'], (node.then || []).length)}
-                            style={{
-                                marginLeft: `${(depth + 1) * 16 * uiScale}px`,
-                                height: `${6 * uiScale}px`,
-                                borderTop:
-                                    dropIndicator &&
-                                    sameArrayPath(dropIndicator.arrayPath, [...nodePath, 'then']) &&
-                                    dropIndicator.index === (node.then || []).length
-                                        ? '2px solid #007fd4'
-                                        : '2px solid transparent',
-                            }}
-                        />
+                                    {branch.nodes.map((child: any, i: number) =>
+                                        renderNode(child, [...branchArrayPath, i], branchArrayPath, i, depth + 1)
+                                    )}
 
-                        <div style={{ marginLeft: `${(depth + 1) * 16 * uiScale}px`, color: '#f59e0b', fontSize: '0.8em', marginTop: `${4 * uiScale}px` }}>
-                            ELSE
-                        </div>
-
-                        {(node.else || []).map((child: any, i: number) =>
-                            renderNode(child, [...nodePath, 'else', i], [...nodePath, 'else'], i, depth + 1)
-                        )}
-
-                        <div
-                            onDragOver={(e) => handleNodeDragOver(e, [...nodePath, 'else'], (node.else || []).length)}
-                            onDrop={(e) => handleNodeDrop(e, [...nodePath, 'else'], (node.else || []).length)}
-                            style={{
-                                marginLeft: `${(depth + 1) * 16 * uiScale}px`,
-                                height: `${6 * uiScale}px`,
-                                borderTop:
-                                    dropIndicator &&
-                                    sameArrayPath(dropIndicator.arrayPath, [...nodePath, 'else']) &&
-                                    dropIndicator.index === (node.else || []).length
-                                        ? '2px solid #007fd4'
-                                        : '2px solid transparent',
-                            }}
-                        />
+                                    <div
+                                        onDragOver={(e) => handleNodeDragOver(e, branchArrayPath, branch.nodes.length)}
+                                        onDrop={(e) => handleNodeDrop(e, branchArrayPath, branch.nodes.length)}
+                                        style={{
+                                            marginLeft: `${(depth + 1) * 16 * uiScale}px`,
+                                            height: `${6 * uiScale}px`,
+                                            borderTop:
+                                                dropIndicator &&
+                                                sameArrayPath(dropIndicator.arrayPath, branchArrayPath) &&
+                                                dropIndicator.index === branch.nodes.length
+                                                    ? '2px solid #007fd4'
+                                                    : '2px solid transparent',
+                                        }}
+                                    />
+                                </React.Fragment>
+                            );
+                        })}
                     </>
                 )}
             </div>
@@ -297,14 +287,21 @@ export function Timeline() {
             </div>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: `${4 * uiScale}px`, marginBottom: `${12 * uiScale}px` }}>
-                <QuickBtn onClick={() => handleAddNode('dialogue')} icon={<MessageSquare size={14 * uiScale} />} title="Dialogue" scale={uiScale} />
-                <QuickBtn onClick={() => handleAddNode('sprite')} icon={<User size={14 * uiScale} />} title="Sprite" scale={uiScale} />
-                <QuickBtn onClick={() => handleAddNode('background')} icon={<ImageIcon size={14 * uiScale} />} title="BG" scale={uiScale} />
-                <QuickBtn onClick={() => handleAddNode('call')} icon={<Workflow size={14 * uiScale} />} title="Macro" scale={uiScale} />
-                <QuickBtn onClick={() => handleAddNode('bgm')} icon={<Music size={14 * uiScale} />} title="Music" scale={uiScale} />
-                <QuickBtn onClick={() => handleAddNode('choice')} icon={<GitFork size={14 * uiScale} />} title="Choice" scale={uiScale} />
-                <QuickBtn onClick={() => handleAddNode('jump')} icon={<ArrowRightCircle size={14 * uiScale} />} title="Jump" scale={uiScale} />
-                <QuickBtn onClick={() => handleAddNode('if')} icon={<GitFork size={14 * uiScale} />} title="If Condition" scale={uiScale} />
+                <AddCommandMenu uiScale={uiScale} onAdd={handleAddNode} items={commandMenuItems} />
+                {quickTypes.map((type) => {
+                    const p = getPlugin(type);
+                    return (
+                        <QuickBtn
+                            key={type}
+                            onClick={() => handleAddNode(type)}
+                            icon={p.icon(14 * uiScale)}
+                            title={p.label}
+                            scale={uiScale}
+                            bg={p.quickColor?.bg ?? '#333'}
+                            border={p.quickColor?.border ?? '#444'}
+                        />
+                    );
+                })}
             </div>
 
             <div style={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: `${2 * uiScale}px`, userSelect: 'none', WebkitUserSelect: 'none' }}>
@@ -334,14 +331,14 @@ export function Timeline() {
     );
 }
 
-function QuickBtn({ onClick, icon, title, scale }: any) {
+function QuickBtn({ onClick, icon, title, scale, bg = '#333', border = '#444' }: any) {
     return (
         <button
             onClick={onClick}
             title={title}
             style={{
-                background: '#333',
-                border: '1px solid #444',
+                background: bg,
+                border: `1px solid ${border}`,
                 color: '#ccc',
                 borderRadius: '3px',
                 padding: `${6 * scale}px`,
