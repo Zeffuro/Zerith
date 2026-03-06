@@ -23,7 +23,7 @@ export function GamePreview({ script }: { script: any[] }) {
             isEditor: true,
             assetResolver: (url: string) => {
                 if (projectPath && !url.startsWith('http')) {
-                    return convertFileSrc(projectPath + url.replace(/\//g, '\\'));
+                    return convertFileSrc(projectPath + url);
                 }
                 return url;
             },
