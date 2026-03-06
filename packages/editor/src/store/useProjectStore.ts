@@ -9,6 +9,7 @@ interface ProjectState {
     characters: Record<string, any>;
     items: Record<string, any>;
     macros: Record<string, any[]>;
+    scenes: Record<string, any[]>;
 
     setProject: (path: string, files: DirEntry[]) => void;
     loadManifest: () => Promise<void>;
@@ -66,6 +67,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         characters: {},
         items: {},
         macros: {},
+        scenes: {},
     }),
 
     loadManifest: async () => {
@@ -76,7 +78,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             const manifestText = await readTextFile(projectPath + '/game.json');
             const manifest = JSON.parse(manifestText);
 
-            const [characters, items, macros] = await Promise.all([
+            const [characters, items, macros, scenes] = await Promise.all([
                 manifest.characters
                     ? resolveManifestValueFromDisk(manifest.characters, projectPath)
                     : Promise.resolve({}),
@@ -91,7 +93,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
                     : Promise.resolve({}),
             ]);
 
-            set({ manifest, characters, items, macros });
+            set({ manifest, characters, items, macros, scenes });
         } catch (err) {
             console.error('Failed to load manifest:', err);
         }

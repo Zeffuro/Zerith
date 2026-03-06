@@ -65,4 +65,9 @@ export class AudioManager {
             masterVolume: this.masterVolume
         };
     }
+
+    public destroy() {
+        sound.stopAll();
+        sound.removeAll();
+    }
 }

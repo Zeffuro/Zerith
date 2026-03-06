@@ -49,7 +49,6 @@ export function GamePreview({ script }: { script: any[] }) {
 
             engine.scenes.addScene('preview', script);
             engine.jumpToScene('preview');
-            engine.start();
         });
 
         return () => {

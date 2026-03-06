@@ -127,8 +127,10 @@ export class Engine {
     }
 
     public destroy() {
+        this._isStarted = false;
         this.input.detach();
         this.display.destroy();
+        this.audio.destroy();
         this.clear();
     }
 
@@ -215,6 +217,12 @@ export class Engine {
                 const idx = this.scenes.currentIndex;
                 const command = this.scenes.script[this.scenes.currentIndex++];
                 await this.runCommand(command);
+
+                if (this.isEditor && (command.type === 'jump' || command.type === 'scene_change')) {
+                    this.logger.info(`[Editor] Skipping scene jump to '${(command as any).scene}'`);
+                    return;
+                }
+
                 const handler = this.handlers.get(command.type);
                 if (handler && !handler.autoNext) {
                     this._lastSavePoint = this.scenes.getLastOriginalIndex(idx);
