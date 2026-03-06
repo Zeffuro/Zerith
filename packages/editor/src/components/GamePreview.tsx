@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Engine, BuiltInHandlers, DialogueHandler, ChoiceHandler } from 'core';
+import { Engine, bootstrapEngine } from 'core';
 import { useProjectStore } from "../store/useProjectStore.ts";
 import { convertFileSrc } from "@tauri-apps/api/core";
 
@@ -12,26 +12,28 @@ export function GamePreview({ script }: { script: any[] }) {
     useEffect(() => {
         if (!canvasRef.current) return;
 
-        const engine = new Engine({
-            display: { width: 1280, height: 720, scaleMode: 'fit' },
-            theme: { fontFamily: 'Courier New', fontSize: 24, boxColor: 0x000033 }
-        });
+        let destroyed = false;
 
-        engine.isEditor = true;
-        engine.persistentState.projectPath = projectPath;
-
-        engine.assetResolver = (url: string) => {
-            if (projectPath && !url.startsWith('http')) {
-                return convertFileSrc(projectPath + url.replace(/\//g, '\\'));
+        bootstrapEngine({
+            canvas: canvasRef.current,
+            config: {
+                display: { width: 1280, height: 720, scaleMode: 'fit' },
+                theme: { fontFamily: 'Courier New', fontSize: 24, boxColor: 0x000033 }
+            },
+            isEditor: true,
+            assetResolver: (url: string) => {
+                if (projectPath && !url.startsWith('http')) {
+                    return convertFileSrc(projectPath + url.replace(/\//g, '\\'));
+                }
+                return url;
+            },
+        }).then(engine => {
+            if (destroyed) {
+                engine.destroy();
+                return;
             }
-            return url;
-        };
 
-        engine.registerHandlers(BuiltInHandlers);
-        engine.registerHandler(new DialogueHandler({ ...engine.theme }));
-        engine.registerHandler(new ChoiceHandler({ ...engine.theme }));
-
-        engine.init(canvasRef.current).then(() => {
+            engine.persistentState.projectPath = projectPath;
             engineRef.current = engine;
 
             engine.scenes.addScene('preview', script);
@@ -40,7 +42,8 @@ export function GamePreview({ script }: { script: any[] }) {
         });
 
         return () => {
-            engine.destroy();
+            destroyed = true;
+            engineRef.current?.destroy();
             engineRef.current = null;
         };
     }, [projectPath]);

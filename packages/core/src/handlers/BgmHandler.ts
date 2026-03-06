@@ -56,25 +56,27 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
             const url = command.assetUrl;
             if (!url) return;
 
+            const resolvedUrl = engine.assetResolver(url);
+
             try {
-                if (!sound.exists(url)) {
+                if (!sound.exists(resolvedUrl)) {
                     await new Promise((resolve, reject) => {
-                        sound.add(url, {
-                            url: url,
+                        sound.add(resolvedUrl, {
+                            url: resolvedUrl,
                             preload: true,
                             loaded: (err, snd) => err ? reject(err) : resolve(snd)
                         });
                     });
                 }
 
-                if (this.currentBgmUrl && this.currentBgmUrl !== url) {
+                if (this.currentBgmUrl && this.currentBgmUrl !== resolvedUrl) {
                     sound.stop(this.currentBgmUrl);
                 }
 
-                this.currentBgmUrl = url;
+                this.currentBgmUrl = resolvedUrl;
                 this.isPaused = false;
 
-                sound.play(url, {
+                sound.play(resolvedUrl, {
                     loop: command.loop ?? true,
                     volume: (command.volume ?? 0.5) * engine.audio.bgmVolume,
                     singleInstance: true

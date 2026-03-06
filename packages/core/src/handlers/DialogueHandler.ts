@@ -1,10 +1,10 @@
-import {Assets, Container, Graphics, HTMLText, Sprite, Text, type TextStyleOptions} from 'pixi.js';
+import { Container, Graphics, HTMLText, Sprite, Text, type TextStyleOptions } from 'pixi.js';
 import {sound} from '@pixi/sound';
 import gsap from 'gsap';
 import type {CommandHandler} from '../types';
 import type {CharacterDefinition} from '../types';
 import type {Engine} from '../Engine';
-import {parseTextTags, transformShorthands} from '../utils/TextParser';
+import { parseTextTags, transformShorthands } from '../utils/TextParser';
 
 export interface DialogueCommand {
     type: 'dialogue';
@@ -113,12 +113,13 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         }
 
         const blipUrl = charData?.blipUrl || this.config.defaultBlipUrl;
-        if (blipUrl) {
+        const resolvedBlipUrl = blipUrl ? engine.assetResolver(blipUrl) : undefined;
+        if (resolvedBlipUrl) {
             try {
-                if (!sound.exists(blipUrl)) {
+                if (!sound.exists(resolvedBlipUrl)) {
                     await new Promise((res, rej) => {
-                        sound.add(blipUrl, {
-                            url: blipUrl,
+                        sound.add(resolvedBlipUrl, {
+                            url: resolvedBlipUrl,
                             preload: true,
                             loaded: (err) => err ? rej(err) : res(null)
                         });

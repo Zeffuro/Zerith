@@ -1,40 +1,101 @@
-import { Engine } from './Engine';
-import { BuiltInHandlers, DialogueHandler, ChoiceHandler } from './index';
+import type {AssetResolver} from './Engine';
+import {Engine} from './Engine';
+import {BuiltInHandlers, ChoiceHandler, DialogueHandler} from './index';
+import type {EngineConfig} from './EngineConfig';
+import type {GameManifest} from './types';
 
 export interface EngineBootstrapOptions {
     canvas: HTMLCanvasElement;
-    manifest: any;
-    theme?: any;
-    assetResolver?: (url: string) => string;
+    config?: EngineConfig;
+    manifest?: GameManifest;
+    assetResolver?: AssetResolver;
+    isEditor?: boolean;
+    characters?: Record<string, any>;
+    defaultBlipUrl?: string;
+    items?: Record<string, any>;
+    macros?: Record<string, any[]>;
+    scenes?: Record<string, any[]>;
+    preloadAssets?: boolean;
 }
 
-export async function bootstrapEngine(options: EngineBootstrapOptions) {
-    const engine = new Engine({
-        display: { width: 1280, height: 720, scaleMode: 'fit' },
-        theme: options.theme || {},
-    });
+export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<Engine> {
+    const {
+        canvas,
+        config = {},
+        manifest = {},
+        assetResolver,
+        isEditor = false,
+        characters = {},
+        defaultBlipUrl = '/assets/sfx/blip.wav',
+        items = {},
+        macros = {},
+        scenes = {},
+        preloadAssets = false,
+    } = options;
 
-    if (options.assetResolver) {
-        engine.assetResolver = options.assetResolver;
-        engine.isEditor = true;
+    const engine = new Engine(config);
+
+    engine.isEditor = isEditor;
+    if (assetResolver) {
+        engine.assetResolver = assetResolver;
     }
 
-    engine.manifest = options.manifest;
-    engine.registerHandlers(BuiltInHandlers);
+    engine.manifest = {...manifest, characters};
 
-    // Setup specialized handlers
+    if (preloadAssets && Object.keys(characters).length > 0) {
+        const { Assets } = await import('pixi.js');
+        const { sound } = await import('@pixi/sound');
+
+        const promises: Promise<any>[] = [];
+        for (const [, char] of Object.entries(characters) as [string, any][]) {
+            if (char.portraitUrl) {
+                promises.push(Assets.load(char.portraitUrl).catch(() => {}));
+            }
+            if (char.blipUrl && !sound.exists(char.blipUrl)) {
+                promises.push(new Promise<void>(resolve => {
+                    sound.add(char.blipUrl, {
+                        url: char.blipUrl,
+                        preload: true,
+                        loaded: () => resolve()
+                    });
+                }));
+            }
+            if (char.spritesheet?.atlasUrl) {
+                promises.push(engine.spritesheets.load(char.spritesheet).catch((err) => {
+                    console.warn(`Failed to preload spritesheet: ${char.spritesheet.atlasUrl}`, err);
+                }));
+            }
+        }
+        await Promise.all(promises);
+    }
+
+    if (Object.keys(items).length > 0) {
+        engine.items.loadDefinitions(items);
+    }
+
+    engine.registerHandlers(BuiltInHandlers);
     engine.registerHandler(new DialogueHandler({
         ...engine.theme,
-        characters: options.manifest.characters,
-        defaultBlipUrl: '/assets/sfx/blip.wav'
+        characters,
+        defaultBlipUrl,
     }));
-
     engine.registerHandler(new ChoiceHandler({
         ...engine.theme,
         selectedBackgroundColor: engine.theme.hoverColor,
-        selectedBorderColor: engine.theme.accentColor
+        selectedBorderColor: engine.theme.accentColor,
     }));
 
-    await engine.init(options.canvas);
+    if (Object.keys(macros).length > 0) {
+        Object.entries(macros).forEach(([name, script]) =>
+            engine.registerTemplate(name, script as any)
+        );
+    }
+
+    if (Object.keys(scenes).length > 0) {
+        engine.loadScenes(scenes);
+    }
+
+    await engine.init(canvas);
+
     return engine;
 }

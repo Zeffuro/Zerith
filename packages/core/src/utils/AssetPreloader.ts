@@ -1,6 +1,6 @@
-import { Assets } from 'pixi.js';
 import { sound } from '@pixi/sound';
 import type { BaseCommand, Script } from '../types';
+import type { Engine } from '../Engine';
 import { Logger } from './Logger';
 
 const logger = new Logger('[AssetPreloader]');
@@ -42,7 +42,7 @@ export function extractAssetUrls(script: Script): { textures: Set<string>; audio
     return { textures, audio };
 }
 
-export async function preloadSceneAssets(script: Script): Promise<void> {
+export async function preloadSceneAssets(engine: Engine, script: Script): Promise<void> {
     const { textures, audio } = extractAssetUrls(script);
 
     const texturePromises = [...textures].map(url =>
@@ -52,10 +52,11 @@ export async function preloadSceneAssets(script: Script): Promise<void> {
     );
 
     const audioPromises = [...audio].map(url => {
-        if (sound.exists(url)) return Promise.resolve();
+        const resolvedUrl = engine.assetResolver(url);
+        if (sound.exists(resolvedUrl)) return Promise.resolve();
         return new Promise<void>((resolve) => {
-            sound.add(url, {
-                url,
+            sound.add(resolvedUrl, {
+                url: resolvedUrl,
                 preload: true,
                 loaded: (err) => {
                     if (err) logger.warn(`Failed to preload audio: ${url}`, err);

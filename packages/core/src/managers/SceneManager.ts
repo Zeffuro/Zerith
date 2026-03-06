@@ -70,7 +70,7 @@ export class SceneManager {
         loadingText.position.set(this.engine.display.width - 20, this.engine.display.height - 20);
         this.engine.layers.overlay.addChild(loadingText);
 
-        await preloadSceneAssets(this.scenes[sceneName]);
+        await preloadSceneAssets(this.engine, this.scenes[sceneName]);
 
         loadingText.destroy();
 

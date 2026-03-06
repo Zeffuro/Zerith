@@ -19,6 +19,7 @@ import { ItemHandler } from './handlers/ItemHandler';
 
 /* Root */
 export * from './Engine';
+export * from './EngineBootstrap';
 export * from './EngineConfig';
 export * from './types';
 export * from './commands';

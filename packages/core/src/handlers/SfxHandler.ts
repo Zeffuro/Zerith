@@ -17,18 +17,20 @@ export class SfxHandler implements CommandHandler<SfxCommand> {
         const url = command.assetUrl;
         if (!url) return;
 
+        const resolvedUrl = engine.assetResolver(url);
+
         try {
-            if (!sound.exists(url)) {
+            if (!sound.exists(resolvedUrl)) {
                 await new Promise((resolve, reject) => {
-                    sound.add(url, {
-                        url: url,
+                    sound.add(resolvedUrl, {
+                        url: resolvedUrl,
                         preload: true,
                         loaded: (err, snd) => err ? reject(err) : resolve(snd)
                     });
                 });
             }
 
-            sound.play(url, {
+            sound.play(resolvedUrl, {
                 volume: (command.volume ?? 0.8) * engine.audio.sfxVolume,
             });
 
