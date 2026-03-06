@@ -1,18 +1,27 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Engine, bootstrapEngine } from 'core';
 import { useProjectStore } from "../store/useProjectStore.ts";
 import { convertFileSrc } from "@tauri-apps/api/core";
 
 export function GamePreview({ script }: { script: any[] }) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const engineRef = useRef<Engine | null>(null);
+    const [isFocused, setIsFocused] = useState(false);
 
-    const projectPath = useProjectStore(state => state.projectPath);
-    const manifest = useProjectStore(state => state.manifest);
-    const characters = useProjectStore(state => state.characters);
-    const items = useProjectStore(state => state.items);
-    const macros = useProjectStore(state => state.macros);
-    const scenes = useProjectStore(state => state.scenes);
+    const {
+        projectPath, manifest, characters, items, macros, scenes, playTrigger
+    } = useProjectStore();
+
+    const handleFocus = () => {
+        setIsFocused(true);
+        engineRef.current?.setInputEnabled(true);
+    };
+
+    const handleBlur = () => {
+        setIsFocused(false);
+        engineRef.current?.setInputEnabled(false);
+    };
 
     useEffect(() => {
         if (!canvasRef.current || !projectPath || !manifest) return;
@@ -25,11 +34,7 @@ export function GamePreview({ script }: { script: any[] }) {
                 display: { width: 1280, height: 720, scaleMode: 'fit' },
                 theme: { fontFamily: 'Courier New', fontSize: 24, boxColor: 0x000033 }
             },
-            manifest,
-            characters,
-            items,
-            macros,
-            scenes,
+            manifest, characters, items, macros, scenes,
             defaultBlipUrl: '/assets/sfx/blip.wav',
             isEditor: true,
             assetResolver: (url: string) => {
@@ -43,9 +48,10 @@ export function GamePreview({ script }: { script: any[] }) {
                 engine.destroy();
                 return;
             }
-
             engine.persistentState.projectPath = projectPath;
             engineRef.current = engine;
+
+            engine.setInputEnabled(false);
 
             engine.scenes.addScene('preview', script);
             engine.jumpToScene('preview');
@@ -59,18 +65,51 @@ export function GamePreview({ script }: { script: any[] }) {
     }, [projectPath, manifest]);
 
     useEffect(() => {
-        if (engineRef.current && script.length > 0) {
-            const engine = engineRef.current;
-            engine.scenes.addScene('preview', script);
-            engine.jumpToScene('preview');
-
-            if (!engine.isStarted) engine.start();
+        if (engineRef.current) {
+            engineRef.current.scenes.addScene('preview', script);
         }
     }, [script]);
 
+    useEffect(() => {
+        if (engineRef.current && playTrigger > 0) {
+            engineRef.current.clear();
+            engineRef.current.scenes.addScene('preview', script);
+            engineRef.current.jumpToScene('preview', 0);
+            engineRef.current.start();
+
+            containerRef.current?.focus();
+        }
+    }, [playTrigger]);
+
     return (
-        <div style={{ position: 'relative', width: '100%', height: '100%', backgroundColor: '#000', overflow: 'hidden' }}>
+        <div
+            ref={containerRef}
+            tabIndex={0}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            style={{
+                position: 'relative',
+                width: '100%',
+                height: '100%',
+                backgroundColor: '#000',
+                overflow: 'hidden',
+                outline: 'none',
+                border: isFocused ? '2px solid #007fd4' : '2px solid transparent',
+                transition: 'border-color 0.2s'
+            }}
+        >
             <canvas ref={canvasRef} />
+
+            {!isFocused && engineRef.current?.isStarted && (
+                <div style={{
+                    position: 'absolute', bottom: 10, right: 10,
+                    padding: '4px 8px', background: 'rgba(0,0,0,0.6)',
+                    color: '#aaa', fontSize: '10px', borderRadius: '4px',
+                    pointerEvents: 'none'
+                }}>
+                    Click to control
+                </div>
+            )}
         </div>
     );
 }

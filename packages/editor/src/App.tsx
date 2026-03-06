@@ -4,6 +4,7 @@ import { GamePreview } from './components/GamePreview';
 import { Toolbar } from './components/layout/Toolbar';
 import { Explorer } from './components/layout/Explorer';
 import { Timeline } from './components/layout/Timeline';
+import { Inspector } from './components/layout/Inspector';
 import { useProjectStore } from './store/useProjectStore';
 import './App.css';
 
@@ -42,7 +43,7 @@ function App() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', marginBottom: '16px', fontSize: '12px', fontWeight: 'bold' }}>
                                     <Settings2 size={16} /> INSPECTOR
                                 </div>
-                                <p style={{ fontSize: '13px' }}>Select a node in the timeline to edit its properties here.</p>
+                                <Inspector />
                             </div>
                         </Panel>
                     </Group>

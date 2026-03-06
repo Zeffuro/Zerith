@@ -16,7 +16,7 @@ export const DefaultDisplayConfig: DisplayConfig = {
 
 export class DisplayManager {
     private app: Application;
-    private canvas: HTMLCanvasElement | null = null;
+    public canvas: HTMLCanvasElement | null = null;
     private config: DisplayConfig;
     private resizeObserver: ResizeObserver | null = null;
     private boundApplyScale: (() => void) | null = null;

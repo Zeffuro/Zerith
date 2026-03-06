@@ -25,8 +25,11 @@ export class InputManager {
     private engine: Engine;
     private config: Required<InputConfig>;
     private canvas: HTMLCanvasElement | null = null;
-    private boundOnPointerDown: (() => void) | null = null;
+
+    // Initialize these as null
+    private boundOnPointerDown: ((e: PointerEvent) => void) | null = null;
     private boundOnKeyDown: ((e: KeyboardEvent) => void) | null = null;
+
     private gamepadPollId: number | null = null;
     private prevGamepadButtons: boolean[] = [];
     private prevGamepadAxes: number[] = [];
@@ -57,18 +60,33 @@ export class InputManager {
     }
 
     public attach(canvas: HTMLCanvasElement) {
+        if (this.canvas) {
+            this.detach();
+        }
+
         this.canvas = canvas;
 
-        this.boundOnPointerDown = () => {
+        this.boundOnPointerDown = (_: PointerEvent) => {
             if (this.engine.isStarted && !this.engine.overlay.isOpen) {
                 this.engine.requestSkip();
                 this.engine.playNext();
             }
         };
-        canvas.addEventListener('pointerdown', this.boundOnPointerDown);
 
         this.boundOnKeyDown = (e: KeyboardEvent) => {
-            // Navigation (always emit, panels may need it)
+            const isGameKey = [
+                ...this.config.navigateUpKeys,
+                ...this.config.navigateDownKeys,
+                ...this.config.navigateLeftKeys,
+                ...this.config.navigateRightKeys,
+                ...this.config.advanceKeys
+            ].includes(e.key);
+
+            if (isGameKey) {
+                // e.preventDefault();
+            }
+
+            // Navigation
             if (this.config.navigateUpKeys.includes(e.key)) {
                 this.engine.emit('input:navigate', 'up');
             }
@@ -87,7 +105,7 @@ export class InputManager {
                 this.engine.emit('input:confirm');
             }
 
-            // Back / Menu key (Escape etc.)
+            // Back / Menu
             if (this.config.backKeys.includes(e.key)) {
                 e.preventDefault();
                 if (this.engine.overlay.isOpen) {
@@ -117,7 +135,7 @@ export class InputManager {
                 return;
             }
 
-            // System keys (save/load shortcuts)
+            // Save/Load Shortcuts
             const key = e.key.toLowerCase();
             if (key === this.config.saveKey) {
                 this.engine.saves.save(1);
@@ -127,6 +145,9 @@ export class InputManager {
                 this.engine.notifications.show('Game Loaded!');
             }
         };
+
+        // 3. Attach listeners
+        canvas.addEventListener('pointerdown', this.boundOnPointerDown);
         window.addEventListener('keydown', this.boundOnKeyDown);
 
         this.startGamepadPolling();
@@ -136,9 +157,11 @@ export class InputManager {
         if (this.canvas && this.boundOnPointerDown) {
             this.canvas.removeEventListener('pointerdown', this.boundOnPointerDown);
         }
+
         if (this.boundOnKeyDown) {
             window.removeEventListener('keydown', this.boundOnKeyDown);
         }
+
         this.stopGamepadPolling();
 
         this.boundOnPointerDown = null;
@@ -147,6 +170,8 @@ export class InputManager {
     }
 
     private startGamepadPolling() {
+        this.stopGamepadPolling();
+
         const poll = () => {
             const gamepad = navigator.getGamepads()[0];
             if (gamepad) {
@@ -156,54 +181,30 @@ export class InputManager {
                 const pressed = (btn: number) => buttons[btn] && !this.prevGamepadButtons[btn];
 
                 // D-pad buttons
-                if (pressed(this.config.gamepadUpButton)) {
-                    this.engine.emit('input:navigate', 'up');
-                }
-                if (pressed(this.config.gamepadDownButton)) {
-                    this.engine.emit('input:navigate', 'down');
-                }
-                if (pressed(this.config.gamepadLeftButton)) {
-                    this.engine.emit('input:navigate', 'left');
-                }
-                if (pressed(this.config.gamepadRightButton)) {
-                    this.engine.emit('input:navigate', 'right');
-                }
+                if (pressed(this.config.gamepadUpButton)) this.engine.emit('input:navigate', 'up');
+                if (pressed(this.config.gamepadDownButton)) this.engine.emit('input:navigate', 'down');
+                if (pressed(this.config.gamepadLeftButton)) this.engine.emit('input:navigate', 'left');
+                if (pressed(this.config.gamepadRightButton)) this.engine.emit('input:navigate', 'right');
 
-                // Left stick Y axis
+                // Axes
                 const stickY = axes[1] ?? 0;
                 const prevStickY = this.prevGamepadAxes[1] ?? 0;
-                if (stickY < -0.5 && prevStickY >= -0.5) {
-                    this.engine.emit('input:navigate', 'up');
-                }
-                if (stickY > 0.5 && prevStickY <= 0.5) {
-                    this.engine.emit('input:navigate', 'down');
-                }
+                if (stickY < -0.5 && prevStickY >= -0.5) this.engine.emit('input:navigate', 'up');
+                if (stickY > 0.5 && prevStickY <= 0.5) this.engine.emit('input:navigate', 'down');
 
-                // Left stick X axis
                 const stickX = axes[0] ?? 0;
                 const prevStickX = this.prevGamepadAxes[0] ?? 0;
-                if (stickX < -0.5 && prevStickX >= -0.5) {
-                    this.engine.emit('input:navigate', 'left');
-                }
-                if (stickX > 0.5 && prevStickX <= 0.5) {
-                    this.engine.emit('input:navigate', 'right');
-                }
+                if (stickX < -0.5 && prevStickX >= -0.5) this.engine.emit('input:navigate', 'left');
+                if (stickX > 0.5 && prevStickX <= 0.5) this.engine.emit('input:navigate', 'right');
 
-                // Confirm (A button)
-                if (pressed(this.config.gamepadConfirmButton)) {
-                    this.engine.emit('input:confirm');
-                }
+                // Buttons
+                if (pressed(this.config.gamepadConfirmButton)) this.engine.emit('input:confirm');
 
-                // Back (B / Circle button)
                 if (pressed(this.config.gamepadBackButton)) {
-                    if (this.engine.overlay.isOpen) {
-                        this.engine.emit('input:back');
-                    } else if (this.engine.isStarted) {
-                        this.engine.emit('menu:toggle');
-                    }
+                    if (this.engine.overlay.isOpen) this.engine.emit('input:back');
+                    else if (this.engine.isStarted) this.engine.emit('menu:toggle');
                 }
 
-                // Advance (A button, only when not in overlay)
                 if (pressed(this.config.gamepadAdvanceButton)) {
                     if (this.engine.isStarted && !this.engine.overlay.isOpen) {
                         this.engine.requestSkip();
@@ -213,14 +214,10 @@ export class InputManager {
                     }
                 }
 
-                // Menu (Start button)
                 if (pressed(this.config.gamepadMenuButton)) {
                     if (this.engine.isStarted) {
-                        if (this.engine.overlay.isOpen) {
-                            this.engine.emit('input:back');
-                        } else {
-                            this.engine.emit('menu:toggle');
-                        }
+                        if (this.engine.overlay.isOpen) this.engine.emit('input:back');
+                        else this.engine.emit('menu:toggle');
                     }
                 }
 

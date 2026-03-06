@@ -1,4 +1,4 @@
-import { Assets, Sprite, type Texture } from 'pixi.js';
+import { Sprite, type Texture } from 'pixi.js';
 import type { BaseCommand, CommandHandler, CharacterDefinition } from '../types';
 import type { Engine } from '../Engine';
 

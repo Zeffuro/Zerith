@@ -11,6 +11,9 @@ interface ProjectState {
     macros: Record<string, any[]>;
     scenes: Record<string, any[]>;
 
+    playTrigger: number;
+    triggerPlay: () => void;
+
     setProject: (path: string, files: DirEntry[]) => void;
     loadManifest: () => Promise<void>;
 
@@ -56,6 +59,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     items: {},
     macros: {},
     scenes: {} as Record<string, any[]>,
+
+    playTrigger: 0,
+    triggerPlay: () => set((state) => ({ playTrigger: state.playTrigger + 1 })),
 
     setProject: (path, files) => set({
         projectPath: path,

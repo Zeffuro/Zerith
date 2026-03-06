@@ -296,6 +296,18 @@ export class Engine {
         this.events.emit(event, ...args);
     }
 
+    /* Input */
+
+    public setInputEnabled(enabled: boolean) {
+        if (this.display.canvas) {
+            if (enabled) {
+                this.input.attach(this.display.canvas);
+            } else {
+                this.input.detach();
+            }
+        }
+    }
+
     /* Assets */
 
     public async loadAsset(url: string): Promise<any> {

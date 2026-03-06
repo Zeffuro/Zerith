@@ -1,4 +1,4 @@
-import { Assets, Container, Graphics, Sprite, Text } from 'pixi.js';
+import { Container, Graphics, Sprite, Text } from 'pixi.js';
 import type { Engine } from '../Engine';
 import type { MenuPanel } from '../types';
 import { createPanelTitle, createButton, createSelectableList, registerFocusableButton } from './UIComponents';
