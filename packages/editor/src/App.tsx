@@ -8,10 +8,50 @@ import { Timeline } from './components/layout/Timeline';
 import { Inspector } from './components/inspector/Inspector';
 import { useProjectStore } from './store/useProjectStore';
 import './App.css';
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { PhysicalSize, PhysicalPosition } from "@tauri-apps/api/dpi";
 
 function App() {
     const script = useProjectStore(state => state.script);
     const uiScale = useProjectStore(state => state.uiScale);
+    const windowState = useProjectStore(state => state.windowState);
+    const setWindowState = useProjectStore(state => state.setWindowState);
+
+    // Window Persistence
+    useEffect(() => {
+        const appWindow = getCurrentWindow();
+
+        if (windowState) {
+            appWindow.setSize(new PhysicalSize(windowState.width, windowState.height));
+            appWindow.setPosition(new PhysicalPosition(windowState.x, windowState.y));
+            if (windowState.maximized) appWindow.maximize();
+        }
+
+        const saveState = async () => {
+            const size = await appWindow.innerSize();
+            const pos = await appWindow.outerPosition();
+            const max = await appWindow.isMaximized();
+
+            setWindowState({
+                width: size.width,
+                height: size.height,
+                x: pos.x,
+                y: pos.y,
+                maximized: max
+            });
+        };
+
+        const unlistenMove = appWindow.listen('tauri://move', saveState);
+        const unlistenResize = appWindow.listen('tauri://resize', saveState);
+
+        window.addEventListener('beforeunload', saveState);
+
+        return () => {
+            unlistenMove.then(f => f());
+            unlistenResize.then(f => f());
+            window.removeEventListener('beforeunload', saveState);
+        };
+    }, []);
 
     useEffect(() => {
         const handleDragOver = (e: DragEvent) => {

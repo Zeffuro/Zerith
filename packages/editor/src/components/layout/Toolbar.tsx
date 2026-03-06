@@ -1,27 +1,38 @@
-import { Play, FolderOpen, Save, ZoomIn, ZoomOut } from 'lucide-react';
+import { Play, Square, FolderOpen, Save, ZoomIn, ZoomOut, Volume2, VolumeX } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readDir, writeTextFile } from '@tauri-apps/plugin-fs';
 import { useProjectStore } from '../../store/useProjectStore';
 
 export function Toolbar() {
-    const { script, activeFile, uiScale, setUiScale } = useProjectStore();
+    const { script, activeFile, uiScale, setUiScale, isMuted, toggleMute } = useProjectStore();
 
     const setProject = useProjectStore(state => state.setProject);
     const loadManifest = useProjectStore(state => state.loadManifest);
     const triggerPlay = useProjectStore(state => state.triggerPlay);
+    const triggerStop = useProjectStore(state => state.triggerStop);
 
     const handleOpenProject = async () => {
         try {
-            const selectedPath = await open({ directory: true, multiple: false, title: 'Open Zerith Game' });
-            if (selectedPath !== null) {
-                const entries = await readDir(selectedPath);
+            const selectedFile = await open({
+                multiple: false,
+                directory: false,
+                filters: [{ name: 'Game Manifest', extensions: ['json'] }],
+                title: 'Select game.json'
+            });
+
+            if (selectedFile) {
+                const separator = selectedFile.includes('\\') ? '\\' : '/';
+                const pathParts = selectedFile.split(separator);
+                pathParts.pop();
+                const projectRoot = pathParts.join(separator);
+
+                const entries = await readDir(projectRoot);
                 entries.sort((a, b) => {
                     if (a.isDirectory && !b.isDirectory) return -1;
                     if (!a.isDirectory && b.isDirectory) return 1;
                     return a.name.localeCompare(b.name);
                 });
-                setProject(selectedPath, entries);
-
+                setProject(projectRoot, entries);
                 await loadManifest();
             }
         } catch (err) {
@@ -39,11 +50,7 @@ export function Toolbar() {
         }
     };
 
-    const iconBtnStyle = {
-        background: 'transparent', border: 'none', color: '#aaa',
-        cursor: 'pointer', padding: `${4 * uiScale}px`
-    };
-
+    const iconBtnStyle = { background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', padding: `${4 * uiScale}px` };
     const buttonStyle = {
         display: 'flex', alignItems: 'center', gap: `${6 * uiScale}px`,
         background: 'transparent', color: '#ccc', border: '1px solid #555',
@@ -56,14 +63,23 @@ export function Toolbar() {
             <strong style={{ color: '#fff', marginRight: `${20 * uiScale}px`, fontSize: '1.1em' }}>Zerith Editor</strong>
 
             <button onClick={handleOpenProject} style={buttonStyle}>
-                <FolderOpen size={14 * uiScale} /> Open Project
+                <FolderOpen size={14 * uiScale} /> Open
             </button>
             <button onClick={handleSave} style={{ ...buttonStyle, marginLeft: '8px' }}>
-                <Save size={14 * uiScale} /> Save Project
+                <Save size={14 * uiScale} /> Save
             </button>
-            <button onClick={triggerPlay} style={{ ...buttonStyle, marginLeft: 'auto', background: '#0e639c', border: 'none', color: 'white' }}>
-                <Play size={14 * uiScale} /> Play Test
-            </button>
+
+            <div style={{ display: 'flex', marginLeft: 'auto', gap: '8px' }}>
+                <button onClick={toggleMute} style={{ ...buttonStyle, border: 'none' }} title={isMuted ? "Unmute" : "Mute"}>
+                    {isMuted ? <VolumeX size={16 * uiScale} color="#f87171" /> : <Volume2 size={16 * uiScale} />}
+                </button>
+                <button onClick={triggerStop} style={{ ...buttonStyle, background: '#882222', border: 'none', color: 'white' }}>
+                    <Square size={12 * uiScale} fill="currentColor" /> Stop
+                </button>
+                <button onClick={triggerPlay} style={{ ...buttonStyle, background: '#0e639c', border: 'none', color: 'white' }}>
+                    <Play size={14 * uiScale} /> Play
+                </button>
+            </div>
 
             <div style={{ marginLeft: `${16 * uiScale}px`, display: 'flex', alignItems: 'center', gap: '4px', borderLeft: '1px solid #444', paddingLeft: `${16 * uiScale}px` }}>
                 <button onClick={() => setUiScale(Math.max(0.8, uiScale - 0.1))} style={iconBtnStyle}><ZoomOut size={14 * uiScale} /></button>

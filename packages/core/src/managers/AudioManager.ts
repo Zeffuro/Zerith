@@ -5,6 +5,7 @@ export interface AudioConfig {
     sfxVolume?: number;
     voiceVolume?: number;
     masterVolume?: number;
+    muted?: boolean;
 }
 
 export class AudioManager {
@@ -13,6 +14,8 @@ export class AudioManager {
     public voiceVolume: number;
     public masterVolume: number;
 
+    private _muted: boolean = false;
+
     public currentBgmUrl: string | null = null;
 
     constructor(config: AudioConfig = {}) {
@@ -20,18 +23,34 @@ export class AudioManager {
         this.sfxVolume = config.sfxVolume ?? 1.0;
         this.voiceVolume = config.voiceVolume ?? 1.0;
         this.masterVolume = config.masterVolume ?? 1.0;
+        this._muted = config.muted ?? false;
     }
 
     public init() {
         sound.init();
-        if (this.masterVolume !== 1.0) {
-            sound.volumeAll = this.masterVolume;
-        }
+        this.updateSystemVolume();
+    }
+
+    public get muted(): boolean {
+        return this._muted;
+    }
+
+    public set muted(value: boolean) {
+        this._muted = value;
+        this.updateSystemVolume();
     }
 
     public setMasterVolume(v: number) {
         this.masterVolume = v;
-        sound.volumeAll = v;
+        this.updateSystemVolume();
+    }
+
+    private updateSystemVolume() {
+        if (this._muted) {
+            sound.volumeAll = 0;
+        } else {
+            sound.volumeAll = this.masterVolume;
+        }
     }
 
     public setVolume(channel: 'bgm' | 'sfx' | 'voice', v: number) {
@@ -62,7 +81,8 @@ export class AudioManager {
             bgmVolume: this.bgmVolume,
             sfxVolume: this.sfxVolume,
             voiceVolume: this.voiceVolume,
-            masterVolume: this.masterVolume
+            masterVolume: this.masterVolume,
+            muted: this._muted
         };
     }
 

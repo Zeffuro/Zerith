@@ -1,6 +1,8 @@
 import { useProjectStore } from '../../store/useProjectStore';
 import { DialogueInspector } from './DialogueInspector';
 import { SpriteInspector } from './SpriteInspector';
+import { MacroInspector } from './MacroInspector';
+import { IfInspector } from './IfInspector';
 
 export function Inspector() {
     const script = useProjectStore(state => state.script);
@@ -31,6 +33,8 @@ export function Inspector() {
 
             {node.type === 'dialogue' && <DialogueInspector node={node} index={selectedNodeIndex} />}
             {node.type === 'sprite' && <SpriteInspector node={node} index={selectedNodeIndex} />}
+            {node.type === 'call' && <MacroInspector node={node} index={selectedNodeIndex} />}
+            {node.type === 'if' && <IfInspector node={node} index={selectedNodeIndex} />}
 
             {(node.type === 'background' || node.type === 'bgm') && (
                 <div>
