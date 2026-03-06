@@ -1,18 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { Engine, bootstrapEngine } from 'core';
-import { useProjectStore } from "../store/useProjectStore.ts";
 import { convertFileSrc } from "@tauri-apps/api/core";
 
+import { useProjectStore } from '../store/useProjectStore';
+import { useEditorStore } from '../store/useEditorStore';
+
 export function GamePreview({ script }: { script: any[] }) {
+    // Manifest data
+    const { projectPath, manifest, characters, items, macros, scenes } = useProjectStore();
+    // Triggers
+    const { playTrigger, stopTrigger, isMuted } = useEditorStore();
+
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const engineRef = useRef<Engine | null>(null);
     const [isFocused, setIsFocused] = useState(false);
-
-    const {
-        projectPath, manifest, characters, items, macros, scenes,
-        playTrigger, stopTrigger, isMuted
-    } = useProjectStore();
 
     const handleFocus = () => {
         setIsFocused(true);

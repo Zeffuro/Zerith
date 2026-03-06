@@ -1,14 +1,16 @@
-import { useProjectStore } from '../../store/useProjectStore';
 import { DialogueInspector } from './DialogueInspector';
 import { SpriteInspector } from './SpriteInspector';
 import { MacroInspector } from './MacroInspector';
 import { IfInspector } from './IfInspector';
 
+import { useEditorStore } from '../../store/useEditorStore';
+import { useScriptStore } from '../../store/useScriptStore';
+
 export function Inspector() {
-    const script = useProjectStore(state => state.script);
-    const selectedNodeIndex = useProjectStore(state => state.selectedNodeIndex);
-    const updateScript = useProjectStore(state => state.updateScript);
-    const uiScale = useProjectStore(state => state.uiScale);
+    const uiScale = useEditorStore(state => state.uiScale);
+    const { getActiveScript, selectedNodeIndex, updateActiveScript } = useScriptStore();
+
+    const script = getActiveScript();
 
     if (selectedNodeIndex === null || !script[selectedNodeIndex]) {
         return <p style={{ fontSize: 'inherit', color: '#666', fontStyle: 'italic', textAlign: 'center', marginTop: '20px' }}>Select a node to edit.</p>;
@@ -18,7 +20,7 @@ export function Inspector() {
 
     const handleChange = (field: string, value: any) => {
         const newScript = script.map((n, i) => i === selectedNodeIndex ? { ...n, [field]: value } : n);
-        updateScript(newScript);
+        updateActiveScript(newScript);
     };
 
     const inputStyle = { width: '100%', padding: `${8 * uiScale}px`, backgroundColor: '#1e1e1e', border: '1px solid #3c3c3c', color: '#fff', borderRadius: '4px', fontSize: 'inherit', outline: 'none' };

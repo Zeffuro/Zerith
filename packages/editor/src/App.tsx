@@ -1,21 +1,23 @@
 import { useEffect } from 'react';
-import { Panel, Group, Separator } from 'react-resizable-panels';
 import { Settings2 } from 'lucide-react';
+import { Panel, Group, Separator } from 'react-resizable-panels';
 import { GamePreview } from './components/GamePreview';
 import { Toolbar } from './components/layout/Toolbar';
 import { Explorer } from './components/layout/Explorer';
 import { Timeline } from './components/layout/Timeline';
 import { Inspector } from './components/inspector/Inspector';
-import { useProjectStore } from './store/useProjectStore';
+
+import { useEditorStore } from './store/useEditorStore';
+import { useScriptStore } from './store/useScriptStore';
+
 import './App.css';
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { PhysicalSize, PhysicalPosition } from "@tauri-apps/api/dpi";
 
 function App() {
-    const script = useProjectStore(state => state.script);
-    const uiScale = useProjectStore(state => state.uiScale);
-    const windowState = useProjectStore(state => state.windowState);
-    const setWindowState = useProjectStore(state => state.setWindowState);
+
+    const { uiScale, windowState, setWindowState } = useEditorStore();
+    const rootScript = useScriptStore(state => state.rootScript);
 
     // Window Persistence
     useEffect(() => {
@@ -96,7 +98,7 @@ function App() {
                     <Group orientation="vertical">
                         <Panel defaultSize={60}>
                             <div style={{ height: '100%', backgroundColor: '#000' }}>
-                                <GamePreview script={script} />
+                                <GamePreview script={rootScript} />
                             </div>
                         </Panel>
 

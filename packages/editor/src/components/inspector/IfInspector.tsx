@@ -1,15 +1,16 @@
-import { useProjectStore } from '../../store/useProjectStore';
 import { ArrowRight } from 'lucide-react';
+import { useScriptStore } from '../../store/useScriptStore';
+import { useEditorStore } from '../../store/useEditorStore';
 
 export function IfInspector({ node, index }: { node: any, index: number }) {
-    const updateScript = useProjectStore(state => state.updateScript);
-    const script = useProjectStore(state => state.getActiveScript());
-    const pushScope = useProjectStore(state => state.pushScope);
-    const uiScale = useProjectStore(state => state.uiScale);
+    const { getActiveScript, updateActiveScript, pushScope } = useScriptStore();
+    const { uiScale } = useEditorStore();
+
+    const script = getActiveScript();
 
     const handleChange = (field: string, value: any) => {
         const newScript = script.map((n, i) => i === index ? { ...n, [field]: value } : n);
-        updateScript(newScript);
+        updateActiveScript(newScript);
     };
 
     const labelStyle = { display: 'block', marginBottom: `${6 * uiScale}px`, color: '#888', fontSize: '0.85em' };
@@ -57,7 +58,6 @@ export function IfInspector({ node, index }: { node: any, index: number }) {
                         type="text"
                         value={node.value !== undefined ? node.value : ''}
                         onChange={e => {
-                            // Basic type inference
                             let v: any = e.target.value;
                             if (v === 'true') v = true;
                             else if (v === 'false') v = false;

@@ -2,14 +2,16 @@ import { Play, Square, FolderOpen, Save, ZoomIn, ZoomOut, Volume2, VolumeX } fro
 import { open } from '@tauri-apps/plugin-dialog';
 import { readDir, writeTextFile } from '@tauri-apps/plugin-fs';
 import { useProjectStore } from '../../store/useProjectStore';
+import { useEditorStore } from '../../store/useEditorStore';
+import { useScriptStore } from '../../store/useScriptStore';
 
 export function Toolbar() {
-    const { script, activeFile, uiScale, setUiScale, isMuted, toggleMute } = useProjectStore();
-
-    const setProject = useProjectStore(state => state.setProject);
-    const loadManifest = useProjectStore(state => state.loadManifest);
-    const triggerPlay = useProjectStore(state => state.triggerPlay);
-    const triggerStop = useProjectStore(state => state.triggerStop);
+    // Project/IO
+    const { setProject, loadManifest, activeFile } = useProjectStore();
+    // Editor State
+    const { uiScale, setUiScale, isMuted, toggleMute, triggerPlay, triggerStop } = useEditorStore();
+    // Content to save
+    const rootScript = useScriptStore(state => state.rootScript);
 
     const handleOpenProject = async () => {
         try {
@@ -43,7 +45,7 @@ export function Toolbar() {
     const handleSave = async () => {
         if (!activeFile) return;
         try {
-            await writeTextFile(activeFile, JSON.stringify(script, null, 4));
+            await writeTextFile(activeFile, JSON.stringify(rootScript, null, 4));
             console.log("Saved to:", activeFile);
         } catch (err) {
             console.error("Failed to save:", err);

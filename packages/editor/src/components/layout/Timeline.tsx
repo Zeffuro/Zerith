@@ -1,16 +1,20 @@
 import { useState, useRef } from 'react';
-import { useProjectStore } from '../../store/useProjectStore';
+import { useScriptStore } from '../../store/useScriptStore';
+import { useEditorStore } from '../../store/useEditorStore';
 import {
     MessageSquare, Image as ImageIcon, Music, Gamepad2,
     ArrowRightCircle, GitFork, User, FileAudio, Workflow, Trash2,
     Home, ChevronRight
 } from 'lucide-react';
+import * as React from "react";
 
 export function Timeline() {
+    const uiScale = useEditorStore(state => state.uiScale);
     const {
-        getActiveScript, updateScript, selectedNodeIndex, setSelectedNode,
-        uiScale, deleteNode, scopePath, popScope, resetScope
-    } = useProjectStore();
+        getActiveScript, updateActiveScript, selectedNodeIndex,
+        setSelectedNode, deleteNode, addNode,
+        scopePath, popScope, resetScope
+    } = useScriptStore();
 
     const script = getActiveScript();
 
@@ -41,7 +45,7 @@ export function Timeline() {
         const newScript = [...script];
         const [movedItem] = newScript.splice(sourceIndex, 1);
         newScript.splice(targetIndex, 0, movedItem);
-        updateScript(newScript);
+        updateActiveScript(newScript);
 
         if (selectedNodeIndex === sourceIndex) setSelectedNode(targetIndex);
         else if (selectedNodeIndex !== null) {
@@ -71,13 +75,13 @@ export function Timeline() {
             const newScript = [...script];
             const[movedItem] = newScript.splice(sourceIndex, 1);
             newScript.push(movedItem);
-            updateScript(newScript);
+            updateActiveScript(newScript);
         }
     };
 
     // --- Actions ---
 
-    const addNode = (type: string) => {
+    const handleAddNode = (type: string) => {
         let newNode: any = { type };
         if (type === 'dialogue') newNode = { type, speaker: '???', text: '...' };
         if (type === 'sprite') newNode = { type, id: '', action: 'show' };
@@ -85,11 +89,7 @@ export function Timeline() {
         if (type === 'choice') newNode = { type, choices:[{ text: 'Option 1', label: '' }] };
         if (type === 'call') newNode = { type, name: '' }; // Macro
 
-        const index = selectedNodeIndex !== null ? selectedNodeIndex + 1 : script.length;
-        const newScript = [...script];
-        newScript.splice(index, 0, newNode);
-        updateScript(newScript);
-        setSelectedNode(index);
+        addNode(newNode);
     };
 
     const handleDelete = (e: React.MouseEvent, index: number) => {
@@ -138,14 +138,14 @@ export function Timeline() {
                 )}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: `${4 * uiScale}px`, marginBottom: `${12 * uiScale}px` }}>
-                <QuickBtn onClick={() => addNode('dialogue')} icon={<MessageSquare size={14 * uiScale} />} title="Dialogue" scale={uiScale} />
-                <QuickBtn onClick={() => addNode('sprite')} icon={<User size={14 * uiScale} />} title="Sprite" scale={uiScale} />
-                <QuickBtn onClick={() => addNode('background')} icon={<ImageIcon size={14 * uiScale} />} title="BG" scale={uiScale} />
-                <QuickBtn onClick={() => addNode('call')} icon={<Workflow size={14 * uiScale} />} title="Macro" scale={uiScale} />
-                <QuickBtn onClick={() => addNode('bgm')} icon={<Music size={14 * uiScale} />} title="Music" scale={uiScale} />
-                <QuickBtn onClick={() => addNode('choice')} icon={<GitFork size={14 * uiScale} />} title="Choice" scale={uiScale} />
-                <QuickBtn onClick={() => addNode('jump')} icon={<ArrowRightCircle size={14 * uiScale} />} title="Jump" scale={uiScale} />
-                <QuickBtn onClick={() => addNode('if')} icon={<GitFork size={14 * uiScale} />} title="If Condition" scale={uiScale} />
+                <QuickBtn onClick={() => handleAddNode('dialogue')} icon={<MessageSquare size={14 * uiScale} />} title="Dialogue" scale={uiScale} />
+                <QuickBtn onClick={() => handleAddNode('sprite')} icon={<User size={14 * uiScale} />} title="Sprite" scale={uiScale} />
+                <QuickBtn onClick={() => handleAddNode('background')} icon={<ImageIcon size={14 * uiScale} />} title="BG" scale={uiScale} />
+                <QuickBtn onClick={() => handleAddNode('call')} icon={<Workflow size={14 * uiScale} />} title="Macro" scale={uiScale} />
+                <QuickBtn onClick={() => handleAddNode('bgm')} icon={<Music size={14 * uiScale} />} title="Music" scale={uiScale} />
+                <QuickBtn onClick={() => handleAddNode('choice')} icon={<GitFork size={14 * uiScale} />} title="Choice" scale={uiScale} />
+                <QuickBtn onClick={() => handleAddNode('jump')} icon={<ArrowRightCircle size={14 * uiScale} />} title="Jump" scale={uiScale} />
+                <QuickBtn onClick={() => handleAddNode('if')} icon={<GitFork size={14 * uiScale} />} title="If Condition" scale={uiScale} />
             </div>
 
             <div

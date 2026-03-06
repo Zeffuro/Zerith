@@ -3,6 +3,7 @@ import { FolderGit2, FolderOpen, FileJson, Image as ImageIcon, ChevronRight, Che
 import { readDir, readTextFile } from '@tauri-apps/plugin-fs';
 import { join } from '@tauri-apps/api/path';
 import { useProjectStore } from '../../store/useProjectStore';
+import { useEditorStore } from '../../store/useEditorStore';
 import type { DirEntry } from '@tauri-apps/plugin-fs';
 import { validateScript } from 'core';
 
@@ -11,9 +12,8 @@ function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPat
     const [children, setChildren] = useState<DirEntry[]>([]);
     const [fullPath, setFullPath] = useState<string>('');
 
-    const activeFile = useProjectStore(state => state.activeFile);
-    const setActiveFile = useProjectStore(state => state.setActiveFile);
-    const uiScale = useProjectStore(state => state.uiScale);
+    const { activeFile, setActiveFile } = useProjectStore();
+    const { uiScale } = useEditorStore();
 
     useEffect(() => {
         join(parentPath, entry.name).then(setFullPath);
@@ -102,7 +102,8 @@ function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPat
 }
 
 export function Explorer() {
-    const { projectPath, files, uiScale } = useProjectStore();
+    const { projectPath, files } = useProjectStore();
+    const { uiScale } = useEditorStore();
 
     return (
         <div style={{ padding: `${12 * uiScale}px 0`, height: '100%', backgroundColor: '#252526', overflowY: 'auto' }}>
