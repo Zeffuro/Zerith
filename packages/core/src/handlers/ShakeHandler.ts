@@ -1,3 +1,4 @@
+import gsap from 'gsap';
 import type { BaseCommand, CommandHandler } from '../types';
 import type { Engine } from '../Engine';
 
@@ -13,36 +14,23 @@ export class ShakeHandler implements CommandHandler<ShakeCommand> {
     public autoNext = true;
 
     execute = async (command: ShakeCommand, engine: Engine) => {
-        const duration = command.duration ?? 500;
+        const duration = (command.duration ?? 500) / 1000;
         const intensity = command.intensity ?? 10;
-        const wait = command.wait ?? false;
+        const targets = [engine.layers.background, engine.layers.sprites];
 
-        const targets =[engine.layers.background, engine.layers.sprites];
+        const tl = gsap.timeline();
 
-        const performShake = () => new Promise<void>((resolve) => {
-            const startTime = performance.now();
-
-            const animate = (time: number) => {
-                const elapsed = time - startTime;
-
-                if (elapsed < duration) {
-                    const offsetX = (Math.random() * 2 - 1) * intensity;
-                    const offsetY = (Math.random() * 2 - 1) * intensity;
-
-                    targets.forEach(t => t.position.set(offsetX, offsetY));
-                    requestAnimationFrame(animate);
-                } else {
-                    targets.forEach(t => t.position.set(0, 0));
-                    resolve();
-                }
-            };
-            requestAnimationFrame(animate);
+        tl.to(targets, {
+            x: `random(-${intensity}, ${intensity})`,
+            y: `random(-${intensity}, ${intensity})`,
+            duration: 0.05,
+            repeat: Math.floor(duration / 0.05),
+            yoyo: true,
+            onComplete: () => {
+                gsap.set(targets, { x: 0, y: 0 });
+            }
         });
 
-        if (wait) {
-            await performShake();
-        } else {
-            performShake();
-        }
+        if (command.wait) await tl;
     };
 }

@@ -46,7 +46,7 @@ export async function preloadSceneAssets(script: Script): Promise<void> {
     const { textures, audio } = extractAssetUrls(script);
 
     const texturePromises = [...textures].map(url =>
-        Assets.load(url).catch(err => {
+        engine.loadAsset(url).catch(err => {
             logger.warn(`Failed to preload texture: ${url}`, err);
         })
     );

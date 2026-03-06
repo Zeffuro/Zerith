@@ -1,7 +1,8 @@
 export type Token =
     | { type: 'text', val: string }
     | { type: 'wait', ms: number }
-    | { type: 'speed', speed: number };
+    | { type: 'speed', speed: number }
+    | { type: 'prompt' };
 
 /**
  * Transforms shorthand tags into valid HTML for PixiJS HTMLText.
@@ -41,7 +42,7 @@ export function transformShorthands(text: string): string {
  */
 export function parseTextTags(text: string): Token[] {
     const tokens: Token[] = [];
-    const regex = /\{(wait|speed):(\d+)}/g;
+    const regex = /\{(wait|speed):(\d+)}|\{p}/g;
     let lastIndex = 0;
     let match;
 
@@ -49,9 +50,14 @@ export function parseTextTags(text: string): Token[] {
         if (match.index > lastIndex) {
             tokens.push({ type: 'text', val: text.slice(lastIndex, match.index) });
         }
-        const [, type, value] = match;
-        if (type === 'wait') tokens.push({ type: 'wait', ms: parseInt(value) });
-        if (type === 'speed') tokens.push({ type: 'speed', speed: parseInt(value) });
+
+        if (match[0] === '{p}') {
+            tokens.push({ type: 'prompt' });
+        } else {
+            const [, type, value] = match;
+            if (type === 'wait') tokens.push({ type: 'wait', ms: parseInt(value) });
+            if (type === 'speed') tokens.push({ type: 'speed', speed: parseInt(value) });
+        }
 
         lastIndex = regex.lastIndex;
     }

@@ -85,7 +85,7 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
         for (const frameName of frames) {
             const tex = sheetConfig?.atlasUrl
                 ? engine.spritesheets.getFrame(sheetConfig.atlasUrl, frameName)
-                : await Assets.load(frameName);
+                : await engine.loadAsset(frameName);
             if (tex) {
                 textures.push(tex);
             } else {
@@ -187,7 +187,7 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             if (charData.spritesheet?.atlasUrl) {
                 return await this.getSheetFrame(charData.spritesheet, frameName, engine);
             }
-            return await Assets.load(frameName);
+            return await engine.loadAsset(frameName);
         }
 
         const url = command.assetUrl;
@@ -201,7 +201,7 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             return null;
         }
 
-        return await Assets.load(url);
+        return await engine.loadAsset(url);
     }
 
     private async getSheetFrame(
@@ -229,7 +229,7 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
         const texture = await this.resolveTexture(command, engine);
         if (!texture) {
             if (command.assetUrl) {
-                const fallback = await Assets.load(command.assetUrl);
+                const fallback = await engine.loadAsset(command.assetUrl);
                 return this.showWithTexture(command, fallback, engine);
             }
             engine.logger.warn(`Sprite 'show' could not resolve texture (id: '${command.id}')`);

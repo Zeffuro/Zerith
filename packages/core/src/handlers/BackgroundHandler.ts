@@ -1,4 +1,4 @@
-import { Assets, Sprite } from 'pixi.js';
+import { Sprite } from 'pixi.js';
 import type { BaseCommand, CommandHandler } from '../types';
 import type { Engine } from '../Engine';
 
@@ -13,7 +13,7 @@ export class BackgroundHandler implements CommandHandler<BackgroundCommand> {
     private sprite: Sprite | null = null;
 
     execute = async (command: BackgroundCommand, engine: Engine) => {
-        const texture = await Assets.load(command.assetUrl);
+        const texture = await engine.loadAsset(command.assetUrl);
 
         if (!this.sprite) {
             this.sprite = new Sprite(texture);

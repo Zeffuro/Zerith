@@ -1,5 +1,6 @@
 import {Assets, Container, Graphics, HTMLText, Sprite, Text, type TextStyleOptions} from 'pixi.js';
 import {sound} from '@pixi/sound';
+import gsap from 'gsap';
 import type {CommandHandler} from '../types';
 import type {CharacterDefinition} from '../types';
 import type {Engine} from '../Engine';
@@ -50,6 +51,8 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         engine.consumeSkip();
         if (!this.container) this.buildUI(engine);
 
+        const resolvedText = engine.resolveText(command.text);
+
         const speakerKey = command.speaker.toLowerCase();
         const charData = this.config.characters?.[speakerKey] ||
             Object.entries(this.config.characters || {})
@@ -63,7 +66,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         this.nameText.style.fill = charData?.nameColor || engine.theme.accentColor;
 
         if (charData?.portraitUrl) {
-            this.portraitSprite.texture = await Assets.load(charData.portraitUrl);
+            this.portraitSprite.texture = await engine.loadAsset(charData.portraitUrl);
             this.portraitSprite.visible = true;
             this.portraitSprite.anchor.set(0.5, 1);
 
@@ -127,7 +130,8 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         }
 
         this.messageText.text = "";
-        const transformed = transformShorthands(command.text);
+
+        const transformed = transformShorthands(resolvedText);
         const tokens = parseTextTags(transformed);
         let currentSpeed = this.config.typewriterSpeed!;
 
@@ -141,6 +145,21 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
 
         for (const token of tokens) {
             if (session !== this.currentSession) return;
+
+            if (token.type === 'prompt') {
+                const blinker = this.createBlinker();
+
+                await new Promise<void>((resolve) => {
+                    const onInput = () => {
+                        engine.off('input:confirm', onInput);
+                        engine.off('input:next', onInput);
+                        blinker.destroy();
+                        resolve();
+                    };
+                    engine.once('input:confirm', onInput);
+                    engine.app.canvas.addEventListener('pointerdown', onInput, { once: true });
+                });
+            }
 
             if (engine.consumeSkip()) {
                 const remaining = tokens
@@ -195,6 +214,14 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
             this.messageText.text = current;
             if (speed > 0) await new Promise(r => setTimeout(r, speed));
         }
+    }
+
+    private createBlinker(): Graphics {
+        const g = new Graphics().poly([0,0, 15,0, 7.5,10]).fill(0xffffff);
+        g.position.set(this.messageText.x + this.messageText.width, this.messageText.y + this.messageText.height);
+        this.container?.addChild(g);
+        gsap.to(g, { alpha: 0, duration: 0.5, repeat: -1, yoyo: true });
+        return g;
     }
 
     private buildUI(engine: Engine) {

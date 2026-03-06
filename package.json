@@ -5,6 +5,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=player"
+    "dev:player": "npm run dev --workspace=player",
+    "dev:editor": "npm run tauri dev --workspace=editor"
   }
 }

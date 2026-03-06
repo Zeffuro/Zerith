@@ -1,4 +1,4 @@
-import { Application, Container } from 'pixi.js';
+import { Application, Assets, Container } from 'pixi.js';
 import type { BaseCommand, CommandHandler, Script, SceneMap, GameManifest } from './types';
 import type { EngineConfig } from './EngineConfig';
 import { Logger } from './utils/Logger';
@@ -19,6 +19,8 @@ import { SettingsPanel } from './ui/SettingsPanel';
 import { HistoryPanel } from './ui/HistoryPanel';
 import { SaveLoadPanel } from './ui/SaveLoadPanel';
 import { ItemBrowserPanel } from './ui/ItemBrowserPanel';
+
+export type AssetResolver = (url: string) => string;
 
 export class Engine {
     public app: Application;
@@ -44,7 +46,10 @@ export class Engine {
     public logger: Logger = new Logger('[Engine]');
     public theme: Theme = DefaultTheme;
     public state: Record<string, any> = {};
+    public persistentState: Record<string, any> = {};
     public manifest: GameManifest = {};
+
+    public isEditor: boolean = false;
 
     private handlers: Map<string, CommandHandler<any>> = new Map();
     private isExecuting = false;
@@ -173,6 +178,14 @@ export class Engine {
         this._autoAdvanceDelay = delayMs;
     }
 
+    public resolveText(text: string): string {
+        return text.replace(/\{(\w+)}/g, (match, key) => {
+            if (this.state[key] !== undefined) return this.state[key];
+            if (this.persistentState[key] !== undefined) return this.persistentState[key];
+            return match;
+        });
+    }
+
     /* Command Execution */
 
     public async runCommand(command: BaseCommand) {
@@ -257,6 +270,10 @@ export class Engine {
 
     /* Events */
 
+    public once(event: string, listener: (...args: any[]) => void) {
+        this.events.once(event, listener);
+    }
+
     public on(event: string, listener: (...args: any[]) => void) {
         this.events.on(event, listener);
     }
@@ -268,4 +285,13 @@ export class Engine {
     public emit(event: string, ...args: any[]) {
         this.events.emit(event, ...args);
     }
+
+    /* Assets */
+
+    public async loadAsset(url: string): Promise<any> {
+        const resolvedUrl = this.assetResolver(url);
+        return await Assets.load(resolvedUrl);
+    }
+
+    public assetResolver: AssetResolver = (url) => url;
 }

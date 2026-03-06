@@ -86,7 +86,7 @@ export class ItemBrowserPanel implements MenuPanel {
 
             if (item.imageUrl) {
                 try {
-                    const texture = await Assets.load(item.imageUrl);
+                    const texture = await engine.loadAsset(item.imageUrl);
                     detailSprite.texture = texture;
                     detailSprite.visible = true;
                     const maxImgW = detailWidth * 0.6;
