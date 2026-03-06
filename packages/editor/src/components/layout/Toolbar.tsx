@@ -1,17 +1,21 @@
-import { Play, Square, FolderOpen, Save, ZoomIn, ZoomOut, Volume2, VolumeX } from 'lucide-react';
+import { Play, Square, FolderOpen, Save, ZoomIn, ZoomOut, Volume2, VolumeX, Star } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readDir, writeTextFile } from '@tauri-apps/plugin-fs';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useScriptStore } from '../../store/useScriptStore';
+import { useState } from 'react';
+import { QuickCommandsMenu } from './QuickCommandsMenu';
 
 export function Toolbar() {
-    // Project/IO
     const { setProject, loadManifest, activeFile } = useProjectStore();
-    // Editor State
-    const { uiScale, setUiScale, isMuted, toggleMute, triggerPlay, triggerStop } = useEditorStore();
-    // Content to save
+    const {
+        uiScale, setUiScale, isMuted, toggleMute, triggerPlay, triggerStop,
+        quickCommandTypes, toggleQuickCommandType, moveQuickCommandType
+    } = useEditorStore();
     const rootScript = useScriptStore(state => state.rootScript);
+
+    const [quickOpen, setQuickOpen] = useState(false);
 
     const handleOpenProject = async () => {
         try {
@@ -61,7 +65,7 @@ export function Toolbar() {
     };
 
     return (
-        <div style={{ height: `${40 * uiScale}px`, backgroundColor: '#2d2d2d', display: 'flex', alignItems: 'center', padding: `0 ${16 * uiScale}px`, borderBottom: '1px solid #3c3c3c' }}>
+        <div style={{ height: `${40 * uiScale}px`, backgroundColor: '#2d2d2d', display: 'flex', alignItems: 'center', padding: `0 ${16 * uiScale}px`, borderBottom: '1px solid #3c3c3c', position: 'relative' }}>
             <strong style={{ color: '#fff', marginRight: `${20 * uiScale}px`, fontSize: '1.1em' }}>Zerith Editor</strong>
 
             <button onClick={handleOpenProject} style={buttonStyle}>
@@ -70,6 +74,19 @@ export function Toolbar() {
             <button onClick={handleSave} style={{ ...buttonStyle, marginLeft: '8px' }}>
                 <Save size={14 * uiScale} /> Save
             </button>
+
+            <button onClick={() => setQuickOpen(v => !v)} style={{ ...buttonStyle, marginLeft: '8px' }}>
+                <Star size={14 * uiScale} /> Quick Buttons
+            </button>
+
+            <QuickCommandsMenu
+                uiScale={uiScale}
+                open={quickOpen}
+                onClose={() => setQuickOpen(false)}
+                quickCommandTypes={quickCommandTypes}
+                toggleQuickCommandType={toggleQuickCommandType}
+                moveQuickCommandType={moveQuickCommandType}
+            />
 
             <div style={{ display: 'flex', marginLeft: 'auto', gap: '8px' }}>
                 <button onClick={toggleMute} style={{ ...buttonStyle, border: 'none' }} title={isMuted ? "Unmute" : "Mute"}>

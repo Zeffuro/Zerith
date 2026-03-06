@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useDismissiblePopup } from '../../hooks/useDismissiblePopup';
 
-type CommandItem = { type: string; label: string };
+type CommandItem = { type: string; label: string; icon?: ReactNode };
 
 export function AddCommandMenu({
                                    uiScale,
@@ -14,15 +15,15 @@ export function AddCommandMenu({
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const rootRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useDismissiblePopup(open, rootRef, () => setOpen(false));
 
     useEffect(() => {
-        const onDocClick = (e: MouseEvent) => {
-            if (!rootRef.current) return;
-            if (!rootRef.current.contains(e.target as Node)) setOpen(false);
-        };
-        document.addEventListener('mousedown', onDocClick);
-        return () => document.removeEventListener('mousedown', onDocClick);
-    }, []);
+        if (!open) return;
+        const t = setTimeout(() => inputRef.current?.focus(), 0);
+        return () => clearTimeout(t);
+    }, [open]);
 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -51,21 +52,25 @@ export function AddCommandMenu({
             </button>
 
             {open && (
-                <div style={{
-                    position: 'absolute',
-                    top: `calc(100% + ${6 * uiScale}px)`,
-                    left: 0,
-                    width: `${260 * uiScale}px`,
-                    maxHeight: `${320 * uiScale}px`,
-                    overflowY: 'auto',
-                    background: '#1f1f1f',
-                    border: '1px solid #3a3a3a',
-                    borderRadius: '6px',
-                    zIndex: 1000,
-                    boxShadow: '0 8px 20px rgba(0,0,0,0.35)',
-                    padding: `${8 * uiScale}px`,
-                }}>
+                <div
+                    className="zerith-scrollbar"
+                    style={{
+                        position: 'absolute',
+                        top: `calc(100% + ${6 * uiScale}px)`,
+                        left: 0,
+                        width: `${280 * uiScale}px`,
+                        maxHeight: `${340 * uiScale}px`,
+                        overflowY: 'auto',
+                        background: '#1f1f1f',
+                        border: '1px solid #3a3a3a',
+                        borderRadius: '6px',
+                        zIndex: 1000,
+                        boxShadow: '0 8px 20px rgba(0,0,0,0.35)',
+                        padding: `${8 * uiScale}px`,
+                    }}
+                >
                     <input
+                        ref={inputRef}
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
@@ -100,12 +105,16 @@ export function AddCommandMenu({
                                 borderRadius: '4px',
                                 cursor: 'pointer',
                                 fontSize: '0.85em',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: `${8 * uiScale}px`,
                             }}
                             onMouseEnter={(e) => (e.currentTarget.style.background = '#2a2a2a')}
                             onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                         >
-                            {item.label}
-                            <span style={{ color: '#777', marginLeft: '6px' }}>({item.type})</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center' }}>{item.icon}</span>
+                            <span>{item.label}</span>
+                            <span style={{ color: '#777', marginLeft: 'auto' }}>({item.type})</span>
                         </button>
                     ))}
 

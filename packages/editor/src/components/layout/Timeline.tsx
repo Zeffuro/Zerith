@@ -5,7 +5,7 @@ import { useEditorStore } from '../../store/useEditorStore';
 import { Trash2, Home, ChevronRight, ChevronDown } from 'lucide-react';
 import * as React from "react";
 import type { ScriptPath } from '../../utils/scriptPathUtils';
-import { COMMAND_TYPES, createDefaultCommand, getPlugin } from '../../editor/commandPlugins';
+import { createDefaultCommand, getPlugin, getAllPlugins } from '../../editor/commandPlugins';
 import { AddCommandMenu } from "./AddCommandMenu.tsx";
 
 function pathKey(path: ScriptPath) {
@@ -18,6 +18,8 @@ function samePath(a: ScriptPath | null, b: ScriptPath) {
 
 export function Timeline() {
     const uiScale = useEditorStore(state => state.uiScale);
+    const quickCommandTypes = useEditorStore(state => state.quickCommandTypes);
+
     const {
         rootScript, selectedNodePath, setSelectedNodePath,
         selectedNodeIndex, setSelectedNode,
@@ -26,12 +28,20 @@ export function Timeline() {
         moveNodeByPath
     } = useScriptStore();
 
-    const commandMenuItems = COMMAND_TYPES.map((type) => ({
-        type,
-        label: getPlugin(type).label,
-    }));
+    const allPlugins = useMemo(() => getAllPlugins(), []);
+    const commandMenuItems = useMemo(
+        () => allPlugins.map((p) => ({
+            type: p.type,
+            label: p.label,
+            icon: p.icon(14 * uiScale),
+        })),
+        [allPlugins, uiScale]
+    );
 
-    const quickTypes = COMMAND_TYPES.filter((t) => !!getPlugin(t).quick);
+    const quickTypes = useMemo(
+        () => quickCommandTypes.filter((t) => !!getPlugin(t)),
+        [quickCommandTypes]
+    );
 
     const dragSourceRef = useRef<ScriptPath | null>(null);
     const [dropIndicator, setDropIndicator] = useState<{ arrayPath: ScriptPath; index: number } | null>(null);
@@ -88,10 +98,6 @@ export function Timeline() {
         setDropIndicator(null);
     };
 
-    const handleAddNode = (type: string) => {
-        addNode(createDefaultCommand(type));
-    };
-
     const handleDeleteRootNode = (e: React.MouseEvent, index: number) => {
         e.stopPropagation();
         if (confirm('Delete this node?')) {
@@ -124,10 +130,10 @@ export function Timeline() {
             case 'sfx': return typeof node.assetUrl !== 'string' || node.assetUrl.trim() === '';
             case 'label': return typeof node.name !== 'string' || node.name.trim() === '';
             case 'goto': return typeof node.label !== 'string' || node.label.trim() === '';
-            case 'if':
-                return !Array.isArray(node.then) || !Array.isArray(node.else);
-            default:
-                return false;
+            case 'if': return !Array.isArray(node.then) || !Array.isArray(node.else);
+            case 'while': return !Array.isArray(node.body);
+            case 'for': return !Array.isArray(node.body);
+            default: return false;
         }
     };
 
@@ -287,13 +293,13 @@ export function Timeline() {
             </div>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: `${4 * uiScale}px`, marginBottom: `${12 * uiScale}px` }}>
-                <AddCommandMenu uiScale={uiScale} onAdd={handleAddNode} items={commandMenuItems} />
+                <AddCommandMenu uiScale={uiScale} onAdd={(type) => addNode(createDefaultCommand(type))} items={commandMenuItems} />
                 {quickTypes.map((type) => {
                     const p = getPlugin(type);
                     return (
                         <QuickBtn
                             key={type}
-                            onClick={() => handleAddNode(type)}
+                            onClick={() => addNode(createDefaultCommand(type))}
                             icon={p.icon(14 * uiScale)}
                             title={p.label}
                             scale={uiScale}

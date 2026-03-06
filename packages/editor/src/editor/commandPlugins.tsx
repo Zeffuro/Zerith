@@ -2,19 +2,11 @@ import type { ReactNode } from 'react';
 import type React from 'react';
 import { CommandSchemaRegistry } from 'core';
 import {
-    MessageSquare,
-    Image as ImageIcon,
-    Music,
-    FileAudio,
-    User,
-    Workflow,
-    GitFork,
-    ArrowRightCircle,
-    Gamepad2,
+    MessageSquare, Image as ImageIcon, Music, FileAudio, User, Workflow,
+    GitFork, ArrowRightCircle, Gamepad2, Repeat, Sigma
 } from 'lucide-react';
 import type { ScriptPath } from '../utils/scriptPathUtils';
 
-// Inspectors
 import { DialogueInspector } from '../components/inspector/DialogueInspector';
 import { SpriteInspector } from '../components/inspector/SpriteInspector';
 import { MacroInspector } from '../components/inspector/MacroInspector';
@@ -37,7 +29,6 @@ export type CommandPlugin = {
     type: string;
     label: string;
     icon: (size: number) => ReactNode;
-    quick?: boolean;
     quickColor?: { bg: string; border: string };
     createDefault?: () => any;
     getSummary?: (node: any) => string;
@@ -51,34 +42,29 @@ const titleCase = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.to
 const PLUGIN_OVERRIDES: Record<string, Partial<CommandPlugin>> = {
     dialogue: {
         icon: (s) => <MessageSquare size={s} color="#60a5fa" />,
-        quick: true,
         createDefault: () => ({ type: 'dialogue', speaker: '???', text: '...' }),
         getSummary: (n) => n.text || '',
         Inspector: DialogueInspector,
     },
     background: {
         icon: (s) => <ImageIcon size={s} color="#34d399" />,
-        quick: true,
         createDefault: () => ({ type: 'background', assetUrl: '' }),
         getSummary: (n) => n.assetUrl || '',
     },
     sprite: {
         icon: (s) => <User size={s} color="#a78bfa" />,
-        quick: true,
         createDefault: () => ({ type: 'sprite', id: '', action: 'show' }),
         getSummary: (n) => n.id || n.assetUrl || '',
         Inspector: SpriteInspector,
     },
     call: {
         icon: (s) => <Workflow size={s} color="#f472b6" />,
-        quick: true,
         createDefault: () => ({ type: 'call', name: '' }),
         getSummary: (n) => n.name || '',
         Inspector: MacroInspector,
     },
     bgm: {
         icon: (s) => <Music size={s} color="#f472b6" />,
-        quick: true,
         createDefault: () => ({ type: 'bgm', action: 'play', assetUrl: '', volume: 0.5 }),
         getSummary: (n) => n.assetUrl || n.action || '',
     },
@@ -90,7 +76,6 @@ const PLUGIN_OVERRIDES: Record<string, Partial<CommandPlugin>> = {
     },
     choice: {
         icon: (s) => <GitFork size={s} color="#fbbf24" />,
-        quick: true,
         quickColor: { bg: '#4a3b10', border: '#7a5f19' },
         createDefault: () => ({ type: 'choice', options: [{ label: 'Option 1', commands: [] }] }),
         getSummary: (n) => `${Array.isArray(n.options) ? n.options.length : 0} options`,
@@ -106,7 +91,6 @@ const PLUGIN_OVERRIDES: Record<string, Partial<CommandPlugin>> = {
     },
     if: {
         icon: (s) => <GitFork size={s} color="#4ec9b0" />,
-        quick: true,
         quickColor: { bg: '#103a38', border: '#1f6a66' },
         createDefault: () => ({ type: 'if', source: 'variable', key: '', op: 'eq', value: true, then: [], else: [] }),
         getSummary: (n) => n.key || '',
@@ -116,37 +100,34 @@ const PLUGIN_OVERRIDES: Record<string, Partial<CommandPlugin>> = {
         ],
         Inspector: IfInspector,
     },
+    while: {
+        icon: (s) => <Repeat size={s} color="#22c55e" />,
+        quickColor: { bg: '#11301b', border: '#1d5b32' },
+        createDefault: () => ({ type: 'while', source: 'variable', key: '', op: 'eq', value: true, body: [] }),
+        getSummary: (n) => n.key || 'loop',
+        getBranches: (n) => [{ label: 'BODY', path: ['body'], nodes: Array.isArray(n.body) ? n.body : [] }],
+    },
+    for: {
+        icon: (s) => <Sigma size={s} color="#60a5fa" />,
+        quickColor: { bg: '#11263d', border: '#1f4b7a' },
+        createDefault: () => ({ type: 'for', iterator: 'i', from: 0, to: 3, step: 1, body: [] }),
+        getSummary: (n) => `${n.iterator ?? 'i'}: ${n.from ?? 0}→${n.to ?? 0} step ${n.step ?? 1}`,
+        getBranches: (n) => [{ label: 'BODY', path: ['body'], nodes: Array.isArray(n.body) ? n.body : [] }],
+    },
     jump: {
         icon: (s) => <ArrowRightCircle size={s} color="#fbbf24" />,
-        quick: true,
         createDefault: () => ({ type: 'jump', to: '' }),
         getSummary: (n) => n.to || '',
         Inspector: JumpInspector,
     },
-    set: {
-        Inspector: SetInspector,
-    },
-    label: {
-        Inspector: LabelInspector,
-    },
-    goto: {
-        Inspector: GotoInspector,
-    },
-    wait: {
-        Inspector: WaitInspector,
-    },
-    transition: {
-        Inspector: TransitionInspector,
-    },
-    shake: {
-        Inspector: ShakeInspector,
-    },
-    flash: {
-        Inspector: FlashInspector,
-    },
-    item: {
-        Inspector: ItemInspector,
-    },
+    set: { Inspector: SetInspector },
+    label: { Inspector: LabelInspector },
+    goto: { Inspector: GotoInspector },
+    wait: { Inspector: WaitInspector },
+    transition: { Inspector: TransitionInspector },
+    shake: { Inspector: ShakeInspector },
+    flash: { Inspector: FlashInspector },
+    item: { Inspector: ItemInspector },
 };
 
 export const COMMAND_TYPES = Object.keys(CommandSchemaRegistry);
@@ -154,30 +135,30 @@ export const COMMAND_TYPES = Object.keys(CommandSchemaRegistry);
 export const COMMAND_PLUGINS: Record<string, CommandPlugin> = Object.fromEntries(
     COMMAND_TYPES.map((type) => {
         const o = PLUGIN_OVERRIDES[type] ?? {};
-        const plugin: CommandPlugin = {
+        return [type, {
             type,
             label: o.label ?? titleCase(type),
             icon: o.icon ?? FALLBACK_ICON,
-            quick: o.quick,
             quickColor: o.quickColor,
             createDefault: o.createDefault ?? (() => ({ type })),
             getSummary: o.getSummary,
             getBranches: o.getBranches,
             Inspector: o.Inspector,
-        };
-        return [type, plugin];
+        }];
     })
 );
 
 export function getPlugin(type: string): CommandPlugin {
-    return (
-        COMMAND_PLUGINS[type] ?? {
-            type,
-            label: titleCase(type),
-            icon: FALLBACK_ICON,
-            createDefault: () => ({ type }),
-        }
-    );
+    return COMMAND_PLUGINS[type] ?? {
+        type,
+        label: titleCase(type),
+        icon: FALLBACK_ICON,
+        createDefault: () => ({ type }),
+    };
+}
+
+export function getAllPlugins(): CommandPlugin[] {
+    return Object.values(COMMAND_PLUGINS);
 }
 
 export function createDefaultCommand(type: string) {

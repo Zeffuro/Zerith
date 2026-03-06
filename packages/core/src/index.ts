@@ -1,4 +1,5 @@
 /* Handlers */
+/* Handlers */
 import { BackgroundHandler } from './handlers/BackgroundHandler';
 import { TransitionHandler } from './handlers/TransitionHandler';
 import { JumpHandler } from './handlers/JumpHandler';
@@ -9,6 +10,8 @@ import { BgmHandler } from './handlers/BgmHandler';
 import { SfxHandler } from './handlers/SfxHandler';
 import { SetHandler } from './handlers/SetHandler';
 import { IfHandler } from './handlers/IfHandler';
+import { WhileHandler } from './handlers/WhileHandler';
+import { ForHandler } from './handlers/ForHandler';
 import { ShakeHandler } from './handlers/ShakeHandler';
 import { WaitHandler } from './handlers/WaitHandler';
 import { LabelHandler } from './handlers/LabelHandler';
@@ -38,6 +41,8 @@ export * from './handlers/BgmHandler';
 export * from './handlers/SfxHandler';
 export * from './handlers/SetHandler';
 export * from './handlers/IfHandler';
+export * from './handlers/WhileHandler';
+export * from './handlers/ForHandler';
 export * from './handlers/ShakeHandler';
 export * from './handlers/WaitHandler';
 export * from './handlers/LabelHandler';
@@ -92,6 +97,8 @@ export const BuiltInHandlers = [
     SfxHandler,
     SetHandler,
     IfHandler,
+    WhileHandler,
+    ForHandler,
     ShakeHandler,
     WaitHandler,
     LabelHandler,

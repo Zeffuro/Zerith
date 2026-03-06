@@ -16,18 +16,6 @@ export const DialogueCommandSchema = z.object({
     instant: z.boolean().optional(),
 });
 
-/* Choice */
-
-export const ChoiceOptionSchema = z.object({
-    label: z.string(),
-    commands: z.array(BaseCommandSchema).optional(),
-});
-
-export const ChoiceCommandSchema = z.object({
-    type: z.literal('choice'),
-    options: z.array(ChoiceOptionSchema),
-});
-
 /* Background */
 
 export const BackgroundCommandSchema = z.object({
@@ -115,6 +103,43 @@ export const IfCommandSchema = z.object({
     any: z.array(ConditionSchema).optional(),
     then: z.array(BaseCommandSchema).optional(),
     else: z.array(BaseCommandSchema).optional(),
+});
+
+/* While */
+
+export const WhileCommandSchema = z.object({
+    type: z.literal('while'),
+    key: z.string().optional(),
+    op: ComparisonOpSchema.optional(),
+    value: z.any().optional(),
+    source: z.string().optional(),
+    all: z.array(ConditionSchema).optional(),
+    any: z.array(ConditionSchema).optional(),
+    body: z.array(BaseCommandSchema).optional(),
+    maxIterations: z.number().int().positive().optional(),
+});
+
+/* For */
+
+export const ForCommandSchema = z.object({
+    type: z.literal('for'),
+    iterator: z.string().optional(),
+    from: z.number().optional(),
+    to: z.number().optional(),
+    step: z.number().optional(),
+    body: z.array(BaseCommandSchema).optional(),
+});
+
+/* Choice */
+
+export const ChoiceOptionSchema = z.object({
+    label: z.string(),
+    commands: z.array(BaseCommandSchema).optional(),
+});
+
+export const ChoiceCommandSchema = z.object({
+    type: z.literal('choice'),
+    options: z.array(ChoiceOptionSchema),
 });
 
 /* Jump */
@@ -205,6 +230,8 @@ export const CommandSchema = z.discriminatedUnion('type', [
     WaitCommandSchema,
     SetCommandSchema,
     IfCommandSchema,
+    WhileCommandSchema,
+    ForCommandSchema,
     JumpCommandSchema,
     GotoCommandSchema,
     LabelCommandSchema,
@@ -231,6 +258,8 @@ export const CommandSchemaRegistry: Record<string, z.ZodType> = {
     wait: WaitCommandSchema,
     set: SetCommandSchema,
     if: IfCommandSchema,
+    while: WhileCommandSchema,
+    for: ForCommandSchema,
     jump: JumpCommandSchema,
     goto: GotoCommandSchema,
     label: LabelCommandSchema,

@@ -10,6 +10,9 @@
     "opener:default",
     "dialog:default",
     "fs:default",
+    "core:window:allow-set-size",
+    "core:window:allow-set-position",
+    "core:window:allow-maximize",
     {
       "identifier": "fs:allow-read-dir",
       "allow": [{ "path": "**" }]

@@ -10,6 +10,8 @@ import type { BgmCommand } from './handlers/BgmHandler';
 import type { SfxCommand } from './handlers/SfxHandler';
 import type { SetCommand } from './handlers/SetHandler';
 import type { IfCommand } from './handlers/IfHandler';
+import type { WhileCommand } from './handlers/WhileHandler';
+import type { ForCommand } from './handlers/ForHandler';
 import type { ShakeCommand } from './handlers/ShakeHandler';
 import type { WaitCommand } from './handlers/WaitHandler';
 import type { LabelCommand } from './handlers/LabelHandler';
@@ -31,6 +33,8 @@ export type Command =
     | SfxCommand
     | SetCommand
     | IfCommand
+    | WhileCommand
+    | ForCommand
     | ShakeCommand
     | WaitCommand
     | LabelCommand
