@@ -1,0 +1,37 @@
+{
+  "key": "classicSoft",
+  "label": "Classic Soft",
+  "vars": {
+    "--editor-bg-app": "#1f2022",
+    "--editor-bg-panel": "#282a2d",
+    "--editor-bg-panel-alt": "#313338",
+    "--editor-bg-input": "#1f2022",
+    "--editor-bg-popup": "#232529",
+    "--editor-bg-hover": "#32353a",
+    "--editor-bg-selected": "#0a446a",
+    "--editor-bg-danger": "#7f2b2b",
+
+    "--editor-border-subtle": "#3a3d42",
+    "--editor-border-normal": "#444850",
+    "--editor-border-input": "#4a4e56",
+    "--editor-border-button": "#5a606a",
+    "--editor-border-accent": "#1d8dde",
+    "--editor-border-primary-btn": "#2f92d9",
+
+    "--editor-text-primary": "#ffffff",
+    "--editor-text-normal": "#d2d5da",
+    "--editor-text-muted": "#9ca3af",
+    "--editor-text-faint": "#7a828f",
+
+    "--editor-accent-primary": "#0f6eaf",
+    "--editor-accent-red": "#f87171",
+    "--editor-accent-green": "#22c55e",
+
+    "--editor-shadow-popup": "0 8px 20px rgba(0,0,0,0.32)",
+    "--editor-shadow-popup-strong": "0 10px 24px rgba(0,0,0,0.38)",
+
+    "--editor-radius-sm": "3px",
+    "--editor-radius-md": "4px",
+    "--editor-radius-lg": "6px"
+  }
+}

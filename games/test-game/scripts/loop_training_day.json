@@ -1,0 +1,38 @@
+[
+  { "type": "bgm", "action": "play", "assetUrl": "/assets/bgm/court.mp3", "volume": 0.35 },
+  { "type": "background", "assetUrl": "/assets/bg/office.png" },
+  { "type": "sprite", "id": "phoenix", "action": "show", "pose": "default" },
+
+  { "type": "dialogue", "speaker": "phoenix", "text": "Maya says I need to review three witness notes before court..." },
+  { "type": "set", "key": "note_idx", "value": 1 },
+
+  {
+    "type": "for",
+    "iterator": "note_idx",
+    "from": 1,
+    "to": 3,
+    "step": 1,
+    "body": [
+      { "type": "dialogue", "speaker": "phoenix", "text": "Reviewing note #{note_idx}..." },
+      { "type": "wait", "duration": 250 }
+    ]
+  },
+
+  { "type": "dialogue", "speaker": "phoenix", "text": "Okay, notes reviewed. Time for pressure drills." },
+  { "type": "set", "key": "focus", "value": 0 },
+
+  {
+    "type": "while",
+    "key": "focus",
+    "op": "lt",
+    "value": 3,
+    "maxIterations": 6,
+    "body": [
+      { "type": "dialogue", "speaker": "phoenix", "text": "Deep breath... focus level {focus}." },
+      { "type": "set", "key": "focus", "op": "add", "value": 1 }
+    ]
+  },
+
+  { "type": "dialogue", "speaker": "phoenix", "text": "That should do it. Courtroom, here I come." },
+  { "type": "jump", "to": "loop_cross_exam" }
+]

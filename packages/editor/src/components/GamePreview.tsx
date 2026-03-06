@@ -9,7 +9,7 @@ export function GamePreview({ script }: { script: any[] }) {
     // Manifest data
     const { projectPath, manifest, characters, items, macros, scenes } = useProjectStore();
     // Triggers
-    const { playTrigger, stopTrigger, isMuted } = useEditorStore();
+    const { playTrigger, stopTrigger, isMuted, playFromIndex } = useEditorStore();
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -63,9 +63,10 @@ export function GamePreview({ script }: { script: any[] }) {
     // Play
     useEffect(() => {
         if (engineRef.current && playTrigger > 0) {
+            const startIndex = typeof playFromIndex === 'number' ? playFromIndex : 0;
             engineRef.current.clear();
             engineRef.current.scenes.addScene('preview', script);
-            engineRef.current.jumpToScene('preview', 0);
+            engineRef.current.jumpToScene('preview', startIndex);
             engineRef.current.start();
             containerRef.current?.focus();
         }

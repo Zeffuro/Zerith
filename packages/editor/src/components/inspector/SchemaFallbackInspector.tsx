@@ -36,20 +36,24 @@ function inferFields(type: string): FieldInfo[] {
             if (innerName === 'ZodString') return { key, optional: tName === 'ZodOptional', kind: 'string' };
             if (innerName === 'ZodNumber') return { key, optional: tName === 'ZodOptional', kind: 'number' };
             if (innerName === 'ZodBoolean') return { key, optional: tName === 'ZodOptional', kind: 'boolean' };
-            if (innerName === 'ZodEnum') return {
-                key,
-                optional: tName === 'ZodOptional',
-                kind: 'enum',
-                enumValues: inner?._def?.values ?? [],
-            };
+            if (innerName === 'ZodEnum') {
+                return {
+                    key,
+                    optional: tName === 'ZodOptional',
+                    kind: 'enum',
+                    enumValues: inner?._def?.values ?? [],
+                };
+            }
 
             return { key, optional: tName === 'ZodOptional', kind: 'unknown' };
         });
 }
 
+const HIDDEN_COMPLEX_KEYS = new Set(['then', 'else', 'body', 'commands', 'options']);
+
 export function SchemaFallbackInspector({ node, index }: { node: any; index?: number | null }) {
     const { labelStyle, inputStyle, handleChange } = useInspectorFieldEditor(index);
-    const fields = inferFields(node?.type);
+    const fields = inferFields(node?.type).filter((f) => !HIDDEN_COMPLEX_KEYS.has(f.key));
 
     if (!node?.type) {
         return <div style={{ color: '#777', fontStyle: 'italic' }}>Invalid node.</div>;
@@ -58,7 +62,7 @@ export function SchemaFallbackInspector({ node, index }: { node: any; index?: nu
     if (fields.length === 0) {
         return (
             <div style={{ color: '#777', fontStyle: 'italic' }}>
-                No schema-derived fields for "{node.type}".
+                No schema-derived scalar fields for "{node.type}".
             </div>
         );
     }
@@ -91,7 +95,9 @@ export function SchemaFallbackInspector({ node, index }: { node: any; index?: nu
                             <input
                                 type="number"
                                 value={value ?? ''}
-                                onChange={(e) => handleChange(f.key, e.target.value === '' ? undefined : Number(e.target.value))}
+                                onChange={(e) =>
+                                    handleChange(f.key, e.target.value === '' ? undefined : Number(e.target.value))
+                                }
                                 style={inputStyle}
                             />
                         </div>
@@ -108,8 +114,30 @@ export function SchemaFallbackInspector({ node, index }: { node: any; index?: nu
                                 style={inputStyle}
                             >
                                 <option value="">(unset)</option>
-                                {f.enumValues.map((v) => <option key={v} value={v}>{v}</option>)}
+                                {f.enumValues.map((v) => (
+                                    <option key={v} value={v}>
+                                        {v}
+                                    </option>
+                                ))}
                             </select>
+                        </div>
+                    );
+                }
+
+                if (f.kind === 'unknown') {
+                    return (
+                        <div key={f.key}>
+                            <label style={labelStyle}>{f.key}</label>
+                            <div
+                                style={{
+                                    ...inputStyle,
+                                    color: '#888',
+                                    background: '#151515',
+                                    borderStyle: 'dashed',
+                                }}
+                            >
+                                Complex field (not inline editable in fallback inspector).
+                            </div>
                         </div>
                     );
                 }

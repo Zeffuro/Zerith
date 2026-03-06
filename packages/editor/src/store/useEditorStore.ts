@@ -8,6 +8,8 @@ interface EditorState {
 
     playTrigger: number;
     stopTrigger: number;
+    playFromIndex: number | null;
+    triggerPlayFrom: (index: number) => void;
 
     quickCommandTypes: string[];
     setQuickCommandTypes: (types: string[]) => void;
@@ -19,6 +21,9 @@ interface EditorState {
     setWindowState: (state: EditorState['windowState']) => void;
     triggerPlay: () => void;
     triggerStop: () => void;
+
+    themeKey: string;
+    setThemeKey: (key: string) => void;
 }
 
 const DEFAULT_QUICK = ['dialogue', 'background', 'sprite', 'choice', 'if', 'while', 'for', 'jump', 'call', 'bgm'];
@@ -31,6 +36,7 @@ export const useEditorStore = create<EditorState>()(
             windowState: null,
             playTrigger: 0,
             stopTrigger: 0,
+            playFromIndex: null,
 
             quickCommandTypes: DEFAULT_QUICK,
 
@@ -61,8 +67,21 @@ export const useEditorStore = create<EditorState>()(
             setUiScale: (scale) => set({ uiScale: scale }),
             toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
             setWindowState: (ws) => set({ windowState: ws }),
-            triggerPlay: () => set((state) => ({ playTrigger: state.playTrigger + 1 })),
             triggerStop: () => set((state) => ({ stopTrigger: state.stopTrigger + 1 })),
+            triggerPlayFrom: (index) =>
+                set((state) => ({
+                    playTrigger: state.playTrigger + 1,
+                    playFromIndex: index,
+                })),
+
+            triggerPlay: () =>
+                set((state) => ({
+                    playTrigger: state.playTrigger + 1,
+                    playFromIndex: null,
+                })),
+
+            themeKey: 'classic',
+            setThemeKey: (key) => set({ themeKey: key }),
         }),
         {
             name: 'zerith-editor-prefs',
@@ -71,6 +90,7 @@ export const useEditorStore = create<EditorState>()(
                 isMuted: state.isMuted,
                 windowState: state.windowState,
                 quickCommandTypes: state.quickCommandTypes,
+                themeKey: state.themeKey,
             }),
             merge: (persisted, current) => {
                 const merged = { ...current, ...(persisted as object) } as EditorState;

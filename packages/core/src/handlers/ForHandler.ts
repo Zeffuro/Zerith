@@ -23,15 +23,20 @@ export class ForHandler implements CommandHandler<ForCommand> {
 
         if (!Number.isFinite(step) || step === 0) step = 1;
 
+        const runBodyOnce = async (value: number) => {
+            engine.setState(iterator, value);
+            for (const child of body) {
+                await engine.runCommand(child as BaseCommand);
+            }
+        };
+
         if (step > 0) {
             for (let i = from; i <= to; i += step) {
-                engine.setState(iterator, i);
-                engine.injectCommands(body);
+                await runBodyOnce(i);
             }
         } else {
             for (let i = from; i >= to; i += step) {
-                engine.setState(iterator, i);
-                engine.injectCommands(body);
+                await runBodyOnce(i);
             }
         }
     };

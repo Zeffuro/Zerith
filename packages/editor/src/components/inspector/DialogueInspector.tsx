@@ -1,8 +1,12 @@
 import { useInspectorFieldEditor } from './useInspectorFieldEditor';
+import { useProjectStore } from '../../store/useProjectStore';
 
 export function DialogueInspector({ node, index }: { node: any, index?: number | null }) {
     const { uiScale, handleChange, inputStyle } = useInspectorFieldEditor(index);
     const labelStyle = { display: 'block', marginBottom: `${6 * uiScale}px`, color: '#888', fontSize: `${11 * uiScale}px` };
+
+    const { characters } = useProjectStore();
+    const charKeys = Object.keys(characters);
 
     const renderPreview = (text: string) => {
         if (!text) return null;
@@ -22,10 +26,15 @@ export function DialogueInspector({ node, index }: { node: any, index?: number |
             <div>
                 <label style={labelStyle}>Speaker</label>
                 <input
-                    type="text" value={node.speaker || ''}
+                    type="text"
+                    value={node.speaker || ''}
                     onChange={e => handleChange('speaker', e.target.value)}
+                    list="dialogue-character-ids"
                     style={inputStyle}
                 />
+                <datalist id="dialogue-character-ids">
+                    {charKeys.map(k => <option key={k} value={k} />)}
+                </datalist>
             </div>
             <div>
                 <label style={labelStyle}>Text</label>

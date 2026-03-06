@@ -2,6 +2,8 @@ import { useEditorStore } from '../../store/useEditorStore';
 import { useScriptStore } from '../../store/useScriptStore';
 import { getPlugin } from '../../editor/commandPlugins';
 import { SchemaFallbackInspector } from './SchemaFallbackInspector';
+import { editorTheme as t } from '../../theme/editorTheme';
+import { styles } from '../../theme/styleHelpers';
 
 export function Inspector() {
     const uiScale = useEditorStore(state => state.uiScale);
@@ -20,10 +22,15 @@ export function Inspector() {
 
     if (!node) {
         return (
-            <p style={{
-                fontSize: 'inherit', color: '#666', fontStyle: 'italic',
-                textAlign: 'center', marginTop: '20px'
-            }}>
+            <p
+                style={{
+                    fontSize: 'inherit',
+                    color: t.text.faint,
+                    fontStyle: 'italic',
+                    textAlign: 'center',
+                    marginTop: '20px'
+                }}
+            >
                 Select a node to edit.
             </p>
         );
@@ -34,12 +41,16 @@ export function Inspector() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: `${16 * uiScale}px`, fontSize: 'inherit' }}>
-            <div style={{
-                paddingBottom: '8px', borderBottom: '1px solid #333',
-                display: 'flex', justifyContent: 'space-between'
-            }}>
-                <span style={{ color: '#666', fontSize: '0.85em', fontWeight: 'bold' }}>NODE TYPE</span>
-                <span style={{ color: '#aaa', fontSize: '0.85em', fontWeight: 'bold', textTransform: 'uppercase' }}>
+            <div style={styles.panelHeaderRow}>
+                <span style={{ color: t.text.faint, fontSize: '0.85em', fontWeight: 'bold' }}>NODE TYPE</span>
+                <span
+                    style={{
+                        color: '#aaa',
+                        fontSize: '0.85em',
+                        fontWeight: 'bold',
+                        textTransform: 'uppercase'
+                    }}
+                >
                     {node.type}
                 </span>
             </div>

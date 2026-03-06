@@ -13,10 +13,12 @@ import { useScriptStore } from './store/useScriptStore';
 import './App.css';
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { PhysicalSize, PhysicalPosition } from "@tauri-apps/api/dpi";
+import { getThemeRegistry } from './theme/themeRegistry';
+import { applyTheme } from './theme/applyTheme';
 
 function App() {
 
-    const { uiScale, windowState, setWindowState } = useEditorStore();
+    const { uiScale, windowState, setWindowState, themeKey } = useEditorStore();
     const rootScript = useScriptStore(state => state.rootScript);
 
     // Window Persistence
@@ -72,6 +74,12 @@ function App() {
             window.removeEventListener('drop', handleDrop);
         };
     }, []);
+
+    useEffect(() => {
+        const themes = getThemeRegistry();
+        const selected = themes.find(t => t.key === themeKey) ?? themes.find(t => t.key === 'classic') ?? themes[0];
+        if (selected) applyTheme(selected);
+    }, [themeKey]);
 
     return (
         <div style={{

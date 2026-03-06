@@ -12,5 +12,48 @@
     { "type": "sprite", "id": "phoenix", "action": "animate", "animation": "objection", "wait": true },
     { "type": "dialogue", "speaker": "phoenix", "text": "OBJECTION!" },
     { "type": "bgm", "action": "resume" }
+  ],
+  "witness_testimony_loop": [
+    { "type": "set", "key": "line_idx", "value": 0 },
+    {
+      "type": "while",
+      "key": "line_idx",
+      "op": "lt",
+      "value": 3,
+      "maxIterations": 10,
+      "body": [
+        {
+          "type": "if",
+          "key": "line_idx",
+          "op": "eq",
+          "value": 0,
+          "then": [
+            { "type": "dialogue", "speaker": "Witness", "text": "I saw the defendant near the office at 4 PM." }
+          ],
+          "else": []
+        },
+        {
+          "type": "if",
+          "key": "line_idx",
+          "op": "eq",
+          "value": 1,
+          "then": [
+            { "type": "dialogue", "speaker": "Witness", "text": "Then I heard a loud shout from inside." }
+          ],
+          "else": []
+        },
+        {
+          "type": "if",
+          "key": "line_idx",
+          "op": "eq",
+          "value": 2,
+          "then": [
+            { "type": "dialogue", "speaker": "Witness", "text": "After that, someone rushed out and disappeared." }
+          ],
+          "else": []
+        },
+        { "type": "set", "key": "line_idx", "op": "add", "value": 1 }
+      ]
+    }
   ]
 }

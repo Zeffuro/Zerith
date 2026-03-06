@@ -8,6 +8,10 @@ interface ProjectState {
     files: DirEntry[];
     activeFile: string | null;
 
+    activeMacroName: string | null;
+    setActiveMacroName: (name: string | null) => void;
+    saveActiveMacroFromScript: (script: any[]) => void;
+
     // Game Data
     manifest: any | null;
     characters: Record<string, any>;
@@ -50,6 +54,22 @@ export const useProjectStore = create<ProjectState>()(
         projectPath: null,
         files: [],
         activeFile: null,
+
+        activeMacroName: null,
+
+        setActiveMacroName: (name) => set({ activeMacroName: name }),
+
+        saveActiveMacroFromScript: (script) => {
+            const { activeMacroName, macros } = get();
+            if (!activeMacroName) return;
+            set({
+                macros: {
+                    ...macros,
+                    [activeMacroName]: script
+                }
+            });
+        },
+
         manifest: null,
         characters: {},
         items: {},

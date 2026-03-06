@@ -2,6 +2,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { getAllPlugins } from '../../editor/commandPlugins';
 import { useMemo, useRef } from 'react';
 import { useDismissiblePopup } from '../../hooks/useDismissiblePopup';
+import { editorTheme as t } from '../../theme/editorTheme';
 
 export function QuickCommandsMenu({
                                       uiScale,
@@ -36,11 +37,11 @@ export function QuickCommandsMenu({
                 width: `${420 * uiScale}px`,
                 maxHeight: `${360 * uiScale}px`,
                 overflowY: 'auto',
-                background: '#1f1f1f',
-                border: '1px solid #3a3a3a',
-                borderRadius: '6px',
+                background: t.bg.popup,
+                border: `1px solid ${t.border.normal}`,
+                borderRadius: t.radius.lg,
                 zIndex: 2000,
-                boxShadow: '0 10px 24px rgba(0,0,0,0.4)',
+                boxShadow: t.shadow.popupStrong,
                 padding: `${10 * uiScale}px`,
             }}
         >
@@ -61,7 +62,7 @@ export function QuickCommandsMenu({
                             alignItems: 'center',
                             padding: `${6 * uiScale}px`,
                             borderRadius: '4px',
-                            background: active ? '#2a2a2a' : 'transparent',
+                            background: active ? t.bg.hover : 'transparent',
                         }}
                     >
                         <button
@@ -72,7 +73,7 @@ export function QuickCommandsMenu({
                                 gap: `${8 * uiScale}px`,
                                 background: 'transparent',
                                 border: 'none',
-                                color: active ? '#fff' : '#888',
+                                color: active ? t.text.primary : t.text.muted,
                                 textAlign: 'left',
                                 cursor: 'pointer',
                                 padding: 0,
@@ -80,7 +81,7 @@ export function QuickCommandsMenu({
                         >
                             {p.icon(14 * uiScale)}
                             <span>{p.label}</span>
-                            <span style={{ color: '#666', fontSize: '0.8em' }}>({p.type})</span>
+                            <span style={{ color: t.text.faint, fontSize: '0.8em' }}>({p.type})</span>
                         </button>
 
                         <button
@@ -115,7 +116,7 @@ export function QuickCommandsMenu({
                             <ArrowRight size={14 * uiScale} />
                         </button>
 
-                        <span style={{ color: active ? '#22c55e' : '#666', fontSize: '0.75em' }}>
+                        <span style={{ color: active ? t.accent.green : t.text.faint, fontSize: '0.75em' }}>
                             {active ? 'ON' : 'OFF'}
                         </span>
                     </div>

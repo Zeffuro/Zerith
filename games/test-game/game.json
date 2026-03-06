@@ -5,6 +5,9 @@
   "items": "/data/items.json",
   "macros": "/data/macros.json",
   "scenes": {
+    "loop_training_day": "/scripts/loop_training_day.json",
+    "loop_cross_exam": "/scripts/loop_cross_exam.json",
+    "loop_debug_showcase": "/scripts/loop_debug_showcase.json",
     "intro": "/scripts/intro.json",
     "courtroom": "/scripts/courtroom.json"
   }

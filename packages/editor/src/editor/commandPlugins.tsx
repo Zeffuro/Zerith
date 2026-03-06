@@ -7,10 +7,14 @@ import {
 } from 'lucide-react';
 import type { ScriptPath } from '../utils/scriptPathUtils';
 
+import { BackgroundInspector } from '../components/inspector/BackgroundInspector';
+import { BgmInspector } from '../components/inspector/BgmInspector';
 import { DialogueInspector } from '../components/inspector/DialogueInspector';
 import { SpriteInspector } from '../components/inspector/SpriteInspector';
 import { MacroInspector } from '../components/inspector/MacroInspector';
 import { IfInspector } from '../components/inspector/IfInspector';
+import { WhileInspector } from '../components/inspector/WhileInspector';
+import { ForInspector } from '../components/inspector/ForInspector';
 import { ChoiceInspector } from '../components/inspector/ChoiceInspector';
 import { JumpInspector } from '../components/inspector/JumpInspector';
 import { SetInspector } from '../components/inspector/SetInspector';
@@ -43,18 +47,19 @@ const PLUGIN_OVERRIDES: Record<string, Partial<CommandPlugin>> = {
     dialogue: {
         icon: (s) => <MessageSquare size={s} color="#60a5fa" />,
         createDefault: () => ({ type: 'dialogue', speaker: '???', text: '...' }),
-        getSummary: (n) => n.text || '',
+        getSummary: (n) => `${n.speaker ?? '???'}: ${n.text ?? ''}`,
         Inspector: DialogueInspector,
     },
     background: {
         icon: (s) => <ImageIcon size={s} color="#34d399" />,
         createDefault: () => ({ type: 'background', assetUrl: '' }),
-        getSummary: (n) => n.assetUrl || '',
+        getSummary: (n) => n.assetUrl || '(no asset)',
+        Inspector: BackgroundInspector,
     },
     sprite: {
         icon: (s) => <User size={s} color="#a78bfa" />,
         createDefault: () => ({ type: 'sprite', id: '', action: 'show' }),
-        getSummary: (n) => n.id || n.assetUrl || '',
+        getSummary: (n) => `${n.id ?? 'sprite'} • ${n.action ?? 'show'}${n.pose ? ` • ${n.pose}` : ''}`,
         Inspector: SpriteInspector,
     },
     call: {
@@ -66,7 +71,11 @@ const PLUGIN_OVERRIDES: Record<string, Partial<CommandPlugin>> = {
     bgm: {
         icon: (s) => <Music size={s} color="#f472b6" />,
         createDefault: () => ({ type: 'bgm', action: 'play', assetUrl: '', volume: 0.5 }),
-        getSummary: (n) => n.assetUrl || n.action || '',
+        getSummary: (n) =>
+            n.action === 'play'
+                ? `play ${n.assetUrl ?? ''}${n.loop !== undefined ? ` • loop:${n.loop}` : ''}`
+                : n.action,
+        Inspector: BgmInspector
     },
     sfx: {
         icon: (s) => <FileAudio size={s} color="#f472b6" />,
@@ -103,9 +112,10 @@ const PLUGIN_OVERRIDES: Record<string, Partial<CommandPlugin>> = {
     while: {
         icon: (s) => <Repeat size={s} color="#22c55e" />,
         quickColor: { bg: '#11301b', border: '#1d5b32' },
-        createDefault: () => ({ type: 'while', source: 'variable', key: '', op: 'eq', value: true, body: [] }),
+        createDefault: () => ({ type: 'while', source: 'variable', key: '', op: 'eq', value: true, body: [], maxIterations: 10000 }),
         getSummary: (n) => n.key || 'loop',
         getBranches: (n) => [{ label: 'BODY', path: ['body'], nodes: Array.isArray(n.body) ? n.body : [] }],
+        Inspector: WhileInspector,
     },
     for: {
         icon: (s) => <Sigma size={s} color="#60a5fa" />,
@@ -113,6 +123,7 @@ const PLUGIN_OVERRIDES: Record<string, Partial<CommandPlugin>> = {
         createDefault: () => ({ type: 'for', iterator: 'i', from: 0, to: 3, step: 1, body: [] }),
         getSummary: (n) => `${n.iterator ?? 'i'}: ${n.from ?? 0}→${n.to ?? 0} step ${n.step ?? 1}`,
         getBranches: (n) => [{ label: 'BODY', path: ['body'], nodes: Array.isArray(n.body) ? n.body : [] }],
+        Inspector: ForInspector,
     },
     jump: {
         icon: (s) => <ArrowRightCircle size={s} color="#fbbf24" />,
@@ -127,7 +138,12 @@ const PLUGIN_OVERRIDES: Record<string, Partial<CommandPlugin>> = {
     transition: { Inspector: TransitionInspector },
     shake: { Inspector: ShakeInspector },
     flash: { Inspector: FlashInspector },
-    item: { Inspector: ItemInspector },
+    item: {
+        icon: (s) => <Gamepad2 size={s} color="#f87171" />,
+        createDefault: () => ({ type: 'item', action: 'add', id: '' }),
+        getSummary: (n) => `${n.action ?? 'add'} ${n.id ?? ''}`,
+        Inspector: ItemInspector,
+    },
 };
 
 export const COMMAND_TYPES = Object.keys(CommandSchemaRegistry);

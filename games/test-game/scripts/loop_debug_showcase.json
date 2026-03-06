@@ -1,0 +1,31 @@
+[
+  { "type": "background", "assetUrl": "/assets/bg/office.png" },
+  { "type": "sprite", "id": "phoenix", "action": "show", "pose": "thinking" },
+
+  { "type": "dialogue", "speaker": "phoenix", "text": "Let's run both loop types quickly for QA." },
+
+  {
+    "type": "for",
+    "iterator": "i",
+    "from": 3,
+    "to": 1,
+    "step": -1,
+    "body": [
+      { "type": "dialogue", "speaker": "phoenix", "text": "Countdown: {i}" }
+    ]
+  },
+
+  { "type": "set", "key": "qa_ticks", "value": 0 },
+  {
+    "type": "while",
+    "key": "qa_ticks",
+    "op": "lt",
+    "value": 2,
+    "body": [
+      { "type": "dialogue", "speaker": "phoenix", "text": "while tick {qa_ticks}" },
+      { "type": "set", "key": "qa_ticks", "op": "add", "value": 1 }
+    ]
+  },
+
+  { "type": "dialogue", "speaker": "phoenix", "text": "Loop showcase complete." }
+]

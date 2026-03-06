@@ -1,0 +1,54 @@
+[
+  { "type": "call", "name": "court_entry" },
+  { "type": "sprite", "id": "phoenix", "action": "show", "pose": "default", "x": 300, "y": 720 },
+  { "type": "sprite", "id": "phoenix", "action": "animate", "animation": "idle_blink" },
+
+  { "type": "dialogue", "speaker": "judge", "text": "Defense, proceed with your cross-examination." },
+  { "type": "dialogue", "speaker": "phoenix", "text": "Yes, Your Honor." },
+
+  { "type": "call", "name": "witness_testimony_loop" },
+
+  { "type": "set", "key": "press_count", "value": 0 },
+
+  {
+    "type": "while",
+    "key": "press_count",
+    "op": "lt",
+    "value": 2,
+    "maxIterations": 5,
+    "body": [
+      {
+        "type": "choice",
+        "options": [
+          {
+            "label": "Press statement",
+            "commands": [
+              { "type": "set", "key": "press_count", "op": "add", "value": 1 },
+              { "type": "dialogue", "speaker": "phoenix", "text": "Hold it! That's your statement #{press_count} under pressure." }
+            ]
+          },
+          {
+            "label": "Present autopsy report",
+            "commands": [
+              {
+                "type": "if",
+                "source": "items",
+                "key": "autopsy_report",
+                "then": [
+                  { "type": "call", "name": "phoenix_objection" },
+                  { "type": "dialogue", "speaker": "phoenix", "text": "This report contradicts your timeline!" },
+                  { "type": "set", "key": "press_count", "value": 2 }
+                ],
+                "else": [
+                  { "type": "dialogue", "speaker": "phoenix", "text": "(I don't have the report yet...)" }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+
+  { "type": "dialogue", "speaker": "judge", "text": "Interesting. We'll take a short recess." }
+]

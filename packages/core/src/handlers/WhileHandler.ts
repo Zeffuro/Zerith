@@ -25,7 +25,9 @@ export class WhileHandler implements CommandHandler<WhileCommand> {
 
         let count = 0;
         while (this.evaluateCommand(command, engine)) {
-            engine.injectCommands(body);
+            for (const child of body) {
+                await engine.runCommand(child as BaseCommand);
+            }
             count++;
             if (count >= maxIterations) {
                 engine.logger.warn(`[while] maxIterations reached (${maxIterations}); breaking loop.`);
