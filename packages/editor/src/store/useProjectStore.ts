@@ -14,6 +14,9 @@ interface ProjectState {
     playTrigger: number;
     triggerPlay: () => void;
 
+    uiScale: number;
+    setUiScale: (scale: number) => void;
+
     setProject: (path: string, files: DirEntry[]) => void;
     loadManifest: () => Promise<void>;
 
@@ -24,6 +27,7 @@ interface ProjectState {
     setActiveFile: (file: string, content: any[]) => void;
     updateScript: (newScript: any[]) => void;
     setSelectedNode: (index: number | null) => void;
+    moveNode: (index: number, direction: 'up' | 'down') => void;
 }
 
 async function resolveManifestValueFromDisk<T>(
@@ -62,6 +66,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     playTrigger: 0,
     triggerPlay: () => set((state) => ({ playTrigger: state.playTrigger + 1 })),
+
+    uiScale: 1.0,
+    setUiScale: (scale) => set({ uiScale: scale }),
 
     setProject: (path, files) => set({
         projectPath: path,
@@ -115,4 +122,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     setActiveFile: (file, content) => set({ activeFile: file, script: content, selectedNodeIndex: null }),
     updateScript: (newScript) => set({ script: newScript }),
     setSelectedNode: (index) => set({ selectedNodeIndex: index }),
+    moveNode: (index, direction) => {
+        const { script } = get();
+        if (index === null || index < 0 || index >= script.length) return;
+
+        const newIndex = direction === 'up' ? index - 1 : index + 1;
+        if (newIndex < 0 || newIndex >= script.length) return;
+
+        const newScript = [...script];
+        [newScript[index], newScript[newIndex]] = [newScript[newIndex], newScript[index]];
+
+        set({ script: newScript, selectedNodeIndex: newIndex });
+    },
 }));

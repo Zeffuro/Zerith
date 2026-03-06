@@ -1,18 +1,42 @@
+import { useEffect } from 'react';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { Settings2 } from 'lucide-react';
 import { GamePreview } from './components/GamePreview';
 import { Toolbar } from './components/layout/Toolbar';
 import { Explorer } from './components/layout/Explorer';
 import { Timeline } from './components/layout/Timeline';
-import { Inspector } from './components/layout/Inspector';
+import { Inspector } from './components/inspector/Inspector';
 import { useProjectStore } from './store/useProjectStore';
 import './App.css';
 
 function App() {
     const script = useProjectStore(state => state.script);
+    const uiScale = useProjectStore(state => state.uiScale);
+
+    useEffect(() => {
+        const handleDragOver = (e: DragEvent) => {
+            e.preventDefault();
+        };
+
+        const handleDrop = (e: DragEvent) => {
+            e.preventDefault();
+        };
+
+        window.addEventListener('dragover', handleDragOver);
+        window.addEventListener('drop', handleDrop);
+
+        return () => {
+            window.removeEventListener('dragover', handleDragOver);
+            window.removeEventListener('drop', handleDrop);
+        };
+    }, []);
 
     return (
-        <div style={{ height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', backgroundColor: '#1e1e1e', color: '#ccc', fontFamily: 'sans-serif' }}>
+        <div style={{
+            height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column',
+            backgroundColor: '#1e1e1e', color: '#ccc', fontFamily: 'sans-serif',
+            fontSize: `${13 * uiScale}px`
+        }}>
             <Toolbar />
 
             <Group orientation="horizontal" style={{ flexGrow: 1 }}>
@@ -39,9 +63,9 @@ function App() {
                         <ResizeHandle horizontal />
 
                         <Panel defaultSize={40}>
-                            <div style={{ padding: '12px', height: '100%', backgroundColor: '#252526' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', marginBottom: '16px', fontSize: '12px', fontWeight: 'bold' }}>
-                                    <Settings2 size={16} /> INSPECTOR
+                            <div style={{ padding: `${12 * uiScale}px`, height: '100%', backgroundColor: '#252526' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', marginBottom: `${16 * uiScale}px`, fontSize: '0.9em', fontWeight: 'bold' }}>
+                                    <Settings2 size={16 * uiScale} /> INSPECTOR
                                 </div>
                                 <Inspector />
                             </div>
