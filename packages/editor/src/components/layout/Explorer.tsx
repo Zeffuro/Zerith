@@ -6,7 +6,6 @@ import { useProjectStore } from '../../store/useProjectStore';
 import type { DirEntry } from '@tauri-apps/plugin-fs';
 import { validateScript } from 'core';
 
-// A recursive component to render files and folders
 function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPath: string; level?: number }) {
     const [isOpen, setIsOpen] = useState(false);
     const [children, setChildren] = useState<DirEntry[]>([]);
@@ -15,14 +14,12 @@ function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPat
     const activeFile = useProjectStore(state => state.activeFile);
     const setActiveFile = useProjectStore(state => state.setActiveFile);
 
-    // Resolve the absolute path of this file/folder
     useEffect(() => {
         join(parentPath, entry.name).then(setFullPath);
     },[parentPath, entry.name]);
 
     const handleClick = async () => {
         if (entry.isDirectory) {
-            // If opening a folder for the first time, read its contents
             if (!isOpen && children.length === 0 && fullPath) {
                 try {
                     const entries = await readDir(fullPath);
@@ -38,15 +35,12 @@ function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPat
             }
             setIsOpen(!isOpen);
         } else {
-            // It's a file! If it's a JSON script, load it into the editor.
             if (entry.name.endsWith('.json') && fullPath) {
                 try {
                     const contents = await readTextFile(fullPath);
                     const data = JSON.parse(contents);
 
-                    // Basic check: Scripts are arrays. Manifests/Characters are objects.
                     if (Array.isArray(data)) {
-                        // Use the Engine's Zod validator!
                         const validScript = validateScript(data);
                         setActiveFile(fullPath, validScript);
                     } else {
@@ -82,7 +76,7 @@ function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPat
                 {entry.isDirectory ? (
                     isOpen ? <ChevronDown size={14} color="#888" /> : <ChevronRight size={14} color="#888" />
                 ) : (
-                    <span style={{ width: 14 }} /> // Spacer for file alignment
+                    <span style={{ width: 14 }} />
                 )}
 
                 {entry.isDirectory ? (
@@ -96,7 +90,6 @@ function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPat
                 <span style={{ fontSize: '13px' }}>{entry.name}</span>
             </div>
 
-            {/* Render children if folder is open */}
             {isOpen && children.map((child, idx) => (
                 <FileNode key={idx} entry={child} parentPath={fullPath} level={level + 1} />
             ))}
@@ -119,7 +112,6 @@ export function Explorer() {
                         {projectPath.split('\\').pop()?.split('/').pop()}
                     </div>
 
-                    {/* Render top level files/folders */}
                     {files.map((file, idx) => (
                         <FileNode key={idx} entry={file} parentPath={projectPath} />
                     ))}

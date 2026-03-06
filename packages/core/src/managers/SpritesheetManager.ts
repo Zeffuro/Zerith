@@ -1,10 +1,17 @@
-import { Spritesheet, Texture, ImageSource, type SpritesheetData } from 'pixi.js';
-import { applyChromaKey } from '../utils/ChromaKey';
+import { Spritesheet, Texture, ImageSource } from 'pixi.js';
+import type { SpritesheetData } from 'pixi.js';
 import type { SpritesheetConfig } from '../types';
+import { applyChromaKey } from '../utils/ChromaKey';
+import type { AssetResolver } from '../Engine';
 
 export class SpritesheetManager {
     private sheets: Map<string, Spritesheet> = new Map();
     private loading: Map<string, Promise<Spritesheet>> = new Map();
+    private resolver: AssetResolver = (url) => url;
+
+    public setResolver(resolver: AssetResolver) {
+        this.resolver = resolver;
+    }
 
     public async load(config: SpritesheetConfig): Promise<Spritesheet> {
         const key = config.atlasUrl;
@@ -28,7 +35,8 @@ export class SpritesheetManager {
     }
 
     private async doLoad(config: SpritesheetConfig): Promise<Spritesheet> {
-        const response = await fetch(config.atlasUrl);
+        const resolvedAtlasUrl = this.resolver(config.atlasUrl);
+        const response = await fetch(resolvedAtlasUrl);
         if (!response.ok) {
             throw new Error(`Failed to fetch spritesheet atlas: ${config.atlasUrl} (${response.status})`);
         }
@@ -38,7 +46,7 @@ export class SpritesheetManager {
         const imageName = atlasData.meta?.image ?? '';
         const imagePath = imageName.startsWith('/') ? imageName : atlasDir + imageName;
 
-        const img = await this.loadImage(imagePath);
+        const img = await this.loadImage(this.resolver(imagePath));
 
         let texture: Texture;
 

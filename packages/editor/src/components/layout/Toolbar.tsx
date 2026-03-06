@@ -5,11 +5,12 @@ import { useProjectStore } from '../../store/useProjectStore';
 
 export function Toolbar() {
     const setProject = useProjectStore(state => state.setProject);
+    const loadManifest = useProjectStore(state => state.loadManifest);
 
     const handleOpenProject = async () => {
         try {
             const selectedPath = await open({ directory: true, multiple: false, title: 'Open Zerith Game' });
-            if (selectedPath && typeof selectedPath === 'string') {
+            if (selectedPath !== null) {
                 const entries = await readDir(selectedPath);
                 entries.sort((a, b) => {
                     if (a.isDirectory && !b.isDirectory) return -1;
@@ -17,6 +18,8 @@ export function Toolbar() {
                     return a.name.localeCompare(b.name);
                 });
                 setProject(selectedPath, entries);
+
+                await loadManifest();
             }
         } catch (err) {
             console.error("Failed to open project:", err);

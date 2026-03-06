@@ -58,6 +58,8 @@ export class Engine {
     private _autoAdvanceDelay: number | null = null;
     private _lastSavePoint: number = 0;
 
+    private _assetResolver: AssetResolver = (url) => url;
+
     constructor(config: EngineConfig = {}) {
         this.app = new Application();
         this.layers = {
@@ -293,5 +295,12 @@ export class Engine {
         return await Assets.load(resolvedUrl);
     }
 
-    public assetResolver: AssetResolver = (url) => url;
+    public get assetResolver(): AssetResolver {
+        return this._assetResolver;
+    }
+
+    public set assetResolver(resolver: AssetResolver) {
+        this._assetResolver = resolver;
+        this.spritesheets.setResolver(resolver);
+    }
 }

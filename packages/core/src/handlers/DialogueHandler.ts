@@ -175,7 +175,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
             if (token.type === 'wait') await new Promise(r => setTimeout(r, token.ms));
             else if (token.type === 'speed') currentSpeed = token.speed;
             else if (token.type === 'text') {
-                await this.typewrite(token.val, currentSpeed, blipUrl, engine, session);
+                await this.typewrite(token.val, currentSpeed, resolvedBlipUrl, engine, session);
             }
         }
 

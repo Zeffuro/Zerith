@@ -8,9 +8,14 @@ export function GamePreview({ script }: { script: any[] }) {
     const engineRef = useRef<Engine | null>(null);
 
     const projectPath = useProjectStore(state => state.projectPath);
+    const manifest = useProjectStore(state => state.manifest);
+    const characters = useProjectStore(state => state.characters);
+    const items = useProjectStore(state => state.items);
+    const macros = useProjectStore(state => state.macros);
+    const scenes = useProjectStore(state => state.scenes);
 
     useEffect(() => {
-        if (!canvasRef.current) return;
+        if (!canvasRef.current || !projectPath || !manifest) return;
 
         let destroyed = false;
 
@@ -20,6 +25,12 @@ export function GamePreview({ script }: { script: any[] }) {
                 display: { width: 1280, height: 720, scaleMode: 'fit' },
                 theme: { fontFamily: 'Courier New', fontSize: 24, boxColor: 0x000033 }
             },
+            manifest,
+            characters,
+            items,
+            macros,
+            scenes,
+            defaultBlipUrl: '/assets/sfx/blip.wav',
             isEditor: true,
             assetResolver: (url: string) => {
                 if (projectPath && !url.startsWith('http')) {
@@ -46,7 +57,7 @@ export function GamePreview({ script }: { script: any[] }) {
             engineRef.current?.destroy();
             engineRef.current = null;
         };
-    }, [projectPath]);
+    }, [projectPath, manifest]);
 
     useEffect(() => {
         if (engineRef.current && script.length > 0) {
