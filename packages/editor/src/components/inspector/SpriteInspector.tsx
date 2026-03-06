@@ -1,22 +1,11 @@
 import { useProjectStore } from '../../store/useProjectStore';
-import { useScriptStore } from '../../store/useScriptStore';
-import { useEditorStore } from '../../store/useEditorStore';
+import { useInspectorFieldEditor } from './useInspectorFieldEditor';
 
-export function SpriteInspector({ node, index }: { node: any, index: number }) {
-    const { getActiveScript, updateActiveScript } = useScriptStore();
+export function SpriteInspector({ node, index }: { node: any, index?: number | null }) {
     const { characters } = useProjectStore();
-    const { uiScale } = useEditorStore();
-
-    const handleChange = (field: string, value: any) => {
-        const script = getActiveScript();
-        const newScript = script.map((n, i) => i === index ? { ...n, [field]: value } : n);
-        updateActiveScript(newScript);
-    };
+    const { handleChange, labelStyle, inputStyle } = useInspectorFieldEditor(index);
 
     const characterData = node.id ? characters[node.id] : null;
-
-    const labelStyle = { display: 'block', marginBottom: `${6 * uiScale}px`, color: '#888', fontSize: '0.85em' };
-    const inputStyle = { width: '100%', padding: `${8 * uiScale}px`, backgroundColor: '#1e1e1e', border: '1px solid #3c3c3c', color: '#fff', borderRadius: '4px', fontSize: 'inherit', outline: 'none' };
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

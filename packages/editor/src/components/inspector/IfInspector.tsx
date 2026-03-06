@@ -1,20 +1,11 @@
 import { ArrowRight } from 'lucide-react';
 import { useScriptStore } from '../../store/useScriptStore';
-import { useEditorStore } from '../../store/useEditorStore';
+import { useInspectorFieldEditor } from './useInspectorFieldEditor';
 
-export function IfInspector({ node, index }: { node: any, index: number }) {
-    const { getActiveScript, updateActiveScript, pushScope } = useScriptStore();
-    const { uiScale } = useEditorStore();
+export function IfInspector({ node, index }: { node: any, index?: number | null }) {
+    const { pushScope } = useScriptStore();
+    const { uiScale, handleChange, labelStyle, inputStyle } = useInspectorFieldEditor(index);
 
-    const script = getActiveScript();
-
-    const handleChange = (field: string, value: any) => {
-        const newScript = script.map((n, i) => i === index ? { ...n, [field]: value } : n);
-        updateActiveScript(newScript);
-    };
-
-    const labelStyle = { display: 'block', marginBottom: `${6 * uiScale}px`, color: '#888', fontSize: '0.85em' };
-    const inputStyle = { width: '100%', padding: `${8 * uiScale}px`, backgroundColor: '#1e1e1e', border: '1px solid #3c3c3c', color: '#fff', borderRadius: '4px', fontSize: 'inherit', outline: 'none' };
     const btnStyle = { width: '100%', padding: `${8 * uiScale}px`, backgroundColor: '#333', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' };
 
     return (
@@ -72,13 +63,11 @@ export function IfInspector({ node, index }: { node: any, index: number }) {
 
             <div style={{ borderTop: '1px solid #333', paddingTop: '12px', marginTop: '4px' }}>
                 <label style={{ ...labelStyle, color: '#4ec9b0' }}>Branches</label>
-
-                <button onClick={() => pushScope(index, 'then')} style={btnStyle}>
+                <button onClick={() => index !== null && index !== undefined && pushScope(index, 'then')} style={btnStyle}>
                     <span>Edit "THEN" Block ({node.then?.length || 0} cmds)</span>
                     <ArrowRight size={14 * uiScale} />
                 </button>
-
-                <button onClick={() => pushScope(index, 'else')} style={btnStyle}>
+                <button onClick={() => index !== null && index !== undefined && pushScope(index, 'else')} style={btnStyle}>
                     <span>Edit "ELSE" Block ({node.else?.length || 0} cmds)</span>
                     <ArrowRight size={14 * uiScale} />
                 </button>
