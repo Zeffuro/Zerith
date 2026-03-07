@@ -8,7 +8,6 @@ import {
     insertNodeAtPath,
     setAtPath,
 } from '../../../utils/scriptPathUtils';
-import { useEditorStore } from '../../useEditorStore.ts';
 import { MAX_HISTORY } from '../constants';
 import { deepClone, isRootIndexPath } from '../helpers';
 import type { ScriptSlice, ScriptState } from '../types';
@@ -250,9 +249,6 @@ export const createPathOpsSlice: ScriptSlice<PathOpsSlice> = (set, get) => ({
 
             const selectedPaths: ScriptPath[] = movingNodes.map((_, i) => [insertAt + i]);
             const lastSelected = selectedPaths[selectedPaths.length - 1] ?? null;
-
-            useEditorStore.getState().setSelectedNodePaths(selectedPaths);
-            useEditorStore.getState().setSelectionAnchorPath(selectedPaths[0] ?? null);
 
             return {
                 rootScript: root,

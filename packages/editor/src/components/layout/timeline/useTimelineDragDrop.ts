@@ -1,13 +1,14 @@
 import { useRef, useState } from 'react';
+import type { DragEvent } from 'react';
 import type { ScriptPath } from '../../../utils/scriptPathUtils';
 import { useScriptStore } from '../../../store/useScriptStore';
 import { useEditorStore } from '../../../store/useEditorStore';
 import type { DropIndicator } from './types';
+import { syncRootSelectionAfterMultiMove } from './selectionSync';
 
 const sameArrayPath = (a: ScriptPath, b: ScriptPath) => a.length === b.length && a.every((v, i) => v === b[i]);
 const isDescendantPath = (possibleDescendant: ScriptPath, ancestor: ScriptPath) =>
     possibleDescendant.length > ancestor.length && ancestor.every((v, i) => possibleDescendant[i] === v);
-
 const isRootPath = (p: ScriptPath) => p.length === 1 && typeof p[0] === 'number';
 
 export function useTimelineDragDrop() {
@@ -15,13 +16,12 @@ export function useTimelineDragDrop() {
     const moveNodesByPathsToArray = useScriptStore((state) => state.moveNodesByPathsToArray);
 
     const dragSourceRef = useRef<ScriptPath | null>(null);
-    const dragSourcesRef = useRef<ScriptPath[] | null>(null); // multi sources
+    const dragSourcesRef = useRef<ScriptPath[] | null>(null);
     const [dropIndicator, setDropIndicator] = useState<DropIndicator>(null);
 
-    const handleNodeDragStart = (e: React.DragEvent, nodePath: ScriptPath) => {
-        const selected = useEditorStore.getState().selectedNodePaths as ScriptPath[];
+    const handleNodeDragStart = (e: DragEvent, nodePath: ScriptPath) => {
+        const selected = useEditorStore.getState().selectedNodePaths;
         const selectedRoot = selected.filter(isRootPath);
-
         const draggedIsSelectedRoot = isRootPath(nodePath) && selectedRoot.some((p) => p[0] === nodePath[0]);
 
         if (draggedIsSelectedRoot && selectedRoot.length > 1) {
@@ -40,14 +40,14 @@ export function useTimelineDragDrop() {
         e.dataTransfer.setData('text/plain', nodePath.join('.'));
     };
 
-    const handleNodeDragOver = (e: React.DragEvent, arrayPath: ScriptPath, index: number) => {
+    const handleNodeDragOver = (e: DragEvent, arrayPath: ScriptPath, index: number) => {
         e.preventDefault();
         e.stopPropagation();
         e.dataTransfer.dropEffect = 'move';
         setDropIndicator({ arrayPath, index });
     };
 
-    const handleNodeDrop = (e: React.DragEvent, arrayPath: ScriptPath, index: number) => {
+    const handleNodeDrop = (e: DragEvent, arrayPath: ScriptPath, index: number) => {
         e.preventDefault();
         e.stopPropagation();
 
@@ -60,6 +60,7 @@ export function useTimelineDragDrop() {
         if (sources && sources.length > 1) {
             if (arrayPath.length === 0) {
                 moveNodesByPathsToArray(sources, arrayPath, index);
+                syncRootSelectionAfterMultiMove(sources.length);
             }
             setDropIndicator(null);
             return;

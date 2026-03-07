@@ -74,21 +74,21 @@ export function useGlobalEditorShortcuts() {
             }
 
             if (e.key === 'Delete' || e.key === 'Backspace') {
-                const { selectedNodePath, deleteNodeByPath, deleteNodesByPaths } = useScriptStore.getState();
-                const { selectedNodePaths, clearSelection } = useEditorStore.getState();
+                const { selectedNodePath } = useScriptStore.getState();
+                const { selectedNodePaths, requestDelete } = useEditorStore.getState();
 
-                if (selectedNodePaths.length > 1) {
-                    e.preventDefault();
-                    deleteNodesByPaths(selectedNodePaths as any);
-                    clearSelection();
-                    return;
-                }
+                const paths =
+                    selectedNodePaths.length > 1
+                        ? selectedNodePaths
+                        : selectedNodePath
+                            ? [selectedNodePath]
+                            : [];
 
-                if (selectedNodePath) {
+                if (paths.length > 0) {
                     e.preventDefault();
-                    deleteNodeByPath(selectedNodePath);
-                    clearSelection();
+                    requestDelete(paths, 'keyboard');
                 }
+                return;
             }
 
             if (mod && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {

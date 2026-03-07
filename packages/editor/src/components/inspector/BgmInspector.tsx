@@ -1,5 +1,6 @@
 import { useInspectorFieldEditor } from './useInspectorFieldEditor';
 import { FieldError } from './FieldError';
+import { AssetPickerField } from './fields/AssetPickerField';
 
 export function BgmInspector({ node, index }: { node: any; index?: number | null }) {
     const { labelStyle, handleChange, getFieldErrors, getFieldInputStyle } = useInspectorFieldEditor(index);
@@ -25,14 +26,16 @@ export function BgmInspector({ node, index }: { node: any; index?: number | null
                 <>
                     <div>
                         <label style={labelStyle}>Asset URL</label>
-                        <input
-                            type="text"
+                        <AssetPickerField
+                            kind="audio"
                             value={node.assetUrl || ''}
-                            onChange={(e) => handleChange('assetUrl', e.target.value)}
-                            style={getFieldInputStyle('assetUrl')}
+                            onChange={(assetUrl) => handleChange('assetUrl', assetUrl)}
+                            inputStyle={getFieldInputStyle('assetUrl')}
+                            listId="bgm-asset-options"
                         />
                         <FieldError errors={getFieldErrors('assetUrl')} />
                     </div>
+
                     <div>
                         <label style={labelStyle}>Volume (0-1)</label>
                         <input
@@ -46,6 +49,7 @@ export function BgmInspector({ node, index }: { node: any; index?: number | null
                         />
                         <FieldError errors={getFieldErrors('volume')} />
                     </div>
+
                     <div>
                         <label style={labelStyle}>Loop</label>
                         <select

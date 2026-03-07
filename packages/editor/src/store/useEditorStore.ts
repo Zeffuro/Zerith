@@ -40,6 +40,10 @@ interface EditorState {
     setSelectionAnchorPath: (path: ScriptPath | null) => void;
     clearSelection: () => void;
     toggleSelectedNodePath: (path: ScriptPath) => void;
+
+    pendingDeleteRequest: null | { paths: ScriptPath[]; source: 'keyboard' | 'click' };
+    requestDelete: (paths: ScriptPath[], source?: 'keyboard' | 'click') => void;
+    clearDeleteRequest: () => void;
 }
 
 const DEFAULT_QUICK = ['dialogue', 'background', 'sprite', 'choice', 'if', 'while', 'for', 'jump', 'call', 'bgm'];
@@ -132,6 +136,10 @@ export const useEditorStore = create<EditorState>()(
                             : [...state.selectedNodePaths, [...path] as ScriptPath],
                     };
                 }),
+
+            pendingDeleteRequest: null,
+            requestDelete: (paths, source = 'keyboard') => set({ pendingDeleteRequest: { paths, source } }),
+            clearDeleteRequest: () => set({ pendingDeleteRequest: null }),
         }),
         {
             name: 'zerith-editor-prefs',

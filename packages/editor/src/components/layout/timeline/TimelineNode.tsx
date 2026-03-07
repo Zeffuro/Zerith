@@ -15,7 +15,7 @@ type Props = {
     selected: boolean;
     selectedNodeIndex: number | null;
     hasValidationError: boolean;
-    hasLikelyIssue: (node: any) => boolean;
+    hasLikelyIssue: boolean;
 
     isCollapsed: boolean;
     onToggleCollapse: (path: ScriptPath) => void;
@@ -28,6 +28,7 @@ type Props = {
     onDragOver: (e: React.DragEvent, arrayPath: ScriptPath, index: number) => void;
     onDrop: (e: React.DragEvent, arrayPath: ScriptPath, index: number) => void;
     onDragEnd: () => void;
+    dragDisabled: boolean;
 
     onDeleteRoot: (e: React.MouseEvent, index: number) => void;
     onPlayFrom: (index: number) => void;
@@ -61,6 +62,7 @@ export function TimelineNode({
                                  onDragOver,
                                  onDrop,
                                  onDragEnd,
+                                 dragDisabled,
                                  onDeleteRoot,
                                  onPlayFrom,
                                  renderChild,
@@ -76,10 +78,19 @@ export function TimelineNode({
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: `${2 * uiScale}px` }}>
             <div
-                draggable
-                onDragStart={(e) => onDragStart(e, nodePath)}
-                onDragOver={(e) => onDragOver(e, parentArrayPath, indexInParent)}
-                onDrop={(e) => onDrop(e, parentArrayPath, indexInParent)}
+                draggable={!dragDisabled}
+                onDragStart={(e) => {
+                    if (dragDisabled) return;
+                    onDragStart(e, nodePath);
+                }}
+                onDragOver={(e) => {
+                    if (dragDisabled) return;
+                    onDragOver(e, parentArrayPath, indexInParent);
+                }}
+                onDrop={(e) => {
+                    if (dragDisabled) return;
+                    onDrop(e, parentArrayPath, indexInParent);
+                }}
                 onDragEnd={onDragEnd}
                 onClick={(e) => onClickNode(e, nodePath)}
                 style={{
@@ -88,6 +99,7 @@ export function TimelineNode({
                     backgroundColor: selected ? t.bg.selected : t.bg.panel,
                     borderLeft: `${3 * uiScale}px solid ${selected ? t.border.accent : 'transparent'}`,
                     borderTop:
+                        !dragDisabled &&
                         dropIndicator &&
                         sameArrayPath(dropIndicator.arrayPath, parentArrayPath) &&
                         dropIndicator.index === indexInParent
@@ -98,7 +110,7 @@ export function TimelineNode({
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    cursor: 'grab',
+                    cursor: dragDisabled ? 'default' : 'grab',
                 }}
             >
                 <div
@@ -125,11 +137,7 @@ export function TimelineNode({
                                 padding: 0,
                             }}
                         >
-                            {isCollapsed ? (
-                                <ChevronRight size={12 * uiScale} />
-                            ) : (
-                                <ChevronDown size={12 * uiScale} />
-                            )}
+                            {isCollapsed ? <ChevronRight size={12 * uiScale} /> : <ChevronDown size={12 * uiScale} />}
                         </button>
                     ) : (
                         <span style={{ width: `${12 * uiScale}px` }} />
@@ -150,7 +158,7 @@ export function TimelineNode({
                     </span>
                 </div>
 
-                {(hasLikelyIssue(node) || hasValidationError) && (
+                {(hasLikelyIssue || hasValidationError) && (
                     <span
                         title={
                             hasValidationError
@@ -159,10 +167,7 @@ export function TimelineNode({
                         }
                         style={{ display: 'flex', alignItems: 'center' }}
                     >
-                        <AlertTriangle
-                            size={12 * uiScale}
-                            color={hasValidationError ? '#ef4444' : '#f59e0b'}
-                        />
+                        <AlertTriangle size={12 * uiScale} color={hasValidationError ? '#ef4444' : '#f59e0b'} />
                     </span>
                 )}
 
@@ -224,12 +229,19 @@ export function TimelineNode({
                             )}
 
                             <div
-                                onDragOver={(e) => onDragOver(e, branchArrayPath, branch.nodes.length)}
-                                onDrop={(e) => onDrop(e, branchArrayPath, branch.nodes.length)}
+                                onDragOver={(e) => {
+                                    if (dragDisabled) return;
+                                    onDragOver(e, branchArrayPath, branch.nodes.length);
+                                }}
+                                onDrop={(e) => {
+                                    if (dragDisabled) return;
+                                    onDrop(e, branchArrayPath, branch.nodes.length);
+                                }}
                                 style={{
                                     marginLeft: `${(depth + 1) * 16 * uiScale}px`,
                                     height: `${6 * uiScale}px`,
                                     borderTop:
+                                        !dragDisabled &&
                                         dropIndicator &&
                                         sameArrayPath(dropIndicator.arrayPath, branchArrayPath) &&
                                         dropIndicator.index === branch.nodes.length
