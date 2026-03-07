@@ -1,7 +1,8 @@
 import { useInspectorFieldEditor } from './useInspectorFieldEditor';
+import { FieldError } from './FieldError';
 
 export function WaitInspector({ node, index }: { node: any; index?: number | null }) {
-    const { labelStyle, inputStyle, handleChange } = useInspectorFieldEditor(index);
+    const { labelStyle, handleChange, getFieldErrors, getFieldInputStyle } = useInspectorFieldEditor(index);
 
     return (
         <div>
@@ -11,8 +12,9 @@ export function WaitInspector({ node, index }: { node: any; index?: number | nul
                 min={0}
                 value={node.duration ?? 500}
                 onChange={(e) => handleChange('duration', Number(e.target.value))}
-                style={inputStyle}
+                style={getFieldInputStyle('duration')}
             />
+            <FieldError errors={getFieldErrors('duration')} />
         </div>
     );
 }

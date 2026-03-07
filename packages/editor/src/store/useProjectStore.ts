@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { DirEntry } from '@tauri-apps/plugin-fs';
-import { readTextFile } from '@tauri-apps/plugin-fs';
+import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { useScriptStore } from './useScriptStore';
 
 interface ProjectState {
@@ -11,6 +11,7 @@ interface ProjectState {
     activeMacroName: string | null;
     setActiveMacroName: (name: string | null) => void;
     saveActiveMacroFromScript: (script: any[]) => void;
+    saveActiveFileFromCurrentScript: () => Promise<void>;
 
     // Game Data
     manifest: any | null;
@@ -68,6 +69,26 @@ export const useProjectStore = create<ProjectState>()(
                     [activeMacroName]: script
                 }
             });
+        },
+
+        saveActiveFileFromCurrentScript: async () => {
+            const { activeFile, activeMacroName } = get();
+            if (!activeFile) return;
+
+            const rootScript = useScriptStore.getState().rootScript;
+
+            try {
+                if (activeMacroName) {
+                    const raw = await readTextFile(activeFile);
+                    const obj = JSON.parse(raw);
+                    obj[activeMacroName] = rootScript;
+                    await writeTextFile(activeFile, JSON.stringify(obj, null, 4));
+                } else {
+                    await writeTextFile(activeFile, JSON.stringify(rootScript, null, 4));
+                }
+            } catch (err) {
+                console.error('Failed to save active file:', err);
+            }
         },
 
         manifest: null,

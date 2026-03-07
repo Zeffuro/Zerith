@@ -1,97 +1,53 @@
-import { useMemo, useState, useRef } from 'react';
-import { AlertTriangle, Play } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import type { ScriptPath } from '../../utils/scriptPathUtils';
+
 import { useScriptStore } from '../../store/useScriptStore';
 import { useEditorStore } from '../../store/useEditorStore';
-import { Trash2, Home, ChevronRight, ChevronDown } from 'lucide-react';
-import * as React from "react";
-import type { ScriptPath } from '../../utils/scriptPathUtils';
 import { createDefaultCommand, getPlugin, getAllPlugins } from '../../editor/commandPlugins';
-import { AddCommandMenu } from "./AddCommandMenu.tsx";
 import { editorTheme as t } from '../../theme/editorTheme';
 
-function pathKey(path: ScriptPath) { return path.join('.'); }
-function samePath(a: ScriptPath | null, b: ScriptPath) { return !!a && a.length === b.length && a.every((v, i) => v === b[i]); }
+import { useTimelineSelection } from './timeline/useTimelineSelection';
+import { useTimelineDragDrop } from './timeline/useTimelineDragDrop';
+import { TimelineNode } from './timeline/TimelineNode';
+import { TimelineHeader } from './timeline/TimelineHeader';
+import { TimelineCommandBar } from './timeline/TimelineCommandBar';
+import { TimelineDropZone } from './timeline/TimelineDropZone';
+import { TimelineEmptyState } from './timeline/TimelineEmptyState';
+
+function pathKey(path: ScriptPath) {
+    return path.join('.');
+}
 
 export function Timeline() {
-    const uiScale = useEditorStore(state => state.uiScale);
-    const quickCommandTypes = useEditorStore(state => state.quickCommandTypes);
-    const triggerPlayFrom = useEditorStore(state => state.triggerPlayFrom);
+    const uiScale = useEditorStore((state) => state.uiScale);
+    const quickCommandTypes = useEditorStore((state) => state.quickCommandTypes);
+    const triggerPlayFrom = useEditorStore((state) => state.triggerPlayFrom);
+    const validationErrors = useEditorStore((state) => state.validationErrors);
 
-    const {
-        rootScript, selectedNodePath, setSelectedNodePath,
-        selectedNodeIndex, setSelectedNode,
-        addNode, deleteNode,
-        scopePath, popScope, resetScope,
-        moveNodeByPath
-    } = useScriptStore();
+    const { selectedNodePaths, selectedKeys, onNodeClick } = useTimelineSelection();
+    const { dropIndicator, sameArrayPath, handleNodeDragStart, handleNodeDragOver, handleNodeDrop, handleDragEnd } =
+        useTimelineDragDrop();
+
+    const { rootScript, selectedNodeIndex, addNode, deleteNode, scopePath, popScope, resetScope } = useScriptStore();
 
     const allPlugins = useMemo(() => getAllPlugins(), []);
     const commandMenuItems = useMemo(
         () => allPlugins.map((p) => ({ type: p.type, label: p.label, icon: p.icon(14 * uiScale) })),
         [allPlugins, uiScale]
     );
-    const quickTypes = useMemo(
-        () => quickCommandTypes.filter((tt) => !!getPlugin(tt)),
-        [quickCommandTypes]
-    );
+    const quickTypes = useMemo(() => quickCommandTypes.filter((tt) => !!getPlugin(tt)), [quickCommandTypes]);
 
-    const dragSourceRef = useRef<ScriptPath | null>(null);
-    const [dropIndicator, setDropIndicator] = useState<{ arrayPath: ScriptPath; index: number } | null>(null);
     const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-
-    const sameArrayPath = (a: ScriptPath, b: ScriptPath) => a.length === b.length && a.every((v, i) => v === b[i]);
-    const isDescendantPath = (possibleDescendant: ScriptPath, ancestor: ScriptPath) =>
-        possibleDescendant.length > ancestor.length && ancestor.every((v, i) => possibleDescendant[i] === v);
+    const rootNodes = useMemo(() => (Array.isArray(rootScript) ? rootScript : []), [rootScript]);
 
     const toggleCollapse = (path: ScriptPath) => {
         const key = pathKey(path);
-        setCollapsed(prev => ({ ...prev, [key]: !prev[key] }));
-    };
-
-    const handleNodeDragStart = (e: React.DragEvent, nodePath: ScriptPath) => {
-        dragSourceRef.current = nodePath;
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", pathKey(nodePath));
-    };
-
-    const handleNodeDragOver = (e: React.DragEvent, arrayPath: ScriptPath, index: number) => {
-        e.preventDefault();
-        e.stopPropagation();
-        e.dataTransfer.dropEffect = "move";
-        setDropIndicator({ arrayPath, index });
-    };
-
-    const handleNodeDrop = (e: React.DragEvent, arrayPath: ScriptPath, index: number) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const source = dragSourceRef.current;
-        dragSourceRef.current = null;
-
-        if (!source) return setDropIndicator(null);
-        if (isDescendantPath(arrayPath, source)) return setDropIndicator(null);
-
-        moveNodeByPath(source, arrayPath, index);
-        setDropIndicator(null);
-    };
-
-    const handleDragEnd = () => {
-        dragSourceRef.current = null;
-        setDropIndicator(null);
+        setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
     };
 
     const handleDeleteRootNode = (e: React.MouseEvent, index: number) => {
         e.stopPropagation();
         if (confirm('Delete this node?')) deleteNode(index);
-    };
-
-    const getIcon = (type: string) => getPlugin(type).icon(14 * uiScale);
-    const getBranches = (node: any): Array<{ label: string; path: ScriptPath; nodes: any[] }> =>
-        node?.type ? (getPlugin(node.type).getBranches?.(node) ?? []) : [];
-
-    const getSummary = (node: any) => {
-        const p = getPlugin(node?.type || '');
-        return p.getSummary?.(node) || (node?.id || node?.assetUrl || node?.name || node?.scene || node?.key || '');
     };
 
     const hasLikelyIssue = (node: any) => {
@@ -111,204 +67,88 @@ export function Timeline() {
         }
     };
 
-    const rootNodes = useMemo(() => Array.isArray(rootScript) ? rootScript : [], [rootScript]);
+    const getQuickMeta = (type: string) => {
+        const p = getPlugin(type);
+        return {
+            icon: p.icon(14 * uiScale),
+            title: p.label,
+            bg: p.quickColor?.bg ?? '#333',
+            border: p.quickColor?.border ?? '#444',
+        };
+    };
 
-    const renderNode = (node: any, nodePath: ScriptPath, parentArrayPath: ScriptPath, indexInParent: number, depth: number): React.ReactNode => {
-        const key = pathKey(nodePath);
-        const selected = samePath(selectedNodePath, nodePath);
-        const branches = getBranches(node);
-        const hasBranches = branches.length > 0;
-        const isCollapsed = collapsed[key];
+    const renderNode = (
+        node: any,
+        nodePath: ScriptPath,
+        parentArrayPath: ScriptPath,
+        indexInParent: number,
+        depth: number
+    ): React.ReactNode => {
+        const nodePrefix = nodePath.join('.');
+        const hasValidationError = Object.keys(validationErrors).some((k) => k === nodePrefix || k.startsWith(nodePrefix + '.'));
 
         return (
-            <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: `${2 * uiScale}px` }}>
-                <div
-                    draggable
-                    onDragStart={(e) => handleNodeDragStart(e, nodePath)}
-                    onDragOver={(e) => handleNodeDragOver(e, parentArrayPath, indexInParent)}
-                    onDrop={(e) => handleNodeDrop(e, parentArrayPath, indexInParent)}
-                    onDragEnd={handleDragEnd}
-                    onClick={() => {
-                        setSelectedNodePath(nodePath);
-                        if (nodePath.length === 1 && typeof nodePath[0] === 'number') setSelectedNode(nodePath[0] as number);
-                    }}
-                    style={{
-                        marginLeft: `${depth * 16 * uiScale}px`,
-                        padding: `${6 * uiScale}px ${10 * uiScale}px`,
-                        backgroundColor: selected ? t.bg.selected : t.bg.panel,
-                        borderLeft: `${3 * uiScale}px solid ${selected ? t.border.accent : 'transparent'}`,
-                        borderTop: dropIndicator && sameArrayPath(dropIndicator.arrayPath, parentArrayPath) && dropIndicator.index === indexInParent
-                            ? `2px solid ${t.border.accent}` : '2px solid transparent',
-                        borderRadius: '2px',
-                        fontSize: 'inherit',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        cursor: 'grab',
-                    }}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: `${8 * uiScale}px`, flexGrow: 1, overflow: 'hidden' }}>
-                        {hasBranches ? (
-                            <button
-                                onClick={(e) => { e.stopPropagation(); toggleCollapse(nodePath); }}
-                                style={{ background: 'transparent', border: 'none', color: t.text.muted, cursor: 'pointer', display: 'flex', padding: 0 }}
-                            >
-                                {isCollapsed ? <ChevronRight size={12 * uiScale} /> : <ChevronDown size={12 * uiScale} />}
-                            </button>
-                        ) : <span style={{ width: `${12 * uiScale}px` }} />}
-
-                        <div style={{ color: '#555', fontSize: '0.8em' }}>:::</div>
-                        {getIcon(node.type)}
-                        <span style={{ fontWeight: 'bold', color: t.text.primary }}>{node.type}</span>
-                        <span style={{ color: t.text.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {getSummary(node)}
-                        </span>
-                    </div>
-
-                    {hasLikelyIssue(node) && (
-                        <span title="This node looks incomplete/invalid" style={{ display: 'flex', alignItems: 'center' }}>
-                            <AlertTriangle size={12 * uiScale} color="#f59e0b" />
-                        </span>
-                    )}
-
-                    {depth === 0 && (
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                triggerPlayFrom(nodePath[0] as number);
-                            }}
-                            title="Play from this command"
-                            style={{ background: 'transparent', border: 'none', color: '#4ade80', cursor: 'pointer' }}
-                        >
-                            <Play size={12 * uiScale} />
-                        </button>
-                    )}
-
-                    {depth === 0 && selectedNodeIndex === nodePath[0] && (
-                        <button
-                            onClick={(e) => handleDeleteRootNode(e, nodePath[0] as number)}
-                            style={{ background: 'transparent', border: 'none', color: t.accent.red, cursor: 'pointer', padding: '2px' }}
-                        >
-                            <Trash2 size={12 * uiScale} />
-                        </button>
-                    )}
-                </div>
-
-                {hasBranches && !isCollapsed && branches.map((branch, bIdx) => {
-                    const branchArrayPath = [...nodePath, ...branch.path];
-                    const labelColor = bIdx % 2 === 0 ? '#4ec9b0' : '#f59e0b';
-
-                    return (
-                        <React.Fragment key={`${key}-branch-${bIdx}`}>
-                            <div style={{
-                                marginLeft: `${(depth + 1) * 16 * uiScale}px`,
-                                color: labelColor,
-                                fontSize: '0.8em',
-                                marginTop: bIdx === 0 ? 0 : `${4 * uiScale}px`
-                            }}>
-                                {branch.label}
-                            </div>
-
-                            {branch.nodes.map((child: any, i: number) =>
-                                renderNode(child, [...branchArrayPath, i], branchArrayPath, i, depth + 1)
-                            )}
-
-                            <div
-                                onDragOver={(e) => handleNodeDragOver(e, branchArrayPath, branch.nodes.length)}
-                                onDrop={(e) => handleNodeDrop(e, branchArrayPath, branch.nodes.length)}
-                                style={{
-                                    marginLeft: `${(depth + 1) * 16 * uiScale}px`,
-                                    height: `${6 * uiScale}px`,
-                                    borderTop: dropIndicator && sameArrayPath(dropIndicator.arrayPath, branchArrayPath) && dropIndicator.index === branch.nodes.length
-                                        ? `2px solid ${t.border.accent}` : '2px solid transparent',
-                                }}
-                            />
-                        </React.Fragment>
-                    );
-                })}
-            </div>
+            <TimelineNode
+                key={nodePrefix}
+                node={node}
+                nodePath={nodePath}
+                parentArrayPath={parentArrayPath}
+                indexInParent={indexInParent}
+                depth={depth}
+                uiScale={uiScale}
+                selected={selectedKeys.has(nodePrefix)}
+                selectedNodeIndex={selectedNodeIndex}
+                hasValidationError={hasValidationError}
+                hasLikelyIssue={hasLikelyIssue}
+                isCollapsed={!!collapsed[pathKey(nodePath)]}
+                onToggleCollapse={toggleCollapse}
+                dropIndicator={dropIndicator}
+                sameArrayPath={sameArrayPath}
+                onClickNode={onNodeClick}
+                onDragStart={handleNodeDragStart}
+                onDragOver={handleNodeDragOver}
+                onDrop={handleNodeDrop}
+                onDragEnd={handleDragEnd}
+                onDeleteRoot={handleDeleteRootNode}
+                onPlayFrom={triggerPlayFrom}
+                renderChild={renderNode}
+            />
         );
     };
 
     return (
         <div style={{ padding: `${8 * uiScale}px`, height: '100%', backgroundColor: t.bg.app, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px', paddingBottom: '8px', borderBottom: `1px solid ${t.border.subtle}`, color: t.text.muted, fontSize: '0.85em' }}>
-                <button onClick={resetScope} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', color: scopePath.length === 0 ? t.text.primary : t.text.muted }}>
-                    <Home size={14 * uiScale} />
-                </button>
+            <TimelineHeader
+                uiScale={uiScale}
+                scopePath={scopePath}
+                selectedCount={selectedNodePaths.length}
+                onResetScope={resetScope}
+                onPopScope={popScope}
+            />
 
-                {scopePath.length > 0 && <>
-                    {scopePath.map((part, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
-                            <ChevronRight size={12 * uiScale} />
-                            <span style={{ color: i === scopePath.length - 1 ? t.text.primary : t.text.muted }}>
-                                {typeof part === 'number' ? `Node ${part}` : part}
-                            </span>
-                        </div>
-                    ))}
-                    <button onClick={popScope} style={{ marginLeft: 'auto', background: '#333', border: 'none', color: '#ccc', borderRadius: '3px', padding: '2px 6px', fontSize: '10px', cursor: 'pointer' }}>
-                        UP
-                    </button>
-                </>}
-            </div>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: `${4 * uiScale}px`, marginBottom: `${12 * uiScale}px` }}>
-                <AddCommandMenu uiScale={uiScale} onAdd={(type) => addNode(createDefaultCommand(type))} items={commandMenuItems} />
-                {quickTypes.map((type) => {
-                    const p = getPlugin(type);
-                    return (
-                        <QuickBtn
-                            key={type}
-                            onClick={() => addNode(createDefaultCommand(type))}
-                            icon={p.icon(14 * uiScale)}
-                            title={p.label}
-                            scale={uiScale}
-                            bg={p.quickColor?.bg ?? '#333'}
-                            border={p.quickColor?.border ?? '#444'}
-                        />
-                    );
-                })}
-            </div>
+            <TimelineCommandBar
+                uiScale={uiScale}
+                commandMenuItems={commandMenuItems}
+                quickTypes={quickTypes}
+                onAdd={(type) => addNode(createDefaultCommand(type))}
+                getQuickMeta={getQuickMeta}
+            />
 
             <div className="zerith-scrollbar" style={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: `${2 * uiScale}px`, userSelect: 'none', WebkitUserSelect: 'none' }}>
                 {rootNodes.map((node, i) => renderNode(node, [i], [], i, 0))}
-                <div
-                    onDragOver={(e) => handleNodeDragOver(e, [], rootNodes.length)}
-                    onDrop={(e) => handleNodeDrop(e, [], rootNodes.length)}
-                    style={{
-                        height: `${8 * uiScale}px`,
-                        borderTop: dropIndicator && sameArrayPath(dropIndicator.arrayPath, []) && dropIndicator.index === rootNodes.length
-                            ? `2px solid ${t.border.accent}` : '2px solid transparent',
-                    }}
+
+                <TimelineDropZone
+                    uiScale={uiScale}
+                    rootCount={rootNodes.length}
+                    dropIndicator={dropIndicator}
+                    sameArrayPath={sameArrayPath}
+                    onDragOver={handleNodeDragOver}
+                    onDrop={handleNodeDrop}
+                    borderAccent={t.border.accent}
                 />
-                {rootNodes.length === 0 && (
-                    <div style={{ textAlign: 'center', color: '#444', padding: '20px', fontStyle: 'italic', fontSize: '0.9em' }}>
-                        Empty Block
-                    </div>
-                )}
+
+                {rootNodes.length === 0 && <TimelineEmptyState />}
             </div>
         </div>
-    );
-}
-
-function QuickBtn({ onClick, icon, title, scale, bg = '#333', border = '#444' }: any) {
-    return (
-        <button
-            onClick={onClick}
-            title={title}
-            style={{
-                background: bg,
-                border: `1px solid ${border}`,
-                color: '#ccc',
-                borderRadius: '3px',
-                padding: `${6 * scale}px`,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-            }}
-        >
-            {icon}
-        </button>
     );
 }

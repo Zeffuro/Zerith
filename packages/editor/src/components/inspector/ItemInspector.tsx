@@ -1,8 +1,9 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useInspectorFieldEditor } from './useInspectorFieldEditor';
+import { FieldError } from './FieldError';
 
 export function ItemInspector({ node, index }: { node: any; index?: number | null }) {
-    const { labelStyle, inputStyle, handleChange } = useInspectorFieldEditor(index);
+    const { labelStyle, handleChange, getFieldErrors, getFieldInputStyle } = useInspectorFieldEditor(index);
 
     const initialJson = useMemo(
         () => JSON.stringify(node.changes ?? {}, null, 2),
@@ -38,12 +39,13 @@ export function ItemInspector({ node, index }: { node: any; index?: number | nul
                 <select
                     value={node.action || 'add'}
                     onChange={(e) => handleChange('action', e.target.value)}
-                    style={inputStyle}
+                    style={getFieldInputStyle('action')}
                 >
                     <option value="add">Add</option>
                     <option value="remove">Remove</option>
                     <option value="update">Update</option>
                 </select>
+                <FieldError errors={getFieldErrors('action')} />
             </div>
 
             <div>
@@ -53,8 +55,9 @@ export function ItemInspector({ node, index }: { node: any; index?: number | nul
                     value={node.id || ''}
                     onChange={(e) => handleChange('id', e.target.value)}
                     placeholder="e.g. attorney_badge"
-                    style={inputStyle}
+                    style={getFieldInputStyle('id')}
                 />
+                <FieldError errors={getFieldErrors('id')} />
             </div>
 
             {node.action === 'update' && (
@@ -65,8 +68,9 @@ export function ItemInspector({ node, index }: { node: any; index?: number | nul
                         onChange={(e) => setChangesJson(e.target.value)}
                         onBlur={onChangesBlur}
                         rows={8}
-                        style={{ ...inputStyle, fontFamily: 'monospace' }}
+                        style={{ ...getFieldInputStyle('changes'), fontFamily: 'monospace' }}
                     />
+                    <FieldError errors={getFieldErrors('changes')} />
                     {jsonError ? (
                         <div style={{ color: '#f87171', fontSize: '0.8em', marginTop: '4px' }}>{jsonError}</div>
                     ) : (

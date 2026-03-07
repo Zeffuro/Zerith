@@ -1,7 +1,8 @@
 import { useInspectorFieldEditor } from './useInspectorFieldEditor';
+import { FieldError } from './FieldError';
 
 export function SetInspector({ node, index }: { node: any; index?: number | null }) {
-    const { labelStyle, inputStyle, handleChange } = useInspectorFieldEditor(index);
+    const { labelStyle, handleChange, getFieldErrors, getFieldInputStyle } = useInspectorFieldEditor(index);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -12,8 +13,9 @@ export function SetInspector({ node, index }: { node: any; index?: number | null
                     value={node.key || ''}
                     onChange={(e) => handleChange('key', e.target.value)}
                     placeholder="e.g. has_badge"
-                    style={inputStyle}
+                    style={getFieldInputStyle('key')}
                 />
+                <FieldError errors={getFieldErrors('key')} />
             </div>
 
             <div>
@@ -21,13 +23,14 @@ export function SetInspector({ node, index }: { node: any; index?: number | null
                 <select
                     value={node.op || 'set'}
                     onChange={(e) => handleChange('op', e.target.value)}
-                    style={inputStyle}
+                    style={getFieldInputStyle('op')}
                 >
                     <option value="set">Set</option>
                     <option value="add">Add</option>
                     <option value="sub">Subtract</option>
                     <option value="toggle">Toggle</option>
                 </select>
+                <FieldError errors={getFieldErrors('op')} />
             </div>
 
             <div>
@@ -43,8 +46,9 @@ export function SetInspector({ node, index }: { node: any; index?: number | null
                         handleChange('value', v);
                     }}
                     placeholder="true / 1 / some text"
-                    style={inputStyle}
+                    style={getFieldInputStyle('value')}
                 />
+                <FieldError errors={getFieldErrors('value')} />
             </div>
         </div>
     );

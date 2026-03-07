@@ -1,10 +1,11 @@
 import { ArrowRight } from 'lucide-react';
 import { useScriptStore } from '../../store/useScriptStore';
 import { useInspectorFieldEditor } from './useInspectorFieldEditor';
+import { FieldError } from './FieldError';
 
 export function WhileInspector({ node, index }: { node: any; index?: number | null }) {
     const { pushScope } = useScriptStore();
-    const { uiScale, handleChange, labelStyle, inputStyle } = useInspectorFieldEditor(index);
+    const { uiScale, handleChange, labelStyle, getFieldErrors, getFieldInputStyle } = useInspectorFieldEditor(index);
 
     const btnStyle = {
         width: '100%',
@@ -27,11 +28,12 @@ export function WhileInspector({ node, index }: { node: any; index?: number | nu
                 <select
                     value={node.source || 'variable'}
                     onChange={(e) => handleChange('source', e.target.value)}
-                    style={inputStyle}
+                    style={getFieldInputStyle('source')}
                 >
                     <option value="variable">Game Variable</option>
                     <option value="items">Items Inventory</option>
                 </select>
+                <FieldError errors={getFieldErrors('source')} />
             </div>
 
             <div>
@@ -41,8 +43,9 @@ export function WhileInspector({ node, index }: { node: any; index?: number | nu
                     value={node.key || ''}
                     onChange={(e) => handleChange('key', e.target.value)}
                     placeholder="e.g. focus"
-                    style={inputStyle}
+                    style={getFieldInputStyle('key')}
                 />
+                <FieldError errors={getFieldErrors('key')} />
             </div>
 
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -51,7 +54,7 @@ export function WhileInspector({ node, index }: { node: any; index?: number | nu
                     <select
                         value={node.op || 'eq'}
                         onChange={(e) => handleChange('op', e.target.value)}
-                        style={inputStyle}
+                        style={getFieldInputStyle('op')}
                     >
                         <option value="eq">==</option>
                         <option value="neq">!=</option>
@@ -60,6 +63,7 @@ export function WhileInspector({ node, index }: { node: any; index?: number | nu
                         <option value="lt">&lt;</option>
                         <option value="lte">&lt;=</option>
                     </select>
+                    <FieldError errors={getFieldErrors('op')} />
                 </div>
                 <div style={{ flex: 1 }}>
                     <label style={labelStyle}>Value</label>
@@ -74,8 +78,9 @@ export function WhileInspector({ node, index }: { node: any; index?: number | nu
                             handleChange('value', v);
                         }}
                         placeholder="true / 3 / text"
-                        style={inputStyle}
+                        style={getFieldInputStyle('value')}
                     />
+                    <FieldError errors={getFieldErrors('value')} />
                 </div>
             </div>
 
@@ -86,8 +91,9 @@ export function WhileInspector({ node, index }: { node: any; index?: number | nu
                     min={1}
                     value={node.maxIterations ?? 10000}
                     onChange={(e) => handleChange('maxIterations', Number(e.target.value))}
-                    style={inputStyle}
+                    style={getFieldInputStyle('maxIterations')}
                 />
+                <FieldError errors={getFieldErrors('maxIterations')} />
             </div>
 
             <div style={{ borderTop: '1px solid #333', paddingTop: '12px' }}>

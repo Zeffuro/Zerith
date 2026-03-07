@@ -1,7 +1,9 @@
 import { useInspectorFieldEditor } from './useInspectorFieldEditor';
+import { FieldError } from './FieldError';
 
 export function LabelInspector({ node, index }: { node: any; index?: number | null }) {
-    const { labelStyle, inputStyle, handleChange } = useInspectorFieldEditor(index);
+    const { labelStyle, handleChange, getFieldErrors, getFieldInputStyle } = useInspectorFieldEditor(index);
+    const nameErrors = getFieldErrors('name');
 
     return (
         <div>
@@ -11,8 +13,9 @@ export function LabelInspector({ node, index }: { node: any; index?: number | nu
                 value={node.name || ''}
                 onChange={(e) => handleChange('name', e.target.value)}
                 placeholder="e.g. cross_exam_start"
-                style={inputStyle}
+                style={getFieldInputStyle('name')}
             />
+            <FieldError errors={nameErrors} />
         </div>
     );
 }

@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 import { CommandSchemaRegistry } from 'core';
 import { useInspectorFieldEditor } from './useInspectorFieldEditor';
+import { FieldError } from './FieldError';
 
 type FieldInfo = {
     key: string;
@@ -52,7 +53,7 @@ function inferFields(type: string): FieldInfo[] {
 const HIDDEN_COMPLEX_KEYS = new Set(['then', 'else', 'body', 'commands', 'options']);
 
 export function SchemaFallbackInspector({ node, index }: { node: any; index?: number | null }) {
-    const { labelStyle, inputStyle, handleChange } = useInspectorFieldEditor(index);
+    const { labelStyle, handleChange, getFieldErrors, getFieldInputStyle } = useInspectorFieldEditor(index);
     const fields = inferFields(node?.type).filter((f) => !HIDDEN_COMPLEX_KEYS.has(f.key));
 
     if (!node?.type) {
@@ -79,11 +80,12 @@ export function SchemaFallbackInspector({ node, index }: { node: any; index?: nu
                             <select
                                 value={value ? 'true' : 'false'}
                                 onChange={(e) => handleChange(f.key, e.target.value === 'true')}
-                                style={inputStyle}
+                                style={getFieldInputStyle(f.key)}
                             >
                                 <option value="false">false</option>
                                 <option value="true">true</option>
                             </select>
+                            <FieldError errors={getFieldErrors(f.key)} />
                         </div>
                     );
                 }
@@ -98,8 +100,9 @@ export function SchemaFallbackInspector({ node, index }: { node: any; index?: nu
                                 onChange={(e) =>
                                     handleChange(f.key, e.target.value === '' ? undefined : Number(e.target.value))
                                 }
-                                style={inputStyle}
+                                style={getFieldInputStyle(f.key)}
                             />
+                            <FieldError errors={getFieldErrors(f.key)} />
                         </div>
                     );
                 }
@@ -111,7 +114,7 @@ export function SchemaFallbackInspector({ node, index }: { node: any; index?: nu
                             <select
                                 value={value ?? ''}
                                 onChange={(e) => handleChange(f.key, e.target.value)}
-                                style={inputStyle}
+                                style={getFieldInputStyle(f.key)}
                             >
                                 <option value="">(unset)</option>
                                 {f.enumValues.map((v) => (
@@ -120,6 +123,7 @@ export function SchemaFallbackInspector({ node, index }: { node: any; index?: nu
                                     </option>
                                 ))}
                             </select>
+                            <FieldError errors={getFieldErrors(f.key)} />
                         </div>
                     );
                 }
@@ -130,7 +134,7 @@ export function SchemaFallbackInspector({ node, index }: { node: any; index?: nu
                             <label style={labelStyle}>{f.key}</label>
                             <div
                                 style={{
-                                    ...inputStyle,
+                                    ...getFieldInputStyle(f.key),
                                     color: '#888',
                                     background: '#151515',
                                     borderStyle: 'dashed',
@@ -138,6 +142,7 @@ export function SchemaFallbackInspector({ node, index }: { node: any; index?: nu
                             >
                                 Complex field (not inline editable in fallback inspector).
                             </div>
+                            <FieldError errors={getFieldErrors(f.key)} />
                         </div>
                     );
                 }
@@ -149,8 +154,9 @@ export function SchemaFallbackInspector({ node, index }: { node: any; index?: nu
                             type="text"
                             value={value ?? ''}
                             onChange={(e) => handleChange(f.key, e.target.value)}
-                            style={inputStyle}
+                            style={getFieldInputStyle(f.key)}
                         />
+                        <FieldError errors={getFieldErrors(f.key)} />
                     </div>
                 );
             })}

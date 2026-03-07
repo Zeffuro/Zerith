@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { ScriptPath } from '../utils/scriptPathUtils';
 
 interface EditorState {
     uiScale: number;
@@ -24,6 +25,21 @@ interface EditorState {
 
     themeKey: string;
     setThemeKey: (key: string) => void;
+
+    clipboardNode: any | null;
+    setClipboardNode: (node: any | null) => void;
+
+    validationErrors: Record<string, string[]>;
+    setValidationErrors: (errors: Record<string, string[]>) => void;
+    clearValidationErrors: () => void;
+
+    selectedNodePaths: ScriptPath[];
+    selectionAnchorPath: ScriptPath | null;
+
+    setSelectedNodePaths: (paths: ScriptPath[]) => void;
+    setSelectionAnchorPath: (path: ScriptPath | null) => void;
+    clearSelection: () => void;
+    toggleSelectedNodePath: (path: ScriptPath) => void;
 }
 
 const DEFAULT_QUICK = ['dialogue', 'background', 'sprite', 'choice', 'if', 'while', 'for', 'jump', 'call', 'bgm'];
@@ -82,6 +98,40 @@ export const useEditorStore = create<EditorState>()(
 
             themeKey: 'classic',
             setThemeKey: (key) => set({ themeKey: key }),
+
+            clipboardNode: null,
+            setClipboardNode: (node) => set({ clipboardNode: node }),
+
+            validationErrors: {},
+            setValidationErrors: (errors) => set({ validationErrors: errors }),
+            clearValidationErrors: () => set({ validationErrors: {} }),
+
+            selectedNodePaths: [],
+            selectionAnchorPath: null,
+
+            setSelectedNodePaths: (paths) =>
+                set({
+                    selectedNodePaths: Array.from(
+                        new Map(paths.map((p) => [p.join('.'), [...p] as ScriptPath])).values()
+                    ),
+                }),
+
+            setSelectionAnchorPath: (path) =>
+                set({ selectionAnchorPath: path ? [...path] as ScriptPath : null }),
+
+            clearSelection: () =>
+                set({ selectedNodePaths: [], selectionAnchorPath: null }),
+
+            toggleSelectedNodePath: (path) =>
+                set((state) => {
+                    const key = path.join('.');
+                    const exists = state.selectedNodePaths.some((p) => p.join('.') === key);
+                    return {
+                        selectedNodePaths: exists
+                            ? state.selectedNodePaths.filter((p) => p.join('.') !== key)
+                            : [...state.selectedNodePaths, [...path] as ScriptPath],
+                    };
+                }),
         }),
         {
             name: 'zerith-editor-prefs',

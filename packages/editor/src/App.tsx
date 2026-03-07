@@ -15,13 +15,16 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { PhysicalSize, PhysicalPosition } from "@tauri-apps/api/dpi";
 import { getThemeRegistry } from './theme/themeRegistry';
 import { applyTheme } from './theme/applyTheme';
+import { useGlobalEditorShortcuts } from './hooks/useGlobalEditorShortcuts';
+import { useLiveScriptValidation } from './hooks/useLiveScriptValidation';
 
 function App() {
-
     const { uiScale, windowState, setWindowState, themeKey } = useEditorStore();
     const rootScript = useScriptStore(state => state.rootScript);
 
-    // Window Persistence
+    useGlobalEditorShortcuts();
+    useLiveScriptValidation(rootScript);
+
     useEffect(() => {
         const appWindow = getCurrentWindow();
 
@@ -58,17 +61,11 @@ function App() {
     }, []);
 
     useEffect(() => {
-        const handleDragOver = (e: DragEvent) => {
-            e.preventDefault();
-        };
-
-        const handleDrop = (e: DragEvent) => {
-            e.preventDefault();
-        };
+        const handleDragOver = (e: DragEvent) => e.preventDefault();
+        const handleDrop = (e: DragEvent) => e.preventDefault();
 
         window.addEventListener('dragover', handleDragOver);
         window.addEventListener('drop', handleDrop);
-
         return () => {
             window.removeEventListener('dragover', handleDragOver);
             window.removeEventListener('drop', handleDrop);
@@ -88,20 +85,11 @@ function App() {
             fontSize: `${13 * uiScale}px`
         }}>
             <Toolbar />
-
             <Group orientation="horizontal" style={{ flexGrow: 1 }}>
-                <Panel defaultSize={20} minSize={15}>
-                    <Explorer />
-                </Panel>
-
+                <Panel defaultSize={20} minSize={15}><Explorer /></Panel>
                 <ResizeHandle />
-
-                <Panel defaultSize={40} minSize={20}>
-                    <Timeline />
-                </Panel>
-
+                <Panel defaultSize={40} minSize={20}><Timeline /></Panel>
                 <ResizeHandle />
-
                 <Panel defaultSize={40} minSize={25}>
                     <Group orientation="vertical">
                         <Panel defaultSize={60}>
@@ -109,9 +97,7 @@ function App() {
                                 <GamePreview script={rootScript} />
                             </div>
                         </Panel>
-
                         <ResizeHandle horizontal />
-
                         <Panel defaultSize={40}>
                             <div style={{ padding: `${12 * uiScale}px`, height: '100%', backgroundColor: '#252526' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', marginBottom: `${16 * uiScale}px`, fontSize: '0.9em', fontWeight: 'bold' }}>

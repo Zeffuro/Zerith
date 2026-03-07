@@ -1,7 +1,9 @@
 import { useInspectorFieldEditor } from './useInspectorFieldEditor';
+import { FieldError } from './FieldError';
 
 export function JumpInspector({ node, index }: { node: any; index?: number | null }) {
-    const { labelStyle, inputStyle, handleChange } = useInspectorFieldEditor(index);
+    const { labelStyle, handleChange, getFieldErrors, getFieldInputStyle } = useInspectorFieldEditor(index);
+    const toErrors = getFieldErrors('to');
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -12,8 +14,9 @@ export function JumpInspector({ node, index }: { node: any; index?: number | nul
                     value={node.to || ''}
                     onChange={(e) => handleChange('to', e.target.value)}
                     placeholder="e.g. intro_courtroom"
-                    style={inputStyle}
+                    style={getFieldInputStyle('to')}
                 />
+                <FieldError errors={toErrors} />
             </div>
         </div>
     );

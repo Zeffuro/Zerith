@@ -1,9 +1,8 @@
 import { Play, Square, FolderOpen, Save, ZoomIn, ZoomOut, Volume2, VolumeX, Star } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
-import { readDir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { readDir } from '@tauri-apps/plugin-fs';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useEditorStore } from '../../store/useEditorStore';
-import { useScriptStore } from '../../store/useScriptStore';
 import { useState } from 'react';
 import { QuickCommandsMenu } from './QuickCommandsMenu';
 import { ThemeMenu } from './ThemeMenu';
@@ -11,13 +10,12 @@ import { editorTheme as t } from '../../theme/editorTheme';
 import { styles } from '../../theme/styleHelpers';
 
 export function Toolbar() {
-    const { setProject, loadManifest, activeFile } = useProjectStore();
+    const { setProject, loadManifest, activeFile, saveActiveFileFromCurrentScript } = useProjectStore();
     const {
         uiScale, setUiScale, isMuted, toggleMute, triggerPlay, triggerStop,
         quickCommandTypes, toggleQuickCommandType, moveQuickCommandType,
         themeKey, setThemeKey
     } = useEditorStore();
-    const rootScript = useScriptStore(state => state.rootScript);
 
     const [quickOpen, setQuickOpen] = useState(false);
 
@@ -50,23 +48,9 @@ export function Toolbar() {
         }
     };
 
-    const { activeMacroName } = useProjectStore();
-
     const handleSave = async () => {
         if (!activeFile) return;
-
-        try {
-            if (activeMacroName) {
-                const raw = await readTextFile(activeFile);
-                const obj = JSON.parse(raw);
-                obj[activeMacroName] = rootScript;
-                await writeTextFile(activeFile, JSON.stringify(obj, null, 4));
-            } else {
-                await writeTextFile(activeFile, JSON.stringify(rootScript, null, 4));
-            }
-        } catch (err) {
-            console.error("Failed to save:", err);
-        }
+        await saveActiveFileFromCurrentScript();
     };
 
     const iconBtnStyle = styles.iconButton(uiScale);

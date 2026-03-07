@@ -1,10 +1,11 @@
 import { ArrowRight } from 'lucide-react';
 import { useScriptStore } from '../../store/useScriptStore';
 import { useInspectorFieldEditor } from './useInspectorFieldEditor';
+import { FieldError } from './FieldError';
 
 export function ForInspector({ node, index }: { node: any; index?: number | null }) {
     const { pushScope } = useScriptStore();
-    const { uiScale, handleChange, labelStyle, inputStyle } = useInspectorFieldEditor(index);
+    const { uiScale, handleChange, labelStyle, getFieldErrors, getFieldInputStyle } = useInspectorFieldEditor(index);
 
     const btnStyle = {
         width: '100%',
@@ -29,8 +30,9 @@ export function ForInspector({ node, index }: { node: any; index?: number | null
                     value={node.iterator ?? 'i'}
                     onChange={(e) => handleChange('iterator', e.target.value)}
                     placeholder="i"
-                    style={inputStyle}
+                    style={getFieldInputStyle('iterator')}
                 />
+                <FieldError errors={getFieldErrors('iterator')} />
             </div>
 
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -40,8 +42,9 @@ export function ForInspector({ node, index }: { node: any; index?: number | null
                         type="number"
                         value={node.from ?? 0}
                         onChange={(e) => handleChange('from', Number(e.target.value))}
-                        style={inputStyle}
+                        style={getFieldInputStyle('from')}
                     />
+                    <FieldError errors={getFieldErrors('from')} />
                 </div>
                 <div style={{ flex: 1 }}>
                     <label style={labelStyle}>To</label>
@@ -49,8 +52,9 @@ export function ForInspector({ node, index }: { node: any; index?: number | null
                         type="number"
                         value={node.to ?? 0}
                         onChange={(e) => handleChange('to', Number(e.target.value))}
-                        style={inputStyle}
+                        style={getFieldInputStyle('to')}
                     />
+                    <FieldError errors={getFieldErrors('to')} />
                 </div>
                 <div style={{ flex: 1 }}>
                     <label style={labelStyle}>Step</label>
@@ -58,8 +62,9 @@ export function ForInspector({ node, index }: { node: any; index?: number | null
                         type="number"
                         value={node.step ?? 1}
                         onChange={(e) => handleChange('step', Number(e.target.value))}
-                        style={inputStyle}
+                        style={getFieldInputStyle('step')}
                     />
+                    <FieldError errors={getFieldErrors('step')} />
                 </div>
             </div>
 

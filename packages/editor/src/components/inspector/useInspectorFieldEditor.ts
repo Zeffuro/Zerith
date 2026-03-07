@@ -3,7 +3,7 @@ import { useEditorStore } from '../../store/useEditorStore';
 import { useScriptStore } from '../../store/useScriptStore';
 
 export function useInspectorFieldEditor(index?: number | null) {
-    const { uiScale } = useEditorStore();
+    const { uiScale, validationErrors } = useEditorStore();
     const {
         getActiveScript,
         updateActiveScript,
@@ -48,5 +48,18 @@ export function useInspectorFieldEditor(index?: number | null) {
         [uiScale]
     );
 
-    return { uiScale, handleChange, labelStyle, inputStyle };
+    const getFieldErrors = (field: string): string[] => {
+        if (!selectedNodePath) return [];
+        const key = [...selectedNodePath, field].join('.');
+        return validationErrors[key] ?? [];
+    };
+
+    const getFieldInputStyle = (field: string) => {
+        const errs = getFieldErrors(field);
+        return errs.length > 0
+            ? { ...inputStyle, border: '1px solid #ef4444' }
+            : inputStyle;
+    };
+
+    return { uiScale, handleChange, labelStyle, inputStyle, getFieldErrors, getFieldInputStyle };
 }

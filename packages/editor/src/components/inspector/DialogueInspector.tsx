@@ -1,16 +1,25 @@
 import { useInspectorFieldEditor } from './useInspectorFieldEditor';
 import { useProjectStore } from '../../store/useProjectStore';
+import { FieldError } from './FieldError';
 
 export function DialogueInspector({ node, index }: { node: any, index?: number | null }) {
-    const { uiScale, handleChange, inputStyle } = useInspectorFieldEditor(index);
-    const labelStyle = { display: 'block', marginBottom: `${6 * uiScale}px`, color: '#888', fontSize: `${11 * uiScale}px` };
+    const { uiScale, handleChange, getFieldErrors, getFieldInputStyle } = useInspectorFieldEditor(index);
+    const speakerErrors = getFieldErrors('speaker');
+    const textErrors = getFieldErrors('text');
+
+    const labelStyle = {
+        display: 'block',
+        marginBottom: `${6 * uiScale}px`,
+        color: '#888',
+        fontSize: `${11 * uiScale}px`
+    };
 
     const { characters } = useProjectStore();
     const charKeys = Object.keys(characters);
 
     const renderPreview = (text: string) => {
         if (!text) return null;
-        let html = text
+        const html = text
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/\{wait:(\d+)}/g, '<span style="color: #fbbf24; font-size: 10px; border: 1px solid #fbbf24; padding: 0 2px; border-radius: 3px;">WAIT $1</span>')
@@ -30,20 +39,23 @@ export function DialogueInspector({ node, index }: { node: any, index?: number |
                     value={node.speaker || ''}
                     onChange={e => handleChange('speaker', e.target.value)}
                     list="dialogue-character-ids"
-                    style={inputStyle}
+                    style={getFieldInputStyle('speaker')}
                 />
+                <FieldError errors={speakerErrors} />
                 <datalist id="dialogue-character-ids">
                     {charKeys.map(k => <option key={k} value={k} />)}
                 </datalist>
             </div>
+
             <div>
                 <label style={labelStyle}>Text</label>
                 <textarea
                     value={node.text || ''}
                     onChange={e => handleChange('text', e.target.value)}
                     rows={5}
-                    style={{ ...inputStyle, fontFamily: 'monospace' }}
+                    style={{ ...getFieldInputStyle('text'), fontFamily: 'monospace' }}
                 />
+                <FieldError errors={textErrors} />
             </div>
 
             <div style={{ padding: '8px', backgroundColor: '#111', border: '1px solid #333', borderRadius: '4px' }}>
