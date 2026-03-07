@@ -1,9 +1,12 @@
 import { useMemo } from 'react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useScriptStore } from '../../store/useScriptStore';
+import { useProjectStore } from '../../store/useProjectStore';
 
 export function useInspectorFieldEditor(index?: number | null) {
     const { uiScale, validationErrors } = useEditorStore();
+    const editingAllMacrosFile = useProjectStore((s) => s.editingAllMacrosFile);
+
     const {
         getActiveScript,
         updateActiveScript,
@@ -50,15 +53,21 @@ export function useInspectorFieldEditor(index?: number | null) {
 
     const getFieldErrors = (field: string): string[] => {
         if (!selectedNodePath) return [];
-        const key = [...selectedNodePath, field].join('.');
+
+        if (!editingAllMacrosFile) {
+            const key = [...selectedNodePath, field].join('.');
+            return validationErrors[key] ?? [];
+        }
+
+        const [macroIndex, ...rest] = selectedNodePath;
+        if (typeof macroIndex !== 'number') return [];
+        const key = `macro.${macroIndex}.${[...rest, field].join('.')}`;
         return validationErrors[key] ?? [];
     };
 
     const getFieldInputStyle = (field: string) => {
         const errs = getFieldErrors(field);
-        return errs.length > 0
-            ? { ...inputStyle, border: '1px solid #ef4444' }
-            : inputStyle;
+        return errs.length > 0 ? { ...inputStyle, border: '1px solid #ef4444' } : inputStyle;
     };
 
     return { uiScale, handleChange, labelStyle, inputStyle, getFieldErrors, getFieldInputStyle };

@@ -38,8 +38,30 @@ export function useGlobalEditorShortcuts() {
 
             if (mod && key === 'd') {
                 e.preventDefault();
+
+                const editingAllMacrosFile = useProjectStore.getState().editingAllMacrosFile;
+                const selectedNodePaths = useEditorStore.getState().selectedNodePaths;
+                const setSelectedNodePaths = useEditorStore.getState().setSelectedNodePaths;
+                const setSelectionAnchorPath = useEditorStore.getState().setSelectionAnchorPath;
+
+                if (editingAllMacrosFile) {
+                    const rootIndices = selectedNodePaths
+                        .filter((p) => Array.isArray(p) && p.length === 1 && typeof p[0] === 'number')
+                        .map((p) => p[0] as number)
+                        .filter((v, i, a) => a.indexOf(v) === i)
+                        .sort((a, b) => a - b);
+
+                    if (rootIndices.length > 0) {
+                        useProjectStore.getState().duplicateMacroEntries(rootIndices);
+                        const duplicated = rootIndices.map((idx, i) => idx + 1 + i);
+                        const dupPaths = duplicated.map((i) => [i]);
+                        setSelectedNodePaths(dupPaths as any);
+                        setSelectionAnchorPath(dupPaths[0] ?? null);
+                    }
+                    return;
+                }
+
                 const { selectedNodePath, duplicateNodeByPath, duplicateNodesByPaths } = useScriptStore.getState();
-                const { selectedNodePaths, setSelectedNodePaths, setSelectionAnchorPath } = useEditorStore.getState();
 
                 if (selectedNodePaths.length > 1) {
                     const originals = (selectedNodePaths as any[])
@@ -92,6 +114,36 @@ export function useGlobalEditorShortcuts() {
             }
 
             if (mod && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+                const editingAllMacrosFile = useProjectStore.getState().editingAllMacrosFile;
+
+                if (editingAllMacrosFile) {
+                    const selected = useEditorStore.getState().selectedNodePaths;
+                    if (selected.length !== 1) return;
+                    const p = selected[0];
+                    if (!p || p.length !== 1 || typeof p[0] !== 'number') return;
+
+                    const idx = p[0] as number;
+                    const total = useProjectStore.getState().macroEntries.length;
+                    const moveMacroEntries = useProjectStore.getState().moveMacroEntries;
+                    const setSelectedNodePaths = useEditorStore.getState().setSelectedNodePaths;
+                    const setSelectionAnchorPath = useEditorStore.getState().setSelectionAnchorPath;
+
+                    if (e.key === 'ArrowUp') {
+                        if (idx <= 0) return;
+                        e.preventDefault();
+                        moveMacroEntries([idx], idx - 1);
+                        setSelectedNodePaths([[idx - 1]]);
+                        setSelectionAnchorPath([idx - 1]);
+                    } else {
+                        if (idx >= total - 1) return;
+                        e.preventDefault();
+                        moveMacroEntries([idx], idx + 2);
+                        setSelectedNodePaths([[idx + 1]]);
+                        setSelectionAnchorPath([idx + 1]);
+                    }
+                    return;
+                }
+
                 const { selectedNodePath, moveNodeByPath, getNodeAtPath } = useScriptStore.getState();
                 if (selectedNodePath) {
                     e.preventDefault();
@@ -114,8 +166,30 @@ export function useGlobalEditorShortcuts() {
                 return;
             }
 
+            // COPY
             if (mod && key === 'c') {
                 e.preventDefault();
+
+                const editingAllMacrosFile = useProjectStore.getState().editingAllMacrosFile;
+                const selected = useEditorStore.getState().selectedNodePaths;
+
+                if (editingAllMacrosFile) {
+                    const root = selected.find((p) => p.length === 1 && typeof p[0] === 'number');
+                    if (root) {
+                        const idx = root[0] as number;
+                        const macro = useProjectStore.getState().macroEntries[idx];
+                        if (macro) {
+                            useEditorStore.getState().setClipboardNode({
+                                __kind: 'macro_header',
+                                payload: typeof structuredClone === 'function'
+                                    ? structuredClone(macro)
+                                    : JSON.parse(JSON.stringify(macro)),
+                            });
+                        }
+                        return;
+                    }
+                }
+
                 const { selectedNodePath, getNodeAtPath } = useScriptStore.getState();
                 if (selectedNodePath) {
                     const node = getNodeAtPath(selectedNodePath);
@@ -130,10 +204,48 @@ export function useGlobalEditorShortcuts() {
                 return;
             }
 
+            // PASTE
             if (mod && key === 'v') {
-                const { selectedNodePath, pasteNodeAtPath } = useScriptStore.getState();
+                const editingAllMacrosFile = useProjectStore.getState().editingAllMacrosFile;
                 const { clipboardNode } = useEditorStore.getState();
-                if (selectedNodePath && clipboardNode) {
+
+                if (editingAllMacrosFile && clipboardNode && (clipboardNode as any).__kind === 'macro_header') {
+                    e.preventDefault();
+
+                    const selected = useEditorStore.getState().selectedNodePaths;
+                    const root = selected.find((p) => p.length === 1 && typeof p[0] === 'number');
+                    const insertAt = root ? ((root[0] as number) + 1) : useProjectStore.getState().macroEntries.length;
+
+                    const copied = (clipboardNode as any).payload;
+                    const entries = [...useProjectStore.getState().macroEntries];
+
+                    const taken = new Set(entries.map((m) => m.name));
+                    let nextName = copied.name || 'macro_copy';
+                    if (taken.has(nextName)) {
+                        let i = 2;
+                        const base = `${nextName}_copy`;
+                        nextName = base;
+                        while (taken.has(nextName)) nextName = `${base}_${i++}`;
+                    }
+
+                    const inserted = {
+                        name: nextName,
+                        commands: typeof structuredClone === 'function'
+                            ? structuredClone(copied.commands ?? [])
+                            : JSON.parse(JSON.stringify(copied.commands ?? [])),
+                    };
+
+                    entries.splice(Math.max(0, Math.min(insertAt, entries.length)), 0, inserted);
+                    useProjectStore.getState().setMacroEntries(entries);
+
+                    const newIdx = Math.max(0, Math.min(insertAt, entries.length - 1));
+                    useEditorStore.getState().setSelectedNodePaths([[newIdx]]);
+                    useEditorStore.getState().setSelectionAnchorPath([newIdx]);
+                    return;
+                }
+
+                const { selectedNodePath, pasteNodeAtPath } = useScriptStore.getState();
+                if (selectedNodePath && clipboardNode && !(clipboardNode as any).__kind) {
                     e.preventDefault();
                     pasteNodeAtPath(selectedNodePath, clipboardNode);
                 }

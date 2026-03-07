@@ -1,66 +1,31 @@
-import { useMemo, useState } from 'react';
+import { ReactNode, MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import type { ScriptPath } from '../../utils/scriptPathUtils';
 
 import { useScriptStore } from '../../store/useScriptStore';
 import { useEditorStore } from '../../store/useEditorStore';
+import { useProjectStore } from '../../store/useProjectStore';
 import { createDefaultCommand, getPlugin, getAllPlugins } from '../../editor/commandPlugins';
 import { hasLikelyIssue } from '../../editor/likelyIssues';
 import { editorTheme as t } from '../../theme/editorTheme';
 
 import { useTimelineSelection } from './timeline/useTimelineSelection';
 import { useTimelineDragDrop } from './timeline/useTimelineDragDrop';
+import { useTimelineSearch } from './timeline/useTimelineSearch';
 import { TimelineNode } from './timeline/TimelineNode';
 import { TimelineHeader } from './timeline/TimelineHeader';
 import { TimelineCommandBar } from './timeline/TimelineCommandBar';
 import { TimelineDropZone } from './timeline/TimelineDropZone';
 import { TimelineEmptyState } from './timeline/TimelineEmptyState';
 import { TimelineSearchBar } from './timeline/TimelineSearchBar';
+import { TimelineTypeFilterChips } from './timeline/TimelineTypeFilterChips';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 
 function pathKey(path: ScriptPath) {
     return path.join('.');
 }
 
-function nodeSearchText(node: any): string {
-    if (!node || typeof node !== 'object') return '';
-    return [
-        node.type,
-        node.text,
-        node.name,
-        node.assetUrl,
-        node.label,
-        node.to,
-        node.scene,
-        node.id,
-        node.key,
-    ]
-        .filter((v) => typeof v === 'string' || typeof v === 'number')
-        .join(' ')
-        .toLowerCase();
-}
-
-function matchesNodeSelf(node: any, query: string): boolean {
-    const q = query.trim().toLowerCase();
-    if (!q) return true;
-    return nodeSearchText(node).includes(q);
-}
-
-function nodeOrDescendantMatches(node: any, query: string): boolean {
-    if (!query.trim()) return true;
-    if (!node || typeof node !== 'object') return false;
-
-    if (matchesNodeSelf(node, query)) return true;
-
-    const plugin = getPlugin(node.type || '');
-    const branches = plugin.getBranches?.(node) ?? [];
-
-    for (const branch of branches) {
-        for (const child of branch.nodes ?? []) {
-            if (nodeOrDescendantMatches(child, query)) return true;
-        }
-    }
-
-    return false;
+function macroNode(name: string, commands: any[]) {
+    return { type: 'macro_header', name, body: commands };
 }
 
 export function Timeline() {
@@ -72,8 +37,15 @@ export function Timeline() {
     const clearDeleteRequest = useEditorStore((state) => state.clearDeleteRequest);
     const requestDelete = useEditorStore((state) => state.requestDelete);
     const clearSelection = useEditorStore((state) => state.clearSelection);
+    const selectedNodePaths = useEditorStore((s) => s.selectedNodePaths);
 
-    const { selectedNodePaths, selectedKeys, onNodeClick } = useTimelineSelection();
+    const editingAllMacrosFile = useProjectStore((s) => s.editingAllMacrosFile);
+    const macroEntries = useProjectStore((s) => s.macroEntries);
+    const setMacroEntries = useProjectStore((s) => s.setMacroEntries);
+    const addMacroEntry = useProjectStore((s) => s.addMacroEntry);
+    const deleteMacroEntries = useProjectStore((s) => s.deleteMacroEntries);
+
+    const { selectedKeys, onNodeClick } = useTimelineSelection();
     const {
         dropIndicator,
         sameArrayPath,
@@ -102,25 +74,94 @@ export function Timeline() {
     const quickTypes = useMemo(() => quickCommandTypes.filter((tt) => !!getPlugin(tt)), [quickCommandTypes]);
 
     const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-    const [query, setQuery] = useState('');
+    const [typeFilter, setTypeFilter] = useState('all');
 
-    const isSearching = query.trim().length > 0;
-    const rootNodes = useMemo(() => (Array.isArray(rootScript) ? rootScript : []), [rootScript]);
+    const timelineRootRef = useRef<HTMLDivElement | null>(null);
+    const searchInputId = 'timeline-search-input';
 
-    const visibleRoot = useMemo(
-        () =>
-            rootNodes
-                .map((node, index) => ({ node, index }))
-                .filter(({ node }) => nodeOrDescendantMatches(node, query)),
-        [rootNodes, query]
-    );
+    const rootNodes = useMemo(() => {
+        if (editingAllMacrosFile) return macroEntries.map((m) => macroNode(m.name, m.commands));
+        return Array.isArray(rootScript) ? rootScript : [];
+    }, [editingAllMacrosFile, macroEntries, rootScript]);
+
+    const typeChips = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const n of rootNodes) {
+            const type = typeof n?.type === 'string' ? n.type : 'unknown';
+            map.set(type, (map.get(type) ?? 0) + 1);
+        }
+        return Array.from(map.entries())
+            .map(([type, count]) => ({ type, count }))
+            .sort((a, b) => a.type.localeCompare(b.type));
+    }, [rootNodes]);
+
+    const {
+        query,
+        setQuery,
+        isSearching,
+        visibleRoot,
+        matchCount,
+        activeMatchDisplayIndex,
+        goToNextMatch,
+        goToPrevMatch,
+    } = useTimelineSearch(rootNodes, typeFilter);
+
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            const isFind = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f';
+            if (!isFind) return;
+
+            const rootEl = timelineRootRef.current;
+            if (!rootEl) return;
+
+            const active = document.activeElement as HTMLElement | null;
+            const insideTimeline = !!(active && rootEl.contains(active));
+            if (!insideTimeline) return;
+
+            e.preventDefault();
+            const input = document.getElementById(searchInputId) as HTMLInputElement | null;
+            if (!input) return;
+            input.focus();
+            input.select();
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, []);
+
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key !== 'Escape') return;
+
+            const input = document.getElementById(searchInputId) as HTMLInputElement | null;
+            if (!input) return;
+
+            const rootEl = timelineRootRef.current;
+            if (!rootEl) return;
+
+            const active = document.activeElement as HTMLElement | null;
+            const insideTimeline = !!(active && rootEl.contains(active));
+            if (!insideTimeline) return;
+
+            if (query) {
+                e.preventDefault();
+                setQuery('');
+                input.focus();
+            } else if (active === input) {
+                input.blur();
+            }
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [query, setQuery]);
 
     const toggleCollapse = (path: ScriptPath) => {
         const key = pathKey(path);
         setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
     };
 
-    const handleDeleteRootNode = (e: React.MouseEvent, index: number) => {
+    const handleDeleteRootNode = (e: MouseEvent, index: number) => {
         e.stopPropagation();
         requestDelete([[index]], 'click');
     };
@@ -132,10 +173,14 @@ export function Timeline() {
             return;
         }
 
-        if (req.paths.length > 1) {
-            deleteNodesByPaths(req.paths);
+        if (editingAllMacrosFile) {
+            const indices = req.paths
+                .filter((p) => p.length === 1 && typeof p[0] === 'number')
+                .map((p) => p[0] as number);
+            deleteMacroEntries(indices);
         } else {
-            deleteNodeByPath(req.paths[0]);
+            if (req.paths.length > 1) deleteNodesByPaths(req.paths);
+            else deleteNodeByPath(req.paths[0]);
         }
 
         clearSelection();
@@ -152,17 +197,50 @@ export function Timeline() {
         };
     };
 
+    const handleAddCommand = (type: string) => {
+        const cmd = createDefaultCommand(type);
+
+        if (!editingAllMacrosFile) {
+            addNode(cmd);
+            return;
+        }
+
+        const selectedRoot = selectedNodePaths.find((p) => p.length > 0 && typeof p[0] === 'number');
+        let macroIndex = selectedRoot && typeof selectedRoot[0] === 'number' ? (selectedRoot[0] as number) : null;
+
+        let next = [...macroEntries];
+
+        if (macroIndex === null || !next[macroIndex]) {
+            const name = `new_macro_${next.length + 1}`;
+            next.push({ name, commands: [] });
+            macroIndex = next.length - 1;
+        }
+
+        next[macroIndex] = {
+            ...next[macroIndex],
+            commands: [...(next[macroIndex].commands ?? []), cmd],
+        };
+
+        setMacroEntries(next);
+    };
+
     const renderNode = (
         node: any,
         nodePath: ScriptPath,
         parentArrayPath: ScriptPath,
         indexInParent: number,
         depth: number
-    ): React.ReactNode => {
+    ): ReactNode => {
         const nodePrefix = nodePath.join('.');
-        const hasValidationError = Object.keys(validationErrors).some(
-            (k) => k === nodePrefix || k.startsWith(nodePrefix + '.')
-        );
+
+        const hasValidationError = editingAllMacrosFile
+            ? (() => {
+                const [macroIndex, ...rest] = nodePath;
+                if (typeof macroIndex !== 'number') return false;
+                const prefix = `macro.${macroIndex}.${rest.join('.')}`;
+                return Object.keys(validationErrors).some((k) => k === prefix || k.startsWith(prefix + '.'));
+            })()
+            : Object.keys(validationErrors).some((k) => k === nodePrefix || k.startsWith(nodePrefix + '.'));
 
         return (
             <TimelineNode
@@ -176,8 +254,8 @@ export function Timeline() {
                 selected={selectedKeys.has(nodePrefix)}
                 selectedNodeIndex={selectedNodeIndex}
                 hasValidationError={hasValidationError}
-                hasLikelyIssue={hasLikelyIssue(node)}
-                isCollapsed={isSearching ? false : !!collapsed[pathKey(nodePath)]}
+                hasLikelyIssue={!editingAllMacrosFile && hasLikelyIssue(node)}
+                isCollapsed={isSearching ? false : collapsed[pathKey(nodePath)]}
                 onToggleCollapse={toggleCollapse}
                 dropIndicator={dropIndicator}
                 sameArrayPath={sameArrayPath}
@@ -190,18 +268,22 @@ export function Timeline() {
                 onPlayFrom={triggerPlayFrom}
                 renderChild={renderNode}
                 dragDisabled={isSearching}
+                searchQuery={query}
             />
         );
     };
 
     return (
         <div
+            ref={timelineRootRef}
+            tabIndex={0}
             style={{
                 padding: `${8 * uiScale}px`,
                 height: '100%',
                 backgroundColor: t.bg.app,
                 display: 'flex',
                 flexDirection: 'column',
+                outline: 'none',
             }}
         >
             <TimelineHeader
@@ -216,9 +298,28 @@ export function Timeline() {
                 uiScale={uiScale}
                 commandMenuItems={commandMenuItems}
                 quickTypes={quickTypes}
-                onAdd={(type) => addNode(createDefaultCommand(type))}
+                onAdd={handleAddCommand}
                 getQuickMeta={getQuickMeta}
             />
+
+            {editingAllMacrosFile && (
+                <div style={{ marginBottom: `${8 * uiScale}px` }}>
+                    <button
+                        onClick={() => addMacroEntry()}
+                        style={{
+                            background: t.accent.primary,
+                            border: `1px solid ${t.border.primaryBtn}`,
+                            color: t.text.primary,
+                            borderRadius: t.radius.md,
+                            padding: `${6 * uiScale}px ${10 * uiScale}px`,
+                            cursor: 'pointer',
+                            fontWeight: 700,
+                        }}
+                    >
+                        + Add Macro
+                    </button>
+                </div>
+            )}
 
             <TimelineSearchBar
                 uiScale={uiScale}
@@ -226,6 +327,19 @@ export function Timeline() {
                 onChangeQuery={setQuery}
                 shown={visibleRoot.length}
                 total={rootNodes.length}
+                isSearching={isSearching}
+                matchCount={matchCount}
+                activeMatchDisplayIndex={activeMatchDisplayIndex}
+                onPrevMatch={goToPrevMatch}
+                onNextMatch={goToNextMatch}
+                inputId={searchInputId}
+            />
+
+            <TimelineTypeFilterChips
+                uiScale={uiScale}
+                chips={typeChips}
+                activeType={typeFilter}
+                onChange={setTypeFilter}
             />
 
             {isSearching && (

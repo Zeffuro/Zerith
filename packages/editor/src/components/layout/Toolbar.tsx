@@ -1,4 +1,4 @@
-import { Play, Square, FolderOpen, Save, ZoomIn, ZoomOut, Volume2, VolumeX, Star } from 'lucide-react';
+import { Play, Square, FolderOpen, Save, ZoomIn, ZoomOut, Volume2, VolumeX, Star, Braces } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readDir } from '@tauri-apps/plugin-fs';
 import { useProjectStore } from '../../store/useProjectStore';
@@ -14,7 +14,7 @@ export function Toolbar() {
     const {
         uiScale, setUiScale, isMuted, toggleMute, triggerPlay, triggerStop,
         quickCommandTypes, toggleQuickCommandType, moveQuickCommandType,
-        themeKey, setThemeKey
+        themeKey, setThemeKey, centerView, setCenterView
     } = useEditorStore();
 
     const [quickOpen, setQuickOpen] = useState(false);
@@ -69,6 +69,15 @@ export function Toolbar() {
 
             <button onClick={() => setQuickOpen(v => !v)} style={{ ...buttonStyle, marginLeft: '8px' }}>
                 <Star size={14 * uiScale} /> Quick Buttons
+            </button>
+
+            <button
+                onClick={() => setCenterView(centerView === 'timeline' ? 'json' : 'timeline')}
+                style={{ ...buttonStyle, marginLeft: '8px' }}
+                title="Toggle center editor mode"
+            >
+                <Braces size={14 * uiScale} />
+                {centerView === 'timeline' ? 'JSON View' : 'Timeline View'}
             </button>
 
             <QuickCommandsMenu

@@ -44,6 +44,9 @@ interface EditorState {
     pendingDeleteRequest: null | { paths: ScriptPath[]; source: 'keyboard' | 'click' };
     requestDelete: (paths: ScriptPath[], source?: 'keyboard' | 'click') => void;
     clearDeleteRequest: () => void;
+
+    centerView: 'timeline' | 'json';
+    setCenterView: (view: 'timeline' | 'json') => void;
 }
 
 const DEFAULT_QUICK = ['dialogue', 'background', 'sprite', 'choice', 'if', 'while', 'for', 'jump', 'call', 'bgm'];
@@ -140,6 +143,9 @@ export const useEditorStore = create<EditorState>()(
             pendingDeleteRequest: null,
             requestDelete: (paths, source = 'keyboard') => set({ pendingDeleteRequest: { paths, source } }),
             clearDeleteRequest: () => set({ pendingDeleteRequest: null }),
+
+            centerView: 'timeline',
+            setCenterView: (view) => set({ centerView: view }),
         }),
         {
             name: 'zerith-editor-prefs',
@@ -149,6 +155,7 @@ export const useEditorStore = create<EditorState>()(
                 windowState: state.windowState,
                 quickCommandTypes: state.quickCommandTypes,
                 themeKey: state.themeKey,
+                centerView: state.centerView,
             }),
             merge: (persisted, current) => {
                 const merged = { ...current, ...(persisted as object) } as EditorState;

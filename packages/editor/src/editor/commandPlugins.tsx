@@ -26,6 +26,7 @@ import { TransitionInspector } from '../components/inspector/TransitionInspector
 import { ShakeInspector } from '../components/inspector/ShakeInspector';
 import { FlashInspector } from '../components/inspector/FlashInspector';
 import { ItemInspector } from '../components/inspector/ItemInspector';
+import { MacroHeaderInspector } from '../components/inspector/MacroHeaderInspector';
 
 export type BranchSpec = { label: string; path: ScriptPath; nodes: any[] };
 
@@ -144,9 +145,19 @@ const PLUGIN_OVERRIDES: Record<string, Partial<CommandPlugin>> = {
         getSummary: (n) => `${n.action ?? 'add'} ${n.id ?? ''}`,
         Inspector: ItemInspector,
     },
+    macro_header: {
+        label: 'Macro',
+        icon: (s) => <Workflow size={s} color="#f59e0b" />,
+        getSummary: (n) => n.name ?? '(unnamed macro)',
+        getBranches: (n) => [{ label: 'BODY', path: ['body'], nodes: Array.isArray(n.body) ? n.body : [] }],
+        Inspector: MacroHeaderInspector,
+    },
 };
 
-export const COMMAND_TYPES = Object.keys(CommandSchemaRegistry);
+export const COMMAND_TYPES = Array.from(new Set([
+    ...Object.keys(CommandSchemaRegistry),
+    'macro_header',
+]));
 
 export const COMMAND_PLUGINS: Record<string, CommandPlugin> = Object.fromEntries(
     COMMAND_TYPES.map((type) => {
@@ -174,7 +185,7 @@ export function getPlugin(type: string): CommandPlugin {
 }
 
 export function getAllPlugins(): CommandPlugin[] {
-    return Object.values(COMMAND_PLUGINS);
+    return Object.values(COMMAND_PLUGINS).filter((p) => p.type !== 'macro_header');
 }
 
 export function createDefaultCommand(type: string) {

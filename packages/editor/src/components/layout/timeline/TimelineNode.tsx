@@ -1,8 +1,42 @@
 import * as React from 'react';
-import { AlertTriangle, Play, Trash2, ChevronRight, ChevronDown } from 'lucide-react';
+import { AlertTriangle, Play, Trash2, ChevronRight, ChevronDown, FolderTree } from 'lucide-react';
 import type { ScriptPath } from '../../../utils/scriptPathUtils';
 import { getPlugin } from '../../../editor/commandPlugins';
 import { editorTheme as t } from '../../../theme/editorTheme';
+
+function escapeRegExp(input: string) {
+    return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function highlightText(text: string, query: string, uiScale: number) {
+    const q = query.trim();
+    if (!q) return text;
+
+    const re = new RegExp(`(${escapeRegExp(q)})`, 'ig');
+    const parts = text.split(re);
+
+    return (
+        <>
+            {parts.map((part, i) => {
+                const isMatch = part.toLowerCase() === q.toLowerCase();
+                if (!isMatch) return <React.Fragment key={i}>{part}</React.Fragment>;
+                return (
+                    <mark
+                        key={i}
+                        style={{
+                            background: 'rgba(250, 204, 21, 0.25)',
+                            color: '#fde68a',
+                            padding: `0 ${2 * uiScale}px`,
+                            borderRadius: 3,
+                        }}
+                    >
+                        {part}
+                    </mark>
+                );
+            })}
+        </>
+    );
+}
 
 type Props = {
     node: any;
@@ -40,6 +74,8 @@ type Props = {
         indexInParent: number,
         depth: number
     ) => React.ReactNode;
+
+    searchQuery?: string;
 };
 
 export function TimelineNode({
@@ -66,18 +102,24 @@ export function TimelineNode({
                                  onDeleteRoot,
                                  onPlayFrom,
                                  renderChild,
+                                 searchQuery = '',
                              }: Props) {
     const plugin = getPlugin(node?.type || '');
     const branches: Array<{ label: string; path: ScriptPath; nodes: any[] }> =
         node?.type ? plugin.getBranches?.(node) ?? [] : [];
     const hasBranches = branches.length > 0;
-    const summary =
-        plugin.getSummary?.(node) ||
-        (node?.id || node?.assetUrl || node?.name || node?.scene || node?.key || '');
+    const isMacroHeader = node?.type === 'macro_header';
+
+    const summary = String(
+        isMacroHeader
+            ? (node?.name || '')
+            : (plugin.getSummary?.(node) || (node?.id || node?.assetUrl || node?.name || node?.scene || node?.key || ''))
+    );
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: `${2 * uiScale}px` }}>
             <div
+                data-node-path={nodePath.join('.')}
                 draggable={!dragDisabled}
                 onDragStart={(e) => {
                     if (dragDisabled) return;
@@ -144,34 +186,35 @@ export function TimelineNode({
                     )}
 
                     <div style={{ color: '#555', fontSize: '0.8em' }}>:::</div>
-                    {plugin.icon(14 * uiScale)}
-                    <span style={{ fontWeight: 'bold', color: t.text.primary }}>{node.type}</span>
+
+                    {isMacroHeader ? <FolderTree size={14 * uiScale} color="#f59e0b" /> : plugin.icon(14 * uiScale)}
+
+                    <span style={{ fontWeight: 'bold', color: t.text.primary }}>
+                        {highlightText(String(isMacroHeader ? 'macro' : node.type ?? ''), searchQuery, uiScale)}
+                    </span>
+
                     <span
                         style={{
-                            color: t.text.muted,
+                            color: isMacroHeader ? '#fbbf24' : t.text.muted,
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                         }}
                     >
-                        {summary}
+                        {highlightText(isMacroHeader ? `Macro: ${summary}` : summary, searchQuery, uiScale)}
                     </span>
                 </div>
 
                 {(hasLikelyIssue || hasValidationError) && (
                     <span
-                        title={
-                            hasValidationError
-                                ? 'Schema validation errors found'
-                                : 'This node looks incomplete/invalid'
-                        }
+                        title={hasValidationError ? 'Schema validation errors found' : 'This node looks incomplete/invalid'}
                         style={{ display: 'flex', alignItems: 'center' }}
                     >
                         <AlertTriangle size={12 * uiScale} color={hasValidationError ? '#ef4444' : '#f59e0b'} />
                     </span>
                 )}
 
-                {depth === 0 && (
+                {!isMacroHeader && depth === 0 && (
                     <button
                         onClick={(e) => {
                             e.stopPropagation();

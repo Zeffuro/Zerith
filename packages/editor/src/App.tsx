@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Settings2 } from 'lucide-react';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { GamePreview } from './components/GamePreview';
@@ -17,10 +17,26 @@ import { getThemeRegistry } from './theme/themeRegistry';
 import { applyTheme } from './theme/applyTheme';
 import { useGlobalEditorShortcuts } from './hooks/useGlobalEditorShortcuts';
 import { useLiveScriptValidation } from './hooks/useLiveScriptValidation';
+import { AssetPreviewPanel } from './components/tools/AssetPreviewPanel';
+import { ScriptJsonEditor } from "./components/layout/ScriptJsonEditor.tsx";
 
 function App() {
     const { uiScale, windowState, setWindowState, themeKey } = useEditorStore();
     const rootScript = useScriptStore(state => state.rootScript);
+    const [toolTab, setToolTab] = useState<'inspector' | 'json' | 'assets'>('inspector');
+
+    const centerView = useEditorStore((s) => s.centerView);
+
+    const toolTabBtn = (active: boolean) => ({
+        border: `1px solid ${active ? 'var(--editor-border-accent)' : 'var(--editor-border-button)'}`,
+        background: active ? 'var(--editor-bg-selected)' : 'transparent',
+        color: active ? 'var(--editor-text-primary)' : 'var(--editor-text-normal)',
+        borderRadius: 'var(--editor-radius-sm)',
+        padding: `${3 * uiScale}px ${8 * uiScale}px`,
+        cursor: 'pointer',
+        fontSize: `${11 * uiScale}px`,
+        lineHeight: 1.2,
+    });
 
     useGlobalEditorShortcuts();
     useLiveScriptValidation(rootScript);
@@ -88,7 +104,9 @@ function App() {
             <Group orientation="horizontal" style={{ flexGrow: 1 }}>
                 <Panel defaultSize={20} minSize={15}><Explorer /></Panel>
                 <ResizeHandle />
-                <Panel defaultSize={40} minSize={20}><Timeline /></Panel>
+                <Panel defaultSize={40} minSize={20}>
+                    {centerView === 'timeline' ? <Timeline /> : <ScriptJsonEditor uiScale={uiScale} />}
+                </Panel>
                 <ResizeHandle />
                 <Panel defaultSize={40} minSize={25}>
                     <Group orientation="vertical">
@@ -99,11 +117,24 @@ function App() {
                         </Panel>
                         <ResizeHandle horizontal />
                         <Panel defaultSize={40}>
-                            <div style={{ padding: `${12 * uiScale}px`, height: '100%', backgroundColor: '#252526' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', marginBottom: `${16 * uiScale}px`, fontSize: '0.9em', fontWeight: 'bold' }}>
-                                    <Settings2 size={16 * uiScale} /> INSPECTOR
+                            <div style={{ padding: `${12 * uiScale}px`, height: '100%', backgroundColor: '#252526', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', marginBottom: `${12 * uiScale}px`, fontSize: '0.9em', fontWeight: 'bold' }}>
+                                    <Settings2 size={16 * uiScale} />
+                                    TOOLS
+                                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+                                        <button style={toolTabBtn(toolTab === 'inspector')} onClick={() => setToolTab('inspector')}>
+                                            Inspector
+                                        </button>
+                                        <button style={toolTabBtn(toolTab === 'assets')} onClick={() => setToolTab('assets')}>
+                                            Assets
+                                        </button>
+                                    </div>
                                 </div>
-                                <Inspector />
+
+                                <div style={{ flex: 1, minHeight: 0 }}>
+                                    {toolTab === 'inspector' && <Inspector />}
+                                    {toolTab === 'assets' && <AssetPreviewPanel uiScale={uiScale} />}
+                                </div>
                             </div>
                         </Panel>
                     </Group>
