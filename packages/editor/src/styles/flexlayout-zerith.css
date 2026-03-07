@@ -1,0 +1,53 @@
+.zerith-dock-host {
+    --dock-font-size: calc(12px * var(--ui-scale, 1));
+    font-size: var(--dock-font-size);
+}
+
+.flexlayout__layout {
+    --font-size: var(--dock-font-size);
+    --font-family: inherit;
+
+    --color-background: var(--editor-bg-app);
+    --color-text: var(--editor-text-normal);
+
+    --color-tabset-background: var(--editor-bg-app);
+    --color-tabset-header-background: var(--editor-bg-panel);
+
+    --color-tab-background: transparent;
+    --color-tab-background-selected: var(--editor-bg-app);
+
+    --color-tab-text: var(--editor-text-muted);
+    --color-tab-text-selected: var(--editor-text-primary);
+
+    --color-tabset-divider-line: var(--editor-border-subtle);
+
+    --color-splitter: var(--editor-bg-panel-alt);
+    --color-splitter-drag: var(--editor-accent-primary);
+
+    --color-drag-rect-border: var(--editor-border-accent);
+    --color-drag-rect-background: rgba(0, 127, 212, 0.2);
+}
+
+.flexlayout__tab_button {
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    transition: background-color 0.1s;
+}
+
+.flexlayout__tab_button:hover {
+    background-color: var(--editor-bg-hover);
+}
+
+.flexlayout__tab_button--selected {
+    background-color: var(--editor-bg-app);
+    box-shadow: inset 0 -2px 0 var(--editor-accent-primary) !important;
+}
+
+.flexlayout__tab_button_content {
+    line-height: 1.2;
+}
+
+.flexlayout__splitter:hover {
+    background-color: var(--editor-border-accent);
+}

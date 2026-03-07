@@ -137,8 +137,17 @@ const PLUGIN_OVERRIDES: Record<string, Partial<CommandPlugin>> = {
     goto: { Inspector: GotoInspector },
     wait: { Inspector: WaitInspector },
     transition: { Inspector: TransitionInspector },
-    shake: { Inspector: ShakeInspector },
-    flash: { Inspector: FlashInspector },
+    shake: {
+        Inspector: ShakeInspector,
+        getSummary: (n) => `${n.intensity ?? 10} intensity • ${n.duration ?? 500}ms`
+    },
+    flash: {
+        Inspector: FlashInspector,
+        getSummary: (n) => {
+            const hex = '#' + (n.color ?? 16777215).toString(16).padStart(6, '0').toUpperCase();
+            return `${hex} • ${n.duration ?? 200}ms`;
+        }
+    },
     item: {
         icon: (s) => <Gamepad2 size={s} color="#f87171" />,
         createDefault: () => ({ type: 'item', action: 'add', id: '' }),

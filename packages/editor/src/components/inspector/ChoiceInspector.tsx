@@ -1,24 +1,10 @@
 import { Plus, Trash2 } from 'lucide-react';
-import { useScriptStore } from '../../store/useScriptStore';
 import { useInspectorFieldEditor } from './useInspectorFieldEditor';
 
 export function ChoiceInspector({ node, index }: { node: any; index?: number | null }) {
-    const { uiScale, labelStyle, inputStyle } = useInspectorFieldEditor(index);
-    const { getActiveScript, updateActiveScript, selectedNodePath, updateNodeAtPath } = useScriptStore();
+    const { uiScale, labelStyle, inputStyle, applyNodePatch } = useInspectorFieldEditor(index);
 
-    const options = Array.isArray(node.options) ? node.options : [];
-
-    const applyNodePatch = (patch: Record<string, any>) => {
-        if (index !== null && index !== undefined) {
-            const script = getActiveScript();
-            const newScript = script.map((n, i) => (i === index ? { ...n, ...patch } : n));
-            updateActiveScript(newScript);
-            return;
-        }
-        if (selectedNodePath) {
-            updateNodeAtPath(selectedNodePath, patch);
-        }
-    };
+    const options = Array.isArray(node.options) ? node.options :[];
 
     const updateOption = (optIndex: number, patch: Record<string, any>) => {
         const next = options.map((opt: any, i: number) => (i === optIndex ? { ...opt, ...patch } : opt));

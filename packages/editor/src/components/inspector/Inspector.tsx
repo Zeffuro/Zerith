@@ -1,103 +1,98 @@
-import { useMemo } from 'react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useScriptStore } from '../../store/useScriptStore';
 import { useProjectStore } from '../../store/useProjectStore';
-import { setAtPath, getAtPath } from '../../utils/scriptPathUtils';
+import { getPlugin } from '../../editor/commandPlugins';
+import { SchemaFallbackInspector } from './SchemaFallbackInspector';
+import { editorTheme as t } from '../../theme/editorTheme';
+import { styles } from '../../theme/styleHelpers';
 
-export function useInspectorFieldEditor(index?: number | null) {
-    const { uiScale, validationErrors } = useEditorStore();
+function getAtPath(root: any, path: Array<string | number>) {
+    let cur = root;
+    for (const key of path) {
+        if (cur == null) return null;
+        cur = cur[key as any];
+    }
+    return cur ?? null;
+}
+
+export function Inspector() {
+    const uiScale = useEditorStore((state) => state.uiScale);
+    const selectedNodePaths = useEditorStore((s) => s.selectedNodePaths);
+
+    const { getActiveScript, selectedNodeIndex, selectedNodePath, getNodeAtPath } = useScriptStore();
+
     const editingAllMacrosFile = useProjectStore((s) => s.editingAllMacrosFile);
     const macroEntries = useProjectStore((s) => s.macroEntries);
-    const setMacroEntries = useProjectStore((s) => s.setMacroEntries);
 
-    const {
-        getActiveScript,
-        updateActiveScript,
-        selectedNodePath,
-        updateNodeAtPath,
-    } = useScriptStore();
+    const script = getActiveScript();
 
-    const handleChange = (field: string, value: any) => {
-        if (editingAllMacrosFile && selectedNodePath && typeof selectedNodePath[0] === 'number') {
-            const macroIndex = selectedNodePath[0] as number;
-            const rest = selectedNodePath.slice(1);
-            const curr = macroEntries[macroIndex];
-            if (!curr) return;
+    let node: any = null;
 
-            if (rest.length === 0 && field === 'name') {
-                const next = [...macroEntries];
-                next[macroIndex] = { ...curr, name: value };
-                setMacroEntries(next);
-                return;
+    if (editingAllMacrosFile) {
+        const path = selectedNodePaths[0] ?? selectedNodePath;
+        if (path && typeof path[0] === 'number') {
+            const macroIdx = path[0] as number;
+            const macro = macroEntries[macroIdx];
+            if (macro) {
+                const syntheticRoot = { type: 'macro_header', name: macro.name, body: macro.commands };
+                node = path.length === 1 ? syntheticRoot : getAtPath(syntheticRoot, path.slice(1));
             }
-
-            const targetPath = rest;
-            const targetNode = getAtPath<any>({ type: 'macro_header', name: curr.name, body: curr.commands }, targetPath);
-            if (!targetNode || typeof targetNode !== 'object') return;
-
-            const patched = { ...targetNode, [field]: value };
-            const updatedSynthetic = setAtPath({ type: 'macro_header', name: curr.name, body: curr.commands }, targetPath, patched);
-
-            const next = [...macroEntries];
-            next[macroIndex] = { ...curr, commands: Array.isArray(updatedSynthetic.body) ? updatedSynthetic.body : curr.commands };
-            setMacroEntries(next);
-            return;
         }
+    } else {
+        if (selectedNodePath) node = getNodeAtPath(selectedNodePath);
+        else if (selectedNodeIndex !== null && script[selectedNodeIndex]) node = script[selectedNodeIndex];
+    }
 
-        if (index !== null && index !== undefined) {
-            const script = getActiveScript();
-            const newScript = script.map((n, i) => (i === index ? { ...n, [field]: value } : n));
-            updateActiveScript(newScript);
-            return;
-        }
+    if (!node) {
+        return (
+            <div style={{ padding: `${16 * uiScale}px`, height: '100%', backgroundColor: t.bg.app }}>
+                <p
+                    style={{
+                        fontSize: 'inherit',
+                        color: t.text.faint,
+                        fontStyle: 'italic',
+                        textAlign: 'center',
+                        marginTop: '20px',
+                    }}
+                >
+                    Select a node to edit.
+                </p>
+            </div>
+        );
+    }
 
-        if (selectedNodePath) {
-            updateNodeAtPath(selectedNodePath, { [field]: value });
-        }
-    };
+    const plugin = getPlugin(node.type);
+    const PluginInspector = plugin.Inspector;
 
-    const labelStyle = useMemo(
-        () => ({
-            display: 'block',
-            marginBottom: `${6 * uiScale}px`,
-            color: '#888',
-            fontSize: '0.85em',
-        }),
-        [uiScale]
+    return (
+        <div
+            className="zerith-scrollbar"
+            style={{
+                padding: `${16 * uiScale}px`,
+                height: '100%',
+                overflowY: 'auto',
+                backgroundColor: t.bg.app
+            }}
+        >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: `${16 * uiScale}px`, fontSize: 'inherit' }}>
+                <div style={styles.panelHeaderRow}>
+                    <span style={{ color: t.text.faint, fontSize: '0.85em', fontWeight: 'bold' }}>NODE TYPE</span>
+                    <span
+                        style={{
+                            color: '#aaa',
+                            fontSize: '0.85em',
+                            fontWeight: 'bold',
+                            textTransform: 'uppercase',
+                        }}
+                    >
+                        {node.type}
+                    </span>
+                </div>
+
+                {PluginInspector ? <PluginInspector node={node} index={selectedNodeIndex} /> : <SchemaFallbackInspector node={node} index={selectedNodeIndex} />}
+            </div>
+        </div>
     );
-
-    const inputStyle = useMemo(
-        () => ({
-            width: '100%',
-            padding: `${8 * uiScale}px`,
-            backgroundColor: '#1e1e1e',
-            border: '1px solid #3c3c3c',
-            color: '#fff',
-            borderRadius: '4px',
-            fontSize: 'inherit',
-            outline: 'none',
-        }),
-        [uiScale]
-    );
-
-    const getFieldErrors = (field: string): string[] => {
-        if (!selectedNodePath) return [];
-
-        if (!editingAllMacrosFile) {
-            const key = [...selectedNodePath, field].join('.');
-            return validationErrors[key] ?? [];
-        }
-
-        const [macroIndex, ...rest] = selectedNodePath;
-        if (typeof macroIndex !== 'number') return [];
-        const key = `macro.${macroIndex}.${[...rest, field].join('.')}`;
-        return validationErrors[key] ?? [];
-    };
-
-    const getFieldInputStyle = (field: string) => {
-        const errs = getFieldErrors(field);
-        return errs.length > 0 ? { ...inputStyle, border: '1px solid #ef4444' } : inputStyle;
-    };
-
-    return { uiScale, handleChange, labelStyle, inputStyle, getFieldErrors, getFieldInputStyle };
 }
+
+export default Inspector;

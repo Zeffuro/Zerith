@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { ScriptPath } from '../utils/scriptPathUtils';
+import { createDefaultDockLayout, DOCK_LAYOUT_VERSION } from '../layout/defaultDockLayout';
 
 interface EditorState {
     uiScale: number;
@@ -45,11 +46,30 @@ interface EditorState {
     requestDelete: (paths: ScriptPath[], source?: 'keyboard' | 'click') => void;
     clearDeleteRequest: () => void;
 
-    centerView: 'timeline' | 'json';
-    setCenterView: (view: 'timeline' | 'json') => void;
+    dockLayoutJson: any;
+    dockLayoutVersion: number;
+    setDockLayoutJson: (json: any) => void;
+    resetDockLayout: () => void;
 }
 
 const DEFAULT_QUICK = ['dialogue', 'background', 'sprite', 'choice', 'if', 'while', 'for', 'jump', 'call', 'bgm'];
+
+function normalizeDockState(state: any) {
+    const hasValidVersion = state?.dockLayoutVersion === DOCK_LAYOUT_VERSION;
+    const hasLayout = !!state?.dockLayoutJson;
+
+    if (hasValidVersion && hasLayout) {
+        return {
+            dockLayoutJson: state.dockLayoutJson,
+            dockLayoutVersion: state.dockLayoutVersion,
+        };
+    }
+
+    return {
+        dockLayoutJson: createDefaultDockLayout(),
+        dockLayoutVersion: DOCK_LAYOUT_VERSION,
+    };
+}
 
 export const useEditorStore = create<EditorState>()(
     persist(
@@ -144,8 +164,14 @@ export const useEditorStore = create<EditorState>()(
             requestDelete: (paths, source = 'keyboard') => set({ pendingDeleteRequest: { paths, source } }),
             clearDeleteRequest: () => set({ pendingDeleteRequest: null }),
 
-            centerView: 'timeline',
-            setCenterView: (view) => set({ centerView: view }),
+            ...normalizeDockState({}),
+
+            setDockLayoutJson: (json) => set({ dockLayoutJson: json }),
+            resetDockLayout: () =>
+                set({
+                    dockLayoutJson: createDefaultDockLayout(),
+                    dockLayoutVersion: DOCK_LAYOUT_VERSION,
+                }),
         }),
         {
             name: 'zerith-editor-prefs',
@@ -155,14 +181,17 @@ export const useEditorStore = create<EditorState>()(
                 windowState: state.windowState,
                 quickCommandTypes: state.quickCommandTypes,
                 themeKey: state.themeKey,
-                centerView: state.centerView,
+                dockLayoutJson: state.dockLayoutJson,
+                dockLayoutVersion: state.dockLayoutVersion,
             }),
-            merge: (persisted, current) => {
-                const merged = { ...current, ...(persisted as object) } as EditorState;
-                if (!Array.isArray(merged.quickCommandTypes) || merged.quickCommandTypes.length === 0) {
-                    merged.quickCommandTypes = DEFAULT_QUICK;
-                }
-                return merged;
+            merge: (persisted: any, current) => {
+                const normalized = normalizeDockState(persisted);
+                return {
+                    ...current,
+                    ...persisted,
+                    dockLayoutJson: normalized.dockLayoutJson,
+                    dockLayoutVersion: normalized.dockLayoutVersion,
+                };
             },
         }
     )

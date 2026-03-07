@@ -311,9 +311,15 @@ export function Timeline() {
                             border: `1px solid ${t.border.primaryBtn}`,
                             color: t.text.primary,
                             borderRadius: t.radius.md,
-                            padding: `${6 * uiScale}px ${10 * uiScale}px`,
+                            padding: `0 ${10 * uiScale}px`,
+                            height: `${26 * uiScale}px`,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxSizing: 'border-box',
                             cursor: 'pointer',
-                            fontWeight: 700,
+                            fontSize: '0.85em',
+                            fontWeight: 'bold',
                         }}
                     >
                         + Add Macro

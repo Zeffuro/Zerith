@@ -38,6 +38,8 @@ interface ProjectState {
     setProject: (path: string, files: DirEntry[]) => void;
     loadManifest: () => Promise<void>;
     setActiveFile: (file: string, content: any[]) => void;
+
+    openProjectFromManifest: (manifestPath: string) => Promise<void>;
 }
 
 async function resolveManifestValueFromDisk<T>(value: T | string, projectPath: string): Promise<T> {
@@ -254,4 +256,26 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
         set({ activeFile: file });
         useScriptStore.getState().setScript(content);
     },
+
+    openProjectFromManifest: async (manifestPath: string) => {
+        const separator = manifestPath.includes('\\') ? '\\' : '/';
+        const pathParts = manifestPath.split(separator);
+        pathParts.pop();
+        const projectRoot = pathParts.join(separator);
+
+        try {
+            const { readDir } = await import('@tauri-apps/plugin-fs');
+            const entries = await readDir(projectRoot);
+            entries.sort((a, b) => {
+                if (a.isDirectory && !b.isDirectory) return -1;
+                if (!a.isDirectory && b.isDirectory) return 1;
+                return a.name.localeCompare(b.name);
+            });
+
+            get().setProject(projectRoot, entries);
+            await get().loadManifest();
+        } catch (err) {
+            console.error('Failed to open project:', err);
+        }
+    }
 }));

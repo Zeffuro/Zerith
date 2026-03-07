@@ -48,11 +48,14 @@ function QuickBtn({ onClick, icon, title, scale, bg = '#333', border = '#444' }:
                 border: `1px solid ${border}`,
                 color: '#ccc',
                 borderRadius: '3px',
-                padding: `${6 * scale}px`,
-                cursor: 'pointer',
-                display: 'flex',
+                width: `${28 * scale}px`,
+                height: `${26 * scale}px`,
+                display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                boxSizing: 'border-box',
+                cursor: 'pointer',
+                padding: 0,
             }}
         >
             {icon}

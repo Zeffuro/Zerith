@@ -1,20 +1,18 @@
-import { Play, Square, FolderOpen, Save, ZoomIn, ZoomOut, Volume2, VolumeX, Star, Braces } from 'lucide-react';
+import { Play, Square, FolderOpen, Save, ZoomIn, ZoomOut, Volume2, VolumeX, Star, MonitorDot } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
-import { readDir } from '@tauri-apps/plugin-fs';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useState } from 'react';
 import { QuickCommandsMenu } from './QuickCommandsMenu';
 import { ThemeMenu } from './ThemeMenu';
 import { editorTheme as t } from '../../theme/editorTheme';
-import { styles } from '../../theme/styleHelpers';
 
 export function Toolbar() {
-    const { setProject, loadManifest, activeFile, saveActiveFileFromCurrentScript } = useProjectStore();
+    const { activeFile, saveActiveFileFromCurrentScript, openProjectFromManifest } = useProjectStore();
     const {
         uiScale, setUiScale, isMuted, toggleMute, triggerPlay, triggerStop,
         quickCommandTypes, toggleQuickCommandType, moveQuickCommandType,
-        themeKey, setThemeKey, centerView, setCenterView
+        themeKey, setThemeKey, resetDockLayout
     } = useEditorStore();
 
     const [quickOpen, setQuickOpen] = useState(false);
@@ -28,23 +26,11 @@ export function Toolbar() {
                 title: 'Select game.json'
             });
 
-            if (selectedFile) {
-                const separator = selectedFile.includes('\\') ? '\\' : '/';
-                const pathParts = selectedFile.split(separator);
-                pathParts.pop();
-                const projectRoot = pathParts.join(separator);
-
-                const entries = await readDir(projectRoot);
-                entries.sort((a, b) => {
-                    if (a.isDirectory && !b.isDirectory) return -1;
-                    if (!a.isDirectory && b.isDirectory) return 1;
-                    return a.name.localeCompare(b.name);
-                });
-                setProject(projectRoot, entries);
-                await loadManifest();
+            if (selectedFile && typeof selectedFile === 'string') {
+                await openProjectFromManifest(selectedFile);
             }
         } catch (err) {
-            console.error("Failed to open project:", err);
+            console.error('Failed to open project dialog:', err);
         }
     };
 
@@ -53,31 +39,41 @@ export function Toolbar() {
         await saveActiveFileFromCurrentScript();
     };
 
-    const iconBtnStyle = styles.iconButton(uiScale);
-    const buttonStyle = styles.buttonBase(uiScale);
+    const pad = `${6 * uiScale}px`;
+    const iconSize = 16 * uiScale;
 
     return (
-        <div style={{ height: `${40 * uiScale}px`, backgroundColor: t.bg.panelAlt, display: 'flex', alignItems: 'center', padding: `0 ${16 * uiScale}px`, borderBottom: `1px solid ${t.border.input}`, position: 'relative' }}>
-            <strong style={{ color: t.text.primary, marginRight: `${20 * uiScale}px`, fontSize: '1.1em' }}>Zerith Editor</strong>
+        <div
+            style={{
+                width: '100%',
+                height: '100%',
+                backgroundColor: t.bg.panelAlt,
+                display: 'flex',
+                alignItems: 'center',
+                padding: `0 ${10 * uiScale}px`,
+                borderBottom: `1px solid ${t.border.input}`,
+                gap: `${6 * uiScale}px`,
+                boxSizing: 'border-box',
+                overflow: 'hidden',
+            }}
+        >
+            <strong style={{ color: t.text.primary, marginRight: `${8 * uiScale}px`, fontSize: '0.95em', whiteSpace: 'nowrap' }}>
+                Zerith Editor
+            </strong>
 
-            <button onClick={handleOpenProject} style={buttonStyle}>
-                <FolderOpen size={14 * uiScale} /> Open
+            <button className="toolbar-btn" onClick={handleOpenProject} style={{ padding: pad }} title="Open Project">
+                <FolderOpen size={iconSize} />
             </button>
-            <button onClick={handleSave} style={{ ...buttonStyle, marginLeft: '8px' }}>
-                <Save size={14 * uiScale} /> Save
-            </button>
-
-            <button onClick={() => setQuickOpen(v => !v)} style={{ ...buttonStyle, marginLeft: '8px' }}>
-                <Star size={14 * uiScale} /> Quick Buttons
+            <button className="toolbar-btn" onClick={handleSave} style={{ padding: pad }} title="Save Active File">
+                <Save size={iconSize} />
             </button>
 
-            <button
-                onClick={() => setCenterView(centerView === 'timeline' ? 'json' : 'timeline')}
-                style={{ ...buttonStyle, marginLeft: '8px' }}
-                title="Toggle center editor mode"
-            >
-                <Braces size={14 * uiScale} />
-                {centerView === 'timeline' ? 'JSON View' : 'Timeline View'}
+            <button className="toolbar-btn" onClick={() => setQuickOpen(v => !v)} style={{ padding: pad }} title="Quick Buttons Configuration">
+                <Star size={iconSize} />
+            </button>
+
+            <button className="toolbar-btn" onClick={resetDockLayout} style={{ padding: pad }} title="Reset UI Layout">
+                <MonitorDot size={iconSize} />
             </button>
 
             <QuickCommandsMenu
@@ -89,26 +85,41 @@ export function Toolbar() {
                 moveQuickCommandType={moveQuickCommandType}
             />
 
-            <div style={{ marginLeft: '8px', display: 'flex', alignItems: 'center' }}>
+            <div style={{ marginLeft: '4px', display: 'flex', alignItems: 'center' }}>
                 <ThemeMenu uiScale={uiScale} selectedKey={themeKey} onSelect={setThemeKey} />
             </div>
 
-            <div style={{ display: 'flex', marginLeft: 'auto', gap: '8px' }}>
-                <button onClick={toggleMute} style={{ ...buttonStyle, border: 'none' }} title={isMuted ? "Unmute" : "Mute"}>
-                    {isMuted ? <VolumeX size={16 * uiScale} color={t.accent.red} /> : <Volume2 size={16 * uiScale} />}
+            <div style={{ display: 'flex', marginLeft: 'auto', gap: '4px' }}>
+                <button className="toolbar-btn" onClick={toggleMute} style={{ padding: pad }} title={isMuted ? 'Unmute Audio' : 'Mute Audio'}>
+                    {isMuted ? <VolumeX size={iconSize} color={t.accent.red} /> : <Volume2 size={iconSize} />}
                 </button>
-                <button onClick={triggerStop} style={{ ...buttonStyle, background: t.bg.danger, border: 'none', color: t.text.primary }}>
-                    <Square size={12 * uiScale} fill="currentColor" /> Stop
+                <button className="toolbar-btn danger" onClick={triggerStop} style={{ padding: pad }} title="Stop Preview">
+                    <Square size={iconSize} fill="currentColor" />
                 </button>
-                <button onClick={triggerPlay} style={{ ...buttonStyle, background: t.accent.primary, border: 'none', color: t.text.primary }}>
-                    <Play size={14 * uiScale} /> Play
+                <button className="toolbar-btn primary" onClick={triggerPlay} style={{ padding: pad }} title="Play Preview">
+                    <Play size={iconSize} fill="currentColor" />
                 </button>
             </div>
 
-            <div style={{ marginLeft: `${16 * uiScale}px`, display: 'flex', alignItems: 'center', gap: '4px', borderLeft: `1px solid #444`, paddingLeft: `${16 * uiScale}px` }}>
-                <button onClick={() => setUiScale(Math.max(0.8, uiScale - 0.1))} style={iconBtnStyle}><ZoomOut size={14 * uiScale} /></button>
-                <span style={{ fontSize: '0.9em', minWidth: `${30 * uiScale}px`, textAlign: 'center' }}>{Math.round(uiScale * 100)}%</span>
-                <button onClick={() => setUiScale(Math.min(1.5, uiScale + 0.1))} style={iconBtnStyle}><ZoomIn size={14 * uiScale} /></button>
+            <div
+                style={{
+                    marginLeft: `${10 * uiScale}px`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                    borderLeft: `1px solid ${t.border.subtle}`,
+                    paddingLeft: `${10 * uiScale}px`,
+                }}
+            >
+                <button className="toolbar-btn" onClick={() => setUiScale(Math.max(0.8, uiScale - 0.1))} style={{ padding: pad }} title="Zoom Out UI">
+                    <ZoomOut size={iconSize} />
+                </button>
+                <span style={{ fontSize: '0.85em', color: t.text.normal, minWidth: `${34 * uiScale}px`, textAlign: 'center' }}>
+                    {Math.round(uiScale * 100)}%
+                </span>
+                <button className="toolbar-btn" onClick={() => setUiScale(Math.min(1.5, uiScale + 0.1))} style={{ padding: pad }} title="Zoom In UI">
+                    <ZoomIn size={iconSize} />
+                </button>
             </div>
         </div>
     );
