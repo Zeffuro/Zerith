@@ -1,0 +1,30 @@
+import { readTextFile } from '@tauri-apps/plugin-fs';
+import { useWorkbenchStore } from '../store/useWorkbenchStore';
+import { applyAssetSelection, applyMacrosFile, applyScriptFile, looksLikeMacrosObject } from './projectOpeners';
+
+export async function activateWorkbenchTab(tabId: string) {
+    const ws = useWorkbenchStore.getState();
+    const tab = ws.tabs.find((t) => t.id === tabId);
+    if (!tab) return;
+
+    ws.setActiveTab(tabId);
+
+    if (tab.kind === 'asset') {
+        if (tab.assetPath) applyAssetSelection(tab.assetPath);
+        return;
+    }
+
+    if (tab.kind === 'script' || tab.kind === 'macros') {
+        const text = await readTextFile(tab.path);
+        const data = JSON.parse(text);
+
+        if (Array.isArray(data)) {
+            applyScriptFile(tab.path, data);
+            return;
+        }
+        if (looksLikeMacrosObject(data)) {
+            applyMacrosFile(tab.path, data);
+            return;
+        }
+    }
+}

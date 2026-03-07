@@ -1,25 +1,8 @@
-import { ArrowRight } from 'lucide-react';
-import { useScriptStore } from '../../store/useScriptStore';
 import { useInspectorFieldEditor } from './useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 
 export function ForInspector({ node, index }: { node: any; index?: number | null }) {
-    const { pushScope } = useScriptStore();
     const { uiScale, handleChange, labelStyle, getFieldErrors, getFieldInputStyle } = useInspectorFieldEditor(index);
-
-    const btnStyle = {
-        width: '100%',
-        padding: `${8 * uiScale}px`,
-        backgroundColor: '#333',
-        border: 'none',
-        color: '#fff',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: '8px',
-    } as const;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: `${12 * uiScale}px` }}>
@@ -66,17 +49,6 @@ export function ForInspector({ node, index }: { node: any; index?: number | null
                     />
                     <FieldError errors={getFieldErrors('step')} />
                 </div>
-            </div>
-
-            <div style={{ borderTop: '1px solid #333', paddingTop: '12px' }}>
-                <label style={{ ...labelStyle, color: '#4ec9b0' }}>Branch</label>
-                <button
-                    onClick={() => index !== null && index !== undefined && pushScope(index, 'body')}
-                    style={btnStyle}
-                >
-                    <span>Edit "BODY" Block ({node.body?.length || 0} cmds)</span>
-                    <ArrowRight size={14 * uiScale} />
-                </button>
             </div>
         </div>
     );

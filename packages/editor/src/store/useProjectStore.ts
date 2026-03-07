@@ -40,6 +40,9 @@ interface ProjectState {
     setActiveFile: (file: string, content: any[]) => void;
 
     openProjectFromManifest: (manifestPath: string) => Promise<void>;
+
+    treeRevision: number;
+    bumpTreeRevision: () => void;
 }
 
 async function resolveManifestValueFromDisk<T>(value: T | string, projectPath: string): Promise<T> {
@@ -277,5 +280,8 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
         } catch (err) {
             console.error('Failed to open project:', err);
         }
-    }
+    },
+
+    treeRevision: 0,
+    bumpTreeRevision: () => set((s) => ({ treeRevision: s.treeRevision + 1 })),
 }));

@@ -20,7 +20,6 @@ function App() {
     useGlobalEditorShortcuts();
     useLiveScriptValidation(rootScript);
 
-    // Setup global console interceptor for the Engine
     useEffect(() => {
         const store = useConsoleStore.getState();
         const origLog = console.log;
@@ -28,10 +27,10 @@ function App() {
         const origWarn = console.warn;
         const origError = console.error;
 
-        console.log = (...args) => { origLog(...args); store.addMessage('log', ...args); };
-        console.info = (...args) => { origInfo(...args); store.addMessage('info', ...args); };
-        console.warn = (...args) => { origWarn(...args); store.addMessage('warn', ...args); };
-        console.error = (...args) => { origError(...args); store.addMessage('error', ...args); };
+        console.log = (...args) => { origLog(...args); store.addMessage('editor', 'log', ...args); };
+        console.info = (...args) => { origInfo(...args); store.addMessage('editor', 'info', ...args); };
+        console.warn = (...args) => { origWarn(...args); store.addMessage('editor', 'warn', ...args); };
+        console.error = (...args) => { origError(...args); store.addMessage('editor', 'error', ...args); };
 
         return () => {
             console.log = origLog;

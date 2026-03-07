@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useAssetOptions } from '../../hooks/useAssetOptions';
+import { useEditorStore } from '../../store/useEditorStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 
 function extOf(path: string) {
@@ -15,8 +16,13 @@ const AUDIO_EXT = new Set(['.mp3', '.ogg', '.wav', '.m4a']);
 export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
     const projectPath = useProjectStore((s) => s.projectPath);
     const { assets } = useAssetOptions('all');
+    const selectedAssetPath = useEditorStore((s) => s.selectedAssetPath);
 
     const [value, setValue] = useState('');
+
+    useEffect(() => {
+        if (selectedAssetPath) setValue(selectedAssetPath);
+    }, [selectedAssetPath]);
 
     const resolvedSrc = useMemo(() => {
         if (!value) return '';

@@ -23,8 +23,7 @@ export const DEFAULT_DOCK_LAYOUT = {
                                 type: 'tabset',
                                 weight: 65,
                                 children:[
-                                    { type: 'tab', name: 'Timeline', component: 'timeline', id: 'timeline' },
-                                    { type: 'tab', name: 'JSON', component: 'json', id: 'json' },
+                                    { type: 'tab', name: 'Editor', component: 'editor', id: 'editor' }
                                 ],
                             },
                             {

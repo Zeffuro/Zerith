@@ -3,6 +3,7 @@ import Editor, { type OnMount } from '@monaco-editor/react';
 import type * as Monaco from 'monaco-editor';
 import { useScriptStore } from '../../store/useScriptStore';
 import { useProjectStore } from '../../store/useProjectStore';
+import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 
 export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
@@ -12,15 +13,19 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
     const editingAllMacrosFile = useProjectStore((s) => s.editingAllMacrosFile);
     const macroEntries = useProjectStore((s) => s.macroEntries);
     const setMacroEntries = useProjectStore((s) => s.setMacroEntries);
+    const saveActiveFileFromCurrentScript = useProjectStore((s) => s.saveActiveFileFromCurrentScript);
+
+    const setLastScriptView = useWorkbenchStore((s) => s.setLastScriptView);
+    const setLastMacrosView = useWorkbenchStore((s) => s.setLastMacrosView);
 
     const initial = useMemo(() => {
         if (editingAllMacrosFile) {
             const obj: Record<string, any[]> = {};
-            macroEntries.forEach(m => obj[m.name] = m.commands);
+            macroEntries.forEach((m) => (obj[m.name] = m.commands));
             return JSON.stringify(obj, null, 2);
         }
         return JSON.stringify(rootScript, null, 2);
-    },[rootScript, editingAllMacrosFile, macroEntries]);
+    }, [rootScript, editingAllMacrosFile, macroEntries]);
 
     const [value, setValue] = useState(initial);
     const [error, setError] = useState<string | null>(null);
@@ -32,6 +37,11 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
         setError(null);
     }, [initial]);
 
+    useEffect(() => {
+        if (editingAllMacrosFile) setLastMacrosView('json');
+        else setLastScriptView('json');
+    }, [editingAllMacrosFile]);
+
     const apply = () => {
         try {
             const parsed = JSON.parse(value);
@@ -41,7 +51,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
                     setError('Macros JSON must be an object { "macro_name": [...] }');
                     return;
                 }
-                const entries = Object.keys(parsed).map(name => ({ name, commands: parsed[name] }));
+                const entries = Object.keys(parsed).map((name) => ({ name, commands: parsed[name] }));
                 setMacroEntries(entries);
             } else {
                 if (!Array.isArray(parsed)) {
@@ -61,12 +71,18 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
         await editorRef.current.getAction('editor.action.formatDocument')?.run();
     };
 
+    const saveNow = async () => {
+        apply();
+        await saveActiveFileFromCurrentScript();
+    };
+
     const onMount: OnMount = (editor, monaco) => {
         editorRef.current = editor;
+
         monaco.editor.defineTheme('zerith-json-dark', {
             base: 'vs-dark',
             inherit: true,
-            rules:[],
+            rules: [],
             colors: {
                 'editor.background': '#1e1e1e',
                 'editorLineNumber.foreground': '#6b7280',
@@ -76,6 +92,10 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
             },
         });
         monaco.editor.setTheme('zerith-json-dark');
+
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+            void saveNow();
+        });
     };
 
     return (
@@ -89,11 +109,28 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
             </div>
 
             <div style={{ border: `1px solid ${error ? '#ef4444' : t.border.subtle}`, borderRadius: t.radius.md, overflow: 'hidden' }}>
-                <Editor height="100%" defaultLanguage="json" value={value} onChange={(v) => { setValue(v ?? ''); setError(null); }} onMount={onMount} options={{ fontSize: Math.round(12 * uiScale), minimap: { enabled: true }, wordWrap: 'off', tabSize: 2, insertSpaces: true }} />
+                <Editor
+                    height="100%"
+                    defaultLanguage="json"
+                    value={value}
+                    onChange={(v) => {
+                        setValue(v ?? '');
+                        setError(null);
+                    }}
+                    onMount={onMount}
+                    options={{
+                        fontSize: Math.round(12 * uiScale),
+                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                        minimap: { enabled: true },
+                        wordWrap: 'off',
+                        tabSize: 2,
+                        insertSpaces: true,
+                    }}
+                />
             </div>
 
             <div style={{ minHeight: `${18 * uiScale}px`, color: error ? '#ef4444' : t.text.muted, fontSize: `${12 * uiScale}px` }}>
-                {error ?? 'JSON mode: edit entire file, then click Apply JSON.'}
+                {error ?? 'JSON mode: edit entire file, then click Apply JSON. Ctrl/Cmd+S saves.'}
             </div>
         </div>
     );

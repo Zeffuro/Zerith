@@ -4,6 +4,7 @@ import type { ScriptPath } from '../../utils/scriptPathUtils';
 import { useScriptStore } from '../../store/useScriptStore';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useProjectStore } from '../../store/useProjectStore';
+import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { createDefaultCommand, getPlugin, getAllPlugins } from '../../editor/commandPlugins';
 import { hasLikelyIssue } from '../../editor/likelyIssues';
 import { editorTheme as t } from '../../theme/editorTheme';
@@ -12,13 +13,14 @@ import { useTimelineSelection } from './timeline/useTimelineSelection';
 import { useTimelineDragDrop } from './timeline/useTimelineDragDrop';
 import { useTimelineSearch } from './timeline/useTimelineSearch';
 import { TimelineNode } from './timeline/TimelineNode';
-import { TimelineHeader } from './timeline/TimelineHeader';
 import { TimelineCommandBar } from './timeline/TimelineCommandBar';
 import { TimelineDropZone } from './timeline/TimelineDropZone';
 import { TimelineEmptyState } from './timeline/TimelineEmptyState';
 import { TimelineSearchBar } from './timeline/TimelineSearchBar';
 import { TimelineTypeFilterChips } from './timeline/TimelineTypeFilterChips';
+import { type CommandContextMenuState, TimelineCommandContextMenu } from './timeline/TimelineCommandContextMenu';
 import { ConfirmDialog } from '../common/ConfirmDialog';
+
 
 function pathKey(path: ScriptPath) {
     return path.join('.');
@@ -40,10 +42,15 @@ export function Timeline() {
     const selectedNodePaths = useEditorStore((s) => s.selectedNodePaths);
 
     const editingAllMacrosFile = useProjectStore((s) => s.editingAllMacrosFile);
+    const setLastScriptView = useWorkbenchStore((s) => s.setLastScriptView);
+    const setLastMacrosView = useWorkbenchStore((s) => s.setLastMacrosView);
     const macroEntries = useProjectStore((s) => s.macroEntries);
     const setMacroEntries = useProjectStore((s) => s.setMacroEntries);
     const addMacroEntry = useProjectStore((s) => s.addMacroEntry);
     const deleteMacroEntries = useProjectStore((s) => s.deleteMacroEntries);
+
+    const [contextMenu, setContextMenu] = useState<CommandContextMenuState>(null);
+    const contextPathRef = useRef<ScriptPath | null>(null);
 
     const { selectedKeys, onNodeClick } = useTimelineSelection();
     const {
@@ -59,9 +66,6 @@ export function Timeline() {
         rootScript,
         selectedNodeIndex,
         addNode,
-        scopePath,
-        popScope,
-        resetScope,
         deleteNodeByPath,
         deleteNodesByPaths,
     } = useScriptStore();
@@ -156,6 +160,25 @@ export function Timeline() {
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [query, setQuery]);
 
+    useEffect(() => {
+        if (editingAllMacrosFile) setLastMacrosView('timeline');
+        else setLastScriptView('timeline');
+    }, [editingAllMacrosFile]);
+
+    useEffect(() => {
+        if (!contextMenu) return;
+        const onDown = () => setContextMenu(null);
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setContextMenu(null);
+        };
+        document.addEventListener('mousedown', onDown);
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.removeEventListener('mousedown', onDown);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [contextMenu]);
+
     const toggleCollapse = (path: ScriptPath) => {
         const key = pathKey(path);
         setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -164,6 +187,78 @@ export function Timeline() {
     const handleDeleteRootNode = (e: MouseEvent, index: number) => {
         e.stopPropagation();
         requestDelete([[index]], 'click');
+    };
+
+    const onContextMenuNode = (e: React.MouseEvent, path: ScriptPath, _node: any) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const canPlayFrom = path.length === 1 && typeof path[0] === 'number' && !editingAllMacrosFile;
+        const clipboard = useEditorStore.getState().clipboardNode;
+        const canPaste = !!clipboard;
+
+        contextPathRef.current = path;
+        setContextMenu({
+            x: e.clientX,
+            y: e.clientY,
+            canPlayFrom,
+            canPaste,
+            onClose: () => setContextMenu(null),
+            onAction: (action) => {
+                const p = contextPathRef.current;
+                if (!p) return;
+
+                const scriptState = useScriptStore.getState();
+                const editorState = useEditorStore.getState();
+
+                switch (action) {
+                    case 'copy': {
+                        const node = scriptState.getNodeAtPath(p);
+                        if (node !== undefined) {
+                            editorState.setClipboardNode(
+                                typeof structuredClone === 'function'
+                                    ? structuredClone(node)
+                                    : JSON.parse(JSON.stringify(node))
+                            );
+                        }
+                        break;
+                    }
+
+                    case 'paste': {
+                        const clip = editorState.clipboardNode;
+                        if (!clip) break;
+                        scriptState.pasteNodeAtPath(p, clip);
+                        break;
+                    }
+
+                    case 'duplicate': {
+                        scriptState.duplicateNodeByPath(p);
+                        break;
+                    }
+
+                    case 'delete': {
+                        requestDelete([p], 'click');
+                        break;
+                    }
+
+                    case 'playFrom': {
+                        if (p.length === 1 && typeof p[0] === 'number') {
+                            triggerPlayFrom(p[0] as number);
+                        }
+                        break;
+                    }
+
+                    case 'addAfter': {
+                        const parent = p.slice(0, -1);
+                        const idx = p[p.length - 1];
+                        if (typeof idx !== 'number') break;
+                        const newNode = createDefaultCommand('dialogue');
+                        scriptState.addNodeAtPath(parent, newNode, idx + 1);
+                        break;
+                    }
+                }
+            },
+        });
     };
 
     const handleConfirmDelete = () => {
@@ -259,6 +354,7 @@ export function Timeline() {
                 onToggleCollapse={toggleCollapse}
                 dropIndicator={dropIndicator}
                 sameArrayPath={sameArrayPath}
+                onContextMenuNode={onContextMenuNode}
                 onClickNode={onNodeClick}
                 onDragStart={handleNodeDragStart}
                 onDragOver={handleNodeDragOver}
@@ -286,14 +382,6 @@ export function Timeline() {
                 outline: 'none',
             }}
         >
-            <TimelineHeader
-                uiScale={uiScale}
-                scopePath={scopePath}
-                selectedCount={selectedNodePaths.length}
-                onResetScope={resetScope}
-                onPopScope={popScope}
-            />
-
             <TimelineCommandBar
                 uiScale={uiScale}
                 commandMenuItems={commandMenuItems}
@@ -393,6 +481,8 @@ export function Timeline() {
                 onCancel={clearDeleteRequest}
                 onConfirm={handleConfirmDelete}
             />
+
+            <TimelineCommandContextMenu uiScale={uiScale} menu={contextMenu} />
         </div>
     );
 }

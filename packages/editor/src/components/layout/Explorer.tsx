@@ -1,26 +1,106 @@
 import { useState, useEffect } from 'react';
 import { FolderGit2, FolderOpen, FileJson, Image as ImageIcon, ChevronRight, ChevronDown } from 'lucide-react';
-import { readDir, readTextFile } from '@tauri-apps/plugin-fs';
+import { readDir } from '@tauri-apps/plugin-fs';
 import { join } from '@tauri-apps/api/path';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useEditorStore } from '../../store/useEditorStore';
 import type { DirEntry } from '@tauri-apps/plugin-fs';
-import { validateScript } from 'core';
 import { editorTheme as t } from '../../theme/editorTheme';
+import { ConfirmDialog } from '../common/ConfirmDialog';
+import {
+    ExplorerContextMenu,
+    type ExplorerContextMenuState,
+} from './explorer/ExplorerContextMenu';
+import { InlineNameInput } from './explorer/InlineNameInput';
 
 function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPath: string; level?: number }) {
     const [isOpen, setIsOpen] = useState(false);
     const [children, setChildren] = useState<DirEntry[]>([]);
     const [fullPath, setFullPath] = useState<string>('');
+    const [ctx, setCtx] = useState<ExplorerContextMenuState>(null);
 
-    const { activeFile, setActiveFile } = useProjectStore();
+    const [isRenaming, setIsRenaming] = useState(false);
+    const [renameDraft, setRenameDraft] = useState(entry.name);
+    const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+
+    const [createMode, setCreateMode] = useState<null | 'file' | 'folder'>(null);
+    const [createDraft, setCreateDraft] = useState('');
+    const [createTargetDir, setCreateTargetDir] = useState<string | null>(null);
+
+    const { activeFile } = useProjectStore();
     const { uiScale } = useEditorStore();
 
     useEffect(() => {
         join(parentPath, entry.name).then(setFullPath);
     }, [parentPath, entry.name]);
 
+    useEffect(() => {
+        setRenameDraft(entry.name);
+    }, [entry.name]);
+
+    useEffect(() => {
+        if (!ctx) return;
+        const onDown = () => setCtx(null);
+        const onEsc = (e: KeyboardEvent) => e.key === 'Escape' && setCtx(null);
+        document.addEventListener('mousedown', onDown);
+        document.addEventListener('keydown', onEsc);
+        return () => {
+            document.removeEventListener('mousedown', onDown);
+            document.removeEventListener('keydown', onEsc);
+        };
+    }, [ctx]);
+
+    const openDefault = async () => {
+        if (!fullPath) return;
+        const { openProjectEntry } = await import('../../services/openProjectEntry');
+        await openProjectEntry(fullPath, entry.name);
+    };
+
+    const commitRename = async () => {
+        const next = renameDraft.trim();
+        if (!next || next === entry.name) {
+            setIsRenaming(false);
+            setRenameDraft(entry.name);
+            return;
+        }
+        const { renamePath } = await import('../../services/explorerFileActions');
+        await renamePath(fullPath, next);
+        setIsRenaming(false);
+    };
+
+    const startCreate = async (mode: 'file' | 'folder') => {
+        const { dirname } = await import('@tauri-apps/api/path');
+        const baseDir = entry.isDirectory ? fullPath : await dirname(fullPath);
+        setCreateTargetDir(baseDir);
+        setCreateMode(mode);
+        setCreateDraft(mode === 'file' ? 'new-file.json' : 'new-folder');
+        if (entry.isDirectory && !isOpen) setIsOpen(true);
+    };
+
+    const commitCreate = async () => {
+        if (!createMode || !createTargetDir) return;
+        const name = createDraft.trim();
+        if (!name) {
+            setCreateMode(null);
+            return;
+        }
+
+        const {
+            createFileInDirectory,
+            createFolderInDirectory,
+        } = await import('../../services/explorerFileActions');
+
+        if (createMode === 'file') await createFileInDirectory(createTargetDir, name, '');
+        else await createFolderInDirectory(createTargetDir, name);
+
+        setCreateMode(null);
+        setCreateDraft('');
+        setCreateTargetDir(null);
+    };
+
     const handleClick = async () => {
+        if (isRenaming) return;
+
         if (entry.isDirectory) {
             if (!isOpen && children.length === 0 && fullPath) {
                 try {
@@ -35,42 +115,72 @@ function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPat
                     console.error('Failed to read directory:', err);
                 }
             }
-            setIsOpen(!isOpen);
+            setIsOpen((v) => !v);
             return;
         }
 
-        if (!entry.name.endsWith('.json') || !fullPath) return;
+        await openDefault();
+    };
 
-        try {
-            const contents = await readTextFile(fullPath);
-            const data = JSON.parse(contents);
+    const onContextMenu = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!fullPath) return;
 
-            if (Array.isArray(data)) {
-                const validScript = validateScript(data);
-                setActiveFile(fullPath, validScript);
-                useProjectStore.getState().setActiveMacroName(null);
-                useProjectStore.getState().setEditingAllMacrosFile(false);
-                useProjectStore.getState().setMacroEntries([]);
-                return;
-            }
+        setCtx({
+            x: e.clientX,
+            y: e.clientY,
+            isDirectory: !!entry.isDirectory,
+            path: fullPath,
+            name: entry.name,
+            onClose: () => setCtx(null),
+            onAction: async (action) => {
+                const { openProjectEntry } = await import('../../services/openProjectEntry');
 
-            if (data && typeof data === 'object') {
-                const keys = Object.keys(data).filter((k) => Array.isArray(data[k]));
-                const isLikelyMacros = keys.length > 0 && keys.length === Object.keys(data).length;
-
-                if (isLikelyMacros) {
-                    const entries = keys
-                        .map((name) => ({ name, commands: validateScript(data[name]) }))
-                        .sort((a, b) => a.name.localeCompare(b.name));
-
-                    useProjectStore.getState().setActiveMacroName(null);
-                    useProjectStore.getState().setEditingAllMacrosFile(true);
-                    useProjectStore.getState().setMacroEntries(entries);
-                    useProjectStore.getState().setActiveFile(fullPath, []);
+                switch (action) {
+                    case 'open':
+                        await openDefault();
+                        break;
+                    case 'openJson':
+                        await openProjectEntry(fullPath, entry.name, { forceView: 'json' });
+                        break;
+                    case 'openTimeline':
+                        await openProjectEntry(fullPath, entry.name, { forceView: 'timeline' });
+                        break;
+                    case 'rename':
+                        setIsRenaming(true);
+                        setRenameDraft(entry.name);
+                        break;
+                    case 'delete':
+                        setConfirmDeleteOpen(true);
+                        break;
+                    case 'reveal': {
+                        const { revealPathInSystem } = await import('../../services/explorerFileActions');
+                        await revealPathInSystem(fullPath);
+                        break;
+                    }
+                    case 'newFile':
+                        await startCreate('file');
+                        break;
+                    case 'newFolder':
+                        await startCreate('folder');
+                        break;
                 }
-            }
-        } catch (err) {
-            console.error('Failed to read or parse JSON:', err);
+            },
+        });
+    };
+
+    const onRowKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === 'F2' && !isRenaming) {
+            e.preventDefault();
+            setIsRenaming(true);
+            setRenameDraft(entry.name);
+            return;
+        }
+
+        if (e.key === 'Enter' && !entry.isDirectory && !isRenaming) {
+            e.preventDefault();
+            void openDefault();
         }
     };
 
@@ -80,7 +190,10 @@ function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPat
     return (
         <div>
             <div
+                tabIndex={0}
                 onClick={handleClick}
+                onContextMenu={onContextMenu}
+                onKeyDown={onRowKeyDown}
                 style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -92,6 +205,7 @@ function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPat
                     backgroundColor: isSelected ? t.bg.selected : 'transparent',
                     color: isSelected ? t.text.primary : entry.isDirectory ? t.text.normal : '#aaa',
                     fontSize: 'inherit',
+                    outline: 'none',
                 }}
                 onMouseEnter={(e) => {
                     if (!isSelected) e.currentTarget.style.backgroundColor = t.bg.hover;
@@ -114,17 +228,74 @@ function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPat
                     <ImageIcon size={iconSize} color="#4ec9b0" />
                 )}
 
-                <span>{entry.name}</span>
+                {isRenaming ? (
+                    <InlineNameInput
+                        uiScale={uiScale}
+                        value={renameDraft}
+                        onChange={setRenameDraft}
+                        onSubmit={commitRename}
+                        onCancel={() => {
+                            setIsRenaming(false);
+                            setRenameDraft(entry.name);
+                        }}
+                    />
+                ) : (
+                    <span>{entry.name}</span>
+                )}
             </div>
 
+            <ExplorerContextMenu uiScale={uiScale} menu={ctx} />
+
+            <ConfirmDialog
+                open={confirmDeleteOpen}
+                title="Delete item?"
+                message={`Delete "${entry.name}"? This cannot be undone.`}
+                confirmText="Delete"
+                cancelText="Cancel"
+                danger
+                onCancel={() => setConfirmDeleteOpen(false)}
+                onConfirm={async () => {
+                    setConfirmDeleteOpen(false);
+                    const { deletePath } = await import('../../services/explorerFileActions');
+                    await deletePath(fullPath);
+                }}
+            />
+
+            {createMode && (
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: `${6 * uiScale}px`,
+                        padding: `${4 * uiScale}px ${8 * uiScale}px`,
+                        paddingLeft: `${((level + 1) * 12 + 8) * uiScale}px`,
+                    }}
+                >
+                    <span style={{ width: 14 * uiScale }} />
+                    <InlineNameInput
+                        uiScale={uiScale}
+                        value={createDraft}
+                        onChange={setCreateDraft}
+                        onSubmit={commitCreate}
+                        onCancel={() => {
+                            setCreateMode(null);
+                            setCreateDraft('');
+                            setCreateTargetDir(null);
+                        }}
+                    />
+                </div>
+            )}
+
             {isOpen &&
-                children.map((child, idx) => <FileNode key={idx} entry={child} parentPath={fullPath} level={level + 1} />)}
+                children.map((child, idx) => (
+                    <FileNode key={idx} entry={child} parentPath={fullPath} level={level + 1} />
+                ))}
         </div>
     );
 }
 
 export function Explorer() {
-    const { projectPath, files } = useProjectStore();
+    const { projectPath, files, treeRevision } = useProjectStore();
     const { uiScale } = useEditorStore();
 
     return (
@@ -164,7 +335,7 @@ export function Explorer() {
                     </div>
 
                     {files.map((file, idx) => (
-                        <FileNode key={idx} entry={file} parentPath={projectPath} />
+                        <FileNode key={`${treeRevision}:${projectPath}:${file.name}:${idx}`} entry={file} parentPath={projectPath} />
                     ))}
                 </div>
             ) : (

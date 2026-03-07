@@ -1,8 +1,7 @@
 export const DOCK_PANELS = {
     toolbar: 'toolbar',
     explorer: 'explorer',
-    timeline: 'timeline',
-    json: 'json',
+    editor: 'editor',
     preview: 'preview',
     inspector: 'inspector',
     assets: 'assets',

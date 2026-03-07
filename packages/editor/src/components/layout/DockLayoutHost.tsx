@@ -1,36 +1,56 @@
 import { useEffect, useRef } from 'react';
-import { Layout, Model, TabNode } from 'flexlayout-react';
+import { Layout, Model, TabNode, Actions } from 'flexlayout-react';
 import 'flexlayout-react/style/dark.css';
 
 import { useEditorStore } from '../../store/useEditorStore';
 import { useScriptStore } from '../../store/useScriptStore';
+import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { DOCK_PANELS } from '../../layout/dockPanelIds';
 
-import { Explorer } from './Explorer';
-import { Timeline } from './Timeline';
-import { ScriptJsonEditor } from './ScriptJsonEditor';
-import { Inspector } from '../inspector/Inspector';
-import { AssetPreviewPanel } from '../tools/AssetPreviewPanel';
-import { GamePreview } from '../GamePreview';
 import { TopChrome } from './TopChrome';
+import { WorkbenchTabs } from './WorkbenchTabs';
+import { EditorSurface } from './EditorSurface';
+
+import { Explorer } from './Explorer';
+import { Inspector } from '../inspector/Inspector';
+import { GamePreview } from '../GamePreview';
 import { ConsolePanel } from '../tools/ConsolePanel';
 
 export function DockLayoutHost() {
-    const uiScale = useEditorStore((s) => s.uiScale);
     const dockLayoutJson = useEditorStore((s) => s.dockLayoutJson);
     const setDockLayoutJson = useEditorStore((s) => s.setDockLayoutJson);
     const rootScript = useScriptStore((s) => s.rootScript);
+    const activeWorkbenchTabId = useWorkbenchStore((s) => s.activeTabId);
 
     const modelRef = useRef<Model | null>(null);
-    if (!modelRef.current) modelRef.current = Model.fromJson(dockLayoutJson);
-    const model = modelRef.current;
+    const lastJsonRef = useRef<string>('');
 
+    const jsonSig = JSON.stringify(dockLayoutJson);
+
+    // create once
+    if (!modelRef.current) {
+        modelRef.current = Model.fromJson(dockLayoutJson);
+        lastJsonRef.current = jsonSig;
+    }
+
+    // rebuild only when store layout changed externally (e.g. reset)
+    if (lastJsonRef.current !== jsonSig) {
+        modelRef.current = Model.fromJson(dockLayoutJson);
+        lastJsonRef.current = jsonSig;
+    }
+
+    const model = modelRef.current!;
     const saveTimerRef = useRef<number | null>(null);
 
     const onModelChange = (m: Model) => {
         if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
         saveTimerRef.current = window.setTimeout(() => {
-            setDockLayoutJson(m.toJson());
+            const next = m.toJson();
+            const nextSig = JSON.stringify(next);
+            if (nextSig !== lastJsonRef.current) {
+                setDockLayoutJson(next);
+                lastJsonRef.current = nextSig;
+            }
             saveTimerRef.current = null;
         }, 180);
     };
@@ -41,22 +61,25 @@ export function DockLayoutHost() {
         };
     }, []);
 
+    useEffect(() => {
+        if (!activeWorkbenchTabId) return;
+        const tabNode = model.getNodeById(DOCK_PANELS.editor) as TabNode | undefined;
+        if (!tabNode) return;
+        model.doAction(Actions.selectTab(DOCK_PANELS.editor));
+    }, [activeWorkbenchTabId, model]);
+
     const factory = (node: TabNode) => {
         const comp = node.getComponent() as string;
 
         switch (comp) {
             case DOCK_PANELS.explorer:
                 return <Explorer />;
-            case DOCK_PANELS.timeline:
-                return <Timeline />;
-            case DOCK_PANELS.json:
-                return <ScriptJsonEditor uiScale={uiScale} />;
+            case DOCK_PANELS.editor:
+                return <EditorSurface />;
             case DOCK_PANELS.preview:
                 return <GamePreview script={rootScript} />;
             case DOCK_PANELS.inspector:
                 return <Inspector />;
-            case DOCK_PANELS.assets:
-                return <AssetPreviewPanel uiScale={uiScale} />;
             case DOCK_PANELS.console:
                 return <ConsolePanel />;
             default:
@@ -77,8 +100,11 @@ export function DockLayoutHost() {
             }}
         >
             <TopChrome />
-            <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
-                <Layout model={model} factory={factory} onModelChange={onModelChange} />
+            <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                <WorkbenchTabs />
+                <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+                    <Layout model={model} factory={factory} onModelChange={onModelChange} />
+                </div>
             </div>
         </div>
     );

@@ -37,6 +37,9 @@ interface EditorState {
     selectedNodePaths: ScriptPath[];
     selectionAnchorPath: ScriptPath | null;
 
+    selectedAssetPath: string | null;
+    setSelectedAssetPath: (path: string | null) => void;
+
     setSelectedNodePaths: (paths: ScriptPath[]) => void;
     setSelectionAnchorPath: (path: ScriptPath | null) => void;
     clearSelection: () => void;
@@ -145,6 +148,9 @@ export const useEditorStore = create<EditorState>()(
 
             setSelectionAnchorPath: (path) =>
                 set({ selectionAnchorPath: path ? [...path] as ScriptPath : null }),
+
+            selectedAssetPath: null,
+            setSelectedAssetPath: (path) => set({ selectedAssetPath: path }),
 
             clearSelection: () =>
                 set({ selectedNodePaths: [], selectionAnchorPath: null }),

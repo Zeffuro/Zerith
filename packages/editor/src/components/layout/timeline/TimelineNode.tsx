@@ -57,6 +57,7 @@ type Props = {
     dropIndicator: { arrayPath: ScriptPath; index: number } | null;
     sameArrayPath: (a: ScriptPath, b: ScriptPath) => boolean;
 
+    onContextMenuNode: (e: React.MouseEvent, path: ScriptPath, node: any) => void;
     onClickNode: (e: React.MouseEvent, path: ScriptPath) => void;
     onDragStart: (e: React.DragEvent, path: ScriptPath) => void;
     onDragOver: (e: React.DragEvent, arrayPath: ScriptPath, index: number) => void;
@@ -93,6 +94,7 @@ export function TimelineNode({
                                  onToggleCollapse,
                                  dropIndicator,
                                  sameArrayPath,
+                                 onContextMenuNode,
                                  onClickNode,
                                  onDragStart,
                                  onDragOver,
@@ -134,6 +136,7 @@ export function TimelineNode({
                     onDrop(e, parentArrayPath, indexInParent);
                 }}
                 onDragEnd={onDragEnd}
+                onContextMenu={(e) => onContextMenuNode(e, nodePath, node)}
                 onClick={(e) => onClickNode(e, nodePath)}
                 style={{
                     marginLeft: `${depth * 16 * uiScale}px`,
