@@ -1,21 +1,21 @@
 export interface Theme {
-    fontFamily: string;
-    fontSize: number;
-    boxColor: number;
-    boxAlpha: number;
+    accentColor: number;
     borderColor: number;
     borderWidth: number;
-    accentColor: number;
+    boxAlpha: number;
+    boxColor: number;
+    fontFamily: string;
+    fontSize: number;
     hoverColor: number;
 }
 
 export const DefaultTheme: Theme = {
+    accentColor: 0xFF_AA_AA,
+    borderColor: 0xAA_AA_FF,
+    borderWidth: 4,
+    boxAlpha: 0.9,
+    boxColor: 0x00_00_55,
     fontFamily: 'Courier New',
     fontSize: 24,
-    boxColor: 0x000055,
-    boxAlpha: 0.9,
-    borderColor: 0xaaaaff,
-    borderWidth: 4,
-    accentColor: 0xffaaaa,
-    hoverColor: 0x333399
+    hoverColor: 0x33_33_99
 };

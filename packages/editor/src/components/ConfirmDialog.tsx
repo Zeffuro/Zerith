@@ -1,20 +1,21 @@
 import { useEffect } from 'react';
+
+import { useEditorStore } from '../store/useEditorStore';
 import { editorTheme as t } from '../theme/editorTheme';
 import { styles } from '../theme/styleHelpers';
-import { useEditorStore } from '../store/useEditorStore';
 
-type Props = {
+type Properties = {
+    cancelText?: string;
+    confirmText?: string;
+    danger?: boolean;
+    message: string;
+    onCancel: () => void;
+    onConfirm: () => void;
     open: boolean;
     title?: string;
-    message: string;
-    confirmText?: string;
-    cancelText?: string;
-    danger?: boolean;
-    onConfirm: () => void;
-    onCancel: () => void;
 };
 
-export function ConfirmDialog({ open, title = 'Confirm', message, confirmText = 'Confirm', cancelText = 'Cancel', danger = false, onConfirm, onCancel }: Props) {
+export function ConfirmDialog({ cancelText = 'Cancel', confirmText = 'Confirm', danger = false, message, onCancel, onConfirm, open, title = 'Confirm' }: Properties) {
     const uiScale = useEditorStore(s => s.uiScale);
 
     useEffect(() => {
@@ -23,20 +24,20 @@ export function ConfirmDialog({ open, title = 'Confirm', message, confirmText = 
             if (e.key === 'Escape') onCancel();
             if (e.key === 'Enter') onConfirm();
         };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
+        globalThis.addEventListener('keydown', onKey);
+        return () => globalThis.removeEventListener('keydown', onKey);
     },[open, onCancel, onConfirm]);
 
     if (!open) return null;
 
     return (
-        <div onClick={onCancel} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', display: 'grid', placeItems: 'center', zIndex: 2000 }}>
-            <div onClick={(e) => e.stopPropagation()} style={{ width: `${380 * uiScale}px`, background: t.bg.panel, border: `1px solid ${t.border.normal}`, borderRadius: t.radius.lg, padding: `${16 * uiScale}px`, color: t.text.primary, boxShadow: t.shadow.popupStrong }}>
-                <div style={{ fontWeight: 700, marginBottom: `${8 * uiScale}px`, fontSize: `${14 * uiScale}px` }}>{title}</div>
-                <div style={{ opacity: .9, marginBottom: `${16 * uiScale}px`, fontSize: `${13 * uiScale}px`, color: t.text.normal }}>{message}</div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: `${8 * uiScale}px` }}>
+        <div onClick={onCancel} style={{ background: 'rgba(0,0,0,.45)', display: 'grid', inset: 0, placeItems: 'center', position: 'fixed', zIndex: 2000 }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ background: t.bg.panel, border: `1px solid ${t.border.normal}`, borderRadius: t.radius.lg, boxShadow: t.shadow.popupStrong, color: t.text.primary, padding: `${16 * uiScale}px`, width: `${380 * uiScale}px` }}>
+                <div style={{ fontSize: `${14 * uiScale}px`, fontWeight: 700, marginBottom: `${8 * uiScale}px` }}>{title}</div>
+                <div style={{ color: t.text.normal, fontSize: `${13 * uiScale}px`, marginBottom: `${16 * uiScale}px`, opacity: .9 }}>{message}</div>
+                <div style={{ display: 'flex', gap: `${8 * uiScale}px`, justifyContent: 'flex-end' }}>
                     <button onClick={onCancel} style={{ ...styles.buttonBase(uiScale) }}>{cancelText}</button>
-                    <button onClick={onConfirm} style={{ ...styles.buttonBase(uiScale), color: '#fff', border: 'none', background: danger ? t.accent.red : t.accent.primary }}>
+                    <button onClick={onConfirm} style={{ ...styles.buttonBase(uiScale), background: danger ? t.accent.red : t.accent.primary, border: 'none', color: '#fff' }}>
                         {confirmText}
                     </button>
                 </div>

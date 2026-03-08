@@ -1,55 +1,52 @@
 import type { TextStyleOptions } from 'pixi.js';
+
 import {sound} from '@pixi/sound';
+
+import type {Engine} from '../Engine';
 import type {CommandHandler} from '../types';
 import type {CharacterDefinition} from '../types';
-import type {Engine} from '../Engine';
+
 import { parseTextTags, transformShorthands } from '../utils/TextParser';
 import { DialogueRenderer } from './dialogue/DialogueRenderer';
 import { TypewriterController } from './dialogue/TypewriterController';
 
 export interface DialogueCommand {
-    type: 'dialogue';
+    instant?: boolean;
+    portraitSide?: 'left' | 'right';
     speaker: string;
     text: string;
-    portraitSide?: 'left' | 'right';
-    instant?: boolean;
+    type: 'dialogue';
 }
 
 export interface DialogueConfig {
-    boxX?: number;
-    boxY?: number;
-    boxWidth?: number;
-    boxHeight?: number;
-    backgroundColor?: number;
     backgroundAlpha?: number;
+    backgroundColor?: number;
     borderColor?: number;
     borderWidth?: number;
-    typewriterSpeed?: number;
-    defaultBlipUrl?: string;
-    nameStyle?: Partial<TextStyleOptions>;
-    messageStyle?: Partial<TextStyleOptions>;
+    boxHeight?: number;
+    boxWidth?: number;
+    boxX?: number;
+    boxY?: number;
     characters?: Record<string, CharacterDefinition>;
+    defaultBlipUrl?: string;
+    messageStyle?: Partial<TextStyleOptions>;
+    nameStyle?: Partial<TextStyleOptions>;
+    typewriterSpeed?: number;
 }
 
 export class DialogueHandler implements CommandHandler<DialogueCommand> {
-    public type: 'dialogue' = 'dialogue';
     public autoNext = false;
+    public type: 'dialogue' = 'dialogue';
+    private activeAbortController: AbortController | null = null;
     private config: DialogueConfig;
     private readonly renderer: DialogueRenderer;
     private readonly typewriter: TypewriterController;
-    private activeAbortController: AbortController | null = null;
 
     constructor(config: DialogueConfig) {
-        this.config = { typewriterSpeed: 30, characters: {}, ...config };
+        this.config = { characters: {}, typewriterSpeed: 30, ...config };
         this.renderer = new DialogueRenderer(this.config);
         this.typewriter = new TypewriterController();
     }
-
-    reset = () => {
-        this.activeAbortController?.abort();
-        this.activeAbortController = null;
-        this.renderer.reset();
-    };
 
     execute = async (command: DialogueCommand, engine: Engine) => {
         this.activeAbortController?.abort();
@@ -78,18 +75,18 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
             if (signal.aborted) return;
 
             engine.setState('__sys_dialogue', {
+                portraitSide: command.portraitSide ?? 'left',
+                portraitUrl: charData.portraitUrl,
                 speaker: command.speaker,
                 text: command.text,
-                portraitUrl: charData.portraitUrl,
-                portraitSide: command.portraitSide ?? 'left',
             });
         } else {
             this.renderer.hidePortrait();
             engine.setState('__sys_dialogue', {
+                portraitSide: null,
+                portraitUrl: null,
                 speaker: command.speaker,
                 text: command.text,
-                portraitUrl: null,
-                portraitSide: null,
             });
         }
 
@@ -99,10 +96,10 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
             if (spriteState?.[command.speaker] || spriteState?.[speakerKey]) {
                 const spriteId = spriteState[command.speaker] ? command.speaker : speakerKey;
                 await engine.runCommand({
-                    type: 'sprite',
-                    id: spriteId,
                     action: 'animate',
                     animation: fullCharData.talkAnimation,
+                    id: spriteId,
+                    type: 'sprite',
                 });
                 if (signal.aborted) return;
             }
@@ -115,13 +112,13 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
                 if (!sound.exists(resolvedBlipUrl)) {
                     await new Promise((res, rej) => {
                         sound.add(resolvedBlipUrl, {
-                            url: resolvedBlipUrl,
+                            loaded: (error) => error ? rej(error) : res(null),
                             preload: true,
-                            loaded: (err) => err ? rej(err) : res(null)
+                            url: resolvedBlipUrl
                         });
                     });
                 }
-            } catch (e) {
+            } catch {
                 engine.logger.warn(`Blip failed to load: ${blipUrl}`);
             }
             if (signal.aborted) return;
@@ -141,15 +138,15 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         }
 
         await this.typewriter.run({
-            tokens,
-            initialSpeed: this.config.typewriterSpeed!,
             blipUrl: resolvedBlipUrl,
-            signal,
             consumeSkip: () => engine.consumeSkip(),
-            getMessageText: () => this.renderer.getMessageText(),
-            setMessageText: (text) => this.renderer.setMessageText(text),
-            getVoiceVolume: () => engine.audio.voiceVolume,
             createPromptBlinker: () => this.renderer.createPromptBlinker(),
+            getMessageText: () => this.renderer.getMessageText(),
+            getVoiceVolume: () => engine.audio.voiceVolume,
+            initialSpeed: this.config.typewriterSpeed!,
+            setMessageText: (text) => this.renderer.setMessageText(text),
+            signal,
+            tokens,
             waitForPromptInput: (abortSignal) => this.waitForPromptInput(engine, abortSignal),
         });
 
@@ -160,6 +157,30 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
             }
         }
     };
+
+    reset = () => {
+        this.activeAbortController?.abort();
+        this.activeAbortController = null;
+        this.renderer.reset();
+    };
+
+    private async waitForDelay(ms: number, signal: AbortSignal): Promise<void> {
+        if (signal.aborted || ms <= 0) return;
+
+        await new Promise<void>((resolve) => {
+            const timeout = setTimeout(() => {
+                signal.removeEventListener('abort', onAbort);
+                resolve();
+            }, ms);
+
+            const onAbort = () => {
+                clearTimeout(timeout);
+                resolve();
+            };
+
+            signal.addEventListener('abort', onAbort, { once: true });
+        });
+    }
 
     private async waitForPromptInput(engine: Engine, signal: AbortSignal): Promise<void> {
         if (signal.aborted) return;
@@ -185,24 +206,6 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
 
             engine.events.on('input:confirm', onInput);
             engine.events.on('input:next', onInput);
-            signal.addEventListener('abort', onAbort, { once: true });
-        });
-    }
-
-    private async waitForDelay(ms: number, signal: AbortSignal): Promise<void> {
-        if (signal.aborted || ms <= 0) return;
-
-        await new Promise<void>((resolve) => {
-            const timeout = setTimeout(() => {
-                signal.removeEventListener('abort', onAbort);
-                resolve();
-            }, ms);
-
-            const onAbort = () => {
-                clearTimeout(timeout);
-                resolve();
-            };
-
             signal.addEventListener('abort', onAbort, { once: true });
         });
     }

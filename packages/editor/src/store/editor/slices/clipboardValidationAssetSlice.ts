@@ -2,15 +2,15 @@ import type { ClipboardValidationAssetSlice, EditorSet } from '../types';
 
 export function createClipboardValidationAssetSlice(set: EditorSet): ClipboardValidationAssetSlice {
     return {
-        clipboardNode: null,
-        setClipboardNode: (node) => set({ clipboardNode: node }),
-
-        validationErrors: {},
-        setValidationErrors: (errors) => set({ validationErrors: errors }),
         clearValidationErrors: () => set({ validationErrors: {} }),
+        clipboardNode: null,
 
         selectedAssetPath: null,
+        setClipboardNode: (node) => set({ clipboardNode: node }),
         setSelectedAssetPath: (path) => set({ selectedAssetPath: path }),
+
+        setValidationErrors: (errors) => set({ validationErrors: errors }),
+        validationErrors: {},
     };
 }
 

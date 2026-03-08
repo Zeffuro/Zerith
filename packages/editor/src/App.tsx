@@ -1,20 +1,19 @@
+import { PhysicalPosition, PhysicalSize } from '@tauri-apps/api/dpi';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useEffect } from 'react';
-import { DockLayoutHost } from './components/layout/DockLayoutHost';
 
+import { DockLayoutHost } from './components/layout/DockLayoutHost';
+import { useGlobalEditorShortcuts } from './hooks/useGlobalEditorShortcuts';
+import './App.css';
+import { useLiveScriptValidation } from './hooks/useLiveScriptValidation';
+import { useConsoleStore } from './store/useConsoleStore';
 import { useEditorStore } from './store/useEditorStore';
 import { useScriptStore } from './store/useScriptStore';
-import { useConsoleStore } from './store/useConsoleStore';
-
-import './App.css';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { PhysicalSize, PhysicalPosition } from '@tauri-apps/api/dpi';
-import { getThemeRegistry } from './theme/themeRegistry';
 import { applyTheme } from './theme/applyTheme';
-import { useGlobalEditorShortcuts } from './hooks/useGlobalEditorShortcuts';
-import { useLiveScriptValidation } from './hooks/useLiveScriptValidation';
+import { getThemeRegistry } from './theme/themeRegistry';
 
 function App() {
-    const { uiScale, windowState, setWindowState, themeKey } = useEditorStore();
+    const { setWindowState, themeKey, uiScale, windowState } = useEditorStore();
     const rootScript = useScriptStore((state) => state.rootScript);
 
     useGlobalEditorShortcuts();
@@ -27,10 +26,10 @@ function App() {
         const origWarn = console.warn;
         const origError = console.error;
 
-        console.log = (...args) => { origLog(...args); store.addMessage('editor', 'log', ...args); };
-        console.info = (...args) => { origInfo(...args); store.addMessage('editor', 'info', ...args); };
-        console.warn = (...args) => { origWarn(...args); store.addMessage('editor', 'warn', ...args); };
-        console.error = (...args) => { origError(...args); store.addMessage('editor', 'error', ...args); };
+        console.log = (...arguments_) => { origLog(...arguments_); store.addMessage('editor', 'log', ...arguments_); };
+        console.info = (...arguments_) => { origInfo(...arguments_); store.addMessage('editor', 'info', ...arguments_); };
+        console.warn = (...arguments_) => { origWarn(...arguments_); store.addMessage('editor', 'warn', ...arguments_); };
+        console.error = (...arguments_) => { origError(...arguments_); store.addMessage('editor', 'error', ...arguments_); };
 
         return () => {
             console.log = origLog;
@@ -54,7 +53,7 @@ function App() {
             const pos = await appWindow.outerPosition();
             const max = await appWindow.isMaximized();
 
-            setWindowState({ width: size.width, height: size.height, x: pos.x, y: pos.y, maximized: max });
+            setWindowState({ height: size.height, maximized: max, width: size.width, x: pos.x, y: pos.y });
         };
 
         const unlistenMove = appWindow.listen('tauri://move', saveState);
@@ -75,7 +74,7 @@ function App() {
     }, [themeKey]);
 
     return (
-        <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', ['--ui-scale' as any]: uiScale }}>
+        <div style={{ ['--ui-scale' as any]: uiScale, inset: 0, overflow: 'hidden', position: 'fixed' }}>
             <DockLayoutHost />
         </div>
     );

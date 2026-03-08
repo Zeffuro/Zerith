@@ -1,8 +1,15 @@
 import type { ScriptPath } from '../../utils/scriptPathUtils';
+
 import { useEditorStore } from '../useEditorStore';
 import { useScriptStore } from '../useScriptStore';
 
-const pathEq = (a: ScriptPath, b: ScriptPath) => a.length === b.length && a.every((v, i) => v === b[i]);
+const pathEq = (a: ScriptPath, b: ScriptPath) => a.length === b.length && a.every((v, index) => v === b[index]);
+
+export interface ExecuteTimelineNodeClickSelectionActionOptions {
+    mod: boolean;
+    nodePath: ScriptPath;
+    shift: boolean;
+}
 
 export function executeSyncRootSelectionAfterMultiMoveAction(fallbackCount: number): void {
     const scriptState = useScriptStore.getState();
@@ -11,26 +18,20 @@ export function executeSyncRootSelectionAfterMultiMoveAction(fallbackCount: numb
     const selected = editorState.selectedNodePaths;
     const count = selected.length > 1 ? selected.length : fallbackCount;
 
-    const endIdx = scriptState.selectedNodePath?.[0];
-    if (typeof endIdx !== 'number') return;
+    const endIndex = scriptState.selectedNodePath?.[0];
+    if (typeof endIndex !== 'number') return;
 
-    const startIdx = Math.max(0, endIdx - count + 1);
-    const nextPaths: ScriptPath[] = Array.from({ length: count }, (_, i) => [startIdx + i]);
+    const startIndex = Math.max(0, endIndex - count + 1);
+    const nextPaths: ScriptPath[] = Array.from({ length: count }, (_, index) => [startIndex + index]);
 
     editorState.setSelectedNodePaths(nextPaths);
     editorState.setSelectionAnchorPath(nextPaths[0] ?? null);
 }
 
-export interface ExecuteTimelineNodeClickSelectionActionOptions {
-    nodePath: ScriptPath;
-    mod: boolean;
-    shift: boolean;
-}
-
 export function executeTimelineNodeClickSelectionAction(
     options: ExecuteTimelineNodeClickSelectionActionOptions,
 ): void {
-    const { nodePath, mod, shift } = options;
+    const { mod, nodePath, shift } = options;
 
     const editor = useEditorStore.getState();
     const script = useScriptStore.getState();
@@ -51,11 +52,11 @@ export function executeTimelineNodeClickSelectionAction(
         editor.selectionAnchorPath.length === 1 &&
         typeof editor.selectionAnchorPath[0] === 'number'
     ) {
-        const a = editor.selectionAnchorPath[0] as number;
+        const a = editor.selectionAnchorPath[0];
         const b = nodePath[0] as number;
         const [start, end] = a <= b ? [a, b] : [b, a];
         const range: ScriptPath[] = [];
-        for (let i = start; i <= end; i++) range.push([i]);
+        for (let index = start; index <= end; index++) range.push([index]);
 
         editor.setSelectedNodePaths(range);
         script.setSelectedNodePath(current);
@@ -64,12 +65,12 @@ export function executeTimelineNodeClickSelectionAction(
     }
 
     if (mod) {
-        const exists = editor.selectedNodePaths.some((p) => pathEq(p as ScriptPath, current));
+        const exists = editor.selectedNodePaths.some((p) => pathEq(p, current));
         const next = exists
-            ? editor.selectedNodePaths.filter((p) => !pathEq(p as ScriptPath, current))
+            ? editor.selectedNodePaths.filter((p) => !pathEq(p, current))
             : [...editor.selectedNodePaths, current];
 
-        editor.setSelectedNodePaths(next as ScriptPath[]);
+        editor.setSelectedNodePaths(next);
         script.setSelectedNodePath(current);
         script.setSelectedNode(current[0] as number);
         if (!editor.selectionAnchorPath) editor.setSelectionAnchorPath(current);

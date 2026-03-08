@@ -1,39 +1,39 @@
 import { editorTheme as t } from '../../../theme/editorTheme';
 
-type Chip = { type: string; count: number };
+type Chip = { count: number; type: string; };
 
-type Props = {
-    uiScale: number;
-    chips: Chip[];
+type Properties = {
     activeType: string;
+    chips: Chip[];
     onChange: (type: string) => void;
+    uiScale: number;
 };
 
-export function TimelineTypeFilterChips({ uiScale, chips, activeType, onChange }: Props) {
-    const allCount = chips.reduce((acc, c) => acc + c.count, 0);
+export function TimelineTypeFilterChips({ activeType, chips, onChange, uiScale }: Properties) {
+    const allCount = chips.reduce((accumulator, c) => accumulator + c.count, 0);
 
     const renderChip = (type: string, count: number, label = type) => {
         const active = activeType === type;
         return (
             <button
                 key={type}
-                type="button"
                 onClick={() => onChange(type)}
                 style={{
-                    border: `1px solid ${active ? t.border.accent : t.border.subtle}`,
-                    background: active ? t.bg.selected : t.bg.panel,
-                    color: active ? t.text.primary : t.text.muted,
-                    borderRadius: 999,
-                    padding: `0 ${10 * uiScale}px`,
-                    height: `${24 * uiScale}px`,
-                    display: 'inline-flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
+                    background: active ? t.bg.selected : t.bg.panel,
+                    border: `1px solid ${active ? t.border.accent : t.border.subtle}`,
+                    borderRadius: 999,
                     boxSizing: 'border-box',
-                    fontSize: `${11 * uiScale}px`,
+                    color: active ? t.text.primary : t.text.muted,
                     cursor: 'pointer',
+                    display: 'inline-flex',
+                    fontSize: `${11 * uiScale}px`,
+                    height: `${24 * uiScale}px`,
+                    justifyContent: 'center',
+                    padding: `0 ${10 * uiScale}px`,
                     whiteSpace: 'nowrap',
                 }}
+                type="button"
             >
                 {label} ({count})
             </button>
@@ -46,9 +46,9 @@ export function TimelineTypeFilterChips({ uiScale, chips, activeType, onChange }
             style={{
                 display: 'flex',
                 gap: `${6 * uiScale}px`,
+                marginBottom: `${6 * uiScale}px`,
                 overflowX: 'auto',
                 paddingBottom: `${6 * uiScale}px`,
-                marginBottom: `${6 * uiScale}px`,
             }}
         >
             {renderChip('all', allCount, 'All')}

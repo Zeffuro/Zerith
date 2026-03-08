@@ -1,93 +1,87 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
-import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
-import { useEditorStore } from '../../../store/useEditorStore';
-import { editorTheme as t } from '../../../theme/editorTheme';
+import { useEffect, useMemo, useRef, useState } from 'react';
+
 import { activateWorkbenchTab } from '../../../services/activateWorkbenchTab';
 import { executeWorkbenchTabAction } from '../../../store/actions/workbenchTabActions';
+import { useEditorStore } from '../../../store/useEditorStore';
+import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
+import { editorTheme as t } from '../../../theme/editorTheme';
 
 type ContextMenuState = {
+    tabId: string;
     x: number;
     y: number;
-    tabId: string;
 } | null;
 
 export function WorkbenchTabs() {
     const uiScale = useEditorStore((s) => s.uiScale);
 
-    const { tabs, activeTabId } = useWorkbenchStore();
+    const { activeTabId, tabs } = useWorkbenchStore();
 
-    const [ctx, setCtx] = useState<ContextMenuState>(null);
+    const [context, setContext] = useState<ContextMenuState>(null);
 
     // drag state
-    const [dragTabId, setDragTabId] = useState<string | null>(null);
-    const [dropIndex, setDropIndex] = useState<number | null>(null);
+    const [dragTabId, setDragTabId] = useState<null | string>(null);
+    const [dropIndex, setDropIndex] = useState<null | number>(null);
 
-    const stripRef = useRef<HTMLDivElement | null>(null);
+    const stripReference = useRef<HTMLDivElement | null>(null);
 
     const tabIndexById = useMemo(
-        () => new Map(tabs.map((tab, idx) => [tab.id, idx])),
+        () => new Map(tabs.map((tab, index) => [tab.id, index])),
         [tabs]
     );
 
     useEffect(() => {
-        const onDocClick = () => setCtx(null);
+        const onDocumentClick = () => setContext(null);
         const onEsc = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') setCtx(null);
+            if (e.key === 'Escape') setContext(null);
         };
-        document.addEventListener('mousedown', onDocClick);
+        document.addEventListener('mousedown', onDocumentClick);
         document.addEventListener('keydown', onEsc);
         return () => {
-            document.removeEventListener('mousedown', onDocClick);
+            document.removeEventListener('mousedown', onDocumentClick);
             document.removeEventListener('keydown', onEsc);
         };
     }, []);
 
     if (tabs.length === 0) return null;
 
-    const menuBtnStyle: React.CSSProperties = {
-        width: '100%',
-        border: 'none',
+    const menuButtonStyle: React.CSSProperties = {
         background: 'transparent',
-        color: t.text.normal,
-        textAlign: 'left',
-        padding: `${6 * uiScale}px ${8 * uiScale}px`,
+        border: 'none',
         borderRadius: t.radius.sm,
+        color: t.text.normal,
         cursor: 'pointer',
         fontSize: `${12 * uiScale}px`,
+        padding: `${6 * uiScale}px ${8 * uiScale}px`,
+        textAlign: 'left',
+        width: '100%',
     };
 
     return (
         <div
-            ref={stripRef}
             className="zerith-scrollbar"
-            style={{
-                display: 'flex',
-                alignItems: 'center',
-                overflowX: 'auto',
-                gap: `${2 * uiScale}px`,
-                padding: `${4 * uiScale}px`,
-                borderBottom: `1px solid ${t.border.subtle}`,
-                background: t.bg.panel,
-                position: 'relative',
+            onDragEnd={() => {
+                setDragTabId(null);
+                setDropIndex(null);
             }}
             onDragOver={(e) => {
                 if (!dragTabId) return;
                 e.preventDefault();
 
-                const target = (e.target as HTMLElement).closest('[data-tab-id]') as HTMLElement | null;
+                const target = (e.target as HTMLElement).closest('[data-tab-id]');
                 if (!target) {
                     setDropIndex(tabs.length);
                     return;
                 }
 
                 const targetId = target.dataset.tabId!;
-                const idx = tabIndexById.get(targetId);
-                if (idx === undefined) return;
+                const index = tabIndexById.get(targetId);
+                if (index === undefined) return;
 
                 const rect = target.getBoundingClientRect();
                 const before = e.clientX < rect.left + rect.width / 2;
-                setDropIndex(before ? idx : idx + 1);
+                setDropIndex(before ? index : index + 1);
             }}
             onDrop={(e) => {
                 if (!dragTabId || dropIndex === null) return;
@@ -96,25 +90,32 @@ export function WorkbenchTabs() {
                 setDragTabId(null);
                 setDropIndex(null);
             }}
-            onDragEnd={() => {
-                setDragTabId(null);
-                setDropIndex(null);
+            ref={stripReference}
+            style={{
+                alignItems: 'center',
+                background: t.bg.panel,
+                borderBottom: `1px solid ${t.border.subtle}`,
+                display: 'flex',
+                gap: `${2 * uiScale}px`,
+                overflowX: 'auto',
+                padding: `${4 * uiScale}px`,
+                position: 'relative',
             }}
         >
-            {tabs.map((tab, idx) => {
+            {tabs.map((tab, index) => {
                 const active = tab.id === activeTabId;
-                const showDropBefore = dropIndex === idx;
-                const showDropAfter = dropIndex === idx + 1 && idx === tabs.length - 1;
+                const showDropBefore = dropIndex === index;
+                const showDropAfter = dropIndex === index + 1 && index === tabs.length - 1;
 
                 return (
-                    <div key={tab.id} style={{ display: 'flex', alignItems: 'stretch' }}>
+                    <div key={tab.id} style={{ alignItems: 'stretch', display: 'flex' }}>
                         {showDropBefore && (
                             <div
                                 style={{
-                                    width: 2,
-                                    marginRight: 2,
                                     background: t.accent.primary,
                                     borderRadius: 2,
+                                    marginRight: 2,
+                                    width: 2,
                                 }}
                             />
                         )}
@@ -122,29 +123,29 @@ export function WorkbenchTabs() {
                         <div
                             data-tab-id={tab.id}
                             draggable
+                            onClick={() => void activateWorkbenchTab(tab.id)}
+                            onContextMenu={(e) => {
+                                e.preventDefault();
+                                setContext({ tabId: tab.id, x: e.clientX, y: e.clientY });
+                                executeWorkbenchTabAction({ action: 'activate', tabId: tab.id });
+                            }}
                             onDragStart={(e) => {
                                 setDragTabId(tab.id);
                                 e.dataTransfer.effectAllowed = 'move';
                                 e.dataTransfer.setData('text/plain', tab.id);
                             }}
-                            onClick={() => void activateWorkbenchTab(tab.id)}
-                            onContextMenu={(e) => {
-                                e.preventDefault();
-                                setCtx({ x: e.clientX, y: e.clientY, tabId: tab.id });
-                                executeWorkbenchTabAction({ action: 'activate', tabId: tab.id });
-                            }}
                             style={{
-                                display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: `${6 * uiScale}px`,
-                                padding: `${4 * uiScale}px ${8 * uiScale}px`,
-                                borderRadius: t.radius.sm,
-                                border: `1px solid ${active ? t.border.accent : t.border.subtle}`,
                                 background: active ? t.bg.selected : t.bg.panelAlt,
+                                border: `1px solid ${active ? t.border.accent : t.border.subtle}`,
+                                borderRadius: t.radius.sm,
                                 color: active ? t.text.primary : t.text.normal,
                                 cursor: 'pointer',
-                                whiteSpace: 'nowrap',
+                                display: 'inline-flex',
+                                gap: `${6 * uiScale}px`,
+                                padding: `${4 * uiScale}px ${8 * uiScale}px`,
                                 userSelect: 'none',
+                                whiteSpace: 'nowrap',
                             }}
                             title={tab.path}
                         >
@@ -156,12 +157,12 @@ export function WorkbenchTabs() {
                                     executeWorkbenchTabAction({ action: 'close', tabId: tab.id });
                                 }}
                                 style={{
-                                    border: 'none',
+                                    alignItems: 'center',
                                     background: 'transparent',
+                                    border: 'none',
                                     color: t.text.muted,
                                     cursor: 'pointer',
                                     display: 'inline-flex',
-                                    alignItems: 'center',
                                     padding: 0,
                                 }}
                                 title="Close"
@@ -173,10 +174,10 @@ export function WorkbenchTabs() {
                         {showDropAfter && (
                             <div
                                 style={{
-                                    width: 2,
-                                    marginLeft: 2,
                                     background: t.accent.primary,
                                     borderRadius: 2,
+                                    marginLeft: 2,
+                                    width: 2,
                                 }}
                             />
                         )}
@@ -184,48 +185,48 @@ export function WorkbenchTabs() {
                 );
             })}
 
-            {ctx && (
+            {context && (
                 <div
+                    onMouseDown={(e) => e.stopPropagation()}
                     style={{
-                        position: 'fixed',
-                        top: ctx.y,
-                        left: ctx.x,
-                        zIndex: 5000,
-                        minWidth: `${180 * uiScale}px`,
                         background: t.bg.popup,
                         border: `1px solid ${t.border.normal}`,
                         borderRadius: t.radius.md,
                         boxShadow: t.shadow.popupStrong,
+                        left: context.x,
+                        minWidth: `${180 * uiScale}px`,
                         padding: `${6 * uiScale}px`,
+                        position: 'fixed',
+                        top: context.y,
+                        zIndex: 5000,
                     }}
-                    onMouseDown={(e) => e.stopPropagation()}
                 >
                     <button
-                        style={menuBtnStyle}
                         onClick={() => {
-                            executeWorkbenchTabAction({ action: 'close', tabId: ctx.tabId });
-                            setCtx(null);
+                            executeWorkbenchTabAction({ action: 'close', tabId: context.tabId });
+                            setContext(null);
                         }}
+                        style={menuButtonStyle}
                     >
                         Close
                     </button>
 
                     <button
-                        style={menuBtnStyle}
                         onClick={() => {
-                            executeWorkbenchTabAction({ action: 'closeOthers', tabId: ctx.tabId });
-                            setCtx(null);
+                            executeWorkbenchTabAction({ action: 'closeOthers', tabId: context.tabId });
+                            setContext(null);
                         }}
+                        style={menuButtonStyle}
                     >
                         Close Others
                     </button>
 
                     <button
-                        style={menuBtnStyle}
                         onClick={() => {
-                            executeWorkbenchTabAction({ action: 'closeToRight', tabId: ctx.tabId });
-                            setCtx(null);
+                            executeWorkbenchTabAction({ action: 'closeToRight', tabId: context.tabId });
+                            setContext(null);
                         }}
+                        style={menuButtonStyle}
                     >
                         Close Tabs to Right
                     </button>

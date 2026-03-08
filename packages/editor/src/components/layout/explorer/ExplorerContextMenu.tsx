@@ -1,45 +1,43 @@
 import { editorTheme as t } from '../../../theme/editorTheme';
 
-export type ExplorerMenuAction =
-    | 'open'
-    | 'openJson'
-    | 'openTimeline'
-    | 'newFile'
-    | 'newFolder'
-    | 'rename'
-    | 'delete'
-    | 'reveal';
-
 export type ExplorerContextMenuState = {
-    x: number;
-    y: number;
     isDirectory: boolean;
-    path: string;
     name: string;
     onAction: (action: ExplorerMenuAction) => void;
     onClose: () => void;
+    path: string;
+    x: number;
+    y: number;
 } | null;
 
-export function ExplorerContextMenu({ uiScale, menu }: { uiScale: number; menu: ExplorerContextMenuState }) {
+export type ExplorerMenuAction =
+    | 'delete'
+    | 'newFile'
+    | 'newFolder'
+    | 'open'
+    | 'openJson'
+    | 'openTimeline'
+    | 'rename'
+    | 'reveal';
+
+export function ExplorerContextMenu({ menu, uiScale }: { menu: ExplorerContextMenuState; uiScale: number; }) {
     if (!menu) return null;
 
     const itemStyle: React.CSSProperties = {
-        width: '100%',
-        border: 'none',
         background: 'transparent',
-        color: t.text.normal,
-        textAlign: 'left',
+        border: 'none',
         borderRadius: t.radius.sm,
-        padding: `${6 * uiScale}px ${8 * uiScale}px`,
+        color: t.text.normal,
         cursor: 'pointer',
         fontSize: `${12 * uiScale}px`,
+        padding: `${6 * uiScale}px ${8 * uiScale}px`,
+        textAlign: 'left',
+        width: '100%',
     };
 
-    const Row = ({ label, action, disabled = false }: { label: string; action: ExplorerMenuAction; disabled?: boolean }) => (
+    const Row = ({ action, disabled = false, label }: { action: ExplorerMenuAction; disabled?: boolean; label: string; }) => (
         <button
-            type="button"
             disabled={disabled}
-            style={{ ...itemStyle, color: disabled ? t.text.faint : t.text.normal, cursor: disabled ? 'not-allowed' : 'pointer' }}
             onClick={() => {
                 if (disabled) return;
                 menu.onAction(action);
@@ -51,6 +49,8 @@ export function ExplorerContextMenu({ uiScale, menu }: { uiScale: number; menu: 
             onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'transparent';
             }}
+            style={{ ...itemStyle, color: disabled ? t.text.faint : t.text.normal, cursor: disabled ? 'not-allowed' : 'pointer' }}
+            type="button"
         >
             {label}
         </button>
@@ -58,35 +58,35 @@ export function ExplorerContextMenu({ uiScale, menu }: { uiScale: number; menu: 
 
     return (
         <div
+            onMouseDown={(e) => e.stopPropagation()}
             style={{
-                position: 'fixed',
-                top: menu.y,
-                left: menu.x,
-                zIndex: 7000,
-                minWidth: `${220 * uiScale}px`,
                 background: t.bg.popup,
                 border: `1px solid ${t.border.normal}`,
                 borderRadius: t.radius.md,
                 boxShadow: t.shadow.popupStrong,
+                left: menu.x,
+                minWidth: `${220 * uiScale}px`,
                 padding: `${6 * uiScale}px`,
+                position: 'fixed',
+                top: menu.y,
+                zIndex: 7000,
             }}
-            onMouseDown={(e) => e.stopPropagation()}
         >
-            <Row label="Open" action="open" disabled={menu.isDirectory} />
+            <Row action="open" disabled={menu.isDirectory} label="Open" />
             {!menu.isDirectory && (
                 <>
-                    <Row label="Open in JSON View" action="openJson" />
-                    <Row label="Open in Timeline View" action="openTimeline" />
+                    <Row action="openJson" label="Open in JSON View" />
+                    <Row action="openTimeline" label="Open in Timeline View" />
                 </>
             )}
 
-            <div style={{ height: 1, background: t.border.subtle, margin: `${6 * uiScale}px 0` }} />
+            <div style={{ background: t.border.subtle, height: 1, margin: `${6 * uiScale}px 0` }} />
 
-            <Row label="New File…" action="newFile" />
-            <Row label="New Folder…" action="newFolder" />
-            <Row label="Rename…" action="rename" />
-            <Row label="Delete…" action="delete" />
-            <Row label="Reveal in File Manager" action="reveal" />
+            <Row action="newFile" label="New File…" />
+            <Row action="newFolder" label="New Folder…" />
+            <Row action="rename" label="Rename…" />
+            <Row action="delete" label="Delete…" />
+            <Row action="reveal" label="Reveal in File Manager" />
         </div>
     );
 }

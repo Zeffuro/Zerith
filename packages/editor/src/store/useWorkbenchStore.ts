@@ -1,7 +1,9 @@
 import { create } from 'zustand';
+
+import type { WorkbenchResourceKind, WorkbenchState } from './workbench/types';
+
 import { createWorkbenchTabsSlice } from './workbench/slices/tabsSlice';
 import { createWorkbenchViewPrefsSlice } from './workbench/slices/viewPrefsSlice';
-import type { WorkbenchResourceKind, WorkbenchState } from './workbench/types';
 
 export type { ScriptViewMode, WorkbenchResourceKind, WorkbenchTab } from './workbench/types';
 

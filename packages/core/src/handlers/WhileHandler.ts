@@ -1,32 +1,32 @@
-import type { BaseCommand, CommandHandler } from '../types';
 import type { Engine } from '../Engine';
+import type { BaseCommand, CommandHandler } from '../types';
 
 export interface WhileCommand extends BaseCommand {
-    type: 'while';
-    key?: string;
-    op?: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte';
-    value?: any;
-    source?: string;
-    all?: Array<{ key: string; op?: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte'; value?: any; source?: string }>;
-    any?: Array<{ key: string; op?: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte'; value?: any; source?: string }>;
+    all?: Array<{ key: string; op?: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'neq'; source?: string; value?: any; }>;
+    any?: Array<{ key: string; op?: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'neq'; source?: string; value?: any; }>;
     body?: BaseCommand[];
+    key?: string;
     maxIterations?: number;
+    op?: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'neq';
+    source?: string;
+    type: 'while';
+    value?: any;
 }
 
 export class WhileHandler implements CommandHandler<WhileCommand> {
-    public type: 'while' = 'while';
     public autoNext = true;
+    public type: 'while' = 'while';
 
     execute = async (command: WhileCommand, engine: Engine) => {
         const body = Array.isArray(command.body) ? command.body : [];
         const maxIterations = Number.isFinite(command.maxIterations as number)
             ? Math.max(1, Number(command.maxIterations))
-            : 10000;
+            : 10_000;
 
         let count = 0;
         while (this.evaluateCommand(command, engine)) {
             for (const child of body) {
-                await engine.runCommand(child as BaseCommand);
+                await engine.runCommand(child);
             }
             count++;
             if (count >= maxIterations) {
@@ -41,13 +41,13 @@ export class WhileHandler implements CommandHandler<WhileCommand> {
         if (Array.isArray(command.any)) return command.any.some(c => this.evaluateCondition(c, engine));
         if (!command.key) return false;
         return this.evaluateCondition(
-            { key: command.key, op: command.op, value: command.value, source: command.source },
+            { key: command.key, op: command.op, source: command.source, value: command.value },
             engine
         );
     }
 
     private evaluateCondition(
-        condition: { key: string; op?: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte'; value?: any; source?: string },
+        condition: { key: string; op?: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'neq'; source?: string; value?: any; },
         engine: Engine
     ): boolean {
         if (condition.source === 'items' || condition.source === 'evidence') {
@@ -62,13 +62,20 @@ export class WhileHandler implements CommandHandler<WhileCommand> {
         if (condition.value === undefined) return !!actual;
 
         switch (op) {
-            case 'eq': return actual === condition.value;
-            case 'neq': return actual !== condition.value;
-            case 'gt': return actual > condition.value;
-            case 'gte': return actual >= condition.value;
-            case 'lt': return actual < condition.value;
-            case 'lte': return actual <= condition.value;
-            default: return actual === condition.value;
+            case 'eq': { return actual === condition.value;
+            }
+            case 'gt': { return actual > condition.value;
+            }
+            case 'gte': { return actual >= condition.value;
+            }
+            case 'lt': { return actual < condition.value;
+            }
+            case 'lte': { return actual <= condition.value;
+            }
+            case 'neq': { return actual !== condition.value;
+            }
+            default: { return actual === condition.value;
+            }
         }
     }
 }

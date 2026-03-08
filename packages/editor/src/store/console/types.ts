@@ -1,24 +1,24 @@
 export interface ConsoleMessage {
     id: number;
     source: 'editor' | 'engine';
-    type: 'log' | 'info' | 'warn' | 'error';
     text: string;
     timestamp: Date;
+    type: 'error' | 'info' | 'log' | 'warn';
 }
 
-export type ConsoleSet = (
-    partial: Record<string, any> | ((state: Record<string, any>) => Record<string, any>)
-) => void;
-
 export interface ConsoleMessagesSlice {
-    messages: ConsoleMessage[];
     addMessage: (
         source: ConsoleMessage['source'],
         type: ConsoleMessage['type'],
-        ...args: any[]
+        ...arguments_: any[]
     ) => void;
     clear: () => void;
+    messages: ConsoleMessage[];
 }
+
+export type ConsoleSet = (
+    partial: ((state: Record<string, any>) => Record<string, any>) | Record<string, any>
+) => void;
 
 export interface ConsoleState extends ConsoleMessagesSlice {}
 

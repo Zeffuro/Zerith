@@ -1,30 +1,30 @@
-import type { BaseCommand, CommandHandler } from '../types';
 import type { Engine } from '../Engine';
+import type { BaseCommand, CommandHandler } from '../types';
 
-export type ComparisonOp = 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte';
+export type ComparisonOp = 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'neq';
 
 export interface Condition {
     key: string;
     op?: ComparisonOp;
-    value?: any;
     source?: string;
+    value?: any;
 }
 
 export interface IfCommand extends BaseCommand {
-    type: 'if';
-    key?: string;
-    op?: ComparisonOp;
-    value?: any;
-    source?: string;
     all?: Condition[];
     any?: Condition[];
-    then?: BaseCommand[];
     else?: BaseCommand[];
+    key?: string;
+    op?: ComparisonOp;
+    source?: string;
+    then?: BaseCommand[];
+    type: 'if';
+    value?: any;
 }
 
 export class IfHandler implements CommandHandler<IfCommand> {
-    public type: 'if' = 'if';
     public autoNext = true;
+    public type: 'if' = 'if';
 
     execute = async (command: IfCommand, engine: Engine) => {
         let conditionMet: boolean;
@@ -35,7 +35,7 @@ export class IfHandler implements CommandHandler<IfCommand> {
             conditionMet = command.any.some(c => this.evaluate(c, engine));
         } else {
             conditionMet = this.evaluate(
-                { key: command.key!, op: command.op, value: command.value, source: command.source },
+                { key: command.key!, op: command.op, source: command.source, value: command.value },
                 engine
             );
         }
@@ -62,13 +62,20 @@ export class IfHandler implements CommandHandler<IfCommand> {
         }
 
         switch (op) {
-            case 'eq': return actual === condition.value;
-            case 'neq': return actual !== condition.value;
-            case 'gt': return actual > condition.value;
-            case 'gte': return actual >= condition.value;
-            case 'lt': return actual < condition.value;
-            case 'lte': return actual <= condition.value;
-            default: return actual === condition.value;
+            case 'eq': { return actual === condition.value;
+            }
+            case 'gt': { return actual > condition.value;
+            }
+            case 'gte': { return actual >= condition.value;
+            }
+            case 'lt': { return actual < condition.value;
+            }
+            case 'lte': { return actual <= condition.value;
+            }
+            case 'neq': { return actual !== condition.value;
+            }
+            default: { return actual === condition.value;
+            }
         }
     }
 }

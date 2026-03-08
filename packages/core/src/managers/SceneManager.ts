@@ -1,66 +1,58 @@
-import type { BaseCommand, Script, SceneMap } from '../types';
 import type { Engine } from '../Engine';
+import type { BaseCommand, SceneMap, Script } from '../types';
 
 export class SceneManager {
-    private engine: Engine;
-    private scenes: SceneMap = {};
-    private templates: Map<string, Script> = new Map();
-    private runtimeScript: Array<{ command: BaseCommand; originalIndex: number }> = [];
-
     public currentIndex: number = 0;
     public currentSceneName: string = "";
-
     public get script(): Script {
         return this.runtimeScript.map((entry) => entry.command);
     }
-
     public get scriptLength(): number {
         return this.runtimeScript.length;
     }
 
-    public getCommandAt(index: number): BaseCommand | undefined {
-        return this.runtimeScript[index]?.command;
-    }
+    private engine: Engine;
+    private runtimeScript: Array<{ command: BaseCommand; originalIndex: number }> = [];
+
+    private scenes: SceneMap = {};
+
+    private templates: Map<string, Script> = new Map();
 
     constructor(engine: Engine) {
         this.engine = engine;
-    }
-
-    public loadScenes(scenes: SceneMap) {
-        this.scenes = scenes;
     }
 
     public addScene(name: string, script: Script) {
         this.scenes[name] = script;
     }
 
-    public hasScene(name: string): boolean {
-        return name in this.scenes;
+    public getCommandAt(index: number): BaseCommand | undefined {
+        return this.runtimeScript[index]?.command;
     }
 
-    public registerTemplate(name: string, script: Script) {
-        this.templates.set(name, script);
-    }
-
-    public getTemplate(name: string): Script | undefined {
-        return this.templates.get(name);
-    }
-
-    public injectCommands(commands: BaseCommand[]) {
-        const injectedEntries = commands.map((command) => ({ command, originalIndex: -1 }));
-        this.runtimeScript.splice(this.currentIndex, 0, ...injectedEntries);
+    public getLastOriginalIndex(runtimeIndex: number): number {
+        for (let index = runtimeIndex; index >= 0; index--) {
+            const orig = this.runtimeScript[index]?.originalIndex ?? -1;
+            if (orig !== -1) return orig;
+        }
+        return 0;
     }
 
     public getOriginalIndex(runtimeIndex: number): number {
         return this.runtimeScript[runtimeIndex]?.originalIndex ?? -1;
     }
 
-    public getLastOriginalIndex(runtimeIndex: number): number {
-        for (let i = runtimeIndex; i >= 0; i--) {
-            const orig = this.runtimeScript[i]?.originalIndex ?? -1;
-            if (orig !== -1) return orig;
-        }
-        return 0;
+    public getTemplate(name: string): Script | undefined {
+        return this.templates.get(name);
+    }
+
+    public hasScene(name: string): boolean {
+        return name in this.scenes;
+    }
+
+    public injectCommands(commands: BaseCommand[]) {
+        const injectedEntries = commands.map((command) => ({ command, originalIndex: -1 }));
+        this.runtimeScript.splice(this.currentIndex, 0, ...injectedEntries);
     }
 
     public async jumpToScene(sceneName: string, startIndex: number = 0) {
@@ -78,5 +70,13 @@ export class SceneManager {
         } finally {
             this.engine.events.emit('scene:loaded', sceneName);
         }
+    }
+
+    public loadScenes(scenes: SceneMap) {
+        this.scenes = scenes;
+    }
+
+    public registerTemplate(name: string, script: Script) {
+        this.templates.set(name, script);
     }
 }

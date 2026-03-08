@@ -1,18 +1,19 @@
+import { Copy, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+
 import { useConsoleStore } from '../../store/useConsoleStore';
 import { useEditorStore } from '../../store/useEditorStore';
 import { editorTheme as t } from '../../theme/editorTheme';
-import { Trash2, Copy } from 'lucide-react';
 
 export function ConsolePanel() {
     const uiScale = useEditorStore((s) => s.uiScale);
-    const { messages, clear } = useConsoleStore();
-    const endRef = useRef<HTMLDivElement>(null);
+    const { clear, messages } = useConsoleStore();
+    const endReference = useRef<HTMLDivElement>(null);
 
     const [sourceFilter, setSourceFilter] = useState<'all' | 'editor' | 'engine'>('all');
 
     useEffect(() => {
-        endRef.current?.scrollIntoView({ behavior: 'auto' });
+        endReference.current?.scrollIntoView({ behavior: 'auto' });
     }, [messages]);
 
     const filtered = useMemo(() => {
@@ -23,8 +24,8 @@ export function ConsolePanel() {
     const copyText = async (text: string) => {
         try {
             await navigator.clipboard.writeText(text);
-        } catch (err) {
-            console.warn('Clipboard write failed:', err);
+        } catch (error) {
+            console.warn('Clipboard write failed:', error);
         }
     };
 
@@ -48,10 +49,10 @@ export function ConsolePanel() {
             <button
                 onClick={() => setSourceFilter(value)}
                 style={{
-                    border: `1px solid ${active ? t.border.accent : t.border.subtle}`,
                     background: active ? t.bg.selected : 'transparent',
-                    color: active ? t.text.primary : t.text.muted,
+                    border: `1px solid ${active ? t.border.accent : t.border.subtle}`,
                     borderRadius: t.radius.sm,
+                    color: active ? t.text.primary : t.text.muted,
                     cursor: 'pointer',
                     fontSize: `${11 * uiScale}px`,
                     padding: `${2 * uiScale}px ${6 * uiScale}px`,
@@ -63,19 +64,19 @@ export function ConsolePanel() {
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: t.bg.app }}>
+        <div style={{ background: t.bg.app, display: 'flex', flexDirection: 'column', height: '100%' }}>
             <div
                 style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
                     alignItems: 'center',
-                    padding: `${4 * uiScale}px ${8 * uiScale}px`,
                     background: t.bg.panel,
                     borderBottom: `1px solid ${t.border.subtle}`,
+                    display: 'flex',
                     gap: `${6 * uiScale}px`,
+                    justifyContent: 'space-between',
+                    padding: `${4 * uiScale}px ${8 * uiScale}px`,
                 }}
             >
-                <span style={{ fontWeight: 'bold', fontSize: `${11 * uiScale}px`, color: t.text.muted }}>
+                <span style={{ color: t.text.muted, fontSize: `${11 * uiScale}px`, fontWeight: 'bold' }}>
                     LOGS
                 </span>
 
@@ -87,16 +88,16 @@ export function ConsolePanel() {
 
                 <button
                     onClick={copyAll}
-                    title="Copy visible logs"
                     style={{ background: 'transparent', border: 'none', color: t.text.muted, cursor: 'pointer' }}
+                    title="Copy visible logs"
                 >
                     <Copy size={14 * uiScale} />
                 </button>
 
                 <button
                     onClick={clear}
-                    title="Clear Console"
                     style={{ background: 'transparent', border: 'none', color: t.text.muted, cursor: 'pointer' }}
+                    title="Clear Console"
                 >
                     <Trash2 size={14 * uiScale} />
                 </button>
@@ -106,55 +107,55 @@ export function ConsolePanel() {
                 className="zerith-scrollbar"
                 style={{
                     flex: 1,
-                    overflowY: 'auto',
-                    padding: `${8 * uiScale}px`,
                     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
                     fontSize: `${12 * uiScale}px`,
+                    overflowY: 'auto',
+                    padding: `${8 * uiScale}px`,
                 }}
             >
                 {filtered.length === 0 && <div style={{ color: t.text.faint, fontStyle: 'italic' }}>No logs yet...</div>}
 
-                {filtered.map((msg) => (
+                {filtered.map((message) => (
                     <div
-                        key={msg.id}
+                        key={message.id}
                         style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'auto 1fr auto',
-                            gap: '8px',
-                            marginBottom: '4px',
-                            color: getColor(msg.type),
-                            borderBottom: `1px solid ${t.bg.panel}`,
-                            paddingBottom: '4px',
                             alignItems: 'start',
+                            borderBottom: `1px solid ${t.bg.panel}`,
+                            color: getColor(message.type),
+                            display: 'grid',
+                            gap: '8px',
+                            gridTemplateColumns: 'auto 1fr auto',
+                            marginBottom: '4px',
+                            paddingBottom: '4px',
                         }}
                     >
                         <span style={{ opacity: 0.5, whiteSpace: 'nowrap' }}>
-                            [{msg.timestamp.toLocaleTimeString()}]
+                            [{message.timestamp.toLocaleTimeString()}]
                         </span>
 
                         <span
                             style={{
-                                wordBreak: 'break-word',
-                                whiteSpace: 'pre-wrap',
                                 userSelect: 'text',
                                 WebkitUserSelect: 'text',
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
                             }}
                         >
-                            [{msg.source}] {msg.text}
+                            [{message.source}] {message.text}
                         </span>
 
                         <button
                             onClick={() =>
-                                copyText(`[${msg.timestamp.toLocaleTimeString()}][${msg.source}][${msg.type}] ${msg.text}`)
+                                copyText(`[${message.timestamp.toLocaleTimeString()}][${message.source}][${message.type}] ${message.text}`)
                             }
-                            title="Copy line"
                             style={{ background: 'transparent', border: 'none', color: t.text.muted, cursor: 'pointer' }}
+                            title="Copy line"
                         >
                             <Copy size={12 * uiScale} />
                         </button>
                     </div>
                 ))}
-                <div ref={endRef} />
+                <div ref={endReference} />
             </div>
         </div>
     );

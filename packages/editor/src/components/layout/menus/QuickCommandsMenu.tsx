@@ -1,49 +1,51 @@
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import { getAllPlugins } from '../../../plugins/commandPlugins';
 import { useMemo, useRef } from 'react';
-import { useDismissiblePopup } from '../../../hooks/useDismissiblePopup';
-import { editorTheme as t } from '../../../theme/editorTheme';
+
 import type { NonMacroEditorCommandType } from '../../../plugins/types';
 
+import { useDismissiblePopup } from '../../../hooks/useDismissiblePopup';
+import { getAllPlugins } from '../../../plugins/commandPlugins';
+import { editorTheme as t } from '../../../theme/editorTheme';
+
 export function QuickCommandsMenu({
-                                      uiScale,
-                                      open,
+                                      moveQuickCommandType,
                                       onClose,
+                                      open,
                                       quickCommandTypes,
                                       toggleQuickCommandType,
-                                      moveQuickCommandType,
+                                      uiScale,
                                   }: {
-    uiScale: number;
-    open: boolean;
+    moveQuickCommandType: (type: NonMacroEditorCommandType, direction: 'left' | 'right') => void;
     onClose: () => void;
+    open: boolean;
     quickCommandTypes: NonMacroEditorCommandType[];
     toggleQuickCommandType: (type: NonMacroEditorCommandType) => void;
-    moveQuickCommandType: (type: NonMacroEditorCommandType, direction: 'left' | 'right') => void;
+    uiScale: number;
 }) {
     const allPlugins = useMemo(() => getAllPlugins(), []);
-    const rootRef = useRef<HTMLDivElement>(null);
+    const rootReference = useRef<HTMLDivElement>(null);
 
-    useDismissiblePopup(open, rootRef, onClose);
+    useDismissiblePopup(open, rootReference, onClose);
 
     if (!open) return null;
 
     return (
         <div
-            ref={rootRef}
             className="zerith-scrollbar"
+            ref={rootReference}
             style={{
-                position: 'absolute',
-                top: `${42 * uiScale}px`,
-                left: `${220 * uiScale}px`,
-                width: `${420 * uiScale}px`,
-                maxHeight: `${360 * uiScale}px`,
-                overflowY: 'auto',
                 background: t.bg.popup,
                 border: `1px solid ${t.border.normal}`,
                 borderRadius: t.radius.lg,
-                zIndex: 2000,
                 boxShadow: t.shadow.popupStrong,
+                left: `${220 * uiScale}px`,
+                maxHeight: `${360 * uiScale}px`,
+                overflowY: 'auto',
                 padding: `${10 * uiScale}px`,
+                position: 'absolute',
+                top: `${42 * uiScale}px`,
+                width: `${420 * uiScale}px`,
+                zIndex: 2000,
             }}
         >
             <div style={{ color: '#aaa', fontSize: '0.8em', marginBottom: `${8 * uiScale}px` }}>
@@ -57,27 +59,27 @@ export function QuickCommandsMenu({
                     <div
                         key={p.type}
                         style={{
-                            display: 'grid',
-                            gridTemplateColumns: '1fr auto auto auto',
-                            gap: `${6 * uiScale}px`,
                             alignItems: 'center',
-                            padding: `${6 * uiScale}px`,
-                            borderRadius: '4px',
                             background: active ? t.bg.hover : 'transparent',
+                            borderRadius: '4px',
+                            display: 'grid',
+                            gap: `${6 * uiScale}px`,
+                            gridTemplateColumns: '1fr auto auto auto',
+                            padding: `${6 * uiScale}px`,
                         }}
                     >
                         <button
                             onClick={() => toggleQuickCommandType(p.type)}
                             style={{
-                                display: 'flex',
                                 alignItems: 'center',
-                                gap: `${8 * uiScale}px`,
                                 background: 'transparent',
                                 border: 'none',
                                 color: active ? t.text.primary : t.text.muted,
-                                textAlign: 'left',
                                 cursor: 'pointer',
+                                display: 'flex',
+                                gap: `${8 * uiScale}px`,
                                 padding: 0,
+                                textAlign: 'left',
                             }}
                         >
                             {p.icon(14 * uiScale)}
@@ -93,8 +95,8 @@ export function QuickCommandsMenu({
                                 border: 'none',
                                 color: '#aaa',
                                 cursor: active ? 'pointer' : 'not-allowed',
-                                padding: `${4 * uiScale}px`,
                                 opacity: active ? 1 : 0.35,
+                                padding: `${4 * uiScale}px`,
                             }}
                             title="Move left"
                         >
@@ -109,8 +111,8 @@ export function QuickCommandsMenu({
                                 border: 'none',
                                 color: '#aaa',
                                 cursor: active ? 'pointer' : 'not-allowed',
-                                padding: `${4 * uiScale}px`,
                                 opacity: active ? 1 : 0.35,
+                                padding: `${4 * uiScale}px`,
                             }}
                             title="Move right"
                         >

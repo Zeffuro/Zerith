@@ -1,31 +1,32 @@
 import { sound } from '@pixi/sound';
+
 import type { Token } from '../../utils/TextParser';
 
 export interface TypewriterRunOptions {
-    tokens: Token[];
-    initialSpeed: number;
     blipUrl?: string;
-    signal: AbortSignal;
     consumeSkip: () => boolean;
-    getMessageText: () => string;
-    setMessageText: (text: string) => void;
-    getVoiceVolume: () => number;
     createPromptBlinker: () => { destroy: () => void };
+    getMessageText: () => string;
+    getVoiceVolume: () => number;
+    initialSpeed: number;
+    setMessageText: (text: string) => void;
+    signal: AbortSignal;
+    tokens: Token[];
     waitForPromptInput: (signal: AbortSignal) => Promise<void>;
 }
 
 export class TypewriterController {
     public async run(options: TypewriterRunOptions): Promise<void> {
         const {
-            tokens,
-            initialSpeed,
             blipUrl,
-            signal,
             consumeSkip,
-            getMessageText,
-            setMessageText,
-            getVoiceVolume,
             createPromptBlinker,
+            getMessageText,
+            getVoiceVolume,
+            initialSpeed,
+            setMessageText,
+            signal,
+            tokens,
             waitForPromptInput,
         } = options;
 
@@ -68,74 +69,15 @@ export class TypewriterController {
 
             if (token.type === 'text') {
                 await this.typeText({
-                    text: token.val,
-                    speed,
                     blipUrl,
-                    signal,
                     consumeSkip,
                     getMessageText,
-                    setMessageText,
                     getVoiceVolume,
+                    setMessageText,
+                    signal,
+                    speed,
+                    text: token.val,
                 });
-            }
-        }
-    }
-
-    private async typeText(options: {
-        text: string;
-        speed: number;
-        blipUrl?: string;
-        signal: AbortSignal;
-        consumeSkip: () => boolean;
-        getMessageText: () => string;
-        setMessageText: (text: string) => void;
-        getVoiceVolume: () => number;
-    }) {
-        const {
-            text,
-            speed,
-            blipUrl,
-            signal,
-            consumeSkip,
-            getMessageText,
-            setMessageText,
-            getVoiceVolume,
-        } = options;
-
-        let current = getMessageText();
-        let i = 0;
-
-        while (i < text.length) {
-            if (signal.aborted) return;
-
-            if (consumeSkip()) {
-                current += text.slice(i);
-                setMessageText(current);
-                return;
-            }
-
-            if (text[i] === '<') {
-                const end = text.indexOf('>', i);
-                if (end === -1) {
-                    current += text.slice(i);
-                    i = text.length;
-                } else {
-                    current += text.slice(i, end + 1);
-                    i = end + 1;
-                }
-            } else {
-                const ch = text[i];
-                current += ch;
-
-                if (blipUrl && ch !== ' ' && ch !== '\n' && sound.exists(blipUrl)) {
-                    sound.play(blipUrl, { volume: 0.1 * getVoiceVolume() });
-                }
-                i++;
-            }
-
-            setMessageText(current);
-            if (speed > 0) {
-                await this.delay(speed, signal);
             }
         }
     }
@@ -156,6 +98,65 @@ export class TypewriterController {
 
             signal.addEventListener('abort', onAbort, { once: true });
         });
+    }
+
+    private async typeText(options: {
+        blipUrl?: string;
+        consumeSkip: () => boolean;
+        getMessageText: () => string;
+        getVoiceVolume: () => number;
+        setMessageText: (text: string) => void;
+        signal: AbortSignal;
+        speed: number;
+        text: string;
+    }) {
+        const {
+            blipUrl,
+            consumeSkip,
+            getMessageText,
+            getVoiceVolume,
+            setMessageText,
+            signal,
+            speed,
+            text,
+        } = options;
+
+        let current = getMessageText();
+        let index = 0;
+
+        while (index < text.length) {
+            if (signal.aborted) return;
+
+            if (consumeSkip()) {
+                current += text.slice(index);
+                setMessageText(current);
+                return;
+            }
+
+            if (text[index] === '<') {
+                const end = text.indexOf('>', index);
+                if (end === -1) {
+                    current += text.slice(index);
+                    index = text.length;
+                } else {
+                    current += text.slice(index, end + 1);
+                    index = end + 1;
+                }
+            } else {
+                const ch = text[index];
+                current += ch;
+
+                if (blipUrl && ch !== ' ' && ch !== '\n' && sound.exists(blipUrl)) {
+                    sound.play(blipUrl, { volume: 0.1 * getVoiceVolume() });
+                }
+                index++;
+            }
+
+            setMessageText(current);
+            if (speed > 0) {
+                await this.delay(speed, signal);
+            }
+        }
     }
 }
 

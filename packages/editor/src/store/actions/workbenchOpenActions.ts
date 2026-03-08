@@ -1,12 +1,13 @@
 import type { ScriptViewMode, WorkbenchTab } from '../useWorkbenchStore';
-import { useWorkbenchStore } from '../useWorkbenchStore';
 
-export type WorkbenchOpenAction = 'openTab' | 'setScriptView' | 'setMacrosView';
+import { useWorkbenchStore } from '../useWorkbenchStore';
 
 export type ExecuteWorkbenchOpenActionOptions =
     | { action: 'openTab'; tab: WorkbenchTab }
-    | { action: 'setScriptView'; view: ScriptViewMode }
-    | { action: 'setMacrosView'; view: ScriptViewMode };
+    | { action: 'setMacrosView'; view: ScriptViewMode }
+    | { action: 'setScriptView'; view: ScriptViewMode };
+
+export type WorkbenchOpenAction = 'openTab' | 'setMacrosView' | 'setScriptView';
 
 export function executeWorkbenchOpenAction(options: ExecuteWorkbenchOpenActionOptions): void {
     const workbench = useWorkbenchStore.getState();
@@ -24,13 +25,13 @@ export function executeWorkbenchOpenAction(options: ExecuteWorkbenchOpenActionOp
     workbench.setLastMacrosView(options.view);
 }
 
-export function getPreferredScriptView(fallback?: ScriptViewMode): ScriptViewMode {
-    const workbench = useWorkbenchStore.getState();
-    return fallback ?? workbench.lastScriptView;
-}
-
 export function getPreferredMacrosView(fallback?: ScriptViewMode): ScriptViewMode {
     const workbench = useWorkbenchStore.getState();
     return fallback ?? workbench.lastMacrosView;
+}
+
+export function getPreferredScriptView(fallback?: ScriptViewMode): ScriptViewMode {
+    const workbench = useWorkbenchStore.getState();
+    return fallback ?? workbench.lastScriptView;
 }
 

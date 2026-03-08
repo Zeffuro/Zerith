@@ -1,22 +1,23 @@
+import type { ScriptPath } from '../../utils/scriptPathUtils';
+
 import { createDefaultCommand } from '../../plugins/commandPlugins';
 import { useEditorStore } from '../useEditorStore';
 import { useScriptStore } from '../useScriptStore';
-import type { ScriptPath } from '../../utils/scriptPathUtils';
-
-export type TimelineContextAction =
-    | 'copy'
-    | 'paste'
-    | 'duplicate'
-    | 'delete'
-    | 'playFrom'
-    | 'addAfter';
 
 export interface ExecuteTimelineContextActionOptions {
     action: TimelineContextAction;
     path: ScriptPath;
-    requestDelete: (paths: ScriptPath[], source?: 'keyboard' | 'click') => void;
+    requestDelete: (paths: ScriptPath[], source?: 'click' | 'keyboard') => void;
     triggerPlayFrom: (index: number) => void;
 }
+
+export type TimelineContextAction =
+    | 'addAfter'
+    | 'copy'
+    | 'delete'
+    | 'duplicate'
+    | 'paste'
+    | 'playFrom';
 
 export function executeTimelineContextAction(options: ExecuteTimelineContextActionOptions): void {
     const { action, path, requestDelete, triggerPlayFrom } = options;
@@ -25,6 +26,15 @@ export function executeTimelineContextAction(options: ExecuteTimelineContextActi
     const editorState = useEditorStore.getState();
 
     switch (action) {
+        case 'addAfter': {
+            const parent = path.slice(0, -1);
+            const index = path.at(-1);
+            if (typeof index !== 'number') break;
+            const newNode = createDefaultCommand('dialogue');
+            scriptState.addNodeAtPath(parent, newNode, index + 1);
+            break;
+        }
+
         case 'copy': {
             const node = scriptState.getNodeAtPath(path);
             if (node !== undefined) {
@@ -37,10 +47,8 @@ export function executeTimelineContextAction(options: ExecuteTimelineContextActi
             break;
         }
 
-        case 'paste': {
-            const clip = editorState.clipboardNode;
-            if (!clip) break;
-            scriptState.pasteNodeAtPath(path, clip);
+        case 'delete': {
+            requestDelete([path], 'click');
             break;
         }
 
@@ -49,8 +57,10 @@ export function executeTimelineContextAction(options: ExecuteTimelineContextActi
             break;
         }
 
-        case 'delete': {
-            requestDelete([path], 'click');
+        case 'paste': {
+            const clip = editorState.clipboardNode;
+            if (!clip) break;
+            scriptState.pasteNodeAtPath(path, clip);
             break;
         }
 
@@ -58,15 +68,6 @@ export function executeTimelineContextAction(options: ExecuteTimelineContextActi
             if (path.length === 1 && typeof path[0] === 'number') {
                 triggerPlayFrom(path[0]);
             }
-            break;
-        }
-
-        case 'addAfter': {
-            const parent = path.slice(0, -1);
-            const idx = path[path.length - 1];
-            if (typeof idx !== 'number') break;
-            const newNode = createDefaultCommand('dialogue');
-            scriptState.addNodeAtPath(parent, newNode, idx + 1);
             break;
         }
     }

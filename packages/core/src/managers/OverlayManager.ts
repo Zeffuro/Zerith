@@ -1,52 +1,65 @@
 import { Container, Graphics, Text } from 'pixi.js';
+
 import type { Engine } from '../Engine';
 import type { MenuPanel } from '../types';
-import { createButton, registerFocusableButton, type UIContext } from '../ui/UIComponents';
+
 import { PanelFocusManager } from '../ui/PanelFocusManager';
+import { createButton, registerFocusableButton, type UIContext } from '../ui/UIComponents';
 
 export interface OverlayConfig {
-    backgroundColor?: number;
     backgroundAlpha?: number;
-    buttonColor?: number;
+    backgroundColor?: number;
     buttonAlpha?: number;
-    buttonHoverColor?: number;
-    buttonWidth?: number;
+    buttonColor?: number;
     buttonHeight?: number;
+    buttonHoverColor?: number;
     buttonSpacing?: number;
-    fontSize?: number;
+    buttonWidth?: number;
     fontFamily?: string;
+    fontSize?: number;
     textColor?: number;
     uiScale?: number;
 }
 
 export class OverlayManager {
-    private readonly engine: Engine;
     public config: Required<OverlayConfig>;
-    private container: Container | null = null;
-    private panelContainer: Container | null = null;
-    private _isOpen = false;
-    private panels: MenuPanel[] = [];
+    public get focus(): PanelFocusManager {
+        if (!this._focus) {
+            this._focus = new PanelFocusManager();
+        }
+        return this._focus;
+    }
+    public get isOpen(): boolean {
+        return this._isOpen;
+    }
     private _activeCleanup: (() => void) | null = null;
-    private _focus: PanelFocusManager | null = null;
-    private _onNavigate: ((dir: string) => void) | null = null;
-    private _onConfirm: (() => void) | null = null;
+    private _focus: null | PanelFocusManager = null;
+    private _isOpen = false;
     private _onBack: (() => void) | null = null;
-    private sceneLoadingText: Text | null = null;
+    private _onConfirm: (() => void) | null = null;
+    private _onNavigate: ((dir: string) => void) | null = null;
+    private container: Container | null = null;
+    private readonly engine: Engine;
+    private panelContainer: Container | null = null;
+
+    private panels: MenuPanel[] = [];
+
+    private sceneLoadingText: null | Text = null;
 
     constructor(engine: Engine, config: OverlayConfig = {}) {
         this.engine = engine;
         this.config = {
-            backgroundColor: 0x000000,
             backgroundAlpha: 0.85,
-            buttonColor: 0x222244,
+            backgroundColor: 0x00_00_00,
             buttonAlpha: 0.9,
-            buttonHoverColor: 0x333399,
-            buttonWidth: 300,
+            buttonColor: 0x22_22_44,
             buttonHeight: 50,
+            buttonHoverColor: 0x33_33_99,
             buttonSpacing: 12,
-            fontSize: 22,
+            buttonWidth: 300,
             fontFamily: 'Courier New',
-            textColor: 0xffffff,
+            fontSize: 22,
+            textColor: 0xFF_FF_FF,
             uiScale: 1,
             ...config
         };
@@ -56,33 +69,60 @@ export class OverlayManager {
         this.engine.events.on('scene:loaded', () => this.hideSceneLoading());
     }
 
+    public close() {
+        if (!this._isOpen) return;
+        this._isOpen = false;
+        this.unsubscribeInput();
+        this.clearAll();
+    }
+
+    public closePanel() {
+        if (this._activeCleanup) {
+            this._activeCleanup();
+            this._activeCleanup = null;
+        }
+        if (this.panelContainer) {
+            this.panelContainer.destroy({ children: true });
+            this.panelContainer = null;
+        }
+    }
+
+    public createButton(label: string, x: number, y: number, action: () => void): Container {
+        return createButton(this.getUIContext(), { label, x, y }, action);
+    }
+
+    public createPanelBase(): Container {
+        const w = this.engine.display.width;
+        const h = this.engine.display.height;
+
+        const root = new Container();
+        root.eventMode = 'static';
+
+        const bg = new Graphics()
+            .rect(0, 0, w, h)
+            .fill({ alpha: 0.95, color: this.config.backgroundColor });
+        bg.eventMode = 'static';
+        bg.on('pointerdown', (e: any) => e.stopPropagation());
+        root.addChild(bg);
+
+        return root;
+    }
+
     public getUIContext(): UIContext {
         return {
-            theme: this.engine.theme,
-            overlayConfig: this.config,
-            canvasWidth: this.engine.display.width,
             canvasHeight: this.engine.display.height,
+            canvasWidth: this.engine.display.width,
             getCanvasRect: () => this.engine.app.canvas.getBoundingClientRect(),
+            overlayConfig: this.config,
+            theme: this.engine.theme,
         };
     }
 
-    public get isOpen(): boolean {
-        return this._isOpen;
-    }
-
-    public get focus(): PanelFocusManager {
-        if (!this._focus) {
-            this._focus = new PanelFocusManager();
-        }
-        return this._focus;
-    }
-
-    public setFocus(fm: PanelFocusManager) {
-        this._focus = fm;
-    }
-
-    public scale(value: number): number {
-        return Math.round(value * this.config.uiScale);
+    public open() {
+        if (this._isOpen) return;
+        this._isOpen = true;
+        this.subscribeInput();
+        this.showMainMenu();
     }
 
     public registerPanel(panel: MenuPanel) {
@@ -95,27 +135,134 @@ export class OverlayManager {
         this.panels = this.panels.filter(p => p.id !== id);
     }
 
+    public scale(value: number): number {
+        return Math.round(value * this.config.uiScale);
+    }
+
+    public setFocus(fm: PanelFocusManager) {
+        this._focus = fm;
+    }
+
+    public showPanel(panel: MenuPanel) {
+        this.closePanel();
+        if (this.container) this.container.visible = false;
+
+        this._focus = new PanelFocusManager();
+
+        const onClose = () => {
+            this.closePanel();
+            if (this.container) this.container.visible = true;
+            this.rebuildMainMenuFocus();
+        };
+
+        this._focus.onBack = onClose;
+
+        const { cleanup, container } = panel.build(this.engine, onClose);
+
+        this.panelContainer = container;
+        this._activeCleanup = cleanup ?? null;
+        this.engine.layers.overlay.addChild(this.panelContainer);
+
+        this._focus.focusInitial(0);
+    }
+
     public toggle() {
         this._isOpen ? this.close() : this.open();
     }
 
-    public open() {
-        if (this._isOpen) return;
-        this._isOpen = true;
-        this.subscribeInput();
+    private clearAll() {
+        this.closePanel();
+        if (this.container) {
+            this.container.destroy({ children: true });
+            this.container = null;
+        }
+        this.hideSceneLoading();
+    }
+
+    private hideSceneLoading() {
+        if (!this.sceneLoadingText) return;
+        this.sceneLoadingText.destroy();
+        this.sceneLoadingText = null;
+    }
+
+    private rebuildMainMenuFocus() {
         this.showMainMenu();
     }
 
-    public close() {
-        if (!this._isOpen) return;
-        this._isOpen = false;
-        this.unsubscribeInput();
+    private showMainMenu() {
         this.clearAll();
+
+        const context = this.getUIContext();
+        const w = context.canvasWidth;
+        const h = context.canvasHeight;
+
+        this.container = new Container();
+        this.container.eventMode = 'static';
+
+        const bg = new Graphics()
+            .rect(0, 0, w, h)
+            .fill({ alpha: this.config.backgroundAlpha, color: this.config.backgroundColor });
+        bg.eventMode = 'static';
+        bg.on('pointerdown', (e: any) => e.stopPropagation());
+        this.container.addChild(bg);
+
+        const title = new Text({
+            style: {
+                fill: this.config.textColor,
+                fontFamily: this.config.fontFamily,
+                fontSize: this.config.fontSize + 10,
+                fontWeight: 'bold'
+            },
+            text: 'PAUSED'
+        });
+        title.anchor.set(0.5);
+        title.position.set(w / 2, h * 0.15);
+        this.container.addChild(title);
+
+        const buttons: { action: () => void; label: string; }[] = [];
+        for (const panel of this.panels) {
+            buttons.push({ action: () => this.showPanel(panel), label: panel.label });
+        }
+        buttons.push({ action: () => this.close(), label: 'Resume' });
+
+        this._focus = new PanelFocusManager();
+        this._focus.onBack = () => this.close();
+
+        const totalHeight = buttons.length * (this.config.buttonHeight + this.config.buttonSpacing);
+        let y = (h / 2) - (totalHeight / 2);
+
+        for (const { action, label } of buttons) {
+            const button = createButton(context, { label, x: w / 2, y }, action);
+            this.container.addChild(button);
+            registerFocusableButton(context, this._focus, button, action);
+            y += this.config.buttonHeight + this.config.buttonSpacing;
+        }
+
+        this._focus.focusInitial(0);
+        this.engine.layers.overlay.addChild(this.container);
+    }
+
+    private showSceneLoading(sceneName: string) {
+        this.hideSceneLoading();
+
+        const label = sceneName ? `Loading ${sceneName}...` : 'Loading...';
+        const loadingText = new Text({
+            style: {
+                fill: this.config.textColor,
+                fontFamily: this.config.fontFamily,
+                fontSize: this.scale(16)
+            },
+            text: label
+        });
+        loadingText.anchor.set(1, 1);
+        loadingText.position.set(this.engine.display.width - this.scale(20), this.engine.display.height - this.scale(20));
+        this.sceneLoadingText = loadingText;
+        this.engine.layers.overlay.addChild(loadingText);
     }
 
     private subscribeInput() {
         this._onNavigate = (dir: string) => {
-            this._focus?.navigate(dir as 'up' | 'down' | 'left' | 'right');
+            this._focus?.navigate(dir as 'down' | 'left' | 'right' | 'up');
         };
         this._onConfirm = () => {
             this._focus?.confirm();
@@ -142,150 +289,5 @@ export class OverlayManager {
             this._onBack = null;
         }
         this._focus = null;
-    }
-
-    private clearAll() {
-        this.closePanel();
-        if (this.container) {
-            this.container.destroy({ children: true });
-            this.container = null;
-        }
-        this.hideSceneLoading();
-    }
-
-    public closePanel() {
-        if (this._activeCleanup) {
-            this._activeCleanup();
-            this._activeCleanup = null;
-        }
-        if (this.panelContainer) {
-            this.panelContainer.destroy({ children: true });
-            this.panelContainer = null;
-        }
-    }
-
-    public showPanel(panel: MenuPanel) {
-        this.closePanel();
-        if (this.container) this.container.visible = false;
-
-        this._focus = new PanelFocusManager();
-
-        const onClose = () => {
-            this.closePanel();
-            if (this.container) this.container.visible = true;
-            this.rebuildMainMenuFocus();
-        };
-
-        this._focus.onBack = onClose;
-
-        const { container, cleanup } = panel.build(this.engine, onClose);
-
-        this.panelContainer = container;
-        this._activeCleanup = cleanup ?? null;
-        this.engine.layers.overlay.addChild(this.panelContainer);
-
-        this._focus.focusInitial(0);
-    }
-
-    private showMainMenu() {
-        this.clearAll();
-
-        const ctx = this.getUIContext();
-        const w = ctx.canvasWidth;
-        const h = ctx.canvasHeight;
-
-        this.container = new Container();
-        this.container.eventMode = 'static';
-
-        const bg = new Graphics()
-            .rect(0, 0, w, h)
-            .fill({ color: this.config.backgroundColor, alpha: this.config.backgroundAlpha });
-        bg.eventMode = 'static';
-        bg.on('pointerdown', (e: any) => e.stopPropagation());
-        this.container.addChild(bg);
-
-        const title = new Text({
-            text: 'PAUSED',
-            style: {
-                fill: this.config.textColor,
-                fontSize: this.config.fontSize + 10,
-                fontFamily: this.config.fontFamily,
-                fontWeight: 'bold'
-            }
-        });
-        title.anchor.set(0.5);
-        title.position.set(w / 2, h * 0.15);
-        this.container.addChild(title);
-
-        const buttons: { label: string; action: () => void }[] = [];
-        for (const panel of this.panels) {
-            buttons.push({ label: panel.label, action: () => this.showPanel(panel) });
-        }
-        buttons.push({ label: 'Resume', action: () => this.close() });
-
-        this._focus = new PanelFocusManager();
-        this._focus.onBack = () => this.close();
-
-        const totalHeight = buttons.length * (this.config.buttonHeight + this.config.buttonSpacing);
-        let y = (h / 2) - (totalHeight / 2);
-
-        buttons.forEach(({ label, action }) => {
-            const btn = createButton(ctx, { label, x: w / 2, y }, action);
-            this.container!.addChild(btn);
-            registerFocusableButton(ctx, this._focus!, btn, action);
-            y += this.config.buttonHeight + this.config.buttonSpacing;
-        });
-
-        this._focus.focusInitial(0);
-        this.engine.layers.overlay.addChild(this.container);
-    }
-
-    private rebuildMainMenuFocus() {
-        this.showMainMenu();
-    }
-
-    public createPanelBase(): Container {
-        const w = this.engine.display.width;
-        const h = this.engine.display.height;
-
-        const root = new Container();
-        root.eventMode = 'static';
-
-        const bg = new Graphics()
-            .rect(0, 0, w, h)
-            .fill({ color: this.config.backgroundColor, alpha: 0.95 });
-        bg.eventMode = 'static';
-        bg.on('pointerdown', (e: any) => e.stopPropagation());
-        root.addChild(bg);
-
-        return root;
-    }
-
-    public createButton(label: string, x: number, y: number, action: () => void): Container {
-        return createButton(this.getUIContext(), { label, x, y }, action);
-    }
-
-    private showSceneLoading(sceneName: string) {
-        this.hideSceneLoading();
-
-        const label = sceneName ? `Loading ${sceneName}...` : 'Loading...';
-        const loadingText = new Text({
-            text: label,
-            style: {
-                fill: this.config.textColor,
-                fontFamily: this.config.fontFamily,
-                fontSize: this.scale(16)
-            }
-        });
-        loadingText.anchor.set(1, 1);
-        loadingText.position.set(this.engine.display.width - this.scale(20), this.engine.display.height - this.scale(20));
-        this.sceneLoadingText = loadingText;
-        this.engine.layers.overlay.addChild(loadingText);
-    }
-
-    private hideSceneLoading() {
-        if (!this.sceneLoadingText) return;
-        this.sceneLoadingText.destroy();
-        this.sceneLoadingText = null;
     }
 }

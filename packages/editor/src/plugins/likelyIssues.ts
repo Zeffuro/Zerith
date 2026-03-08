@@ -1,33 +1,44 @@
-function asObject(value: unknown): Record<string, unknown> | null {
-    return value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+export function hasLikelyIssue(node: unknown): boolean {
+    const object = asObject(node);
+    if (!object || typeof object.type !== 'string') return true;
+
+    switch (object.type) {
+        case 'background': {
+            return typeof object.assetUrl !== 'string' || object.assetUrl.trim() === '';
+        }
+        case 'call': {
+            return typeof object.name !== 'string' || object.name.trim() === '';
+        }
+        case 'dialogue': {
+            return typeof object.text !== 'string';
+        }
+        case 'for': {
+            return !Array.isArray(object.body);
+        }
+        case 'goto': {
+            return typeof object.label !== 'string' || object.label.trim() === '';
+        }
+        case 'if': {
+            return !Array.isArray(object.then) || !Array.isArray(object.else);
+        }
+        case 'jump': {
+            return typeof object.to !== 'string' || object.to.trim() === '';
+        }
+        case 'label': {
+            return typeof object.name !== 'string' || object.name.trim() === '';
+        }
+        case 'sfx': {
+            return typeof object.assetUrl !== 'string' || object.assetUrl.trim() === '';
+        }
+        case 'while': {
+            return !Array.isArray(object.body);
+        }
+        default: {
+            return false;
+        }
+    }
 }
 
-export function hasLikelyIssue(node: unknown): boolean {
-    const obj = asObject(node);
-    if (!obj || typeof obj.type !== 'string') return true;
-
-    switch (obj.type) {
-        case 'dialogue':
-            return typeof obj.text !== 'string';
-        case 'jump':
-            return typeof obj.to !== 'string' || obj.to.trim() === '';
-        case 'call':
-            return typeof obj.name !== 'string' || obj.name.trim() === '';
-        case 'background':
-            return typeof obj.assetUrl !== 'string' || obj.assetUrl.trim() === '';
-        case 'sfx':
-            return typeof obj.assetUrl !== 'string' || obj.assetUrl.trim() === '';
-        case 'label':
-            return typeof obj.name !== 'string' || obj.name.trim() === '';
-        case 'goto':
-            return typeof obj.label !== 'string' || obj.label.trim() === '';
-        case 'if':
-            return !Array.isArray(obj.then) || !Array.isArray(obj.else);
-        case 'while':
-            return !Array.isArray(obj.body);
-        case 'for':
-            return !Array.isArray(obj.body);
-        default:
-            return false;
-    }
+function asObject(value: unknown): null | Record<string, unknown> {
+    return value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
 }

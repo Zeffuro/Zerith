@@ -1,42 +1,43 @@
 import { Container, Graphics, Text, type TextStyleOptions } from 'pixi.js';
-import type { BaseCommand, CommandHandler } from '../types';
-import type { Engine } from '../Engine';
 
-export interface ChoiceOption {
-    label: string;
-    commands?: BaseCommand[];
-}
+import type { Engine } from '../Engine';
+import type { BaseCommand, CommandHandler } from '../types';
 
 export interface ChoiceCommand extends BaseCommand {
-    type: 'choice';
     options: ChoiceOption[];
+    type: 'choice';
 }
 
 export interface ChoiceConfig {
-    backgroundColor?: number;
     backgroundAlpha?: number;
-    selectedBackgroundColor?: number;
-    selectedBackgroundAlpha?: number;
+    backgroundColor?: number;
     borderColor?: number;
-    selectedBorderColor?: number;
     borderWidth?: number;
+    selectedBackgroundAlpha?: number;
+    selectedBackgroundColor?: number;
+    selectedBorderColor?: number;
     textStyle?: Partial<TextStyleOptions>;
 }
 
+export interface ChoiceOption {
+    commands?: BaseCommand[];
+    label: string;
+}
+
 export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
-    public type: 'choice' = 'choice';
     public autoNext = true;
+    public type: 'choice' = 'choice';
     private config: Required<ChoiceConfig>;
 
     constructor(config: ChoiceConfig = {}) {
         this.config = {
-            backgroundColor: 0x000000,
             backgroundAlpha: 0.8,
-            selectedBackgroundColor: 0x333399,
-            selectedBackgroundAlpha: 0.95,
-            borderColor: 0xffffff,
-            selectedBorderColor: 0xffaaaa,
+            backgroundColor: 0x00_00_00,
+            borderColor: 0xFF_FF_FF,
             borderWidth: 2,
+            selectedBackgroundAlpha: 0.95,
+            selectedBackgroundColor: 0x33_33_99,
+            selectedBorderColor: 0xFF_AA_AA,
             textStyle: {},
             ...config
         };
@@ -64,11 +65,11 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
                 if (newIndex >= command.options.length) newIndex = 0;
 
                 this.styleButton(backgrounds[selectedIndex], buttonWidth, buttonHeight, false);
-                buttons[selectedIndex].alpha = 1.0;
+                buttons[selectedIndex].alpha = 1;
 
                 selectedIndex = newIndex;
                 this.styleButton(backgrounds[selectedIndex], buttonWidth, buttonHeight, true);
-                buttons[selectedIndex].alpha = 1.0;
+                buttons[selectedIndex].alpha = 1;
             };
 
             const confirmSelection = () => {
@@ -85,45 +86,45 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
                 });
             };
 
-            command.options.forEach((option, index) => {
-                const btn = new Container();
-                btn.eventMode = 'static';
-                btn.cursor = 'pointer';
+            for (const [index, option] of command.options.entries()) {
+                const button = new Container();
+                button.eventMode = 'static';
+                button.cursor = 'pointer';
 
                 const bg = new Graphics();
                 this.styleButton(bg, buttonWidth, buttonHeight, index === 0);
                 backgrounds.push(bg);
 
                 const text = new Text({
-                    text: option.label,
                     style: {
-                        fontFamily: engine.theme.fontFamily,
-                        fill: 0xffffff,
-                        fontSize: engine.theme.fontSize,
                         align: 'center',
+                        fill: 0xFF_FF_FF,
+                        fontFamily: engine.theme.fontFamily,
+                        fontSize: engine.theme.fontSize,
                         ...this.config.textStyle
-                    }
+                    },
+                    text: option.label
                 });
                 text.anchor.set(0.5);
                 text.position.set(buttonWidth / 2, buttonHeight / 2);
 
-                btn.addChild(bg, text);
-                btn.position.set((w / 2) - (buttonWidth / 2), currentY);
+                button.addChild(bg, text);
+                button.position.set((w / 2) - (buttonWidth / 2), currentY);
 
-                btn.on('pointerover', () => {
+                button.on('pointerover', () => {
                     updateSelection(index);
                 });
 
-                btn.on('pointerdown', (e: any) => {
+                button.on('pointerdown', (e: any) => {
                     e.stopPropagation();
                     selectedIndex = index;
                     confirmSelection();
                 });
 
-                buttons.push(btn);
-                choiceContainer.addChild(btn);
+                buttons.push(button);
+                choiceContainer.addChild(button);
                 currentY += buttonHeight + spacing;
-            });
+            }
 
             // Subscribe to InputManager events
             const onNavigate = (direction: string) => {
@@ -151,8 +152,8 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
         bg.clear();
         bg.roundRect(0, 0, w, h, 10);
         bg.fill({
-            color: selected ? this.config.selectedBackgroundColor : this.config.backgroundColor,
-            alpha: selected ? this.config.selectedBackgroundAlpha : this.config.backgroundAlpha
+            alpha: selected ? this.config.selectedBackgroundAlpha : this.config.backgroundAlpha,
+            color: selected ? this.config.selectedBackgroundColor : this.config.backgroundColor
         });
         if (this.config.borderWidth > 0) {
             bg.stroke({

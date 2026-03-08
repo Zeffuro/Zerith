@@ -1,16 +1,33 @@
-import { Spritesheet, Texture, ImageSource } from 'pixi.js';
 import type { SpritesheetData } from 'pixi.js';
-import type { SpritesheetConfig } from '../types';
-import { applyChromaKey } from '../utils/ChromaKey';
+
+import { ImageSource, Spritesheet, Texture } from 'pixi.js';
+
 import type { AssetResolver } from '../Engine';
+import type { SpritesheetConfig } from '../types';
+
+import { applyChromaKey } from '../utils/ChromaKey';
 
 export class SpritesheetManager {
-    private sheets: Map<string, Spritesheet> = new Map();
     private loading: Map<string, Promise<Spritesheet>> = new Map();
-    private resolver: AssetResolver = (url) => url;
+    private sheets: Map<string, Spritesheet> = new Map();
+    public clear() {
+        this.sheets.clear();
+    }
 
-    public setResolver(resolver: AssetResolver) {
-        this.resolver = resolver;
+    public getFrame(atlasUrl: string, frameName: string): Texture | undefined {
+        const sheet = this.sheets.get(atlasUrl);
+        if (!sheet) return undefined;
+        return sheet.textures[frameName];
+    }
+
+    public getFrameNames(atlasUrl: string): string[] {
+        const sheet = this.sheets.get(atlasUrl);
+        if (!sheet) return [];
+        return Object.keys(sheet.textures);
+    }
+
+    public has(atlasUrl: string): boolean {
+        return this.sheets.has(atlasUrl);
     }
 
     public async load(config: SpritesheetConfig): Promise<Spritesheet> {
@@ -34,6 +51,10 @@ export class SpritesheetManager {
         }
     }
 
+    public setResolver(resolver: AssetResolver) {
+        this.resolver = resolver;
+    }
+
     private async doLoad(config: SpritesheetConfig): Promise<Spritesheet> {
         const resolvedAtlasUrl = this.resolver(config.atlasUrl);
         const response = await fetch(resolvedAtlasUrl);
@@ -42,7 +63,7 @@ export class SpritesheetManager {
         }
         const atlasData: SpritesheetData = await response.json();
 
-        const atlasDir = config.atlasUrl.substring(0, config.atlasUrl.lastIndexOf('/') + 1);
+        const atlasDir = config.atlasUrl.slice(0, Math.max(0, config.atlasUrl.lastIndexOf('/') + 1));
         const imageName = atlasData.meta?.image ?? '';
         const imagePath = imageName.startsWith('/') ? imageName : atlasDir + imageName;
 
@@ -65,33 +86,15 @@ export class SpritesheetManager {
         return sheet;
     }
 
-    public getFrame(atlasUrl: string, frameName: string): Texture | undefined {
-        const sheet = this.sheets.get(atlasUrl);
-        if (!sheet) return undefined;
-        return sheet.textures[frameName];
-    }
-
-    public getFrameNames(atlasUrl: string): string[] {
-        const sheet = this.sheets.get(atlasUrl);
-        if (!sheet) return [];
-        return Object.keys(sheet.textures);
-    }
-
-    public has(atlasUrl: string): boolean {
-        return this.sheets.has(atlasUrl);
-    }
-
-    public clear() {
-        this.sheets.clear();
-    }
-
     private loadImage(url: string): Promise<HTMLImageElement> {
         return new Promise((resolve, reject) => {
             const img = new Image();
             img.crossOrigin = 'anonymous';
-            img.onload = () => resolve(img);
+            img.addEventListener('load', () => resolve(img));
             img.onerror = () => reject(new Error(`Failed to load image: ${url}`));
             img.src = url;
         });
     }
+
+    private resolver: AssetResolver = (url) => url;
 }

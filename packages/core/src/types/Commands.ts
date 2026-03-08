@@ -24,20 +24,20 @@ export const BuiltInCommandTypes = [
     'item',
 ] as const;
 
-export type CommandType = (typeof BuiltInCommandTypes)[number];
-export type SceneNavigationCommandType = Extract<CommandType, 'jump' | 'scene_change'>;
-
 export interface BaseCommand {
-    type: CommandType;
     [key: string]: any;
-}
-
-export interface CommandHandler<TCmd extends BaseCommand = BaseCommand> {
     type: CommandType;
+}
+export interface CommandHandler<TCmd extends BaseCommand = BaseCommand> {
     autoNext?: boolean;
     execute: (command: TCmd, engine: Engine) => Promise<void>;
     reset?: () => void;
+    type: CommandType;
 }
 
-export type Script = BaseCommand[];
+export type CommandType = (typeof BuiltInCommandTypes)[number];
+
 export type SceneMap = Record<string, Script>;
+
+export type SceneNavigationCommandType = Extract<CommandType, 'jump' | 'scene_change'>;
+export type Script = BaseCommand[];

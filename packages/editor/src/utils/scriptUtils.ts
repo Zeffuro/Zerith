@@ -1,4 +1,4 @@
-export const getNestedArray = (root: any[], path: (string | number)[]): any[] => {
+export const getNestedArray = (root: any[], path: (number | string)[]): any[] => {
     let current: any = root;
     for (const key of path) {
         if (current && typeof current === 'object' && key in current) {
@@ -10,19 +10,19 @@ export const getNestedArray = (root: any[], path: (string | number)[]): any[] =>
     return Array.isArray(current) ? current : [];
 };
 
-export const updateDeepScript = (root: any[], path: (string | number)[], newSubArray: any[]): any[] => {
+export const updateDeepScript = (root: any[], path: (number | string)[], newSubArray: any[]): any[] => {
     if (path.length === 0) return newSubArray;
 
     const newRoot = [...root];
     let current: any = newRoot;
 
-    for (let i = 0; i < path.length - 1; i++) {
-        const key = path[i];
+    for (let index = 0; index < path.length - 1; index++) {
+        const key = path[index];
         current[key] = Array.isArray(current[key]) ? [...current[key]] : { ...current[key] };
         current = current[key];
     }
 
-    const lastKey = path[path.length - 1];
+    const lastKey = path.at(-1);
     current[lastKey] = newSubArray;
     return newRoot;
 };

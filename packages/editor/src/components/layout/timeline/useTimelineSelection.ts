@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
+
 import type { ScriptPath } from '../../../utils/scriptPathUtils';
-import { useEditorStore } from '../../../store/useEditorStore';
+
 import { executeTimelineNodeClickSelectionAction } from '../../../store/actions/timelineSelectionActions';
+import { useEditorStore } from '../../../store/useEditorStore';
 
 export function useTimelineSelection() {
     const selectedNodePaths = useEditorStore(state => state.selectedNodePaths);
@@ -13,11 +15,11 @@ export function useTimelineSelection() {
 
     const onNodeClick = (e: React.MouseEvent, nodePath: ScriptPath) => {
         executeTimelineNodeClickSelectionAction({
-            nodePath,
             mod: e.metaKey || e.ctrlKey,
+            nodePath,
             shift: e.shiftKey,
         });
     };
 
-    return { selectedNodePaths, selectedKeys, onNodeClick };
+    return { onNodeClick, selectedKeys, selectedNodePaths };
 }

@@ -2,34 +2,19 @@ import { sound } from '@pixi/sound';
 
 export interface AudioConfig {
     bgmVolume?: number;
-    sfxVolume?: number;
-    voiceVolume?: number;
     masterVolume?: number;
     muted?: boolean;
+    sfxVolume?: number;
+    voiceVolume?: number;
 }
 
 export class AudioManager {
     public bgmVolume: number;
-    public sfxVolume: number;
-    public voiceVolume: number;
+    public currentBgmUrl: null | string = null;
     public masterVolume: number;
+    public sfxVolume: number;
 
-    private _muted: boolean = false;
-
-    public currentBgmUrl: string | null = null;
-
-    constructor(config: AudioConfig = {}) {
-        this.bgmVolume = config.bgmVolume ?? 1.0;
-        this.sfxVolume = config.sfxVolume ?? 1.0;
-        this.voiceVolume = config.voiceVolume ?? 1.0;
-        this.masterVolume = config.masterVolume ?? 1.0;
-        this._muted = config.muted ?? false;
-    }
-
-    public init() {
-        sound.init();
-        this.updateSystemVolume();
-    }
+    public voiceVolume: number;
 
     public get muted(): boolean {
         return this._muted;
@@ -40,31 +25,56 @@ export class AudioManager {
         this.updateSystemVolume();
     }
 
+    private _muted: boolean = false;
+
+    constructor(config: AudioConfig = {}) {
+        this.bgmVolume = config.bgmVolume ?? 1;
+        this.sfxVolume = config.sfxVolume ?? 1;
+        this.voiceVolume = config.voiceVolume ?? 1;
+        this.masterVolume = config.masterVolume ?? 1;
+        this._muted = config.muted ?? false;
+    }
+
+    public destroy() {
+        sound.stopAll();
+        sound.removeAll();
+    }
+
+    public getVolumes(): Required<AudioConfig> {
+        return {
+            bgmVolume: this.bgmVolume,
+            masterVolume: this.masterVolume,
+            muted: this._muted,
+            sfxVolume: this.sfxVolume,
+            voiceVolume: this.voiceVolume
+        };
+    }
+
+    public init() {
+        sound.init();
+        this.updateSystemVolume();
+    }
+
     public setMasterVolume(v: number) {
         this.masterVolume = v;
         this.updateSystemVolume();
     }
 
-    private updateSystemVolume() {
-        if (this._muted) {
-            sound.volumeAll = 0;
-        } else {
-            sound.volumeAll = this.masterVolume;
-        }
-    }
-
     public setVolume(channel: 'bgm' | 'sfx' | 'voice', v: number) {
         switch (channel) {
-            case 'bgm':
+            case 'bgm': {
                 this.bgmVolume = v;
                 this.applyBgmVolume();
                 break;
-            case 'sfx':
+            }
+            case 'sfx': {
                 this.sfxVolume = v;
                 break;
-            case 'voice':
+            }
+            case 'voice': {
                 this.voiceVolume = v;
                 break;
+            }
         }
     }
 
@@ -76,18 +86,7 @@ export class AudioManager {
         }
     }
 
-    public getVolumes(): Required<AudioConfig> {
-        return {
-            bgmVolume: this.bgmVolume,
-            sfxVolume: this.sfxVolume,
-            voiceVolume: this.voiceVolume,
-            masterVolume: this.masterVolume,
-            muted: this._muted
-        };
-    }
-
-    public destroy() {
-        sound.stopAll();
-        sound.removeAll();
+    private updateSystemVolume() {
+        sound.volumeAll = this._muted ? 0 : this.masterVolume;
     }
 }

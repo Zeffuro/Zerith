@@ -1,19 +1,19 @@
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 
-export function SetInspector({ node, index }: { node: any; index?: number | null }) {
-    const { labelStyle, handleChange, getFieldErrors, getFieldInputStyle } = useInspectorFieldEditor(index);
+export function SetInspector({ index, node }: { index?: null | number; node: any; }) {
+    const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle } = useInspectorFieldEditor(index);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
                 <label style={labelStyle}>Key</label>
                 <input
-                    type="text"
-                    value={node.key || ''}
                     onChange={(e) => handleChange('key', e.target.value)}
                     placeholder="e.g. has_badge"
                     style={getFieldInputStyle('key')}
+                    type="text"
+                    value={node.key || ''}
                 />
                 <FieldError errors={getFieldErrors('key')} />
             </div>
@@ -21,9 +21,9 @@ export function SetInspector({ node, index }: { node: any; index?: number | null
             <div>
                 <label style={labelStyle}>Operation</label>
                 <select
-                    value={node.op || 'set'}
                     onChange={(e) => handleChange('op', e.target.value)}
                     style={getFieldInputStyle('op')}
+                    value={node.op || 'set'}
                 >
                     <option value="set">Set</option>
                     <option value="add">Add</option>
@@ -36,8 +36,6 @@ export function SetInspector({ node, index }: { node: any; index?: number | null
             <div>
                 <label style={labelStyle}>Value</label>
                 <input
-                    type="text"
-                    value={node.value !== undefined ? String(node.value) : ''}
                     onChange={(e) => {
                         let v: any = e.target.value;
                         if (v === 'true') v = true;
@@ -47,6 +45,8 @@ export function SetInspector({ node, index }: { node: any; index?: number | null
                     }}
                     placeholder="true / 1 / some text"
                     style={getFieldInputStyle('value')}
+                    type="text"
+                    value={node.value === undefined ? '' : String(node.value)}
                 />
                 <FieldError errors={getFieldErrors('value')} />
             </div>

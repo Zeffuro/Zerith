@@ -1,26 +1,25 @@
 import { editorTheme as t } from '../../../theme/editorTheme';
 
 export function InlineNameInput({
-                                    uiScale,
-                                    value,
+                                    autoFocus = true,
+                                    onCancel,
                                     onChange,
                                     onSubmit,
-                                    onCancel,
-                                    autoFocus = true,
+                                    uiScale,
+                                    value,
                                 }: {
+    autoFocus?: boolean;
+    onCancel: () => void;
+    onChange: (v: string) => void;
+    onSubmit: () => Promise<void> | void;
     uiScale: number;
     value: string;
-    onChange: (v: string) => void;
-    onSubmit: () => void | Promise<void>;
-    onCancel: () => void;
-    autoFocus?: boolean;
 }) {
     return (
         <input
             autoFocus={autoFocus}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
             onBlur={() => void onSubmit()}
+            onChange={(e) => onChange(e.target.value)}
             onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -31,15 +30,16 @@ export function InlineNameInput({
                 }
             }}
             style={{
-                flex: 1,
-                minWidth: 0,
                 background: t.bg.input,
                 border: `1px solid ${t.border.input}`,
-                color: t.text.primary,
                 borderRadius: t.radius.sm,
-                padding: `${2 * uiScale}px ${6 * uiScale}px`,
+                color: t.text.primary,
+                flex: 1,
                 fontSize: 'inherit',
+                minWidth: 0,
+                padding: `${2 * uiScale}px ${6 * uiScale}px`,
             }}
+            value={value}
         />
     );
 }

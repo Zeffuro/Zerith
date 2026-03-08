@@ -1,9 +1,10 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 
-export function ItemInspector({ node, index }: { node: any; index?: number | null }) {
-    const { labelStyle, handleChange, getFieldErrors, getFieldInputStyle } = useInspectorFieldEditor(index);
+export function ItemInspector({ index, node }: { index?: null | number; node: any; }) {
+    const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle } = useInspectorFieldEditor(index);
 
     const initialJson = useMemo(
         () => JSON.stringify(node.changes ?? {}, null, 2),
@@ -11,7 +12,7 @@ export function ItemInspector({ node, index }: { node: any; index?: number | nul
     );
 
     const [changesJson, setChangesJson] = useState(initialJson);
-    const [jsonError, setJsonError] = useState<string | null>(null);
+    const [jsonError, setJsonError] = useState<null | string>(null);
 
     useEffect(() => {
         setChangesJson(initialJson);
@@ -37,9 +38,9 @@ export function ItemInspector({ node, index }: { node: any; index?: number | nul
             <div>
                 <label style={labelStyle}>Action</label>
                 <select
-                    value={node.action || 'add'}
                     onChange={(e) => handleChange('action', e.target.value)}
                     style={getFieldInputStyle('action')}
+                    value={node.action || 'add'}
                 >
                     <option value="add">Add</option>
                     <option value="remove">Remove</option>
@@ -51,11 +52,11 @@ export function ItemInspector({ node, index }: { node: any; index?: number | nul
             <div>
                 <label style={labelStyle}>Item ID</label>
                 <input
-                    type="text"
-                    value={node.id || ''}
                     onChange={(e) => handleChange('id', e.target.value)}
                     placeholder="e.g. attorney_badge"
                     style={getFieldInputStyle('id')}
+                    type="text"
+                    value={node.id || ''}
                 />
                 <FieldError errors={getFieldErrors('id')} />
             </div>
@@ -64,11 +65,11 @@ export function ItemInspector({ node, index }: { node: any; index?: number | nul
                 <div>
                     <label style={labelStyle}>Changes (JSON object)</label>
                     <textarea
-                        value={changesJson}
-                        onChange={(e) => setChangesJson(e.target.value)}
                         onBlur={onChangesBlur}
+                        onChange={(e) => setChangesJson(e.target.value)}
                         rows={8}
                         style={{ ...getFieldInputStyle('changes'), fontFamily: 'monospace' }}
+                        value={changesJson}
                     />
                     <FieldError errors={getFieldErrors('changes')} />
                     {jsonError ? (

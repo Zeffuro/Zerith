@@ -1,25 +1,33 @@
 export interface FocusableItem {
-    focus: () => void;
-    blur: () => void;
     activate: () => void;
+    blur: () => void;
+    focus: () => void;
 }
 
 export class PanelFocusManager {
-    private items: FocusableItem[] = [];
-    private _selectedIndex = 0;
-    private _onBack: (() => void) | null = null;
-    private _onNavigateRaw: ((direction: 'up' | 'down' | 'left' | 'right') => boolean) | null = null;
-
+    public get count(): number {
+        return this.items.length;
+    }
+    public set onBack(handler: (() => void) | null) {
+        this._onBack = handler;
+    }
+    public set onNavigateRaw(handler: ((direction: 'down' | 'left' | 'right' | 'up') => boolean) | null) {
+        this._onNavigateRaw = handler;
+    }
     public get selectedIndex(): number {
         return this._selectedIndex;
     }
 
-    public get count(): number {
-        return this.items.length;
-    }
+    private _onBack: (() => void) | null = null;
 
-    public register(item: FocusableItem) {
-        this.items.push(item);
+    private _onNavigateRaw: ((direction: 'down' | 'left' | 'right' | 'up') => boolean) | null = null;
+
+    private _selectedIndex = 0;
+
+    private items: FocusableItem[] = [];
+
+    public back() {
+        this._onBack?.();
     }
 
     public clear() {
@@ -27,16 +35,9 @@ export class PanelFocusManager {
         this._selectedIndex = 0;
     }
 
-    public set onBack(handler: (() => void) | null) {
-        this._onBack = handler;
-    }
-
-    public set onNavigateRaw(handler: ((direction: 'up' | 'down' | 'left' | 'right') => boolean) | null) {
-        this._onNavigateRaw = handler;
-    }
-
-    public back() {
-        this._onBack?.();
+    public confirm() {
+        if (this.items.length === 0) return;
+        this.items[this._selectedIndex].activate();
     }
 
     public focusInitial(index: number = 0) {
@@ -45,7 +46,7 @@ export class PanelFocusManager {
         this.items[this._selectedIndex].focus();
     }
 
-    public navigate(direction: 'up' | 'down' | 'left' | 'right') {
+    public navigate(direction: 'down' | 'left' | 'right' | 'up') {
         if (this._onNavigateRaw) {
             const consumed = this._onNavigateRaw(direction);
             if (consumed) return;
@@ -53,21 +54,20 @@ export class PanelFocusManager {
 
         if (this.items.length === 0) return;
 
-        const prev = this._selectedIndex;
+        const previous = this._selectedIndex;
         if (direction === 'up') {
-            this._selectedIndex = prev <= 0 ? this.items.length - 1 : prev - 1;
+            this._selectedIndex = previous <= 0 ? this.items.length - 1 : previous - 1;
         } else if (direction === 'down') {
-            this._selectedIndex = prev >= this.items.length - 1 ? 0 : prev + 1;
+            this._selectedIndex = previous >= this.items.length - 1 ? 0 : previous + 1;
         }
 
-        if (prev !== this._selectedIndex) {
-            this.items[prev].blur();
+        if (previous !== this._selectedIndex) {
+            this.items[previous].blur();
             this.items[this._selectedIndex].focus();
         }
     }
 
-    public confirm() {
-        if (this.items.length === 0) return;
-        this.items[this._selectedIndex].activate();
+    public register(item: FocusableItem) {
+        this.items.push(item);
     }
 }

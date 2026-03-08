@@ -7,11 +7,11 @@ export type PathOpsProjectBridge = Pick<
 
 let bridgeGetter: (() => PathOpsProjectBridge) | null = null;
 
-export function setPathOpsProjectBridge(getter: () => PathOpsProjectBridge): void {
-    bridgeGetter = getter;
+export function getPathOpsProjectBridge(): null | PathOpsProjectBridge {
+    return bridgeGetter ? bridgeGetter() : null;
 }
 
-export function getPathOpsProjectBridge(): PathOpsProjectBridge | null {
-    return bridgeGetter ? bridgeGetter() : null;
+export function setPathOpsProjectBridge(getter: () => PathOpsProjectBridge): void {
+    bridgeGetter = getter;
 }
 

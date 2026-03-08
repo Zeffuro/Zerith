@@ -1,36 +1,37 @@
 import { Container, Graphics, Text, type TextStyleFontWeight } from 'pixi.js';
+
 import type { Engine } from '../Engine';
 
 export interface StartScreenConfig {
-    text?: string;
-    fontSize?: number;
-    fontFamily?: string;
-    fontWeight?: TextStyleFontWeight;
-    textColor?: number;
-    backgroundColor?: number;
     backgroundAlpha?: number;
-    pulseSpeed?: number;
-    pulseMin?: number;
+    backgroundColor?: number;
+    fontFamily?: string;
+    fontSize?: number;
+    fontWeight?: TextStyleFontWeight;
     pulseMax?: number;
+    pulseMin?: number;
+    pulseSpeed?: number;
+    text?: string;
+    textColor?: number;
 }
 
 export class StartScreenManager {
-    private engine: Engine;
     private readonly config: Required<StartScreenConfig>;
+    private engine: Engine;
 
     constructor(engine: Engine, config: StartScreenConfig = {}) {
         this.engine = engine;
         this.config = {
-            text: 'CLICK TO START',
-            fontSize: 36,
-            fontFamily: 'Arial',
-            fontWeight: 'bold' as TextStyleFontWeight,
-            textColor: 0xffffff,
-            backgroundColor: 0x000000,
             backgroundAlpha: 0.85,
-            pulseSpeed: 500,
+            backgroundColor: 0x00_00_00,
+            fontFamily: 'Arial',
+            fontSize: 36,
+            fontWeight: 'bold' as TextStyleFontWeight,
+            pulseMax: 1,
             pulseMin: 0.6,
-            pulseMax: 1.0,
+            pulseSpeed: 500,
+            text: 'CLICK TO START',
+            textColor: 0xFF_FF_FF,
             ...config
         };
     }
@@ -49,16 +50,16 @@ export class StartScreenManager {
         const startLayer = new Container();
         const overlayBg = new Graphics()
             .rect(0, 0, w, h)
-            .fill({ color: cfg.backgroundColor, alpha: cfg.backgroundAlpha });
+            .fill({ alpha: cfg.backgroundAlpha, color: cfg.backgroundColor });
 
         const startTxt = new Text({
-            text: cfg.text,
             style: {
                 fill: cfg.textColor,
-                fontSize: cfg.fontSize,
                 fontFamily: cfg.fontFamily,
+                fontSize: cfg.fontSize,
                 fontWeight: cfg.fontWeight
-            }
+            },
+            text: cfg.text
         });
         startTxt.anchor.set(0.5);
         startTxt.position.set(w / 2, h / 2);
@@ -68,7 +69,7 @@ export class StartScreenManager {
         startLayer.cursor = 'pointer';
         this.engine.layers.overlay.addChild(startLayer);
 
-        const { pulseSpeed, pulseMin, pulseMax } = cfg;
+        const { pulseMax, pulseMin, pulseSpeed } = cfg;
         const pulseRange = pulseMax - pulseMin;
         const animate = () => {
             if (startLayer.destroyed) return;

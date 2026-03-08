@@ -2,19 +2,19 @@ import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 import { AssetPickerField } from './fields/AssetPickerField';
 
-export function BackgroundInspector({ node, index }: { node: any; index?: number | null }) {
-    const { labelStyle, handleChange, getFieldErrors, getFieldInputStyle } = useInspectorFieldEditor(index);
+export function BackgroundInspector({ index, node }: { index?: null | number; node: any; }) {
+    const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle } = useInspectorFieldEditor(index);
     const assetErrors = getFieldErrors('assetUrl');
 
     return (
         <div>
             <label style={labelStyle}>Asset URL</label>
             <AssetPickerField
-                kind="bg"
-                value={node.assetUrl ?? ''}
-                onChange={(assetUrl) => handleChange('assetUrl', assetUrl)}
                 inputStyle={getFieldInputStyle('assetUrl')}
+                kind="bg"
                 listId="bg-asset-options"
+                onChange={(assetUrl) => handleChange('assetUrl', assetUrl)}
+                value={node.assetUrl ?? ''}
             />
             <FieldError errors={assetErrors} />
         </div>

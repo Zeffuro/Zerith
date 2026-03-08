@@ -1,18 +1,18 @@
-import type { BaseCommand, CommandHandler } from '../types';
 import type { Engine } from '../Engine';
+import type { BaseCommand, CommandHandler } from '../types';
 
 export interface ForCommand extends BaseCommand {
-    type: 'for';
-    iterator?: string;
-    from?: number;
-    to?: number;
-    step?: number;
     body?: BaseCommand[];
+    from?: number;
+    iterator?: string;
+    step?: number;
+    to?: number;
+    type: 'for';
 }
 
 export class ForHandler implements CommandHandler<ForCommand> {
-    public type: 'for' = 'for';
     public autoNext = true;
+    public type: 'for' = 'for';
 
     execute = async (command: ForCommand, engine: Engine) => {
         const iterator = command.iterator ?? 'i';
@@ -26,17 +26,17 @@ export class ForHandler implements CommandHandler<ForCommand> {
         const runBodyOnce = async (value: number) => {
             engine.setState(iterator, value);
             for (const child of body) {
-                await engine.runCommand(child as BaseCommand);
+                await engine.runCommand(child);
             }
         };
 
         if (step > 0) {
-            for (let i = from; i <= to; i += step) {
-                await runBodyOnce(i);
+            for (let index = from; index <= to; index += step) {
+                await runBodyOnce(index);
             }
         } else {
-            for (let i = from; i >= to; i += step) {
-                await runBodyOnce(i);
+            for (let index = from; index >= to; index += step) {
+                await runBodyOnce(index);
             }
         }
     };

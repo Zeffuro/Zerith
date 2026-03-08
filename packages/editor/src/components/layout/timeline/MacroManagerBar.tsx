@@ -1,9 +1,10 @@
-import { Copy, Trash2, Pencil } from 'lucide-react';
+import { Copy, Pencil, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+
+import { executeMacroTimelineAction } from '../../../store/actions/macroTimelineActions';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useProjectStore } from '../../../store/useProjectStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
-import { executeMacroTimelineAction } from '../../../store/actions/macroTimelineActions';
 
 export function MacroManagerBar({ uiScale }: { uiScale: number }) {
     const selectedNodePaths = useEditorStore((s) => s.selectedNodePaths);
@@ -14,10 +15,10 @@ export function MacroManagerBar({ uiScale }: { uiScale: number }) {
     const selectedMacroIndex = useMemo(() => {
         const first = selectedNodePaths[0];
         if (!first || typeof first[0] !== 'number') return null;
-        return first[0] as number;
+        return first[0];
     }, [selectedNodePaths]);
 
-    const selectedMacro = selectedMacroIndex !== null ? macroEntries[selectedMacroIndex] : null;
+    const selectedMacro = selectedMacroIndex === null ? null : macroEntries[selectedMacroIndex];
     const [renameDraft, setRenameDraft] = useState('');
 
     const beginRename = () => {
@@ -38,30 +39,30 @@ export function MacroManagerBar({ uiScale }: { uiScale: number }) {
         executeMacroTimelineAction('deleteSelected');
     };
 
-    const btnStyle = {
-        border: `1px solid ${t.border.button}`,
-        background: t.bg.panel,
-        color: t.text.normal,
-        borderRadius: t.radius.sm,
-        padding: `${4 * uiScale}px ${8 * uiScale}px`,
-        cursor: 'pointer',
-        fontSize: `${11 * uiScale}px`,
-        display: 'inline-flex',
+    const buttonStyle = {
         alignItems: 'center',
+        background: t.bg.panel,
+        border: `1px solid ${t.border.button}`,
+        borderRadius: t.radius.sm,
+        color: t.text.normal,
+        cursor: 'pointer',
+        display: 'inline-flex',
+        fontSize: `${11 * uiScale}px`,
         gap: `${4 * uiScale}px`,
+        padding: `${4 * uiScale}px ${8 * uiScale}px`,
     };
 
     return (
         <div
             style={{
+                alignItems: 'center',
+                background: t.bg.panel,
                 border: `1px solid ${t.border.subtle}`,
                 borderRadius: t.radius.md,
-                padding: `${6 * uiScale}px`,
-                marginBottom: `${8 * uiScale}px`,
                 display: 'flex',
-                alignItems: 'center',
                 gap: `${6 * uiScale}px`,
-                background: t.bg.panel,
+                marginBottom: `${8 * uiScale}px`,
+                padding: `${6 * uiScale}px`,
             }}
         >
             <span style={{ color: t.text.muted, fontSize: `${11 * uiScale}px` }}>Macro:</span>
@@ -69,11 +70,9 @@ export function MacroManagerBar({ uiScale }: { uiScale: number }) {
             {selectedMacro ? (
                 <>
                     <input
-                        type="text"
-                        value={renameDraft || selectedMacro.name}
-                        onFocus={beginRename}
-                        onChange={(e) => setRenameDraft(e.target.value)}
                         onBlur={applyRename}
+                        onChange={(e) => setRenameDraft(e.target.value)}
+                        onFocus={beginRename}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                                 e.preventDefault();
@@ -82,31 +81,33 @@ export function MacroManagerBar({ uiScale }: { uiScale: number }) {
                             }
                         }}
                         style={{
-                            flex: 1,
-                            minWidth: 0,
-                            border: `1px solid ${t.border.input}`,
                             background: t.bg.input,
-                            color: t.text.primary,
+                            border: `1px solid ${t.border.input}`,
                             borderRadius: t.radius.sm,
-                            padding: `${4 * uiScale}px ${8 * uiScale}px`,
+                            color: t.text.primary,
+                            flex: 1,
                             fontSize: `${12 * uiScale}px`,
+                            minWidth: 0,
+                            padding: `${4 * uiScale}px ${8 * uiScale}px`,
                         }}
                         title="Rename macro"
+                        type="text"
+                        value={renameDraft || selectedMacro.name}
                     />
 
-                    <button type="button" onClick={applyRename} style={btnStyle} title="Rename">
+                    <button onClick={applyRename} style={buttonStyle} title="Rename" type="button">
                         <Pencil size={12 * uiScale} /> Rename
                     </button>
 
-                    <button type="button" onClick={duplicateSelected} style={btnStyle} title="Duplicate macro">
+                    <button onClick={duplicateSelected} style={buttonStyle} title="Duplicate macro" type="button">
                         <Copy size={12 * uiScale} /> Duplicate
                     </button>
 
                     <button
-                        type="button"
                         onClick={deleteSelected}
-                        style={{ ...btnStyle, color: '#fca5a5', border: `1px solid #7f1d1d` }}
+                        style={{ ...buttonStyle, border: `1px solid #7f1d1d`, color: '#fca5a5' }}
                         title="Delete macro"
+                        type="button"
                     >
                         <Trash2 size={12 * uiScale} /> Delete
                     </button>

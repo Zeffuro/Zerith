@@ -2,10 +2,10 @@ import type { WorkbenchSet, WorkbenchViewPrefsSlice } from '../types';
 
 export function createWorkbenchViewPrefsSlice(set: WorkbenchSet): WorkbenchViewPrefsSlice {
     return {
-        lastScriptView: 'timeline',
         lastMacrosView: 'timeline',
-        setLastScriptView: (view) => set({ lastScriptView: view }),
+        lastScriptView: 'timeline',
         setLastMacrosView: (view) => set({ lastMacrosView: view }),
+        setLastScriptView: (view) => set({ lastScriptView: view }),
     };
 }
 

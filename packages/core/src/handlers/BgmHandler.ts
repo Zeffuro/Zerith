@@ -1,19 +1,20 @@
 import { sound } from '@pixi/sound';
-import type { BaseCommand, CommandHandler } from '../types';
+
 import type { Engine } from '../Engine';
+import type { BaseCommand, CommandHandler } from '../types';
 
 export interface BgmCommand extends BaseCommand {
-    type: 'bgm';
-    action: 'play' | 'stop' | 'pause' | 'resume';
+    action: 'pause' | 'play' | 'resume' | 'stop';
     assetUrl?: string;
-    volume?: number;
     loop?: boolean;
+    type: 'bgm';
+    volume?: number;
 }
 
 export class BgmHandler implements CommandHandler<BgmCommand> {
-    public type: 'bgm' = 'bgm';
     public autoNext = true;
-    private currentBgmUrl: string | null = null;
+    public type: 'bgm' = 'bgm';
+    private currentBgmUrl: null | string = null;
     private isPaused = false;
 
     execute = async (command: BgmCommand, engine: Engine) => {
@@ -62,9 +63,9 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
                 if (!sound.exists(resolvedUrl)) {
                     await new Promise((resolve, reject) => {
                         sound.add(resolvedUrl, {
-                            url: resolvedUrl,
+                            loaded: (error, snd) => error ? reject(error) : resolve(snd),
                             preload: true,
-                            loaded: (err, snd) => err ? reject(err) : resolve(snd)
+                            url: resolvedUrl
                         });
                     });
                 }
@@ -78,8 +79,8 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
 
                 sound.play(resolvedUrl, {
                     loop: command.loop ?? true,
-                    volume: (command.volume ?? 0.5) * engine.audio.bgmVolume,
-                    singleInstance: true
+                    singleInstance: true,
+                    volume: (command.volume ?? 0.5) * engine.audio.bgmVolume
                 });
                 engine.setState('__sys_bgm', url);
 

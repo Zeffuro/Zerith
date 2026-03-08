@@ -2,17 +2,17 @@ import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 import { AssetPickerField } from './fields/AssetPickerField';
 
-export function BgmInspector({ node, index }: { node: any; index?: number | null }) {
-    const { labelStyle, handleChange, getFieldErrors, getFieldInputStyle } = useInspectorFieldEditor(index);
+export function BgmInspector({ index, node }: { index?: null | number; node: any; }) {
+    const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle } = useInspectorFieldEditor(index);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
                 <label style={labelStyle}>Action</label>
                 <select
-                    value={node.action || 'play'}
                     onChange={(e) => handleChange('action', e.target.value)}
                     style={getFieldInputStyle('action')}
+                    value={node.action || 'play'}
                 >
                     <option value="play">Play</option>
                     <option value="stop">Stop</option>
@@ -27,11 +27,11 @@ export function BgmInspector({ node, index }: { node: any; index?: number | null
                     <div>
                         <label style={labelStyle}>Asset URL</label>
                         <AssetPickerField
-                            kind="audio"
-                            value={node.assetUrl || ''}
-                            onChange={(assetUrl) => handleChange('assetUrl', assetUrl)}
                             inputStyle={getFieldInputStyle('assetUrl')}
+                            kind="audio"
                             listId="bgm-asset-options"
+                            onChange={(assetUrl) => handleChange('assetUrl', assetUrl)}
+                            value={node.assetUrl || ''}
                         />
                         <FieldError errors={getFieldErrors('assetUrl')} />
                     </div>
@@ -39,13 +39,13 @@ export function BgmInspector({ node, index }: { node: any; index?: number | null
                     <div>
                         <label style={labelStyle}>Volume (0-1)</label>
                         <input
-                            type="number"
-                            step="0.01"
-                            min={0}
                             max={1}
-                            value={node.volume ?? 0.5}
+                            min={0}
                             onChange={(e) => handleChange('volume', Number(e.target.value))}
+                            step="0.01"
                             style={getFieldInputStyle('volume')}
+                            type="number"
+                            value={node.volume ?? 0.5}
                         />
                         <FieldError errors={getFieldErrors('volume')} />
                     </div>
@@ -53,9 +53,9 @@ export function BgmInspector({ node, index }: { node: any; index?: number | null
                     <div>
                         <label style={labelStyle}>Loop</label>
                         <select
-                            value={node.loop ? 'true' : 'false'}
                             onChange={(e) => handleChange('loop', e.target.value === 'true')}
                             style={getFieldInputStyle('loop')}
+                            value={node.loop ? 'true' : 'false'}
                         >
                             <option value="true">true</option>
                             <option value="false">false</option>

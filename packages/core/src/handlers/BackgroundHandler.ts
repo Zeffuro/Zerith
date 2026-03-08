@@ -1,26 +1,27 @@
 import { Sprite } from 'pixi.js';
-import type { BaseCommand, CommandHandler } from '../types';
+
 import type { Engine } from '../Engine';
+import type { BaseCommand, CommandHandler } from '../types';
 
 export interface BackgroundCommand extends BaseCommand {
-    type: 'background';
     assetUrl: string;
+    type: 'background';
 }
 
 export class BackgroundHandler implements CommandHandler<BackgroundCommand> {
-    public type: 'background' = 'background';
     public autoNext = true;
-    private sprite: Sprite | null = null;
+    public type: 'background' = 'background';
+    private sprite: null | Sprite = null;
 
     execute = async (command: BackgroundCommand, engine: Engine) => {
         const texture = await engine.loadAsset(command.assetUrl);
 
-        if (!this.sprite) {
+        if (this.sprite) {
+            this.sprite.texture = texture;
+        } else {
             this.sprite = new Sprite(texture);
             this.sprite.anchor.set(0.5);
             engine.layers.background.addChild(this.sprite);
-        } else {
-            this.sprite.texture = texture;
         }
 
         const w = engine.display.width;

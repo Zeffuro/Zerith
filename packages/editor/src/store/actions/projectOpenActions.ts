@@ -1,14 +1,16 @@
 import type { Command } from 'core';
+
 import type { MacroEntry } from '../useProjectStore';
+
 import { useEditorStore } from '../useEditorStore';
 import { useProjectStore } from '../useProjectStore';
 
-export type ProjectOpenAction = 'applyScriptFile' | 'applyMacrosFile' | 'applyAssetSelection';
-
 export type ExecuteProjectOpenActionOptions =
-    | { action: 'applyScriptFile'; path: string; script: Command[] }
-    | { action: 'applyMacrosFile'; path: string; entries: MacroEntry[] }
-    | { action: 'applyAssetSelection'; assetPath: string };
+    | { action: 'applyAssetSelection'; assetPath: string }
+    | { action: 'applyMacrosFile'; entries: MacroEntry[]; path: string; }
+    | { action: 'applyScriptFile'; path: string; script: Command[] };
+
+export type ProjectOpenAction = 'applyAssetSelection' | 'applyMacrosFile' | 'applyScriptFile';
 
 export function executeProjectOpenAction(options: ExecuteProjectOpenActionOptions): void {
     if (options.action === 'applyAssetSelection') {

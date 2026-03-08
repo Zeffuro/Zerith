@@ -1,35 +1,38 @@
-import type { BaseCommand, CommandHandler } from '../types';
 import type { Engine } from '../Engine';
+import type { BaseCommand, CommandHandler } from '../types';
 
 export interface ItemCommand extends BaseCommand {
-    type: 'item';
     action: 'add' | 'remove' | 'update';
-    id: string;
     changes?: Record<string, any>;
+    id: string;
+    type: 'item';
 }
 
 export class ItemHandler implements CommandHandler<ItemCommand> {
-    public type: 'item' = 'item';
     public autoNext = true;
+    public type: 'item' = 'item';
 
     execute = async (command: ItemCommand, engine: Engine) => {
         const manager = engine.items;
 
         switch (command.action) {
-            case 'add':
+            case 'add': {
                 manager.add(command.id);
                 engine.logger.info(`Item added: ${command.id}`);
                 break;
-            case 'remove':
+            }
+            case 'remove': {
                 manager.remove(command.id);
                 engine.logger.info(`Item removed: ${command.id}`);
                 break;
-            case 'update':
+            }
+            case 'update': {
                 if (command.changes) {
                     manager.update(command.id, command.changes);
                     engine.logger.info(`Item updated: ${command.id}`);
                 }
                 break;
+            }
         }
 
         engine.setState('__sys_items', manager.serialize());

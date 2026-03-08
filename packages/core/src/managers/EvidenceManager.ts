@@ -1,4 +1,4 @@
-import { ItemManager, type ItemDefinition } from './ItemManager';
+import { type ItemDefinition, ItemManager } from './ItemManager';
 
 export interface EvidenceItem extends ItemDefinition {
     type: 'evidence' | 'profile';

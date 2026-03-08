@@ -1,15 +1,16 @@
 import type { Command } from 'core';
+
+import { getAtPath, setAtPath } from '../../utils/scriptPathUtils';
 import { useProjectStore } from '../useProjectStore';
 import { useScriptStore } from '../useScriptStore';
-import { getAtPath, setAtPath } from '../../utils/scriptPathUtils';
 
 export interface ExecuteInspectorFieldPatchActionOptions {
+    index?: null | number;
     patch: Record<string, unknown>;
-    index?: number | null;
 }
 
 export function executeInspectorFieldPatchAction(options: ExecuteInspectorFieldPatchActionOptions): void {
-    const { patch, index } = options;
+    const { index, patch } = options;
 
     const projectState = useProjectStore.getState();
     const scriptState = useScriptStore.getState();
@@ -45,7 +46,7 @@ export function executeInspectorFieldPatchAction(options: ExecuteInspectorFieldP
 
     if (index !== null && index !== undefined) {
         const script = scriptState.getActiveScript();
-        const newScript = script.map((n, i) => (i === index ? { ...n, ...patch } : n));
+        const newScript = script.map((n, index_) => (index_ === index ? { ...n, ...patch } : n));
         scriptState.updateActiveScript(newScript);
         return;
     }

@@ -4,32 +4,32 @@ import type { ProjectScriptBridge, ProjectSessionSlice, ProjectSet } from '../ty
 
 export function createProjectSessionSlice(set: ProjectSet, scriptBridge: ProjectScriptBridge): ProjectSessionSlice {
     return {
-        projectPath: null,
-        files: [],
         activeFile: null,
-        treeRevision: 0,
-
-        setProject: (path: string, files: FsDirEntry[]) =>
-            set({
-                projectPath: path,
-                files,
-                activeFile: null,
-                manifest: null,
-                characters: {},
-                items: {},
-                macros: {},
-                scenes: {},
-                activeMacroName: null,
-                editingAllMacrosFile: false,
-                macroEntries: [],
-            }),
+        bumpTreeRevision: () => set((s) => ({ treeRevision: s.treeRevision + 1 })),
+        files: [],
+        projectPath: null,
 
         setActiveFile: (file: string, content: EditorNode[]) => {
             set({ activeFile: file });
             scriptBridge.setScript(content);
         },
 
-        bumpTreeRevision: () => set((s) => ({ treeRevision: s.treeRevision + 1 })),
+        setProject: (path: string, files: FsDirEntry[]) =>
+            set({
+                activeFile: null,
+                activeMacroName: null,
+                characters: {},
+                editingAllMacrosFile: false,
+                files,
+                items: {},
+                macroEntries: [],
+                macros: {},
+                manifest: null,
+                projectPath: path,
+                scenes: {},
+            }),
+
+        treeRevision: 0,
     };
 }
 

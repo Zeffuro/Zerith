@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import Editor, { type OnMount } from '@monaco-editor/react';
 import type * as Monaco from 'monaco-editor';
-import { useScriptStore } from '../../../store/useScriptStore';
+
+import Editor, { type OnMount } from '@monaco-editor/react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+
 import { useProjectStore } from '../../../store/useProjectStore';
+import { useScriptStore } from '../../../store/useScriptStore';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
 
@@ -20,17 +22,17 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
 
     const initial = useMemo(() => {
         if (editingAllMacrosFile) {
-            const obj: Record<string, any[]> = {};
-            macroEntries.forEach((m) => (obj[m.name] = m.commands));
-            return JSON.stringify(obj, null, 2);
+            const object: Record<string, any[]> = {};
+            for (const m of macroEntries) (object[m.name] = m.commands);
+            return JSON.stringify(object, null, 2);
         }
         return JSON.stringify(rootScript, null, 2);
     }, [rootScript, editingAllMacrosFile, macroEntries]);
 
     const [value, setValue] = useState(initial);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<null | string>(null);
 
-    const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
+    const editorReference = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
 
     useEffect(() => {
         setValue(initial);
@@ -51,7 +53,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
                     setError('Macros JSON must be an object { "macro_name": [...] }');
                     return;
                 }
-                const entries = Object.keys(parsed).map((name) => ({ name, commands: parsed[name] }));
+                const entries = Object.keys(parsed).map((name) => ({ commands: parsed[name], name }));
                 setMacroEntries(entries);
             } else {
                 if (!Array.isArray(parsed)) {
@@ -61,14 +63,14 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
                 setScript(parsed);
             }
             setError(null);
-        } catch (e: any) {
-            setError(e?.message ?? 'Invalid JSON');
+        } catch (error_: any) {
+            setError(error_?.message ?? 'Invalid JSON');
         }
     };
 
-    const formatDoc = async () => {
-        if (!editorRef.current) return;
-        await editorRef.current.getAction('editor.action.formatDocument')?.run();
+    const formatDocument = async () => {
+        if (!editorReference.current) return;
+        await editorReference.current.getAction('editor.action.formatDocument')?.run();
     };
 
     const saveNow = async () => {
@@ -77,19 +79,19 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
     };
 
     const onMount: OnMount = (editor, monaco) => {
-        editorRef.current = editor;
+        editorReference.current = editor;
 
         monaco.editor.defineTheme('zerith-json-dark', {
             base: 'vs-dark',
-            inherit: true,
-            rules: [],
             colors: {
                 'editor.background': '#1e1e1e',
-                'editorLineNumber.foreground': '#6b7280',
-                'editorLineNumber.activeForeground': '#9ca3af',
-                'editorGutter.background': '#1e1e1e',
                 'editorCursor.foreground': '#f9fafb',
+                'editorGutter.background': '#1e1e1e',
+                'editorLineNumber.activeForeground': '#9ca3af',
+                'editorLineNumber.foreground': '#6b7280',
             },
+            inherit: true,
+            rules: [],
         });
         monaco.editor.setTheme('zerith-json-dark');
 
@@ -99,37 +101,37 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
     };
 
     return (
-        <div style={{ height: '100%', display: 'grid', gridTemplateRows: 'auto 1fr auto', gap: `${8 * uiScale}px`, padding: `${8 * uiScale}px`, background: t.bg.app }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: `${8 * uiScale}px` }}>
+        <div style={{ background: t.bg.app, display: 'grid', gap: `${8 * uiScale}px`, gridTemplateRows: 'auto 1fr auto', height: '100%', padding: `${8 * uiScale}px` }}>
+            <div style={{ alignItems: 'center', display: 'flex', gap: `${8 * uiScale}px` }}>
                 <strong style={{ color: t.text.primary }}>Script JSON</strong>
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: `${6 * uiScale}px` }}>
-                    <button onClick={formatDoc} style={{ background: t.bg.panel, border: `1px solid ${t.border.button}`, color: t.text.normal, borderRadius: t.radius.md, padding: `${5 * uiScale}px ${10 * uiScale}px`, cursor: 'pointer' }}>Format</button>
-                    <button onClick={apply} style={{ background: t.accent.primary, border: `1px solid ${t.border.primaryBtn}`, color: t.text.primary, borderRadius: t.radius.md, padding: `${5 * uiScale}px ${10 * uiScale}px`, cursor: 'pointer', fontWeight: 700 }}>Apply JSON</button>
+                <div style={{ display: 'flex', gap: `${6 * uiScale}px`, marginLeft: 'auto' }}>
+                    <button onClick={formatDocument} style={{ background: t.bg.panel, border: `1px solid ${t.border.button}`, borderRadius: t.radius.md, color: t.text.normal, cursor: 'pointer', padding: `${5 * uiScale}px ${10 * uiScale}px` }}>Format</button>
+                    <button onClick={apply} style={{ background: t.accent.primary, border: `1px solid ${t.border.primaryBtn}`, borderRadius: t.radius.md, color: t.text.primary, cursor: 'pointer', fontWeight: 700, padding: `${5 * uiScale}px ${10 * uiScale}px` }}>Apply JSON</button>
                 </div>
             </div>
 
             <div style={{ border: `1px solid ${error ? '#ef4444' : t.border.subtle}`, borderRadius: t.radius.md, overflow: 'hidden' }}>
                 <Editor
-                    height="100%"
                     defaultLanguage="json"
-                    value={value}
+                    height="100%"
                     onChange={(v) => {
                         setValue(v ?? '');
                         setError(null);
                     }}
                     onMount={onMount}
                     options={{
-                        fontSize: Math.round(12 * uiScale),
                         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                        minimap: { enabled: true },
-                        wordWrap: 'off',
-                        tabSize: 2,
+                        fontSize: Math.round(12 * uiScale),
                         insertSpaces: true,
+                        minimap: { enabled: true },
+                        tabSize: 2,
+                        wordWrap: 'off',
                     }}
+                    value={value}
                 />
             </div>
 
-            <div style={{ minHeight: `${18 * uiScale}px`, color: error ? '#ef4444' : t.text.muted, fontSize: `${12 * uiScale}px` }}>
+            <div style={{ color: error ? '#ef4444' : t.text.muted, fontSize: `${12 * uiScale}px`, minHeight: `${18 * uiScale}px` }}>
                 {error ?? 'JSON mode: edit entire file, then click Apply JSON. Ctrl/Cmd+S saves.'}
             </div>
         </div>

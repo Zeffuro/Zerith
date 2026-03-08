@@ -1,43 +1,44 @@
 import type { ReactNode } from 'react';
+
 import { editorTheme as t } from '../../../theme/editorTheme';
 
 export function MenuButton({
-                               uiScale,
-                               label,
                                active,
-                               onClick,
                                children,
+                               label,
+                               onClick,
+                               uiScale,
                            }: {
-    uiScale: number;
-    label: string;
     active: boolean;
-    onClick: () => void;
     children?: ReactNode;
+    label: string;
+    onClick: () => void;
+    uiScale: number;
 }) {
     return (
         <div style={{ position: 'relative' }}>
             <button
-                type="button"
                 onClick={onClick}
                 style={{
-                    border: 'none',
                     background: active ? t.bg.hover : 'transparent',
-                    color: active ? t.text.primary : t.text.normal,
-                    padding: `${4 * uiScale}px ${8 * uiScale}px`,
+                    border: 'none',
                     borderRadius: t.radius.sm,
+                    color: active ? t.text.primary : t.text.normal,
                     cursor: 'pointer',
                     fontSize: `${12 * uiScale}px`,
                     lineHeight: 1.2,
+                    padding: `${4 * uiScale}px ${8 * uiScale}px`,
                 }}
+                type="button"
             >
                 {label}
             </button>
             {active && (
                 <div
                     style={{
+                        left: 0,
                         position: 'absolute',
                         top: `calc(100% + ${4 * uiScale}px)`,
-                        left: 0,
                     }}
                 >
                     {children}

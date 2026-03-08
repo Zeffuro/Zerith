@@ -1,21 +1,14 @@
 export interface ItemDefinition {
-    id: string;
-    name: string;
-    description: string;
-    imageUrl?: string;
     [key: string]: any;
+    description: string;
+    id: string;
+    imageUrl?: string;
+    name: string;
 }
 
 export class ItemManager<T extends ItemDefinition = ItemDefinition> {
     protected definitions: Map<string, T> = new Map();
     protected items: Map<string, T> = new Map();
-
-    public loadDefinitions(defs: Record<string, Omit<T, 'id'>>) {
-        this.definitions.clear();
-        for (const [id, def] of Object.entries(defs)) {
-            this.definitions.set(id, { ...def, id } as T);
-        }
-    }
 
     public add(id: string): boolean {
         const def = this.definitions.get(id);
@@ -27,12 +20,13 @@ export class ItemManager<T extends ItemDefinition = ItemDefinition> {
         return true;
     }
 
-    public remove(id: string): boolean {
-        return this.items.delete(id);
+    public clear() {
+        this.items.clear();
     }
 
-    public has(id: string): boolean {
-        return this.items.has(id);
+    public deserialize(ids: string[]) {
+        this.items.clear();
+        for (const id of ids) this.add(id);
     }
 
     public get(id: string): T | undefined {
@@ -43,23 +37,29 @@ export class ItemManager<T extends ItemDefinition = ItemDefinition> {
         return [...this.items.values()];
     }
 
-    public update(id: string, changes: Partial<Omit<T, 'id'>>) {
-        const item = this.items.get(id);
-        if (item) {
-            Object.assign(item, changes);
+    public has(id: string): boolean {
+        return this.items.has(id);
+    }
+
+    public loadDefinitions(defs: Record<string, Omit<T, 'id'>>) {
+        this.definitions.clear();
+        for (const [id, def] of Object.entries(defs)) {
+            this.definitions.set(id, { ...def, id } as T);
         }
     }
 
-    public clear() {
-        this.items.clear();
+    public remove(id: string): boolean {
+        return this.items.delete(id);
     }
 
     public serialize(): string[] {
         return [...this.items.keys()];
     }
 
-    public deserialize(ids: string[]) {
-        this.items.clear();
-        ids.forEach(id => this.add(id));
+    public update(id: string, changes: Partial<Omit<T, 'id'>>) {
+        const item = this.items.get(id);
+        if (item) {
+            Object.assign(item, changes);
+        }
     }
 }

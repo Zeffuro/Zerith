@@ -1,5 +1,5 @@
-import type { EditorSet, PlaybackQuickCommandsSlice } from '../types';
 import type { NonMacroEditorCommandType } from '../../../plugins/types';
+import type { EditorSet, PlaybackQuickCommandsSlice } from '../types';
 
 const DEFAULT_QUICK: NonMacroEditorCommandType[] = [
     'dialogue',
@@ -16,14 +16,25 @@ const DEFAULT_QUICK: NonMacroEditorCommandType[] = [
 
 export function createPlaybackQuickCommandsSlice(set: EditorSet): PlaybackQuickCommandsSlice {
     return {
-        playTrigger: 0,
-        stopTrigger: 0,
+        moveQuickCommandType: (type, direction) =>
+            set((state) => {
+                const list = [...state.quickCommandTypes];
+                const index = list.indexOf(type);
+                if (index === -1) return {};
+                const nextIndex = direction === 'left' ? index - 1 : index + 1;
+                if (nextIndex < 0 || nextIndex >= list.length) return {};
+                [list[index], list[nextIndex]] = [list[nextIndex], list[index]];
+                return { quickCommandTypes: list };
+            }),
         playFromIndex: null,
+        playTrigger: 0,
 
         quickCommandTypes: DEFAULT_QUICK,
 
         setQuickCommandTypes: (types) =>
-            set({ quickCommandTypes: Array.from(new Set(types.filter(Boolean))) }),
+            set({ quickCommandTypes: [...new Set(types.filter(Boolean))] }),
+
+        stopTrigger: 0,
 
         toggleQuickCommandType: (type) =>
             set((state) => {
@@ -36,30 +47,19 @@ export function createPlaybackQuickCommandsSlice(set: EditorSet): PlaybackQuickC
                 };
             }),
 
-        moveQuickCommandType: (type, direction) =>
-            set((state) => {
-                const list = [...state.quickCommandTypes];
-                const idx = list.indexOf(type);
-                if (idx < 0) return {};
-                const nextIdx = direction === 'left' ? idx - 1 : idx + 1;
-                if (nextIdx < 0 || nextIdx >= list.length) return {};
-                [list[idx], list[nextIdx]] = [list[nextIdx], list[idx]];
-                return { quickCommandTypes: list };
-            }),
-
-        triggerStop: () => set((state) => ({ stopTrigger: state.stopTrigger + 1 })),
+        triggerPlay: () =>
+            set((state) => ({
+                playFromIndex: null,
+                playTrigger: state.playTrigger + 1,
+            })),
 
         triggerPlayFrom: (index) =>
             set((state) => ({
-                playTrigger: state.playTrigger + 1,
                 playFromIndex: index,
+                playTrigger: state.playTrigger + 1,
             })),
 
-        triggerPlay: () =>
-            set((state) => ({
-                playTrigger: state.playTrigger + 1,
-                playFromIndex: null,
-            })),
+        triggerStop: () => set((state) => ({ stopTrigger: state.stopTrigger + 1 })),
     };
 }
 

@@ -1,6 +1,6 @@
 import { useWorkbenchStore } from '../store/useWorkbenchStore';
-import { applyAssetSelection, applyMacrosFile, applyScriptFile, looksLikeMacrosObject } from './projectOpeners';
 import { fsReadTextFile } from './fs';
+import { applyAssetSelection, applyMacrosFile, applyScriptFile, looksLikeMacrosObject } from './projectOpeners';
 
 export async function activateWorkbenchTab(tabId: string) {
     const ws = useWorkbenchStore.getState();

@@ -1,46 +1,47 @@
+import { open } from '@tauri-apps/plugin-dialog';
 import { useMemo, useRef, useState } from 'react';
-import { MenuButton } from './MenuButton';
-import { MenuDropdown, type MenuItem } from './MenuDropdown';
+
 import { useDismissiblePopup } from '../../../hooks/useDismissiblePopup';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useProjectStore } from '../../../store/useProjectStore';
-import { open } from '@tauri-apps/plugin-dialog';
 import { editorTheme as t } from '../../../theme/editorTheme';
+import { MenuButton } from './MenuButton';
+import { MenuDropdown, type MenuItem } from './MenuDropdown';
 
-type MenuKey = 'File' | 'Edit' | 'View' | 'Run' | 'Help';
+type MenuKey = 'Edit' | 'File' | 'Help' | 'Run' | 'View';
 
 export function MenuBar({ uiScale }: { uiScale: number }) {
-    const rootRef = useRef<HTMLDivElement>(null);
+    const rootReference = useRef<HTMLDivElement>(null);
     const[openMenu, setOpenMenu] = useState<MenuKey | null>(null);
 
     const {
+        resetDockLayout,
+        setThemeKey,
         setUiScale,
-        uiScale: currentScale,
+        themeKey,
         triggerPlay,
         triggerStop,
-        resetDockLayout,
-        themeKey,
-        setThemeKey,
+        uiScale: currentScale,
     } = useEditorStore();
 
-    const { openProjectFromManifest, activeFile, saveActiveFileFromCurrentScript } = useProjectStore();
+    const { activeFile, openProjectFromManifest, saveActiveFileFromCurrentScript } = useProjectStore();
 
-    useDismissiblePopup(!!openMenu, rootRef, () => setOpenMenu(null));
+    useDismissiblePopup(!!openMenu, rootReference, () => setOpenMenu(null));
 
     const handleOpenProject = async () => {
         try {
             const selectedFile = await open({
-                multiple: false,
                 directory: false,
-                filters: [{ name: 'Game Manifest', extensions: ['json'] }],
+                filters: [{ extensions: ['json'], name: 'Game Manifest' }],
+                multiple: false,
                 title: 'Select game.json',
             });
 
             if (selectedFile && typeof selectedFile === 'string') {
                 await openProjectFromManifest(selectedFile);
             }
-        } catch (err) {
-            console.error('Failed to open project dialog:', err);
+        } catch (error) {
+            console.error('Failed to open project dialog:', error);
         }
     };
 
@@ -51,30 +52,30 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
 
     const fileItems = useMemo<MenuItem[]>(
         () =>[
-            { label: 'Open Project…', shortcut: 'Ctrl+O', onClick: handleOpenProject },
-            { label: 'Save', shortcut: 'Ctrl+S', onClick: handleSave, disabled: !activeFile },
-            { separator: true, label: 'sep-1' },
+            { label: 'Open Project…', onClick: handleOpenProject, shortcut: 'Ctrl+O' },
+            { disabled: !activeFile, label: 'Save', onClick: handleSave, shortcut: 'Ctrl+S' },
+            { label: 'sep-1', separator: true },
             { label: 'Reset Layout', onClick: resetDockLayout },
         ],[activeFile, handleOpenProject, handleSave, resetDockLayout]
     );
 
     const editItems = useMemo<MenuItem[]>(
         () =>[
-            { label: 'Undo', shortcut: 'Ctrl+Z', disabled: false },
-            { label: 'Redo', shortcut: 'Ctrl+Y', disabled: false },
-            { separator: true, label: 'sep-2' },
-            { label: 'Copy', shortcut: 'Ctrl+C', disabled: false },
-            { label: 'Paste', shortcut: 'Ctrl+V', disabled: false },
+            { disabled: false, label: 'Undo', shortcut: 'Ctrl+Z' },
+            { disabled: false, label: 'Redo', shortcut: 'Ctrl+Y' },
+            { label: 'sep-2', separator: true },
+            { disabled: false, label: 'Copy', shortcut: 'Ctrl+C' },
+            { disabled: false, label: 'Paste', shortcut: 'Ctrl+V' },
         ],[]
     );
 
     const viewItems = useMemo<MenuItem[]>(
         () =>[
-            { separator: true, label: 'sep-3' },
-            { label: 'Zoom In', shortcut: 'Ctrl+=', onClick: () => setUiScale(Math.min(1.5, currentScale + 0.1)) },
-            { label: 'Zoom Out', shortcut: 'Ctrl+-', onClick: () => setUiScale(Math.max(0.8, currentScale - 0.1)) },
-            { label: 'Reset Zoom', shortcut: 'Ctrl+0', onClick: () => setUiScale(1.0) },
-            { separator: true, label: 'sep-4' },
+            { label: 'sep-3', separator: true },
+            { label: 'Zoom In', onClick: () => setUiScale(Math.min(1.5, currentScale + 0.1)), shortcut: 'Ctrl+=' },
+            { label: 'Zoom Out', onClick: () => setUiScale(Math.max(0.8, currentScale - 0.1)), shortcut: 'Ctrl+-' },
+            { label: 'Reset Zoom', onClick: () => setUiScale(1), shortcut: 'Ctrl+0' },
+            { label: 'sep-4', separator: true },
             { label: `Theme: ${themeKey}`, submenuLabel: 'Select' },
             { label: 'Classic', onClick: () => setThemeKey('classic') },
             { label: 'Classic Soft', onClick: () => setThemeKey('classicSoft') },
@@ -84,52 +85,52 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
 
     const runItems = useMemo<MenuItem[]>(
         () =>[
-            { label: 'Play', shortcut: 'F5', onClick: triggerPlay },
-            { label: 'Stop', shortcut: 'Shift+F5', onClick: triggerStop },
+            { label: 'Play', onClick: triggerPlay, shortcut: 'F5' },
+            { label: 'Stop', onClick: triggerStop, shortcut: 'Shift+F5' },
         ],
         [triggerPlay, triggerStop]
     );
 
     const helpItems = useMemo<MenuItem[]>(
-        () =>[{ label: 'About Zerith Editor', disabled: true }],
+        () =>[{ disabled: true, label: 'About Zerith Editor' }],
         []
     );
 
     const menuMap: Record<MenuKey, MenuItem[]> = {
-        File: fileItems,
         Edit: editItems,
-        View: viewItems,
-        Run: runItems,
+        File: fileItems,
         Help: helpItems,
+        Run: runItems,
+        View: viewItems,
     };
 
     const keys: MenuKey[] =['File', 'Edit', 'View', 'Run', 'Help'];
 
     return (
         <div
-            ref={rootRef}
+            ref={rootReference}
             style={{
-                height: `${28 * uiScale}px`,
-                minHeight: `${28 * uiScale}px`,
-                display: 'flex',
                 alignItems: 'center',
-                gap: `${2 * uiScale}px`,
-                padding: `0 ${8 * uiScale}px`,
                 background: t.bg.panelAlt,
                 borderBottom: `1px solid ${t.border.subtle}`,
+                display: 'flex',
+                gap: `${2 * uiScale}px`,
+                height: `${28 * uiScale}px`,
+                minHeight: `${28 * uiScale}px`,
+                padding: `0 ${8 * uiScale}px`,
                 position: 'relative',
                 zIndex: 3000,
             }}
         >
             {keys.map((k) => (
                 <MenuButton
-                    key={k}
-                    uiScale={uiScale}
-                    label={k}
                     active={openMenu === k}
-                    onClick={() => setOpenMenu((prev) => (prev === k ? null : k))}
+                    key={k}
+                    label={k}
+                    onClick={() => setOpenMenu((previous) => (previous === k ? null : k))}
+                    uiScale={uiScale}
                 >
-                    <MenuDropdown uiScale={uiScale} items={menuMap[k]} />
+                    <MenuDropdown items={menuMap[k]} uiScale={uiScale} />
                 </MenuButton>
             ))}
         </div>

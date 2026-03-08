@@ -1,9 +1,10 @@
-import { Suspense, lazy } from 'react';
-import { useWorkbenchStore } from '../../store/useWorkbenchStore';
+import { lazy, Suspense } from 'react';
+
 import { useEditorStore } from '../../store/useEditorStore';
-import { Timeline } from './timeline/Timeline';
-import { AssetPreviewPanel } from '../tools/AssetPreviewPanel';
+import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../theme/editorTheme';
+import { AssetPreviewPanel } from '../tools/AssetPreviewPanel';
+import { Timeline } from './timeline/Timeline';
 
 const ScriptJsonEditor = lazy(() => import('./workbench/ScriptJsonEditor').then((m) => ({ default: m.ScriptJsonEditor })));
 
@@ -16,45 +17,45 @@ export function EditorSurface() {
     const setLastMacrosView = useWorkbenchStore((s) => s.setLastMacrosView);
 
     const jsonEditor = (
-        <Suspense fallback={<div style={{ padding: 12, opacity: 0.7 }}>Loading JSON editor...</div>}>
+        <Suspense fallback={<div style={{ opacity: 0.7, padding: 12 }}>Loading JSON editor...</div>}>
             <ScriptJsonEditor uiScale={uiScale} />
         </Suspense>
     );
 
-    if (!activeTab) return <div style={{ padding: 16, opacity: 0.7 }}>Open a file from Explorer.</div>;
+    if (!activeTab) return <div style={{ opacity: 0.7, padding: 16 }}>Open a file from Explorer.</div>;
 
-    const viewBtn = (active: boolean) => ({
-        border: `1px solid ${active ? t.border.accent : t.border.button}`,
+    const viewButton = (active: boolean) => ({
         background: active ? t.bg.selected : t.bg.panel,
-        color: active ? t.text.primary : t.text.normal,
+        border: `1px solid ${active ? t.border.accent : t.border.button}`,
         borderRadius: t.radius.sm,
-        padding: `${4 * uiScale}px ${10 * uiScale}px`,
+        color: active ? t.text.primary : t.text.normal,
         cursor: 'pointer',
         fontSize: `${12 * uiScale}px`,
+        padding: `${4 * uiScale}px ${10 * uiScale}px`,
     });
 
-    const renderModeToggle = (kind: 'script' | 'macros') => {
+    const renderModeToggle = (kind: 'macros' | 'script') => {
         const mode = kind === 'script' ? lastScriptView : lastMacrosView;
         const setMode = kind === 'script' ? setLastScriptView : setLastMacrosView;
 
         return (
             <div
                 style={{
-                    display: 'flex',
                     alignItems: 'center',
+                    background: t.bg.panel,
+                    borderBottom: `1px solid ${t.border.subtle}`,
+                    display: 'flex',
                     gap: `${6 * uiScale}px`,
                     padding: `${6 * uiScale}px`,
-                    borderBottom: `1px solid ${t.border.subtle}`,
-                    background: t.bg.panel,
                 }}
             >
-                <button onClick={() => setMode('timeline')} style={viewBtn(mode === 'timeline')}>
+                <button onClick={() => setMode('timeline')} style={viewButton(mode === 'timeline')}>
                     Timeline
                 </button>
-                <button onClick={() => setMode('json')} style={viewBtn(mode === 'json')}>
+                <button onClick={() => setMode('json')} style={viewButton(mode === 'json')}>
                     JSON
                 </button>
-                <span style={{ marginLeft: 8, color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
+                <span style={{ color: t.text.muted, fontSize: `${12 * uiScale}px`, marginLeft: 8 }}>
                 Current: {mode}
             </span>
             </div>
@@ -65,7 +66,7 @@ export function EditorSurface() {
 
     if (activeTab.kind === 'script') {
         return (
-            <div style={{ height: '100%', display: 'grid', gridTemplateRows: 'auto 1fr' }}>
+            <div style={{ display: 'grid', gridTemplateRows: 'auto 1fr', height: '100%' }}>
                 {renderModeToggle('script')}
                 {lastScriptView === 'json' ? jsonEditor : <Timeline />}
             </div>
@@ -74,7 +75,7 @@ export function EditorSurface() {
 
     if (activeTab.kind === 'macros') {
         return (
-            <div style={{ height: '100%', display: 'grid', gridTemplateRows: 'auto 1fr' }}>
+            <div style={{ display: 'grid', gridTemplateRows: 'auto 1fr', height: '100%' }}>
                 {renderModeToggle('macros')}
                 {lastMacrosView === 'json' ? jsonEditor : <Timeline />}
             </div>

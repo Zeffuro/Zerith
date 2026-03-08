@@ -1,44 +1,53 @@
 import type { Application } from 'pixi.js';
 
 export interface DisplayConfig {
-    width: number;
-    height: number;
-    scaleMode: 'fixed' | 'fit' | 'fill' | 'stretch';
     backgroundColor: number;
+    height: number;
+    scaleMode: 'fill' | 'fit' | 'fixed' | 'stretch';
+    width: number;
 }
 
 export const DefaultDisplayConfig: DisplayConfig = {
-    width: 800,
+    backgroundColor: 0x11_11_11,
     height: 600,
     scaleMode: 'fit',
-    backgroundColor: 0x111111
+    width: 800
 };
 
 export class DisplayManager {
-    private app: Application;
     public canvas: HTMLCanvasElement | null = null;
-    private config: DisplayConfig;
-    private resizeObserver: ResizeObserver | null = null;
+    public get height(): number { return this.config.height; }
+    public get width(): number { return this.config.width; }
+    private app: Application;
     private boundApplyScale: (() => void) | null = null;
 
-    public get width(): number { return this.config.width; }
-    public get height(): number { return this.config.height; }
+    private config: DisplayConfig;
+    private resizeObserver: null | ResizeObserver = null;
 
     constructor(app: Application, config: Partial<DisplayConfig> = {}) {
         this.app = app;
         this.config = { ...DefaultDisplayConfig, ...config };
     }
 
+    public destroy() {
+        if (this.boundApplyScale) {
+            window.removeEventListener('resize', this.boundApplyScale);
+        }
+        this.resizeObserver?.disconnect();
+        this.resizeObserver = null;
+        this.boundApplyScale = null;
+    }
+
     public async init(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
 
         await this.app.init({
-            canvas,
-            width: this.config.width,
-            height: this.config.height,
-            backgroundColor: this.config.backgroundColor,
             autoDensity: true,
-            resolution: window.devicePixelRatio || 1
+            backgroundColor: this.config.backgroundColor,
+            canvas,
+            height: this.config.height,
+            resolution: window.devicePixelRatio || 1,
+            width: this.config.width
         });
 
         if (this.config.scaleMode !== 'fixed') {
@@ -65,17 +74,7 @@ export class DisplayManager {
         let cssHeight: number;
 
         switch (this.config.scaleMode) {
-            case 'fit':
-                if (parentAspect > gameAspect) {
-                    cssHeight = parentH;
-                    cssWidth = parentH * gameAspect;
-                } else {
-                    cssWidth = parentW;
-                    cssHeight = parentW / gameAspect;
-                }
-                break;
-
-            case 'fill':
+            case 'fill': {
                 if (parentAspect > gameAspect) {
                     cssWidth = parentW;
                     cssHeight = parentW / gameAspect;
@@ -84,14 +83,28 @@ export class DisplayManager {
                     cssWidth = parentH * gameAspect;
                 }
                 break;
+            }
 
-            case 'stretch':
+            case 'fit': {
+                if (parentAspect > gameAspect) {
+                    cssHeight = parentH;
+                    cssWidth = parentH * gameAspect;
+                } else {
+                    cssWidth = parentW;
+                    cssHeight = parentW / gameAspect;
+                }
+                break;
+            }
+
+            case 'stretch': {
                 cssWidth = parentW;
                 cssHeight = parentH;
                 break;
+            }
 
-            default:
+            default: {
                 return;
+            }
         }
 
         this.canvas.style.width = `${cssWidth}px`;
@@ -100,14 +113,5 @@ export class DisplayManager {
         this.canvas.style.position = 'absolute';
         this.canvas.style.left = `${(parentW - cssWidth) / 2}px`;
         this.canvas.style.top = `${(parentH - cssHeight) / 2}px`;
-    }
-
-    public destroy() {
-        if (this.boundApplyScale) {
-            window.removeEventListener('resize', this.boundApplyScale);
-        }
-        this.resizeObserver?.disconnect();
-        this.resizeObserver = null;
-        this.boundApplyScale = null;
     }
 }

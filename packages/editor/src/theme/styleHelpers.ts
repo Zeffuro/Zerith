@@ -2,16 +2,16 @@ import { editorTheme as t } from './editorTheme';
 
 export const styles = {
     buttonBase: (uiScale: number) => ({
-        display: 'flex',
         alignItems: 'center',
-        gap: `${6 * uiScale}px`,
         background: 'transparent',
-        color: t.text.normal,
         border: `1px solid ${t.border.button}`,
-        padding: `${4 * uiScale}px ${12 * uiScale}px`,
         borderRadius: t.radius.md,
+        color: t.text.normal,
         cursor: 'pointer',
+        display: 'flex',
         fontSize: 'inherit',
+        gap: `${6 * uiScale}px`,
+        padding: `${4 * uiScale}px ${12 * uiScale}px`,
     }),
     iconButton: (uiScale: number) => ({
         background: 'transparent',
@@ -21,20 +21,20 @@ export const styles = {
         padding: `${4 * uiScale}px`,
     }),
     input: (uiScale: number) => ({
-        width: '100%',
-        padding: `${8 * uiScale}px`,
         backgroundColor: t.bg.input,
         border: `1px solid ${t.border.input}`,
-        color: t.text.primary,
         borderRadius: t.radius.md,
+        color: t.text.primary,
         fontSize: 'inherit',
         outline: 'none',
+        padding: `${8 * uiScale}px`,
+        width: '100%',
     }),
     panelHeaderRow: {
-        paddingBottom: '8px',
         borderBottom: `1px solid ${t.border.subtle}`,
         display: 'flex',
         justifyContent: 'space-between',
+        paddingBottom: '8px',
     } as const,
     popup: (uiScale: number) => ({
         background: t.bg.popup,

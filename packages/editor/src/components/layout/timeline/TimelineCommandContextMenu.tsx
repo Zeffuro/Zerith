@@ -1,41 +1,41 @@
 import { editorTheme as t } from '../../../theme/editorTheme';
 
-type Action =
-    | 'copy'
-    | 'paste'
-    | 'duplicate'
-    | 'delete'
-    | 'playFrom'
-    | 'addAfter';
-
 export type CommandContextMenuState = {
-    x: number;
-    y: number;
-    canPlayFrom: boolean;
     canPaste: boolean;
+    canPlayFrom: boolean;
     onAction: (action: Action) => void;
     onClose: () => void;
+    x: number;
+    y: number;
 } | null;
 
+type Action =
+    | 'addAfter'
+    | 'copy'
+    | 'delete'
+    | 'duplicate'
+    | 'paste'
+    | 'playFrom';
+
 export function TimelineCommandContextMenu({
-                                               uiScale,
                                                menu,
+                                               uiScale,
                                            }: {
-    uiScale: number;
     menu: CommandContextMenuState;
+    uiScale: number;
 }) {
     if (!menu) return null;
 
     const itemStyle: React.CSSProperties = {
-        width: '100%',
-        border: 'none',
         background: 'transparent',
-        color: t.text.normal,
-        textAlign: 'left',
+        border: 'none',
         borderRadius: t.radius.sm,
-        padding: `${6 * uiScale}px ${8 * uiScale}px`,
+        color: t.text.normal,
         cursor: 'pointer',
         fontSize: `${12 * uiScale}px`,
+        padding: `${6 * uiScale}px ${8 * uiScale}px`,
+        textAlign: 'left',
+        width: '100%',
     };
 
     const disabledStyle: React.CSSProperties = {
@@ -45,18 +45,16 @@ export function TimelineCommandContextMenu({
     };
 
     const Row = ({
-                     label,
                      action,
                      disabled = false,
+                     label,
                  }: {
-        label: string;
         action: Action;
         disabled?: boolean;
+        label: string;
     }) => (
         <button
-            type="button"
-    disabled={disabled}
-    style={disabled ? disabledStyle : itemStyle}
+            disabled={disabled}
     onClick={() => {
         if (disabled) return;
         menu.onAction(action);
@@ -68,6 +66,8 @@ export function TimelineCommandContextMenu({
     onMouseLeave={(e) => {
         e.currentTarget.style.background = 'transparent';
     }}
+    style={disabled ? disabledStyle : itemStyle}
+    type="button"
 >
     {label}
     </button>
@@ -75,27 +75,27 @@ export function TimelineCommandContextMenu({
 
     return (
         <div
-            style={{
-        position: 'fixed',
-            top: menu.y,
-            left: menu.x,
-            zIndex: 6000,
-            minWidth: `${200 * uiScale}px`,
-            background: t.bg.popup,
+            onMouseDown={(e) => e.stopPropagation()}
+    style={{
+        background: t.bg.popup,
             border: `1px solid ${t.border.normal}`,
             borderRadius: t.radius.md,
             boxShadow: t.shadow.popupStrong,
+            left: menu.x,
+            minWidth: `${200 * uiScale}px`,
             padding: `${6 * uiScale}px`,
+            position: 'fixed',
+            top: menu.y,
+            zIndex: 6000,
     }}
-    onMouseDown={(e) => e.stopPropagation()}
 >
-    <Row label="Copy" action="copy" />
-    <Row label="Paste After" action="paste" disabled={!menu.canPaste} />
-    <Row label="Duplicate" action="duplicate" />
-    <Row label="Delete" action="delete" />
-    <div style={{ height: 1, background: t.border.subtle, margin: `${6 * uiScale}px 0` }} />
-    <Row label="Add Command After" action="addAfter" />
-    <Row label="Play From Here" action="playFrom" disabled={!menu.canPlayFrom} />
+    <Row action="copy" label="Copy" />
+    <Row action="paste" disabled={!menu.canPaste} label="Paste After" />
+    <Row action="duplicate" label="Duplicate" />
+    <Row action="delete" label="Delete" />
+    <div style={{ background: t.border.subtle, height: 1, margin: `${6 * uiScale}px 0` }} />
+    <Row action="addAfter" label="Add Command After" />
+    <Row action="playFrom" disabled={!menu.canPlayFrom} label="Play From Here" />
     </div>
 );
 }

@@ -1,82 +1,82 @@
-import type { ScriptPath } from '../../utils/scriptPathUtils';
 import type { NonMacroEditorCommandType } from '../../plugins/types';
+import type { ScriptPath } from '../../utils/scriptPathUtils';
 
-export type EditorSet = (
-    partial: Record<string, any> | ((state: Record<string, any>) => Record<string, any>)
-) => void;
-
-export type DeleteRequestSource = 'keyboard' | 'click';
-
-export type PendingDeleteRequest = null | {
-    paths: ScriptPath[];
-    source: DeleteRequestSource;
-};
-
-export type EditorWindowState = {
-    width: number;
-    height: number;
-    x: number;
-    y: number;
-    maximized: boolean;
-} | null;
-
-export interface UiPrefsSlice {
-    uiScale: number;
-    isMuted: boolean;
-    windowState: EditorWindowState;
-    themeKey: string;
-    setUiScale: (scale: number) => void;
-    toggleMute: () => void;
-    setWindowState: (state: EditorWindowState) => void;
-    setThemeKey: (key: string) => void;
+export interface ClipboardValidationAssetSlice {
+    clearValidationErrors: () => void;
+    clipboardNode: any | null;
+    selectedAssetPath: null | string;
+    setClipboardNode: (node: any | null) => void;
+    setSelectedAssetPath: (path: null | string) => void;
+    setValidationErrors: (errors: Record<string, string[]>) => void;
+    validationErrors: Record<string, string[]>;
 }
+
+export type DeleteRequestSource = 'click' | 'keyboard';
 
 export interface DockLayoutSlice {
     dockLayoutJson: any;
     dockLayoutVersion: number;
-    setDockLayoutJson: (json: any) => void;
     resetDockLayout: () => void;
+    setDockLayoutJson: (json: any) => void;
+}
+
+export type EditorSet = (
+    partial: ((state: Record<string, any>) => Record<string, any>) | Record<string, any>
+) => void;
+
+export interface EditorState
+    extends ClipboardValidationAssetSlice,
+        DockLayoutSlice,
+        PlaybackQuickCommandsSlice,
+        SelectionSlice,
+        UiPrefsSlice {}
+
+export type EditorWindowState = {
+    height: number;
+    maximized: boolean;
+    width: number;
+    x: number;
+    y: number;
+} | null;
+
+export type PendingDeleteRequest = {
+    paths: ScriptPath[];
+    source: DeleteRequestSource;
+} | null;
+
+export interface PlaybackQuickCommandsSlice {
+    moveQuickCommandType: (type: NonMacroEditorCommandType, direction: 'left' | 'right') => void;
+    playFromIndex: null | number;
+    playTrigger: number;
+    quickCommandTypes: NonMacroEditorCommandType[];
+    setQuickCommandTypes: (types: NonMacroEditorCommandType[]) => void;
+    stopTrigger: number;
+    toggleQuickCommandType: (type: NonMacroEditorCommandType) => void;
+    triggerPlay: () => void;
+    triggerPlayFrom: (index: number) => void;
+    triggerStop: () => void;
 }
 
 export interface SelectionSlice {
-    selectedNodePaths: ScriptPath[];
-    selectionAnchorPath: ScriptPath | null;
-    pendingDeleteRequest: PendingDeleteRequest;
-    setSelectedNodePaths: (paths: ScriptPath[]) => void;
-    setSelectionAnchorPath: (path: ScriptPath | null) => void;
-    clearSelection: () => void;
-    toggleSelectedNodePath: (path: ScriptPath) => void;
-    requestDelete: (paths: ScriptPath[], source?: DeleteRequestSource) => void;
     clearDeleteRequest: () => void;
+    clearSelection: () => void;
+    pendingDeleteRequest: PendingDeleteRequest;
+    requestDelete: (paths: ScriptPath[], source?: DeleteRequestSource) => void;
+    selectedNodePaths: ScriptPath[];
+    selectionAnchorPath: null | ScriptPath;
+    setSelectedNodePaths: (paths: ScriptPath[]) => void;
+    setSelectionAnchorPath: (path: null | ScriptPath) => void;
+    toggleSelectedNodePath: (path: ScriptPath) => void;
 }
 
-export interface PlaybackQuickCommandsSlice {
-    playTrigger: number;
-    stopTrigger: number;
-    playFromIndex: number | null;
-    triggerPlayFrom: (index: number) => void;
-    triggerPlay: () => void;
-    triggerStop: () => void;
-    quickCommandTypes: NonMacroEditorCommandType[];
-    setQuickCommandTypes: (types: NonMacroEditorCommandType[]) => void;
-    toggleQuickCommandType: (type: NonMacroEditorCommandType) => void;
-    moveQuickCommandType: (type: NonMacroEditorCommandType, direction: 'left' | 'right') => void;
+export interface UiPrefsSlice {
+    isMuted: boolean;
+    setThemeKey: (key: string) => void;
+    setUiScale: (scale: number) => void;
+    setWindowState: (state: EditorWindowState) => void;
+    themeKey: string;
+    toggleMute: () => void;
+    uiScale: number;
+    windowState: EditorWindowState;
 }
-
-export interface ClipboardValidationAssetSlice {
-    clipboardNode: any | null;
-    setClipboardNode: (node: any | null) => void;
-    validationErrors: Record<string, string[]>;
-    setValidationErrors: (errors: Record<string, string[]>) => void;
-    clearValidationErrors: () => void;
-    selectedAssetPath: string | null;
-    setSelectedAssetPath: (path: string | null) => void;
-}
-
-export interface EditorState
-    extends UiPrefsSlice,
-        PlaybackQuickCommandsSlice,
-        ClipboardValidationAssetSlice,
-        SelectionSlice,
-        DockLayoutSlice {}
 

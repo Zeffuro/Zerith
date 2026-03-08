@@ -1,25 +1,16 @@
-import { useEditorStore } from '../../store/useEditorStore';
-import { useScriptStore } from '../../store/useScriptStore';
-import { useProjectStore } from '../../store/useProjectStore';
 import { getPlugin } from '../../plugins/commandPlugins';
-import { SchemaFallbackInspector } from './SchemaFallbackInspector';
+import { useEditorStore } from '../../store/useEditorStore';
+import { useProjectStore } from '../../store/useProjectStore';
+import { useScriptStore } from '../../store/useScriptStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { styles } from '../../theme/styleHelpers';
-
-function getAtPath(root: any, path: Array<string | number>) {
-    let cur = root;
-    for (const key of path) {
-        if (cur == null) return null;
-        cur = cur[key as any];
-    }
-    return cur ?? null;
-}
+import { SchemaFallbackInspector } from './SchemaFallbackInspector';
 
 export function Inspector() {
     const uiScale = useEditorStore((state) => state.uiScale);
     const selectedNodePaths = useEditorStore((s) => s.selectedNodePaths);
 
-    const { getActiveScript, selectedNodeIndex, selectedNodePath, getNodeAtPath } = useScriptStore();
+    const { getActiveScript, getNodeAtPath, selectedNodeIndex, selectedNodePath } = useScriptStore();
 
     const editingAllMacrosFile = useProjectStore((s) => s.editingAllMacrosFile);
     const macroEntries = useProjectStore((s) => s.macroEntries);
@@ -31,10 +22,10 @@ export function Inspector() {
     if (editingAllMacrosFile) {
         const path = selectedNodePaths[0] ?? selectedNodePath;
         if (path && typeof path[0] === 'number') {
-            const macroIdx = path[0] as number;
-            const macro = macroEntries[macroIdx];
+            const macroIndex = path[0];
+            const macro = macroEntries[macroIndex];
             if (macro) {
-                const syntheticRoot = { type: 'macro_header', name: macro.name, body: macro.commands };
+                const syntheticRoot = { body: macro.commands, name: macro.name, type: 'macro_header' };
                 node = path.length === 1 ? syntheticRoot : getAtPath(syntheticRoot, path.slice(1));
             }
         }
@@ -45,14 +36,14 @@ export function Inspector() {
 
     if (!node) {
         return (
-            <div style={{ padding: `${16 * uiScale}px`, height: '100%', backgroundColor: t.bg.app }}>
+            <div style={{ backgroundColor: t.bg.app, height: '100%', padding: `${16 * uiScale}px` }}>
                 <p
                     style={{
-                        fontSize: 'inherit',
                         color: t.text.faint,
+                        fontSize: 'inherit',
                         fontStyle: 'italic',
-                        textAlign: 'center',
                         marginTop: '20px',
+                        textAlign: 'center',
                     }}
                 >
                     Select a node to edit.
@@ -68,13 +59,13 @@ export function Inspector() {
         <div
             className="zerith-scrollbar"
             style={{
-                padding: `${16 * uiScale}px`,
+                backgroundColor: t.bg.app,
                 height: '100%',
                 overflowY: 'auto',
-                backgroundColor: t.bg.app
+                padding: `${16 * uiScale}px`
             }}
         >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: `${16 * uiScale}px`, fontSize: 'inherit' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', fontSize: 'inherit', gap: `${16 * uiScale}px` }}>
                 <div style={styles.panelHeaderRow}>
                     <span style={{ color: t.text.faint, fontSize: '0.85em', fontWeight: 'bold' }}>NODE TYPE</span>
                     <span
@@ -89,10 +80,19 @@ export function Inspector() {
                     </span>
                 </div>
 
-                {PluginInspector ? <PluginInspector node={node} index={selectedNodeIndex} /> : <SchemaFallbackInspector node={node} index={selectedNodeIndex} />}
+                {PluginInspector ? <PluginInspector index={selectedNodeIndex} node={node} /> : <SchemaFallbackInspector index={selectedNodeIndex} node={node} />}
             </div>
         </div>
     );
+}
+
+function getAtPath(root: any, path: Array<number | string>) {
+    let current = root;
+    for (const key of path) {
+        if (current == undefined) return null;
+        current = current[key as any];
+    }
+    return current ?? null;
 }
 
 export default Inspector;

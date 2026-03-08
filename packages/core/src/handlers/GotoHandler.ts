@@ -1,14 +1,14 @@
-import type { BaseCommand, CommandHandler } from '../types';
 import type { Engine } from '../Engine';
+import type { BaseCommand, CommandHandler } from '../types';
 
 export interface GotoCommand extends BaseCommand {
-    type: 'goto';
     label: string;
+    type: 'goto';
 }
 
 export class GotoHandler implements CommandHandler<GotoCommand> {
-    public type: 'goto' = 'goto';
     public autoNext = true;
+    public type: 'goto' = 'goto';
 
     execute = async (command: GotoCommand, engine: Engine) => {
         const script = engine.scenes.script;
@@ -16,10 +16,10 @@ export class GotoHandler implements CommandHandler<GotoCommand> {
             cmd => cmd.type === 'label' && 'name' in cmd && cmd.name === command.label
         );
 
-        if (targetIndex !== -1) {
-            engine.scenes.currentIndex = targetIndex + 1;
-        } else {
+        if (targetIndex === -1) {
             engine.logger.warn(`Label '${command.label}' not found in current scene.`);
+        } else {
+            engine.scenes.currentIndex = targetIndex + 1;
         }
     };
 }

@@ -1,24 +1,55 @@
+import type { ScriptSlice, ScriptState } from '../types';
+
 import { getNestedArray, updateDeepScript } from '../../../utils/scriptUtils';
 import { MAX_HISTORY } from '../constants';
-import type { ScriptSlice, ScriptState } from '../types';
 
 type ListOpsSlice = Pick<
     ScriptState,
-    'getActiveScript' | 'updateActiveScript' | 'moveNode' | 'deleteNode' | 'addNode'
+    'addNode' | 'deleteNode' | 'getActiveScript' | 'moveNode' | 'updateActiveScript'
 >;
 
 export const createListOpsSlice: ScriptSlice<ListOpsSlice> = (set, get) => ({
+    addNode: (node) => {
+        const { getActiveScript, selectedNodeIndex, updateActiveScript } = get();
+        const currentList = getActiveScript();
+
+        const index = selectedNodeIndex === null ? currentList.length : selectedNodeIndex + 1;
+        const newList = [...currentList];
+        newList.splice(index, 0, node);
+
+        updateActiveScript(newList);
+
+        const scope = get().scopePath;
+        set({
+            selectedNodeIndex: index,
+            selectedNodePath: [...scope, index],
+        });
+    },
+
+    deleteNode: (index) => {
+        const { getActiveScript, selectedNodeIndex, updateActiveScript } = get();
+        const newList = getActiveScript().filter((_, index_) => index_ !== index);
+
+        updateActiveScript(newList);
+
+        const nextIndex =
+            selectedNodeIndex === index
+                ? null
+                : (selectedNodeIndex !== null && selectedNodeIndex > index
+                    ? selectedNodeIndex - 1
+                    : selectedNodeIndex);
+
+        const scope = get().scopePath;
+        set({
+            selectedNodeIndex: nextIndex,
+            selectedNodePath: nextIndex === null ? null : [...scope, nextIndex],
+        });
+    },
+
     getActiveScript: () => {
         const { rootScript, scopePath } = get();
         return getNestedArray(rootScript, scopePath);
     },
-
-    updateActiveScript: (newSubArray) =>
-        set((state) => ({
-            rootScript: updateDeepScript(state.rootScript, state.scopePath, newSubArray),
-            past: [...state.past, state.rootScript].slice(-MAX_HISTORY),
-            future: [],
-        })),
 
     moveNode: (index, direction) => {
         const { getActiveScript, updateActiveScript } = get();
@@ -39,40 +70,10 @@ export const createListOpsSlice: ScriptSlice<ListOpsSlice> = (set, get) => ({
         });
     },
 
-    deleteNode: (index) => {
-        const { getActiveScript, updateActiveScript, selectedNodeIndex } = get();
-        const newList = getActiveScript().filter((_, i) => i !== index);
-
-        updateActiveScript(newList);
-
-        const nextIndex =
-            selectedNodeIndex === index
-                ? null
-                : selectedNodeIndex !== null && selectedNodeIndex > index
-                    ? selectedNodeIndex - 1
-                    : selectedNodeIndex;
-
-        const scope = get().scopePath;
-        set({
-            selectedNodeIndex: nextIndex,
-            selectedNodePath: nextIndex === null ? null : [...scope, nextIndex],
-        });
-    },
-
-    addNode: (node) => {
-        const { getActiveScript, updateActiveScript, selectedNodeIndex } = get();
-        const currentList = getActiveScript();
-
-        const index = selectedNodeIndex !== null ? selectedNodeIndex + 1 : currentList.length;
-        const newList = [...currentList];
-        newList.splice(index, 0, node);
-
-        updateActiveScript(newList);
-
-        const scope = get().scopePath;
-        set({
-            selectedNodeIndex: index,
-            selectedNodePath: [...scope, index],
-        });
-    },
+    updateActiveScript: (newSubArray) =>
+        set((state) => ({
+            future: [],
+            past: [...state.past, state.rootScript].slice(-MAX_HISTORY),
+            rootScript: updateDeepScript(state.rootScript, state.scopePath, newSubArray),
+        })),
 });

@@ -1,19 +1,53 @@
-import { z } from 'zod';
 import { CommandSchemaRegistry } from 'core/schemas';
-
-type ScalarKind = 'string' | 'number' | 'boolean' | 'enum' | 'unknown';
+import { z } from 'zod';
 
 export type FieldInfo = {
-    key: string;
-    optional: boolean;
-    kind: ScalarKind;
     enumValues?: string[];
+    key: string;
+    kind: ScalarKind;
+    optional: boolean;
 };
 
+type ScalarKind = 'boolean' | 'enum' | 'number' | 'string' | 'unknown';
+
 type UnwrapResult = {
-    schema: z.ZodTypeAny;
     optional: boolean;
+    schema: z.ZodTypeAny;
 };
+
+export function inferCommandFields(type: string): FieldInfo[] {
+    const rawSchema = CommandSchemaRegistry[type] as undefined | z.ZodTypeAny;
+    if (!rawSchema) return [];
+
+    const { schema } = unwrapSchema(rawSchema);
+    if (!(schema instanceof z.ZodObject)) return [];
+
+    const shape = schema.shape;
+
+    return Object.entries(shape)
+        .filter(([key]) => key !== 'type')
+        .map(([key, rawFieldSchema]) => {
+            const { optional, schema: fieldSchema } = unwrapSchema(rawFieldSchema);
+            return {
+                key,
+                optional,
+                ...inferFieldKind(fieldSchema),
+            };
+        });
+}
+
+function inferFieldKind(schema: z.ZodTypeAny): Omit<FieldInfo, 'key' | 'optional'> {
+    if (schema instanceof z.ZodString) return { kind: 'string' };
+    if (schema instanceof z.ZodNumber) return { kind: 'number' };
+    if (schema instanceof z.ZodBoolean) return { kind: 'boolean' };
+
+    if (schema instanceof z.ZodEnum) {
+        const enumValues = [...schema.options].filter((v): v is string => typeof v === 'string');
+        return { enumValues, kind: 'enum' };
+    }
+
+    return { kind: 'unknown' };
+}
 
 function unwrapSchema(raw: z.ZodTypeAny): UnwrapResult {
     let schema = raw;
@@ -45,40 +79,6 @@ function unwrapSchema(raw: z.ZodTypeAny): UnwrapResult {
         break;
     }
 
-    return { schema, optional };
-}
-
-function inferFieldKind(schema: z.ZodTypeAny): Omit<FieldInfo, 'key' | 'optional'> {
-    if (schema instanceof z.ZodString) return { kind: 'string' };
-    if (schema instanceof z.ZodNumber) return { kind: 'number' };
-    if (schema instanceof z.ZodBoolean) return { kind: 'boolean' };
-
-    if (schema instanceof z.ZodEnum) {
-        const enumValues = [...schema.options].filter((v): v is string => typeof v === 'string');
-        return { kind: 'enum', enumValues };
-    }
-
-    return { kind: 'unknown' };
-}
-
-export function inferCommandFields(type: string): FieldInfo[] {
-    const rawSchema = CommandSchemaRegistry[type] as z.ZodTypeAny | undefined;
-    if (!rawSchema) return [];
-
-    const { schema } = unwrapSchema(rawSchema);
-    if (!(schema instanceof z.ZodObject)) return [];
-
-    const shape = schema.shape;
-
-    return Object.entries(shape)
-        .filter(([key]) => key !== 'type')
-        .map(([key, rawFieldSchema]) => {
-            const { schema: fieldSchema, optional } = unwrapSchema(rawFieldSchema);
-            return {
-                key,
-                optional,
-                ...inferFieldKind(fieldSchema),
-            };
-        });
+    return { optional, schema };
 }
 

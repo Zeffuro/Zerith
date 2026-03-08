@@ -1,36 +1,11 @@
-import { fsReadTextFile } from '../../../services/fs';
 import type { ProjectGet, ProjectManifestSlice, ProjectSet } from '../types';
 
-async function resolveManifestValueFromDisk<T>(value: T | string, projectPath: string): Promise<T> {
-    if (typeof value === 'string') {
-        const filePath = projectPath + value;
-        const text = await fsReadTextFile(filePath);
-        return JSON.parse(text);
-    }
-    return value as T;
-}
-
-async function resolveScenesDisk(
-    scenes: Record<string, any>,
-    projectPath: string
-): Promise<Record<string, any[]>> {
-    const resolved: Record<string, any[]> = {};
-    await Promise.all(
-        Object.entries(scenes).map(async ([name, value]) => {
-            resolved[name] = await resolveManifestValueFromDisk<any[]>(value, projectPath);
-        })
-    );
-    return resolved;
-}
+import { fsReadTextFile } from '../../../services/fs';
 
 export function createProjectManifestSlice(set: ProjectSet, get: ProjectGet): ProjectManifestSlice {
     return {
-        manifest: null,
         characters: {},
         items: {},
-        macros: {},
-        scenes: {},
-
         loadManifest: async () => {
             const { projectPath } = get();
             if (!projectPath) return;
@@ -46,11 +21,37 @@ export function createProjectManifestSlice(set: ProjectSet, get: ProjectGet): Pr
                     manifest.scenes ? resolveScenesDisk(manifest.scenes, projectPath) : Promise.resolve({}),
                 ]);
 
-                set({ manifest, characters, items, macros, scenes });
-            } catch (err) {
-                console.error('Failed to load manifest:', err);
+                set({ characters, items, macros, manifest, scenes });
+            } catch (error) {
+                console.error('Failed to load manifest:', error);
             }
         },
+        macros: {},
+        manifest: null,
+
+        scenes: {},
     };
+}
+
+async function resolveManifestValueFromDisk<T>(value: string | T, projectPath: string): Promise<T> {
+    if (typeof value === 'string') {
+        const filePath = projectPath + value;
+        const text = await fsReadTextFile(filePath);
+        return JSON.parse(text);
+    }
+    return value;
+}
+
+async function resolveScenesDisk(
+    scenes: Record<string, any>,
+    projectPath: string
+): Promise<Record<string, any[]>> {
+    const resolved: Record<string, any[]> = {};
+    await Promise.all(
+        Object.entries(scenes).map(async ([name, value]) => {
+            resolved[name] = await resolveManifestValueFromDisk<any[]>(value, projectPath);
+        })
+    );
+    return resolved;
 }
 

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+
+import { useEditorStore } from '../../store/useEditorStore';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useScriptStore } from '../../store/useScriptStore';
-import { useEditorStore } from '../../store/useEditorStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 
-export function MacroHeaderInspector({}: { node: any; index?: number | null }) {
+export function MacroHeaderInspector({}: { index?: null | number; node: any; }) {
     const uiScale = useEditorStore((s) => s.uiScale);
     const selectedNodePath = useScriptStore((s) => s.selectedNodePath);
 
@@ -13,66 +14,66 @@ export function MacroHeaderInspector({}: { node: any; index?: number | null }) {
     const removeMacroEntry = useProjectStore((s) => s.removeMacroEntry);
     const duplicateMacroEntries = useProjectStore((s) => s.duplicateMacroEntries);
 
-    const idx = typeof selectedNodePath?.[0] === 'number' ? (selectedNodePath[0] as number) : null;
-    const macro = idx !== null ? macroEntries[idx] : null;
+    const index = typeof selectedNodePath?.[0] === 'number' ? (selectedNodePath[0]) : null;
+    const macro = index === null ? null : macroEntries[index];
 
     const [name, setName] = useState(macro?.name ?? '');
     useEffect(() => setName(macro?.name ?? ''), [macro?.name]);
 
-    if (idx === null || !macro) {
+    if (index === null || !macro) {
         return <div style={{ color: t.text.faint, fontStyle: 'italic' }}>Select a macro header.</div>;
     }
 
     const inputStyle = {
-        width: '100%',
-        padding: `${8 * uiScale}px`,
         backgroundColor: t.bg.input,
         border: `1px solid ${t.border.input}`,
-        color: t.text.primary,
         borderRadius: t.radius.md,
+        color: t.text.primary,
         fontSize: 'inherit',
         outline: 'none',
+        padding: `${8 * uiScale}px`,
+        width: '100%',
     };
 
-    const btn = {
-        border: `1px solid ${t.border.button}`,
+    const button = {
         background: t.bg.panel,
-        color: t.text.normal,
+        border: `1px solid ${t.border.button}`,
         borderRadius: t.radius.sm,
-        padding: `${6 * uiScale}px ${10 * uiScale}px`,
+        color: t.text.normal,
         cursor: 'pointer',
         fontSize: `${12 * uiScale}px`,
+        padding: `${6 * uiScale}px ${10 * uiScale}px`,
     };
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: `${12 * uiScale}px` }}>
             <div>
-                <label style={{ display: 'block', marginBottom: `${6 * uiScale}px`, color: t.text.muted, fontSize: '0.85em' }}>
+                <label style={{ color: t.text.muted, display: 'block', fontSize: '0.85em', marginBottom: `${6 * uiScale}px` }}>
                     Macro Name
                 </label>
                 <input
-                    type="text"
-                    value={name}
+                    onBlur={() => renameMacroEntry(index, name)}
                     onChange={(e) => setName(e.target.value)}
-                    onBlur={() => renameMacroEntry(idx, name)}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                             e.preventDefault();
-                            renameMacroEntry(idx, name);
+                            renameMacroEntry(index, name);
                             (e.target as HTMLInputElement).blur();
                         }
                     }}
                     style={inputStyle}
+                    type="text"
+                    value={name}
                 />
             </div>
 
             <div style={{ display: 'flex', gap: `${8 * uiScale}px` }}>
-                <button style={btn} onClick={() => duplicateMacroEntries([idx])}>
+                <button onClick={() => duplicateMacroEntries([index])} style={button}>
                     Duplicate Macro
                 </button>
                 <button
-                    style={{ ...btn, color: '#fecaca', border: '1px solid #7f1d1d' }}
-                    onClick={() => removeMacroEntry(idx)}
+                    onClick={() => removeMacroEntry(index)}
+                    style={{ ...button, border: '1px solid #7f1d1d', color: '#fecaca' }}
                 >
                     Delete Macro
                 </button>

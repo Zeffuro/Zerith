@@ -1,17 +1,17 @@
 import type { Engine } from '../Engine';
 
-export interface SaveState {
-    sceneName: string;
-    index: number;
-    state: Record<string, any>;
-    meta: SaveMeta;
-}
-
 export interface SaveMeta {
-    slot: number;
+    label?: string;
     savedAt: number;
     sceneName: string;
-    label?: string;
+    slot: number;
+}
+
+export interface SaveState {
+    index: number;
+    meta: SaveMeta;
+    sceneName: string;
+    state: Record<string, any>;
 }
 
 export class SaveManager {
@@ -23,33 +23,47 @@ export class SaveManager {
         this.prefix = prefix;
     }
 
-    public save(slot: number = 1, label?: string) {
-        const meta: SaveMeta = {
-            slot,
-            savedAt: Date.now(),
-            sceneName: this.engine.currentSceneName,
-            label
-        };
+    public deleteSlot(slot: number) {
+        localStorage.removeItem(`${this.prefix}_${slot}`);
+        this.engine.logger.info(`Save slot ${slot} deleted`);
+    }
 
-        const saveData: SaveState = {
-            sceneName: this.engine.currentSceneName,
-            index: this.engine.lastSavePoint,
-            state: JSON.parse(JSON.stringify(this.engine.state)),
-            meta
-        };
+    public getMeta(slot: number): null | SaveMeta {
+        const saveString = localStorage.getItem(`${this.prefix}_${slot}`);
+        if (!saveString) return null;
 
-        localStorage.setItem(`${this.prefix}_${slot}`, JSON.stringify(saveData));
-        this.engine.logger.info(`Game saved to slot ${slot}`);
+        try {
+            const saveData: SaveState = JSON.parse(saveString);
+            return saveData.meta ?? {
+                savedAt: 0,
+                sceneName: saveData.sceneName,
+                slot
+            };
+        } catch {
+            return null;
+        }
+    }
+
+    public hasSlot(slot: number): boolean {
+        return localStorage.getItem(`${this.prefix}_${slot}`) !== null;
+    }
+
+    public listSlots(maxSlots: number = 10): (null | SaveMeta)[] {
+        const slots: (null | SaveMeta)[] = [];
+        for (let index = 1; index <= maxSlots; index++) {
+            slots.push(this.getMeta(index));
+        }
+        return slots;
     }
 
     public async load(slot: number = 1) {
-        const saveStr = localStorage.getItem(`${this.prefix}_${slot}`);
-        if (!saveStr) {
+        const saveString = localStorage.getItem(`${this.prefix}_${slot}`);
+        if (!saveString) {
             this.engine.logger.warn(`No save found in slot ${slot}`);
             return;
         }
 
-        const saveData: SaveState = JSON.parse(saveStr);
+        const saveData: SaveState = JSON.parse(saveString);
         this.engine.logger.info(`Loading save from slot ${slot}...`);
 
         this.engine.clear();
@@ -61,34 +75,34 @@ export class SaveManager {
         }
 
         const bgUrl = this.engine.getState('__sys_bg');
-        if (bgUrl) await this.engine.runCommand({ type: 'background', assetUrl: bgUrl });
+        if (bgUrl) await this.engine.runCommand({ assetUrl: bgUrl, type: 'background' });
 
         const bgmUrl = this.engine.getState('__sys_bgm');
-        if (bgmUrl) await this.engine.runCommand({ type: 'bgm', action: 'play', assetUrl: bgmUrl });
+        if (bgmUrl) await this.engine.runCommand({ action: 'play', assetUrl: bgmUrl, type: 'bgm' });
 
         const sprites = this.engine.getState('__sys_sprites');
         if (sprites && typeof sprites === 'object') {
             for (const [id, data] of Object.entries(sprites)) {
                 const s = data as any;
                 await this.engine.runCommand({
-                    type: 'sprite',
-                    id,
                     action: 'show',
+                    anchorX: s.anchorX,
+                    anchorY: s.anchorY,
                     assetUrl: s.assetUrl,
-                    pose: s.pose,
-                    x: s.x, y: s.y,
-                    anchorX: s.anchorX, anchorY: s.anchorY,
-                    scaleX: s.scaleX, scaleY: s.scaleY,
                     flip: s.flip,
-                    transition: 'instant',
+                    id, pose: s.pose,
+                    scaleX: s.scaleX, scaleY: s.scaleY,
+                    transition: 'instant', type: 'sprite',
+                    x: s.x,
+                    y: s.y,
                 });
 
                 if (s.animation) {
                     await this.engine.runCommand({
-                        type: 'sprite',
-                        id,
                         action: 'animate',
                         animation: s.animation,
+                        id,
+                        type: 'sprite',
                     });
                 }
             }
@@ -100,36 +114,22 @@ export class SaveManager {
         }
     }
 
-    public getMeta(slot: number): SaveMeta | null {
-        const saveStr = localStorage.getItem(`${this.prefix}_${slot}`);
-        if (!saveStr) return null;
+    public save(slot: number = 1, label?: string) {
+        const meta: SaveMeta = {
+            label,
+            savedAt: Date.now(),
+            sceneName: this.engine.currentSceneName,
+            slot
+        };
 
-        try {
-            const saveData: SaveState = JSON.parse(saveStr);
-            return saveData.meta ?? {
-                slot,
-                savedAt: 0,
-                sceneName: saveData.sceneName
-            };
-        } catch {
-            return null;
-        }
-    }
+        const saveData: SaveState = {
+            index: this.engine.lastSavePoint,
+            meta,
+            sceneName: this.engine.currentSceneName,
+            state: JSON.parse(JSON.stringify(this.engine.state))
+        };
 
-    public listSlots(maxSlots: number = 10): (SaveMeta | null)[] {
-        const slots: (SaveMeta | null)[] = [];
-        for (let i = 1; i <= maxSlots; i++) {
-            slots.push(this.getMeta(i));
-        }
-        return slots;
-    }
-
-    public hasSlot(slot: number): boolean {
-        return localStorage.getItem(`${this.prefix}_${slot}`) !== null;
-    }
-
-    public deleteSlot(slot: number) {
-        localStorage.removeItem(`${this.prefix}_${slot}`);
-        this.engine.logger.info(`Save slot ${slot} deleted`);
+        localStorage.setItem(`${this.prefix}_${slot}`, JSON.stringify(saveData));
+        this.engine.logger.info(`Game saved to slot ${slot}`);
     }
 }

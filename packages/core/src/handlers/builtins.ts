@@ -1,22 +1,22 @@
 import { BackgroundHandler } from './BackgroundHandler';
-import { TransitionHandler } from './TransitionHandler';
-import { JumpHandler } from './JumpHandler';
-import { SceneChangeHandler } from './SceneChangeHandler';
+import { BgmHandler } from './BgmHandler';
 import { BlockHandler } from './BlockHandler';
 import { CallHandler } from './CallHandler';
-import { BgmHandler } from './BgmHandler';
-import { SfxHandler } from './SfxHandler';
-import { SetHandler } from './SetHandler';
-import { IfHandler } from './IfHandler';
-import { WhileHandler } from './WhileHandler';
-import { ForHandler } from './ForHandler';
-import { ShakeHandler } from './ShakeHandler';
-import { WaitHandler } from './WaitHandler';
-import { LabelHandler } from './LabelHandler';
-import { GotoHandler } from './GotoHandler';
-import { SpriteHandler } from './SpriteHandler';
 import { FlashHandler } from './FlashHandler';
+import { ForHandler } from './ForHandler';
+import { GotoHandler } from './GotoHandler';
+import { IfHandler } from './IfHandler';
 import { ItemHandler } from './ItemHandler';
+import { JumpHandler } from './JumpHandler';
+import { LabelHandler } from './LabelHandler';
+import { SceneChangeHandler } from './SceneChangeHandler';
+import { SetHandler } from './SetHandler';
+import { SfxHandler } from './SfxHandler';
+import { ShakeHandler } from './ShakeHandler';
+import { SpriteHandler } from './SpriteHandler';
+import { TransitionHandler } from './TransitionHandler';
+import { WaitHandler } from './WaitHandler';
+import { WhileHandler } from './WhileHandler';
 
 /**
  * Handlers that require no constructor config.

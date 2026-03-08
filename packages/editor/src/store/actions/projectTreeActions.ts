@@ -1,4 +1,5 @@
 import type { FsDirEntry } from '../../services/fs';
+
 import { useProjectStore } from '../useProjectStore';
 
 export function executeProjectTreeRefreshAction(path: string, entries: FsDirEntry[]): void {
@@ -7,7 +8,7 @@ export function executeProjectTreeRefreshAction(path: string, entries: FsDirEntr
     project.bumpTreeRevision?.();
 }
 
-export function getCurrentProjectPath(): string | null {
+export function getCurrentProjectPath(): null | string {
     return useProjectStore.getState().projectPath;
 }
 

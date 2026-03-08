@@ -1,7 +1,9 @@
 import { Container, Graphics, Text } from 'pixi.js';
+
 import type { Engine } from '../Engine';
 import type { MenuPanel } from '../types';
-import { createPanelTitle, createButton, registerFocusableButton } from './UIComponents';
+
+import { createButton, createPanelTitle, registerFocusableButton } from './UIComponents';
 
 export interface HistoryPanelConfig {
     maxLines?: number;
@@ -18,14 +20,14 @@ export class HistoryPanel implements MenuPanel {
 
     build(engine: Engine, onClose: () => void) {
         const overlay = engine.overlay;
-        const ctx = overlay.getUIContext();
-        const cfg = ctx.overlayConfig;
-        const w = ctx.canvasWidth;
-        const h = ctx.canvasHeight;
+        const context = overlay.getUIContext();
+        const cfg = context.overlayConfig;
+        const w = context.canvasWidth;
+        const h = context.canvasHeight;
         const focus = overlay.focus;
 
         const root = overlay.createPanelBase();
-        root.addChild(createPanelTitle(ctx, 'HISTORY'));
+        root.addChild(createPanelTitle(context, 'HISTORY'));
 
         const entries = engine.history.getRecent(this.config.maxLines);
         const padding = 40;
@@ -37,47 +39,47 @@ export class HistoryPanel implements MenuPanel {
 
         const content = new Container();
 
-        const mask = new Graphics().rect(0, 60, w, contentAreaBottom - 60).fill(0xffffff);
+        const mask = new Graphics().rect(0, 60, w, contentAreaBottom - 60).fill(0xFF_FF_FF);
         root.addChild(mask);
         content.mask = mask;
 
         if (entries.length === 0) {
             const empty = new Text({
-                text: 'No dialogue history yet.',
-                style: { fill: 0x888888, fontSize: cfg.fontSize - 4, fontFamily: cfg.fontFamily }
+                style: { fill: 0x88_88_88, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize - 4 },
+                text: 'No dialogue history yet.'
             });
             empty.position.set(padding, y);
             content.addChild(empty);
         } else {
-            entries.forEach((entry) => {
+            for (const entry of entries) {
                 const speakerText = new Text({
-                    text: `${entry.speaker}:`,
                     style: {
-                        fill: ctx.theme.accentColor,
-                        fontSize: cfg.fontSize - 4,
+                        fill: context.theme.accentColor,
                         fontFamily: cfg.fontFamily,
+                        fontSize: cfg.fontSize - 4,
                         fontWeight: 'bold'
-                    }
+                    },
+                    text: `${entry.speaker}:`
                 });
                 speakerText.position.set(padding, y);
                 content.addChild(speakerText);
 
-                const cleanText = entry.text.replace(/{[^}]+}/g, '').replace(/<[^>]+>/g, '');
-                const msgText = new Text({
-                    text: cleanText,
+                const cleanText = entry.text.replaceAll(/{[^}]+}/g, '').replaceAll(/<[^>]+>/g, '');
+                const messageText = new Text({
                     style: {
                         fill: cfg.textColor,
-                        fontSize: cfg.fontSize - 4,
                         fontFamily: cfg.fontFamily,
+                        fontSize: cfg.fontSize - 4,
                         wordWrap: true,
                         wordWrapWidth: w - (padding * 2) - 10
-                    }
+                    },
+                    text: cleanText
                 });
-                msgText.position.set(padding + 10, y + lineHeight);
-                content.addChild(msgText);
+                messageText.position.set(padding + 10, y + lineHeight);
+                content.addChild(messageText);
 
-                y += lineHeight + msgText.height + 10;
-            });
+                y += lineHeight + messageText.height + 10;
+            }
         }
 
         root.addChild(content);
@@ -102,7 +104,7 @@ export class HistoryPanel implements MenuPanel {
         engine.app.canvas.addEventListener('wheel', onWheel, { passive: false });
 
         // Keyboard/gamepad scroll via navigate
-        focus.onNavigateRaw = (direction: 'up' | 'down' | 'left' | 'right') => {
+        focus.onNavigateRaw = (direction: 'down' | 'left' | 'right' | 'up') => {
             if (direction === 'up') {
                 applyScroll(scrollStep);
                 return true;
@@ -114,14 +116,14 @@ export class HistoryPanel implements MenuPanel {
             return false;
         };
 
-        const backBtn = createButton(ctx, { label: 'Back', x: w / 2, y: h - backHeight - backMargin }, onClose);
-        root.addChild(backBtn);
+        const backButton = createButton(context, { label: 'Back', x: w / 2, y: h - backHeight - backMargin }, onClose);
+        root.addChild(backButton);
 
-        registerFocusableButton(ctx, focus, backBtn, onClose);
+        registerFocusableButton(context, focus, backButton, onClose);
 
         return {
-            container: root,
             cleanup: () => engine.app.canvas.removeEventListener('wheel', onWheel),
+            container: root,
         };
     }
 }

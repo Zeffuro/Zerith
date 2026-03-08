@@ -1,76 +1,66 @@
-import { Search, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, X } from 'lucide-react';
+
 import { editorTheme as t } from '../../../theme/editorTheme';
 
-type Props = {
-    uiScale: number;
-    query: string;
+type Properties = {
+    activeMatchDisplayIndex: number;
+    inputId: string;
+    isSearching: boolean;
+    matchCount: number;
     onChangeQuery: (value: string) => void;
+
+    onNextMatch: () => void;
+    onPrevMatch: () => void;
+    query: string;
     shown: number;
     total: number;
 
-    isSearching: boolean;
-    matchCount: number;
-    activeMatchDisplayIndex: number;
-    onPrevMatch: () => void;
-    onNextMatch: () => void;
-
-    inputId: string;
+    uiScale: number;
 };
 
 export function TimelineSearchBar({
-                                      uiScale,
-                                      query,
-                                      onChangeQuery,
-                                      shown,
-                                      total,
+                                      activeMatchDisplayIndex,
+                                      inputId,
                                       isSearching,
                                       matchCount,
-                                      activeMatchDisplayIndex,
-                                      onPrevMatch,
+                                      onChangeQuery,
                                       onNextMatch,
-                                      inputId,
-                                  }: Props) {
-    const iconBtnStyle = {
-        border: `1px solid ${t.border.subtle}`,
+                                      onPrevMatch,
+                                      query,
+                                      shown,
+                                      total,
+                                      uiScale,
+                                  }: Properties) {
+    const iconButtonStyle = {
         background: t.bg.app,
-        color: t.text.muted,
+        border: `1px solid ${t.border.subtle}`,
         borderRadius: 4,
-        width: 22 * uiScale,
-        height: 22 * uiScale,
-        display: 'grid',
-        placeItems: 'center' as const,
+        color: t.text.muted,
         cursor: 'pointer',
+        display: 'grid',
+        height: 22 * uiScale,
+        placeItems: 'center' as const,
+        width: 22 * uiScale,
     };
 
     return (
         <div
             style={{
-                display: 'flex',
                 alignItems: 'center',
-                gap: `${8 * uiScale}px`,
-                marginBottom: `${8 * uiScale}px`,
                 background: t.bg.panel,
                 border: `1px solid ${t.border.subtle}`,
                 borderRadius: 6,
+                display: 'flex',
+                gap: `${8 * uiScale}px`,
+                marginBottom: `${8 * uiScale}px`,
                 padding: `${6 * uiScale}px`,
             }}
         >
-            <Search size={14 * uiScale} color={t.text.muted} />
+            <Search color={t.text.muted} size={14 * uiScale} />
 
             <input
                 id={inputId}
-                type="text"
-                value={query}
                 onChange={(e) => onChangeQuery(e.target.value)}
-                placeholder="Search timeline..."
-                style={{
-                    flex: 1,
-                    background: 'transparent',
-                    border: 'none',
-                    outline: 'none',
-                    color: t.text.primary,
-                    fontSize: `${13 * uiScale}px`,
-                }}
                 onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                         e.preventDefault();
@@ -78,14 +68,25 @@ export function TimelineSearchBar({
                         else onNextMatch();
                     }
                 }}
+                placeholder="Search timeline..."
+                style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: t.text.primary,
+                    flex: 1,
+                    fontSize: `${13 * uiScale}px`,
+                    outline: 'none',
+                }}
+                type="text"
+                value={query}
             />
 
             <span
                 style={{
-                    fontSize: `${11 * uiScale}px`,
                     color: t.text.muted,
-                    padding: `0 ${4 * uiScale}px`,
+                    fontSize: `${11 * uiScale}px`,
                     minWidth: `${44 * uiScale}px`,
+                    padding: `0 ${4 * uiScale}px`,
                     textAlign: 'right',
                 }}
                 title="Visible root nodes"
@@ -97,10 +98,10 @@ export function TimelineSearchBar({
                 <>
                     <span
                         style={{
-                            fontSize: `${11 * uiScale}px`,
                             color: t.text.muted,
-                            padding: `0 ${4 * uiScale}px`,
+                            fontSize: `${11 * uiScale}px`,
                             minWidth: `${40 * uiScale}px`,
+                            padding: `0 ${4 * uiScale}px`,
                             textAlign: 'right',
                         }}
                         title="Search matches"
@@ -109,29 +110,29 @@ export function TimelineSearchBar({
                     </span>
 
                     <button
-                        type="button"
-                        onClick={onPrevMatch}
                         disabled={matchCount === 0}
-                        title="Previous match (Shift+Enter / Shift+Ctrl+G)"
+                        onClick={onPrevMatch}
                         style={{
-                            ...iconBtnStyle,
-                            opacity: matchCount === 0 ? 0.5 : 1,
+                            ...iconButtonStyle,
                             cursor: matchCount === 0 ? 'not-allowed' : 'pointer',
+                            opacity: matchCount === 0 ? 0.5 : 1,
                         }}
+                        title="Previous match (Shift+Enter / Shift+Ctrl+G)"
+                        type="button"
                     >
                         <ChevronUp size={12 * uiScale} />
                     </button>
 
                     <button
-                        type="button"
-                        onClick={onNextMatch}
                         disabled={matchCount === 0}
-                        title="Next match (Enter / Ctrl+G)"
+                        onClick={onNextMatch}
                         style={{
-                            ...iconBtnStyle,
-                            opacity: matchCount === 0 ? 0.5 : 1,
+                            ...iconButtonStyle,
                             cursor: matchCount === 0 ? 'not-allowed' : 'pointer',
+                            opacity: matchCount === 0 ? 0.5 : 1,
                         }}
+                        title="Next match (Enter / Ctrl+G)"
+                        type="button"
                     >
                         <ChevronDown size={12 * uiScale} />
                     </button>
@@ -140,10 +141,10 @@ export function TimelineSearchBar({
 
             {query && (
                 <button
-                    type="button"
                     onClick={() => onChangeQuery('')}
+                    style={iconButtonStyle}
                     title="Clear search"
-                    style={iconBtnStyle}
+                    type="button"
                 >
                     <X size={12 * uiScale} />
                 </button>

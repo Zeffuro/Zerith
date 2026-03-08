@@ -1,7 +1,9 @@
 import { Container, Graphics, Text } from 'pixi.js';
+
 import type { Engine } from '../Engine';
 import type { MenuPanel } from '../types';
-import { createPanelTitle, createButton, registerFocusableButton } from './UIComponents';
+
+import { createButton, createPanelTitle, registerFocusableButton } from './UIComponents';
 
 export interface SaveLoadPanelConfig {
     maxSlots?: number;
@@ -10,10 +12,10 @@ export interface SaveLoadPanelConfig {
 export class SaveLoadPanel implements MenuPanel {
     public id: string;
     public label: string;
-    private readonly mode: 'save' | 'load';
     private config: Required<SaveLoadPanelConfig>;
+    private readonly mode: 'load' | 'save';
 
-    constructor(mode: 'save' | 'load', config: SaveLoadPanelConfig = {}) {
+    constructor(mode: 'load' | 'save', config: SaveLoadPanelConfig = {}) {
         this.mode = mode;
         this.id = mode === 'save' ? 'save' : 'load';
         this.label = mode === 'save' ? 'Save Game' : 'Load Game';
@@ -22,14 +24,14 @@ export class SaveLoadPanel implements MenuPanel {
 
     build(engine: Engine, onClose: () => void) {
         const overlay = engine.overlay;
-        const ctx = overlay.getUIContext();
-        const cfg = ctx.overlayConfig;
-        const w = ctx.canvasWidth;
-        const h = ctx.canvasHeight;
+        const context = overlay.getUIContext();
+        const cfg = context.overlayConfig;
+        const w = context.canvasWidth;
+        const h = context.canvasHeight;
         const focus = overlay.focus;
 
         const root = overlay.createPanelBase();
-        root.addChild(createPanelTitle(ctx, this.mode === 'save' ? 'SAVE GAME' : 'LOAD GAME'));
+        root.addChild(createPanelTitle(context, this.mode === 'save' ? 'SAVE GAME' : 'LOAD GAME'));
 
         const slots = engine.saves.listSlots(this.config.maxSlots);
         const slotHeight = 55;
@@ -46,12 +48,12 @@ export class SaveLoadPanel implements MenuPanel {
         const styleSlot = (bg: Graphics, selected: boolean) => {
             bg.clear();
             bg.roundRect(0, 0, slotWidth, slotHeight, 8);
-            bg.fill({ color: selected ? cfg.buttonHoverColor : cfg.buttonColor, alpha: selected ? 1 : cfg.buttonAlpha });
-            bg.stroke({ color: selected ? ctx.theme.accentColor : ctx.theme.borderColor, width: selected ? 2 : 1 });
+            bg.fill({ alpha: selected ? 1 : cfg.buttonAlpha, color: selected ? cfg.buttonHoverColor : cfg.buttonColor });
+            bg.stroke({ color: selected ? context.theme.accentColor : context.theme.borderColor, width: selected ? 2 : 1 });
         };
 
-        slots.forEach((meta, index) => {
-            const slotNum = index + 1;
+        for (const [index, meta] of slots.entries()) {
+            const slotNumber = index + 1;
             const slotContainer = new Container();
             slotContainer.eventMode = 'static';
             slotContainer.cursor = 'pointer';
@@ -63,14 +65,14 @@ export class SaveLoadPanel implements MenuPanel {
             let label: string;
             if (meta) {
                 const date = new Date(meta.savedAt);
-                label = `Slot ${slotNum}  —  ${meta.sceneName || 'Unknown'}  (${date.toLocaleString()})`;
+                label = `Slot ${slotNumber}  —  ${meta.sceneName || 'Unknown'}  (${date.toLocaleString()})`;
             } else {
-                label = `Slot ${slotNum}  —  Empty`;
+                label = `Slot ${slotNumber}  —  Empty`;
             }
 
             const slotText = new Text({
-                text: label,
-                style: { fill: meta ? cfg.textColor : 0x666666, fontSize: cfg.fontSize - 6, fontFamily: cfg.fontFamily }
+                style: { fill: meta ? cfg.textColor : 0x66_66_66, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize - 6 },
+                text: label
             });
             slotText.anchor.set(0, 0.5);
             slotText.position.set(15, slotHeight / 2);
@@ -80,13 +82,13 @@ export class SaveLoadPanel implements MenuPanel {
 
             const activateSlot = () => {
                 if (this.mode === 'save') {
-                    engine.saves.save(slotNum);
-                    engine.notifications.show(`Saved to Slot ${slotNum}`);
+                    engine.saves.save(slotNumber);
+                    engine.notifications.show(`Saved to Slot ${slotNumber}`);
                     engine.overlay.close();
                 } else {
                     if (!meta) { engine.notifications.show('Slot is empty'); return; }
-                    engine.saves.load(slotNum).then(() => {
-                        engine.notifications.show(`Loaded Slot ${slotNum}`);
+                    engine.saves.load(slotNumber).then(() => {
+                        engine.notifications.show(`Loaded Slot ${slotNumber}`);
                         engine.overlay.close();
                     });
                 }
@@ -100,19 +102,19 @@ export class SaveLoadPanel implements MenuPanel {
             });
 
             focus.register({
-                focus: () => styleSlot(slotBg, true),
-                blur: () => styleSlot(slotBg, false),
                 activate: activateSlot,
+                blur: () => styleSlot(slotBg, false),
+                focus: () => styleSlot(slotBg, true),
             });
 
             root.addChild(slotContainer);
             y += slotHeight + slotSpacing;
-        });
+        }
 
-        const backBtn = createButton(ctx, { label: 'Back', x: w / 2, y: h - backButtonHeight - backButtonMargin }, onClose);
-        root.addChild(backBtn);
+        const backButton = createButton(context, { label: 'Back', x: w / 2, y: h - backButtonHeight - backButtonMargin }, onClose);
+        root.addChild(backButton);
 
-        registerFocusableButton(ctx, focus, backBtn, onClose);
+        registerFocusableButton(context, focus, backButton, onClose);
 
         return { container: root };
     }

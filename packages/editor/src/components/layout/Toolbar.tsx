@@ -1,18 +1,19 @@
-import { Play, Square, FolderOpen, Save, ZoomIn, ZoomOut, Volume2, VolumeX, Star, MonitorDot } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
-import { useProjectStore } from '../../store/useProjectStore';
-import { useEditorStore } from '../../store/useEditorStore';
+import { FolderOpen, MonitorDot, Play, Save, Square, Star, Volume2, VolumeX, ZoomIn, ZoomOut } from 'lucide-react';
 import { useState } from 'react';
+
+import { useEditorStore } from '../../store/useEditorStore';
+import { useProjectStore } from '../../store/useProjectStore';
+import { editorTheme as t } from '../../theme/editorTheme';
 import { QuickCommandsMenu } from './menus/QuickCommandsMenu';
 import { ThemeMenu } from './menus/ThemeMenu';
-import { editorTheme as t } from '../../theme/editorTheme';
 
 export function Toolbar() {
-    const { activeFile, saveActiveFileFromCurrentScript, openProjectFromManifest } = useProjectStore();
+    const { activeFile, openProjectFromManifest, saveActiveFileFromCurrentScript } = useProjectStore();
     const {
-        uiScale, setUiScale, isMuted, toggleMute, triggerPlay, triggerStop,
-        quickCommandTypes, toggleQuickCommandType, moveQuickCommandType,
-        themeKey, setThemeKey, resetDockLayout
+        isMuted, moveQuickCommandType, quickCommandTypes, resetDockLayout, setThemeKey, setUiScale,
+        themeKey, toggleMute, toggleQuickCommandType,
+        triggerPlay, triggerStop, uiScale
     } = useEditorStore();
 
     const [quickOpen, setQuickOpen] = useState(false);
@@ -20,17 +21,17 @@ export function Toolbar() {
     const handleOpenProject = async () => {
         try {
             const selectedFile = await open({
-                multiple: false,
                 directory: false,
-                filters: [{ name: 'Game Manifest', extensions: ['json'] }],
+                filters: [{ extensions: ['json'], name: 'Game Manifest' }],
+                multiple: false,
                 title: 'Select game.json'
             });
 
             if (selectedFile) {
                 await openProjectFromManifest(selectedFile);
             }
-        } catch (err) {
-            console.error('Failed to open project dialog:', err);
+        } catch (error) {
+            console.error('Failed to open project dialog:', error);
         }
     };
 
@@ -45,19 +46,19 @@ export function Toolbar() {
     return (
         <div
             style={{
-                width: '100%',
-                height: '100%',
-                backgroundColor: t.bg.panelAlt,
-                display: 'flex',
                 alignItems: 'center',
-                padding: `0 ${10 * uiScale}px`,
+                backgroundColor: t.bg.panelAlt,
                 borderBottom: `1px solid ${t.border.input}`,
-                gap: `${6 * uiScale}px`,
                 boxSizing: 'border-box',
+                display: 'flex',
+                gap: `${6 * uiScale}px`,
+                height: '100%',
                 overflow: 'hidden',
+                padding: `0 ${10 * uiScale}px`,
+                width: '100%',
             }}
         >
-            <strong style={{ color: t.text.primary, marginRight: `${8 * uiScale}px`, fontSize: '0.95em', whiteSpace: 'nowrap' }}>
+            <strong style={{ color: t.text.primary, fontSize: '0.95em', marginRight: `${8 * uiScale}px`, whiteSpace: 'nowrap' }}>
                 Zerith Editor
             </strong>
 
@@ -77,44 +78,44 @@ export function Toolbar() {
             </button>
 
             <QuickCommandsMenu
-                uiScale={uiScale}
-                open={quickOpen}
+                moveQuickCommandType={moveQuickCommandType}
                 onClose={() => setQuickOpen(false)}
+                open={quickOpen}
                 quickCommandTypes={quickCommandTypes}
                 toggleQuickCommandType={toggleQuickCommandType}
-                moveQuickCommandType={moveQuickCommandType}
+                uiScale={uiScale}
             />
 
-            <div style={{ marginLeft: '4px', display: 'flex', alignItems: 'center' }}>
-                <ThemeMenu uiScale={uiScale} selectedKey={themeKey} onSelect={setThemeKey} />
+            <div style={{ alignItems: 'center', display: 'flex', marginLeft: '4px' }}>
+                <ThemeMenu onSelect={setThemeKey} selectedKey={themeKey} uiScale={uiScale} />
             </div>
 
-            <div style={{ display: 'flex', marginLeft: 'auto', gap: '4px' }}>
+            <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto' }}>
                 <button className="toolbar-btn" onClick={toggleMute} style={{ padding: pad }} title={isMuted ? 'Unmute Audio' : 'Mute Audio'}>
-                    {isMuted ? <VolumeX size={iconSize} color={t.accent.red} /> : <Volume2 size={iconSize} />}
+                    {isMuted ? <VolumeX color={t.accent.red} size={iconSize} /> : <Volume2 size={iconSize} />}
                 </button>
                 <button className="toolbar-btn danger" onClick={triggerStop} style={{ padding: pad }} title="Stop Preview">
-                    <Square size={iconSize} fill="currentColor" />
+                    <Square fill="currentColor" size={iconSize} />
                 </button>
                 <button className="toolbar-btn primary" onClick={triggerPlay} style={{ padding: pad }} title="Play Preview">
-                    <Play size={iconSize} fill="currentColor" />
+                    <Play fill="currentColor" size={iconSize} />
                 </button>
             </div>
 
             <div
                 style={{
-                    marginLeft: `${10 * uiScale}px`,
-                    display: 'flex',
                     alignItems: 'center',
-                    gap: '2px',
                     borderLeft: `1px solid ${t.border.subtle}`,
+                    display: 'flex',
+                    gap: '2px',
+                    marginLeft: `${10 * uiScale}px`,
                     paddingLeft: `${10 * uiScale}px`,
                 }}
             >
                 <button className="toolbar-btn" onClick={() => setUiScale(Math.max(0.8, uiScale - 0.1))} style={{ padding: pad }} title="Zoom Out UI">
                     <ZoomOut size={iconSize} />
                 </button>
-                <span style={{ fontSize: '0.85em', color: t.text.normal, minWidth: `${34 * uiScale}px`, textAlign: 'center' }}>
+                <span style={{ color: t.text.normal, fontSize: '0.85em', minWidth: `${34 * uiScale}px`, textAlign: 'center' }}>
                     {Math.round(uiScale * 100)}%
                 </span>
                 <button className="toolbar-btn" onClick={() => setUiScale(Math.min(1.5, uiScale + 0.1))} style={{ padding: pad }} title="Zoom In UI">

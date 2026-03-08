@@ -1,27 +1,25 @@
-import { Assets } from 'pixi.js';
 import { sound } from '@pixi/sound';
+import { Assets } from 'pixi.js';
+
 import type { AssetResolver } from '../Engine';
-import type { CharacterDefinition, BaseCommand, Script, SpritesheetConfig } from '../types';
+import type { BaseCommand, CharacterDefinition, Script, SpritesheetConfig } from '../types';
 import type { SpritesheetManager } from './SpritesheetManager';
+
 import { Logger } from '../utils/Logger';
 
 export class AssetManager {
-    private readonly logger = new Logger('[AssetManager]');
     private readonly loadedUrls: Set<string> = new Set();
+    private readonly logger = new Logger('[AssetManager]');
     private resolver: AssetResolver;
+
+    private readonly spritesheets: SpritesheetManager;
 
     constructor(spritesheets: SpritesheetManager, resolver: AssetResolver = (url) => url) {
         this.spritesheets = spritesheets;
         this.resolver = resolver;
     }
 
-    private readonly spritesheets: SpritesheetManager;
-
-    public setResolver(resolver: AssetResolver) {
-        this.resolver = resolver;
-    }
-
-    public static extractAssetUrls(script: Script): { textures: Set<string>; audio: Set<string> } {
+    public static extractAssetUrls(script: Script): { audio: Set<string>; textures: Set<string>; } {
         const textures = new Set<string>();
         const audio = new Set<string>();
 
@@ -61,21 +59,11 @@ export class AssetManager {
         };
 
         walk(script);
-        return { textures, audio };
+        return { audio, textures };
     }
 
-    public extractAssetUrls(script: Script): { textures: Set<string>; audio: Set<string> } {
+    public extractAssetUrls(script: Script): { audio: Set<string>; textures: Set<string>; } {
         return AssetManager.extractAssetUrls(script);
-    }
-
-    public async preloadSceneAssets(script: Script): Promise<void> {
-        const { textures, audio } = this.extractAssetUrls(script);
-
-        const texturePromises = [...textures].map((url) => this.preloadTexture(url));
-        const audioPromises = [...audio].map((url) => this.preloadAudio(url));
-
-        await Promise.all([...texturePromises, ...audioPromises]);
-        this.logger.info(`Preloaded ${textures.size} textures, ${audio.size} audio files.`);
     }
 
     public async preloadCharacterAssets(characters: Record<string, CharacterDefinition>): Promise<void> {
@@ -102,17 +90,18 @@ export class AssetManager {
         await Promise.all(tasks);
     }
 
-    private async preloadTexture(url: string): Promise<void> {
-        const resolvedUrl = this.resolver(url);
-        const key = `texture:${resolvedUrl}`;
-        if (this.loadedUrls.has(key)) return;
+    public async preloadSceneAssets(script: Script): Promise<void> {
+        const { audio, textures } = this.extractAssetUrls(script);
 
-        try {
-            await Assets.load(resolvedUrl);
-            this.loadedUrls.add(key);
-        } catch (err) {
-            this.logger.warn(`Failed to preload texture: ${url}`, err);
-        }
+        const texturePromises = [...textures].map((url) => this.preloadTexture(url));
+        const audioPromises = [...audio].map((url) => this.preloadAudio(url));
+
+        await Promise.all([...texturePromises, ...audioPromises]);
+        this.logger.info(`Preloaded ${textures.size} textures, ${audio.size} audio files.`);
+    }
+
+    public setResolver(resolver: AssetResolver) {
+        this.resolver = resolver;
     }
 
     private async preloadAudio(url: string): Promise<void> {
@@ -125,13 +114,13 @@ export class AssetManager {
 
         await new Promise<void>((resolve) => {
             sound.add(resolvedUrl, {
-                url: resolvedUrl,
-                preload: true,
-                loaded: (err) => {
-                    if (err) this.logger.warn(`Failed to preload audio: ${url}`, err);
+                loaded: (error) => {
+                    if (error) this.logger.warn(`Failed to preload audio: ${url}`, error);
                     else this.loadedUrls.add(key);
                     resolve();
                 },
+                preload: true,
+                url: resolvedUrl,
             });
         });
     }
@@ -144,8 +133,21 @@ export class AssetManager {
         try {
             await this.spritesheets.load(config);
             this.loadedUrls.add(key);
-        } catch (err) {
-            this.logger.warn(`Failed to preload spritesheet: ${config.atlasUrl}`, err);
+        } catch (error) {
+            this.logger.warn(`Failed to preload spritesheet: ${config.atlasUrl}`, error);
+        }
+    }
+
+    private async preloadTexture(url: string): Promise<void> {
+        const resolvedUrl = this.resolver(url);
+        const key = `texture:${resolvedUrl}`;
+        if (this.loadedUrls.has(key)) return;
+
+        try {
+            await Assets.load(resolvedUrl);
+            this.loadedUrls.add(key);
+        } catch (error) {
+            this.logger.warn(`Failed to preload texture: ${url}`, error);
         }
     }
 }

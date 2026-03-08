@@ -1,11 +1,11 @@
 export const DOCK_PANELS = {
-    toolbar: 'toolbar',
-    explorer: 'explorer',
-    editor: 'editor',
-    preview: 'preview',
-    inspector: 'inspector',
     assets: 'assets',
     console: 'console',
+    editor: 'editor',
+    explorer: 'explorer',
+    inspector: 'inspector',
+    preview: 'preview',
+    toolbar: 'toolbar',
 } as const;
 
 export type DockPanelId = (typeof DOCK_PANELS)[keyof typeof DOCK_PANELS];

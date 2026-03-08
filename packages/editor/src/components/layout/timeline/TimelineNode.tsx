@@ -1,73 +1,35 @@
+import { AlertTriangle, ChevronDown, ChevronRight, FolderTree, Play, Trash2 } from 'lucide-react';
 import * as React from 'react';
-import { AlertTriangle, Play, Trash2, ChevronRight, ChevronDown, FolderTree } from 'lucide-react';
+
 import type { ScriptPath } from '../../../utils/scriptPathUtils';
+
 import { getPlugin } from '../../../plugins/commandPlugins';
 import { editorTheme as t } from '../../../theme/editorTheme';
 
-function escapeRegExp(input: string) {
-    return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function highlightText(text: string, query: string, uiScale: number) {
-    const q = query.trim();
-    if (!q) return text;
-
-    const re = new RegExp(`(${escapeRegExp(q)})`, 'ig');
-    const parts = text.split(re);
-
-    return (
-        <>
-            {parts.map((part, i) => {
-                const isMatch = part.toLowerCase() === q.toLowerCase();
-                if (!isMatch) return <React.Fragment key={i}>{part}</React.Fragment>;
-                return (
-                    <mark
-                        key={i}
-                        style={{
-                            background: t.syntax.highlightBg,
-                            color: t.syntax.highlightText,
-                            padding: `0 ${2 * uiScale}px`,
-                            borderRadius: 3,
-                        }}
-                    >
-                        {part}
-                    </mark>
-                );
-            })}
-        </>
-    );
-}
-
-type Props = {
-    node: any;
-    nodePath: ScriptPath;
-    parentArrayPath: ScriptPath;
-    indexInParent: number;
+type Properties = {
     depth: number;
-    uiScale: number;
-
-    selected: boolean;
-    selectedNodeIndex: number | null;
-    hasValidationError: boolean;
+    dragDisabled: boolean;
+    dropIndicator: { arrayPath: ScriptPath; index: number } | null;
     hasLikelyIssue: boolean;
+    hasValidationError: boolean;
+    indexInParent: number;
 
     isCollapsed: boolean;
-    onToggleCollapse: (path: ScriptPath) => void;
-
-    dropIndicator: { arrayPath: ScriptPath; index: number } | null;
-    sameArrayPath: (a: ScriptPath, b: ScriptPath) => boolean;
+    node: any;
+    nodePath: ScriptPath;
+    onClickNode: (e: React.MouseEvent, path: ScriptPath) => void;
 
     onContextMenuNode: (e: React.MouseEvent, path: ScriptPath, node: any) => void;
-    onClickNode: (e: React.MouseEvent, path: ScriptPath) => void;
-    onDragStart: (e: React.DragEvent, path: ScriptPath) => void;
-    onDragOver: (e: React.DragEvent, arrayPath: ScriptPath, index: number) => void;
-    onDrop: (e: React.DragEvent, arrayPath: ScriptPath, index: number) => void;
-    onDragEnd: () => void;
-    dragDisabled: boolean;
-
     onDeleteRoot: (e: React.MouseEvent, index: number) => void;
-    onPlayFrom: (index: number) => void;
 
+    onDragEnd: () => void;
+    onDragOver: (e: React.DragEvent, arrayPath: ScriptPath, index: number) => void;
+
+    onDragStart: (e: React.DragEvent, path: ScriptPath) => void;
+    onDrop: (e: React.DragEvent, arrayPath: ScriptPath, index: number) => void;
+    onPlayFrom: (index: number) => void;
+    onToggleCollapse: (path: ScriptPath) => void;
+    parentArrayPath: ScriptPath;
     renderChild: (
         node: any,
         nodePath: ScriptPath,
@@ -75,39 +37,45 @@ type Props = {
         indexInParent: number,
         depth: number
     ) => React.ReactNode;
+    sameArrayPath: (a: ScriptPath, b: ScriptPath) => boolean;
 
     searchQuery?: string;
+    selected: boolean;
+
+    selectedNodeIndex: null | number;
+
+    uiScale: number;
 };
 
 export function TimelineNode({
+                                 depth,
+                                 dragDisabled,
+                                 dropIndicator,
+                                 hasLikelyIssue,
+                                 hasValidationError,
+                                 indexInParent,
+                                 isCollapsed,
                                  node,
                                  nodePath,
+                                 onClickNode,
+                                 onContextMenuNode,
+                                 onDeleteRoot,
+                                 onDragEnd,
+                                 onDragOver,
+                                 onDragStart,
+                                 onDrop,
+                                 onPlayFrom,
+                                 onToggleCollapse,
                                  parentArrayPath,
-                                 indexInParent,
-                                 depth,
-                                 uiScale,
+                                 renderChild,
+                                 sameArrayPath,
+                                 searchQuery = '',
                                  selected,
                                  selectedNodeIndex,
-                                 hasValidationError,
-                                 hasLikelyIssue,
-                                 isCollapsed,
-                                 onToggleCollapse,
-                                 dropIndicator,
-                                 sameArrayPath,
-                                 onContextMenuNode,
-                                 onClickNode,
-                                 onDragStart,
-                                 onDragOver,
-                                 onDrop,
-                                 onDragEnd,
-                                 dragDisabled,
-                                 onDeleteRoot,
-                                 onPlayFrom,
-                                 renderChild,
-                                 searchQuery = '',
-                             }: Props) {
+                                 uiScale,
+                             }: Properties) {
     const plugin = getPlugin(node?.type || '');
-    const branches: Array<{ label: string; path: ScriptPath; nodes: any[] }> =
+    const branches: Array<{ label: string; nodes: any[]; path: ScriptPath; }> =
         node?.type ? plugin.getBranches?.(node) ?? [] : [];
     const hasBranches = branches.length > 0;
     const isMacroHeader = node?.type === 'macro_header';
@@ -123,26 +91,26 @@ export function TimelineNode({
             <div
                 data-node-path={nodePath.join('.')}
                 draggable={!dragDisabled}
-                onDragStart={(e) => {
-                    if (dragDisabled) return;
-                    onDragStart(e, nodePath);
-                }}
+                onClick={(e) => onClickNode(e, nodePath)}
+                onContextMenu={(e) => onContextMenuNode(e, nodePath, node)}
+                onDragEnd={onDragEnd}
                 onDragOver={(e) => {
                     if (dragDisabled) return;
                     onDragOver(e, parentArrayPath, indexInParent);
+                }}
+                onDragStart={(e) => {
+                    if (dragDisabled) return;
+                    onDragStart(e, nodePath);
                 }}
                 onDrop={(e) => {
                     if (dragDisabled) return;
                     onDrop(e, parentArrayPath, indexInParent);
                 }}
-                onDragEnd={onDragEnd}
-                onContextMenu={(e) => onContextMenuNode(e, nodePath, node)}
-                onClick={(e) => onClickNode(e, nodePath)}
                 style={{
-                    marginLeft: `${depth * 16 * uiScale}px`,
-                    padding: `${6 * uiScale}px ${10 * uiScale}px`,
+                    alignItems: 'center',
                     backgroundColor: selected ? t.bg.selected : t.bg.panel,
                     borderLeft: `${3 * uiScale}px solid ${selected ? t.border.accent : 'transparent'}`,
+                    borderRadius: '2px',
                     borderTop:
                         !dragDisabled &&
                         dropIndicator &&
@@ -150,20 +118,20 @@ export function TimelineNode({
                         dropIndicator.index === indexInParent
                             ? `2px solid ${t.border.accent}`
                             : '2px solid transparent',
-                    borderRadius: '2px',
-                    fontSize: 'inherit',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
                     cursor: dragDisabled ? 'default' : 'grab',
+                    display: 'flex',
+                    fontSize: 'inherit',
+                    justifyContent: 'space-between',
+                    marginLeft: `${depth * 16 * uiScale}px`,
+                    padding: `${6 * uiScale}px ${10 * uiScale}px`,
                 }}
             >
                 <div
                     style={{
-                        display: 'flex',
                         alignItems: 'center',
-                        gap: `${8 * uiScale}px`,
+                        display: 'flex',
                         flexGrow: 1,
+                        gap: `${8 * uiScale}px`,
                         overflow: 'hidden',
                     }}
                 >
@@ -190,18 +158,18 @@ export function TimelineNode({
 
                     <div style={{ color: t.text.faint, fontSize: '0.8em' }}>:::</div>
 
-                    {isMacroHeader ? <FolderTree size={14 * uiScale} color={t.syntax.flow} /> : plugin.icon(14 * uiScale)}
+                    {isMacroHeader ? <FolderTree color={t.syntax.flow} size={14 * uiScale} /> : plugin.icon(14 * uiScale)}
 
-                    <span style={{ fontWeight: 'bold', color: t.text.primary }}>
+                    <span style={{ color: t.text.primary, fontWeight: 'bold' }}>
                         {highlightText(String(isMacroHeader ? 'macro' : node.type ?? ''), searchQuery, uiScale)}
                     </span>
 
                     <span
                         style={{
                             color: isMacroHeader ? t.syntax.flow : t.text.muted,
-                            whiteSpace: 'nowrap',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
                         }}
                     >
                         {highlightText(isMacroHeader ? `Macro: ${summary}` : summary, searchQuery, uiScale)}
@@ -210,10 +178,10 @@ export function TimelineNode({
 
                 {(hasLikelyIssue || hasValidationError) && (
                     <span
+                        style={{ alignItems: 'center', display: 'flex' }}
                         title={hasValidationError ? 'Schema validation errors found' : 'This node looks incomplete/invalid'}
-                        style={{ display: 'flex', alignItems: 'center' }}
                     >
-                        <AlertTriangle size={12 * uiScale} color={hasValidationError ? t.accent.red : t.syntax.flow} />
+                        <AlertTriangle color={hasValidationError ? t.accent.red : t.syntax.flow} size={12 * uiScale} />
                     </span>
                 )}
 
@@ -223,13 +191,13 @@ export function TimelineNode({
                             e.stopPropagation();
                             onPlayFrom(nodePath[0] as number);
                         }}
-                        title="Play from this command"
                         style={{
                             background: 'transparent',
                             border: 'none',
                             color: t.accent.green,
                             cursor: 'pointer',
                         }}
+                        title="Play from this command"
                     >
                         <Play size={12 * uiScale} />
                     </button>
@@ -253,25 +221,25 @@ export function TimelineNode({
 
             {hasBranches &&
                 !isCollapsed &&
-                branches.map((branch, bIdx) => {
+                branches.map((branch, bIndex) => {
                     const branchArrayPath = [...nodePath, ...branch.path];
-                    const labelColor = bIdx % 2 === 0 ? t.syntax.logic : t.syntax.flow;
+                    const labelColor = bIndex % 2 === 0 ? t.syntax.logic : t.syntax.flow;
 
                     return (
-                        <React.Fragment key={`${nodePath.join('.')}-branch-${bIdx}`}>
+                        <React.Fragment key={`${nodePath.join('.')}-branch-${bIndex}`}>
                             <div
                                 style={{
-                                    marginLeft: `${(depth + 1) * 16 * uiScale}px`,
                                     color: labelColor,
                                     fontSize: '0.8em',
-                                    marginTop: bIdx === 0 ? 0 : `${4 * uiScale}px`,
+                                    marginLeft: `${(depth + 1) * 16 * uiScale}px`,
+                                    marginTop: bIndex === 0 ? 0 : `${4 * uiScale}px`,
                                 }}
                             >
                                 {branch.label}
                             </div>
 
-                            {branch.nodes.map((child: any, i: number) =>
-                                renderChild(child, [...branchArrayPath, i], branchArrayPath, i, depth + 1)
+                            {branch.nodes.map((child: any, index: number) =>
+                                renderChild(child, [...branchArrayPath, index], branchArrayPath, index, depth + 1)
                             )}
 
                             <div
@@ -284,8 +252,6 @@ export function TimelineNode({
                                     onDrop(e, branchArrayPath, branch.nodes.length);
                                 }}
                                 style={{
-                                    marginLeft: `${(depth + 1) * 16 * uiScale}px`,
-                                    height: `${6 * uiScale}px`,
                                     borderTop:
                                         !dragDisabled &&
                                         dropIndicator &&
@@ -293,11 +259,47 @@ export function TimelineNode({
                                         dropIndicator.index === branch.nodes.length
                                             ? `2px solid ${t.border.accent}`
                                             : '2px solid transparent',
+                                    height: `${6 * uiScale}px`,
+                                    marginLeft: `${(depth + 1) * 16 * uiScale}px`,
                                 }}
                             />
                         </React.Fragment>
                     );
                 })}
         </div>
+    );
+}
+
+function escapeRegExp(input: string) {
+    return input.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+}
+
+function highlightText(text: string, query: string, uiScale: number) {
+    const q = query.trim();
+    if (!q) return text;
+
+    const re = new RegExp(`(${escapeRegExp(q)})`, 'ig');
+    const parts = text.split(re);
+
+    return (
+        <>
+            {parts.map((part, index) => {
+                const isMatch = part.toLowerCase() === q.toLowerCase();
+                if (!isMatch) return <React.Fragment key={index}>{part}</React.Fragment>;
+                return (
+                    <mark
+                        key={index}
+                        style={{
+                            background: t.syntax.highlightBg,
+                            borderRadius: 3,
+                            color: t.syntax.highlightText,
+                            padding: `0 ${2 * uiScale}px`,
+                        }}
+                    >
+                        {part}
+                    </mark>
+                );
+            })}
+        </>
     );
 }

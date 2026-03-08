@@ -1,12 +1,12 @@
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
-import { FieldError } from './FieldError';
 import { inferCommandFields } from '../../utils/zodInference';
+import { FieldError } from './FieldError';
 
 
-const HIDDEN_COMPLEX_KEYS = new Set(['then', 'else', 'body', 'commands', 'options']);
+const HIDDEN_COMPLEX_KEYS = new Set(['body', 'commands', 'else', 'options', 'then']);
 
-export function SchemaFallbackInspector({ node, index }: { node: any; index?: number | null }) {
-    const { labelStyle, handleChange, getFieldErrors, getFieldInputStyle } = useInspectorFieldEditor(index);
+export function SchemaFallbackInspector({ index, node }: { index?: null | number; node: any; }) {
+    const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle } = useInspectorFieldEditor(index);
     const fields = inferCommandFields(node?.type).filter((f) => !HIDDEN_COMPLEX_KEYS.has(f.key));
 
     if (!node?.type) {
@@ -31,9 +31,9 @@ export function SchemaFallbackInspector({ node, index }: { node: any; index?: nu
                         <div key={f.key}>
                             <label style={labelStyle}>{f.key}</label>
                             <select
-                                value={value ? 'true' : 'false'}
                                 onChange={(e) => handleChange(f.key, e.target.value === 'true')}
                                 style={getFieldInputStyle(f.key)}
+                                value={value ? 'true' : 'false'}
                             >
                                 <option value="false">false</option>
                                 <option value="true">true</option>
@@ -48,12 +48,12 @@ export function SchemaFallbackInspector({ node, index }: { node: any; index?: nu
                         <div key={f.key}>
                             <label style={labelStyle}>{f.key}</label>
                             <input
-                                type="number"
-                                value={value ?? ''}
                                 onChange={(e) =>
                                     handleChange(f.key, e.target.value === '' ? undefined : Number(e.target.value))
                                 }
                                 style={getFieldInputStyle(f.key)}
+                                type="number"
+                                value={value ?? ''}
                             />
                             <FieldError errors={getFieldErrors(f.key)} />
                         </div>
@@ -65,9 +65,9 @@ export function SchemaFallbackInspector({ node, index }: { node: any; index?: nu
                         <div key={f.key}>
                             <label style={labelStyle}>{f.key}</label>
                             <select
-                                value={value ?? ''}
                                 onChange={(e) => handleChange(f.key, e.target.value)}
                                 style={getFieldInputStyle(f.key)}
+                                value={value ?? ''}
                             >
                                 <option value="">(unset)</option>
                                 {f.enumValues.map((v) => (
@@ -88,9 +88,9 @@ export function SchemaFallbackInspector({ node, index }: { node: any; index?: nu
                             <div
                                 style={{
                                     ...getFieldInputStyle(f.key),
-                                    color: '#888',
                                     background: '#151515',
                                     borderStyle: 'dashed',
+                                    color: '#888',
                                 }}
                             >
                                 Complex field (not inline editable in fallback inspector).
@@ -104,10 +104,10 @@ export function SchemaFallbackInspector({ node, index }: { node: any; index?: nu
                     <div key={f.key}>
                         <label style={labelStyle}>{f.key}</label>
                         <input
-                            type="text"
-                            value={value ?? ''}
                             onChange={(e) => handleChange(f.key, e.target.value)}
                             style={getFieldInputStyle(f.key)}
+                            type="text"
+                            value={value ?? ''}
                         />
                         <FieldError errors={getFieldErrors(f.key)} />
                     </div>

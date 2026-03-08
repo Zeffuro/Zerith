@@ -1,75 +1,76 @@
 import { Plus, Trash2 } from 'lucide-react';
+
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { editorTheme as t } from '../../theme/editorTheme';
 
-export function ChoiceInspector({ node, index }: { node: any; index?: number | null }) {
-    const { uiScale, labelStyle, inputStyle, applyNodePatch } = useInspectorFieldEditor(index);
+export function ChoiceInspector({ index, node }: { index?: null | number; node: any; }) {
+    const { applyNodePatch, inputStyle, labelStyle, uiScale } = useInspectorFieldEditor(index);
 
     const options = Array.isArray(node.options) ? node.options : [];
 
     const updateOption = (optIndex: number, patch: Record<string, any>) => {
-        const next = options.map((opt: any, i: number) => (i === optIndex ? { ...opt, ...patch } : opt));
+        const next = options.map((opt: any, index_: number) => (index_ === optIndex ? { ...opt, ...patch } : opt));
         applyNodePatch({ options: next });
     };
 
     const addOption = () => {
-        const next = [...options, { label: `Option ${options.length + 1}`, commands: [] }];
+        const next = [...options, { commands: [], label: `Option ${options.length + 1}` }];
         applyNodePatch({ options: next });
     };
 
     const removeOption = (optIndex: number) => {
-        const next = options.filter((_: any, i: number) => i !== optIndex);
+        const next = options.filter((_: any, index_: number) => index_ !== optIndex);
         applyNodePatch({ options: next });
     };
 
-    const btnStyle = {
+    const buttonStyle = {
+        alignItems: 'center',
         background: t.bg.panelAlt,
         border: `1px solid ${t.border.button}`,
-        color: t.text.normal,
         borderRadius: t.radius.md,
-        padding: `${6 * uiScale}px ${8 * uiScale}px`,
+        color: t.text.normal,
         cursor: 'pointer',
         display: 'inline-flex',
-        alignItems: 'center',
-        gap: '6px',
         fontSize: '0.85em',
+        gap: '6px',
+        padding: `${6 * uiScale}px ${8 * uiScale}px`,
     } as const;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: `${12 * uiScale}px` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label style={{ ...labelStyle, marginBottom: 0, color: t.syntax.logic }}>Options</label>
-                <button onClick={addOption} style={btnStyle}>
+            <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between' }}>
+                <label style={{ ...labelStyle, color: t.syntax.logic, marginBottom: 0 }}>Options</label>
+                <button onClick={addOption} style={buttonStyle}>
                     <Plus size={14 * uiScale} /> Add Option
                 </button>
             </div>
 
             {options.length === 0 && (
-                <div style={{ color: t.text.muted, fontStyle: 'italic', fontSize: '0.85em' }}>
+                <div style={{ color: t.text.muted, fontSize: '0.85em', fontStyle: 'italic' }}>
                     No options yet.
                 </div>
             )}
 
-            {options.map((opt: any, i: number) => (
+            {options.map((opt: any, index_: number) => (
                 <div
-                    key={i}
+                    key={index_}
                     style={{
+                        background: t.bg.panelAlt,
                         border: `1px solid ${t.border.subtle}`,
                         borderRadius: t.radius.lg,
-                        padding: `${10 * uiScale}px`,
-                        background: t.bg.panelAlt,
                         display: 'flex',
                         flexDirection: 'column',
                         gap: `${8 * uiScale}px`,
+                        padding: `${10 * uiScale}px`,
                     }}
                 >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ color: t.text.muted, fontSize: '0.8em', fontWeight: 'bold' }}>
-                            OPTION {i + 1}
+                            OPTION {index_ + 1}
                         </span>
                         <button
-                            onClick={() => removeOption(i)}
-                            style={{ ...btnStyle, border: 'none', background: 'transparent', color: t.accent.red, padding: 0 }}
+                            onClick={() => removeOption(index_)}
+                            style={{ ...buttonStyle, background: 'transparent', border: 'none', color: t.accent.red, padding: 0 }}
                             title="Remove option"
                         >
                             <Trash2 size={14 * uiScale} />
@@ -79,11 +80,11 @@ export function ChoiceInspector({ node, index }: { node: any; index?: number | n
                     <div>
                         <label style={labelStyle}>Label</label>
                         <input
+                            onChange={(e) => updateOption(index_, { label: e.target.value })}
+                            placeholder="Choice text shown to player"
+                            style={inputStyle}
                             type="text"
                             value={opt?.label ?? ''}
-                            onChange={(e) => updateOption(i, { label: e.target.value })}
-                            style={inputStyle}
-                            placeholder="Choice text shown to player"
                         />
                     </div>
                 </div>

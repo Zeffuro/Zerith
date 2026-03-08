@@ -1,61 +1,61 @@
 export const DOCK_LAYOUT_VERSION = 1 as const;
 
 export const DEFAULT_DOCK_LAYOUT = {
-    global: { tabEnableClose: false, splitterSize: 4 },
+    global: { splitterSize: 4, tabEnableClose: false },
     layout: {
-        type: 'row',
-        weight: 100,
         children:[
             {
+                children:[{ component: 'explorer', id: 'explorer', name: 'Explorer', type: 'tab' }],
                 type: 'tabset',
                 weight: 20,
-                children:[{ type: 'tab', name: 'Explorer', component: 'explorer', id: 'explorer' }],
             },
             {
-                type: 'column',
-                weight: 80,
                 children:[
                     {
-                        type: 'row',
-                        weight: 75,
                         children:[
                             {
+                                children:[
+                                    { component: 'editor', id: 'editor', name: 'Editor', type: 'tab' }
+                                ],
                                 type: 'tabset',
                                 weight: 65,
-                                children:[
-                                    { type: 'tab', name: 'Editor', component: 'editor', id: 'editor' }
-                                ],
                             },
                             {
-                                type: 'column',
-                                weight: 35,
                                 children:[
                                     {
+                                        children:[{ component: 'preview', id: 'preview', name: 'Preview', type: 'tab' }],
                                         type: 'tabset',
                                         weight: 45,
-                                        children:[{ type: 'tab', name: 'Preview', component: 'preview', id: 'preview' }],
                                     },
                                     {
+                                        children:[
+                                            { component: 'inspector', id: 'inspector', name: 'Inspector', type: 'tab' },
+                                        ],
                                         type: 'tabset',
                                         weight: 55,
-                                        children:[
-                                            { type: 'tab', name: 'Inspector', component: 'inspector', id: 'inspector' },
-                                        ],
                                     },
                                 ],
+                                type: 'column',
+                                weight: 35,
                             },
                         ],
+                        type: 'row',
+                        weight: 75,
                     },
                     {
+                        children:[
+                            { component: 'console', id: 'console', name: 'Console', type: 'tab' }
+                        ],
                         type: 'tabset',
                         weight: 25,
-                        children:[
-                            { type: 'tab', name: 'Console', component: 'console', id: 'console' }
-                        ],
                     }
                 ],
+                type: 'column',
+                weight: 80,
             }
         ],
+        type: 'row',
+        weight: 100,
     },
 };
 

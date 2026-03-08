@@ -1,17 +1,18 @@
 // packages/core/src/handlers/SfxHandler.ts
 import { sound } from '@pixi/sound';
-import type { BaseCommand, CommandHandler } from '../types';
+
 import type { Engine } from '../Engine';
+import type { BaseCommand, CommandHandler } from '../types';
 
 export interface SfxCommand extends BaseCommand {
-    type: 'sfx';
     assetUrl: string;
+    type: 'sfx';
     volume?: number;
 }
 
 export class SfxHandler implements CommandHandler<SfxCommand> {
-    public type: 'sfx' = 'sfx';
     public autoNext = true;
+    public type: 'sfx' = 'sfx';
 
     execute = async (command: SfxCommand, engine: Engine) => {
         const url = command.assetUrl;
@@ -23,9 +24,9 @@ export class SfxHandler implements CommandHandler<SfxCommand> {
             if (!sound.exists(resolvedUrl)) {
                 await new Promise((resolve, reject) => {
                     sound.add(resolvedUrl, {
-                        url: resolvedUrl,
+                        loaded: (error, snd) => error ? reject(error) : resolve(snd),
                         preload: true,
-                        loaded: (err, snd) => err ? reject(err) : resolve(snd)
+                        url: resolvedUrl
                     });
                 });
             }

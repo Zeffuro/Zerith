@@ -1,25 +1,27 @@
 import { create } from 'zustand';
+
+import type { ProjectState } from './project/types';
+
 import { createProjectIoSlice } from './project/slices/ioSlice';
+import { createProjectMacrosSlice } from './project/slices/macrosSlice';
 import { createProjectManifestSlice } from './project/slices/manifestSlice';
 import { createProjectSessionSlice } from './project/slices/sessionSlice';
-import { createProjectMacrosSlice } from './project/slices/macrosSlice';
-import type { ProjectState } from './project/types';
-import { useScriptStore } from './useScriptStore';
 import { setPathOpsProjectBridge } from './script/bridges/pathOpsProjectBridge';
+import { useScriptStore } from './useScriptStore';
 
 export type { MacroEntry } from './project/types';
 
 
 export const useProjectStore = create<ProjectState>()((set, get) => ({
     ...createProjectSessionSlice(set, {
-        setScript: (content) => useScriptStore.getState().setScript(content),
         getRootScript: () => useScriptStore.getState().rootScript,
+        setScript: (content) => useScriptStore.getState().setScript(content),
     }),
     ...createProjectMacrosSlice(set, get),
     ...createProjectManifestSlice(set, get),
     ...createProjectIoSlice(get, {
-        setScript: (content) => useScriptStore.getState().setScript(content),
         getRootScript: () => useScriptStore.getState().rootScript,
+        setScript: (content) => useScriptStore.getState().setScript(content),
     }),
 
 }));

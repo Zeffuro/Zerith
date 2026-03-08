@@ -1,7 +1,7 @@
-import { bootstrapEngine, validateScript, resolveManifestValue, resolveScenes, type GameManifest } from 'core';
+import { bootstrapEngine, type GameManifest, resolveManifestValue, resolveScenes, validateScript } from 'core';
 
 async function bootstrap() {
-    const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
+    const canvas = document.querySelector('#game-canvas') as HTMLCanvasElement;
 
     const manifest: GameManifest = await fetch('/game.json').then(r => r.json());
 
@@ -19,37 +19,37 @@ async function bootstrap() {
 
     const engine = await bootstrapEngine({
         canvas,
+        characters,
         config: {
-            display: { width: 1280, height: 720, scaleMode: 'fit' },
             audio: {
                 bgmVolume: 0.8,
-                sfxVolume: 1.0,
-                voiceVolume: 1.0,
-                masterVolume: 1.0
+                masterVolume: 1,
+                sfxVolume: 1,
+                voiceVolume: 1
+            },
+            display: { height: 720, scaleMode: 'fit', width: 1280 },
+            startScreen: {
+                backgroundAlpha: 0.9,
+                backgroundColor: 0x00_00_00,
+                text: 'CLICK TO START'
             },
             theme: {
+                accentColor: 0xFF_AA_AA,
+                borderColor: 0xAA_AA_FF,
+                borderWidth: 4,
+                boxAlpha: 0.9,
+                boxColor: 0x00_00_33,
                 fontFamily: 'Courier New',
                 fontSize: 24,
-                boxColor: 0x000033,
-                boxAlpha: 0.9,
-                borderColor: 0xaaaaff,
-                borderWidth: 4,
-                accentColor: 0xffaaaa,
-                hoverColor: 0x333399
-            },
-            startScreen: {
-                text: 'CLICK TO START',
-                backgroundColor: 0x000000,
-                backgroundAlpha: 0.9
+                hoverColor: 0x33_33_99
             }
         },
-        manifest,
-        characters,
+        defaultBlipUrl: '/assets/sfx/blip.wav',
         items,
         macros,
-        scenes: validatedScenes,
+        manifest,
         preloadAssets: true,
-        defaultBlipUrl: '/assets/sfx/blip.wav',
+        scenes: validatedScenes,
     });
 
     const startScene = manifest.startScene ?? 'intro';

@@ -1,17 +1,18 @@
-import { Graphics } from 'pixi.js';
 import gsap from 'gsap';
-import type { BaseCommand, CommandHandler } from '../types';
+import { Graphics } from 'pixi.js';
+
 import type { Engine } from '../Engine';
+import type { BaseCommand, CommandHandler } from '../types';
 
 export interface TransitionCommand extends BaseCommand {
-    type: 'transition';
-    action: 'fade_out' | 'fade_in';
+    action: 'fade_in' | 'fade_out';
     duration?: number;
+    type: 'transition';
 }
 
 export class TransitionHandler implements CommandHandler<TransitionCommand> {
-    public type: 'transition' = 'transition';
     public autoNext = true;
+    public type: 'transition' = 'transition';
     private fadeRect: Graphics | null = null;
 
     execute = async (command: TransitionCommand, engine: Engine) => {
@@ -20,7 +21,7 @@ export class TransitionHandler implements CommandHandler<TransitionCommand> {
         if (!this.fadeRect) {
             this.fadeRect = new Graphics()
                 .rect(0, 0, engine.display.width, engine.display.height)
-                .fill(0x000000);
+                .fill(0x00_00_00);
             engine.layers.overlay.addChild(this.fadeRect);
         }
 

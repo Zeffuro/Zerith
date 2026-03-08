@@ -1,37 +1,38 @@
-import { AddCommandMenu } from '../menus/AddCommandMenu';
 import type { NonMacroEditorCommandType } from '../../../plugins/types';
 
-type Item = { type: NonMacroEditorCommandType; label: string; icon: React.ReactNode };
+import { AddCommandMenu } from '../menus/AddCommandMenu';
 
-type Props = {
-    uiScale: number;
+type Item = { icon: React.ReactNode; label: string; type: NonMacroEditorCommandType; };
+
+type Properties = {
     commandMenuItems: Item[];
-    quickTypes: NonMacroEditorCommandType[];
+    getQuickMeta: (type: NonMacroEditorCommandType) => { bg: string; border: string; icon: React.ReactNode; title: string; };
     onAdd: (type: NonMacroEditorCommandType) => void;
-    getQuickMeta: (type: NonMacroEditorCommandType) => { icon: React.ReactNode; title: string; bg: string; border: string };
+    quickTypes: NonMacroEditorCommandType[];
+    uiScale: number;
 };
 
 export function TimelineCommandBar({
-                                       uiScale,
                                        commandMenuItems,
-                                       quickTypes,
-                                       onAdd,
                                        getQuickMeta,
-                                   }: Props) {
+                                       onAdd,
+                                       quickTypes,
+                                       uiScale,
+                                   }: Properties) {
     return (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: `${4 * uiScale}px`, marginBottom: `${12 * uiScale}px` }}>
-            <AddCommandMenu uiScale={uiScale} onAdd={onAdd} items={commandMenuItems} />
+            <AddCommandMenu items={commandMenuItems} onAdd={onAdd} uiScale={uiScale} />
             {quickTypes.map((type) => {
                 const meta = getQuickMeta(type);
                 return (
                     <QuickBtn
-                        key={type}
-                        onClick={() => onAdd(type)}
-                        icon={meta.icon}
-                        title={meta.title}
-                        scale={uiScale}
                         bg={meta.bg}
                         border={meta.border}
+                        icon={meta.icon}
+                        key={type}
+                        onClick={() => onAdd(type)}
+                        scale={uiScale}
+                        title={meta.title}
                     />
                 );
             })}
@@ -39,25 +40,25 @@ export function TimelineCommandBar({
     );
 }
 
-function QuickBtn({ onClick, icon, title, scale, bg = '#333', border = '#444' }: any) {
+function QuickBtn({ bg = '#333', border = '#444', icon, onClick, scale, title }: any) {
     return (
         <button
             onClick={onClick}
-            title={title}
             style={{
+                alignItems: 'center',
                 background: bg,
                 border: `1px solid ${border}`,
-                color: '#ccc',
                 borderRadius: '3px',
-                width: `${28 * scale}px`,
-                height: `${26 * scale}px`,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
                 boxSizing: 'border-box',
+                color: '#ccc',
                 cursor: 'pointer',
+                display: 'inline-flex',
+                height: `${26 * scale}px`,
+                justifyContent: 'center',
                 padding: 0,
+                width: `${28 * scale}px`,
             }}
+            title={title}
         >
             {icon}
         </button>

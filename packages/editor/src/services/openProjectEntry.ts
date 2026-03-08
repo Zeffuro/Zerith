@@ -1,64 +1,41 @@
-import { makeTabId } from '../store/useWorkbenchStore';
-import { applyAssetSelection, applyMacrosFile, applyScriptFile, looksLikeMacrosObject } from './projectOpeners';
-import { fsReadTextFile } from './fs';
 import { executeConsoleMessageAction } from '../store/actions/consoleMessageActions';
+import { getCurrentProjectPath } from '../store/actions/projectTreeActions';
 import {
     executeWorkbenchOpenAction,
     getPreferredMacrosView,
     getPreferredScriptView,
 } from '../store/actions/workbenchOpenActions';
-import { getCurrentProjectPath } from '../store/actions/projectTreeActions';
+import { makeTabId } from '../store/useWorkbenchStore';
+import { fsReadTextFile } from './fs';
+import { applyAssetSelection, applyMacrosFile, applyScriptFile, looksLikeMacrosObject } from './projectOpeners';
 
-const IMG_EXT = new Set(['.png', '.jpg', '.jpeg', '.webp', '.avif']);
-const AUDIO_EXT = new Set(['.mp3', '.ogg', '.wav', '.m4a']);
+const IMG_EXT = new Set(['.avif', '.jpeg', '.jpg', '.png', '.webp']);
+const AUDIO_EXT = new Set(['.m4a', '.mp3', '.ogg', '.wav']);
 const TEXT_EXT = new Set([
-    '.txt', '.md', '.yaml', '.yml', '.toml', '.ini', '.csv',
-    '.ts', '.tsx', '.js', '.jsx', '.css', '.html'
+    '.css', '.csv', '.html', '.ini', '.js', '.jsx', '.md',
+    '.toml', '.ts', '.tsx', '.txt', '.yaml', '.yml'
 ]);
 
-function extOf(name: string) {
-    const i = name.lastIndexOf('.');
-    return i >= 0 ? name.slice(i).toLowerCase() : '';
-}
-
-function basename(path: string) {
-    return path.split(/[\\/]/).pop() || path;
-}
-
-function toProjectRelativePath(fullPath: string, projectPath: string | null) {
-    if (!projectPath) return fullPath;
-    const base = projectPath.replace(/\\/g, '/').replace(/\/+$/, '');
-    const abs = fullPath.replace(/\\/g, '/');
-    if (!abs.startsWith(base)) return fullPath;
-    const rest = abs.slice(base.length);
-    return rest.startsWith('/') ? rest : `/${rest}`;
-}
-
-function focusMainEditorFor(kind: 'asset' | 'scriptLike' | 'text') {
-    // TODO: integrate with Dock model to select center tabset tab.
-    void kind;
-}
-
-export async function openProjectEntry(fullPath: string, entryName: string, opts?: { forceView?: 'timeline' | 'json' }) {
-    const ext = extOf(entryName);
+export async function openProjectEntry(fullPath: string, entryName: string, options?: { forceView?: 'json' | 'timeline' }) {
+    const extension = extensionOf(entryName);
 
     try {
-        if (IMG_EXT.has(ext) || AUDIO_EXT.has(ext)) {
+        if (IMG_EXT.has(extension) || AUDIO_EXT.has(extension)) {
             const projectPath = getCurrentProjectPath();
             const rel = toProjectRelativePath(fullPath, projectPath);
             applyAssetSelection(rel);
 
             executeWorkbenchOpenAction({ action: 'openTab', tab: {
+                assetPath: rel,
                 id: makeTabId('asset', fullPath),
                 kind: 'asset',
                 path: fullPath,
                 title: basename(fullPath),
-                assetPath: rel,
             }});
             return;
         }
 
-        if (ext === '.json') {
+        if (extension === '.json') {
             const contents = await fsReadTextFile(fullPath);
             const data = JSON.parse(contents);
 
@@ -69,8 +46,8 @@ export async function openProjectEntry(fullPath: string, entryName: string, opts
                     id: makeTabId('manifest', fullPath),
                     kind: 'manifest',
                     path: fullPath,
-                    title: basename(fullPath),
                     textContent: contents,
+                    title: basename(fullPath),
                 }});
                 return;
             }
@@ -78,15 +55,15 @@ export async function openProjectEntry(fullPath: string, entryName: string, opts
             if (Array.isArray(data)) {
                 applyScriptFile(fullPath, data);
 
-                const preferred = getPreferredScriptView(opts?.forceView);
-                if (opts?.forceView) executeWorkbenchOpenAction({ action: 'setScriptView', view: opts.forceView });
+                const preferred = getPreferredScriptView(options?.forceView);
+                if (options?.forceView) executeWorkbenchOpenAction({ action: 'setScriptView', view: options.forceView });
 
                 executeWorkbenchOpenAction({ action: 'openTab', tab: {
                     id: makeTabId('script', fullPath),
                     kind: 'script',
                     path: fullPath,
-                    title: basename(fullPath),
                     preferredView: preferred,
+                    title: basename(fullPath),
                 }});
                 return;
             }
@@ -94,15 +71,15 @@ export async function openProjectEntry(fullPath: string, entryName: string, opts
             if (looksLikeMacrosObject(data)) {
                 applyMacrosFile(fullPath, data);
 
-                const preferred = getPreferredMacrosView(opts?.forceView);
-                if (opts?.forceView) executeWorkbenchOpenAction({ action: 'setMacrosView', view: opts.forceView });
+                const preferred = getPreferredMacrosView(options?.forceView);
+                if (options?.forceView) executeWorkbenchOpenAction({ action: 'setMacrosView', view: options.forceView });
 
                 executeWorkbenchOpenAction({ action: 'openTab', tab: {
                     id: makeTabId('macros', fullPath),
                     kind: 'macros',
                     path: fullPath,
-                    title: basename(fullPath),
                     preferredView: preferred,
+                    title: basename(fullPath),
                 }});
                 return;
             }
@@ -112,20 +89,20 @@ export async function openProjectEntry(fullPath: string, entryName: string, opts
                 id: makeTabId(kind, fullPath),
                 kind,
                 path: fullPath,
-                title: basename(fullPath),
                 textContent: contents,
+                title: basename(fullPath),
             }});
             return;
         }
 
-        if (TEXT_EXT.has(ext)) {
+        if (TEXT_EXT.has(extension)) {
             const contents = await fsReadTextFile(fullPath);
             executeWorkbenchOpenAction({ action: 'openTab', tab: {
                 id: makeTabId('text', fullPath),
                 kind: 'text',
                 path: fullPath,
-                title: basename(fullPath),
                 textContent: contents,
+                title: basename(fullPath),
             }});
             focusMainEditorFor('text');
             return;
@@ -138,7 +115,30 @@ export async function openProjectEntry(fullPath: string, entryName: string, opts
             title: basename(fullPath),
         }});
         executeConsoleMessageAction('editor', 'warn', 'No handler for file type yet:', fullPath);
-    } catch (err) {
-        console.error('Failed to open entry:', err);
+    } catch (error) {
+        console.error('Failed to open entry:', error);
     }
+}
+
+function basename(path: string) {
+    return path.split(/[\\/]/).pop() || path;
+}
+
+function extensionOf(name: string) {
+    const index = name.lastIndexOf('.');
+    return index === -1 ? '' : name.slice(index).toLowerCase();
+}
+
+function focusMainEditorFor(kind: 'asset' | 'scriptLike' | 'text') {
+    // TODO: integrate with Dock model to select center tabset tab.
+    void kind;
+}
+
+function toProjectRelativePath(fullPath: string, projectPath: null | string) {
+    if (!projectPath) return fullPath;
+    const base = projectPath.replaceAll('\\', '/').replace(/\/+$/, '');
+    const abs = fullPath.replaceAll('\\', '/');
+    if (!abs.startsWith(base)) return fullPath;
+    const rest = abs.slice(base.length);
+    return rest.startsWith('/') ? rest : `/${rest}`;
 }

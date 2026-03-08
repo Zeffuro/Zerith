@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+
+import type { EditorState } from './editor/types';
+
 import { createClipboardValidationAssetSlice } from './editor/slices/clipboardValidationAssetSlice';
 import { createDockLayoutSlice, normalizeDockLayoutState } from './editor/slices/dockLayoutSlice';
 import { createPlaybackQuickCommandsSlice } from './editor/slices/playbackQuickCommandsSlice';
 import { createSelectionSlice } from './editor/slices/selectionSlice';
 import { createUiPrefsSlice } from './editor/slices/uiPrefsSlice';
-import type { EditorState } from './editor/types';
 
 export const useEditorStore = create<EditorState>()(
     persist(
@@ -21,16 +23,6 @@ export const useEditorStore = create<EditorState>()(
             ...createDockLayoutSlice(set),
         }),
         {
-            name: 'zerith-editor-prefs',
-            partialize: (state) => ({
-                uiScale: state.uiScale,
-                isMuted: state.isMuted,
-                windowState: state.windowState,
-                quickCommandTypes: state.quickCommandTypes,
-                themeKey: state.themeKey,
-                dockLayoutJson: state.dockLayoutJson,
-                dockLayoutVersion: state.dockLayoutVersion,
-            }),
             merge: (persisted: any, current) => {
                 const normalized = normalizeDockLayoutState(persisted);
                 return {
@@ -40,6 +32,16 @@ export const useEditorStore = create<EditorState>()(
                     dockLayoutVersion: normalized.dockLayoutVersion,
                 };
             },
+            name: 'zerith-editor-prefs',
+            partialize: (state) => ({
+                dockLayoutJson: state.dockLayoutJson,
+                dockLayoutVersion: state.dockLayoutVersion,
+                isMuted: state.isMuted,
+                quickCommandTypes: state.quickCommandTypes,
+                themeKey: state.themeKey,
+                uiScale: state.uiScale,
+                windowState: state.windowState,
+            }),
         }
     )
 );

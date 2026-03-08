@@ -1,14 +1,14 @@
-import type { BaseCommand, CommandHandler } from '../types';
 import type { Engine } from '../Engine';
+import type { BaseCommand, CommandHandler } from '../types';
 
 export interface BlockCommand extends BaseCommand {
-    type: 'block';
     commands: BaseCommand[];
+    type: 'block';
 }
 
 export class BlockHandler implements CommandHandler<BlockCommand> {
-    public type: 'block' = 'block';
     public autoNext = true;
+    public type: 'block' = 'block';
 
     execute = async (command: BlockCommand, engine: Engine) => {
         engine.scenes.injectCommands(command.commands);

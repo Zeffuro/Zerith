@@ -1,7 +1,9 @@
 import { Container, Graphics, Sprite, Text } from 'pixi.js';
+
 import type { Engine } from '../Engine';
 import type { MenuPanel } from '../types';
-import { createPanelTitle, createButton, createSelectableList, registerFocusableButton } from './UIComponents';
+
+import { createButton, createPanelTitle, createSelectableList, registerFocusableButton } from './UIComponents';
 
 export class ItemBrowserPanel implements MenuPanel {
     public id = 'evidence';
@@ -9,31 +11,31 @@ export class ItemBrowserPanel implements MenuPanel {
 
     build(engine: Engine, onClose: () => void) {
         const overlay = engine.overlay;
-        const ctx = overlay.getUIContext();
-        const cfg = ctx.overlayConfig;
-        const w = ctx.canvasWidth;
-        const h = ctx.canvasHeight;
+        const context = overlay.getUIContext();
+        const cfg = context.overlayConfig;
+        const w = context.canvasWidth;
+        const h = context.canvasHeight;
         const focus = overlay.focus;
 
         const root = overlay.createPanelBase();
-        root.addChild(createPanelTitle(ctx, 'COURT RECORD'));
+        root.addChild(createPanelTitle(context, 'COURT RECORD'));
 
         const items = engine.items.getAll();
         const backMargin = 20;
 
         if (items.length === 0) {
             const empty = new Text({
-                text: 'No evidence or profiles collected yet.',
-                style: { fill: 0x888888, fontSize: cfg.fontSize - 2, fontFamily: cfg.fontFamily }
+                style: { fill: 0x88_88_88, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize - 2 },
+                text: 'No evidence or profiles collected yet.'
             });
             empty.anchor.set(0.5);
             empty.position.set(w / 2, h / 2);
             root.addChild(empty);
 
-            const backBtn = createButton(ctx, { label: 'Back', x: w / 2, y: h - cfg.buttonHeight - backMargin }, onClose);
-            root.addChild(backBtn);
+            const backButton = createButton(context, { label: 'Back', x: w / 2, y: h - cfg.buttonHeight - backMargin }, onClose);
+            root.addChild(backButton);
 
-            registerFocusableButton(ctx, focus, backBtn, onClose);
+            registerFocusableButton(context, focus, backButton, onClose);
 
             return { container: root };
         }
@@ -59,20 +61,20 @@ export class ItemBrowserPanel implements MenuPanel {
         detailContainer.addChild(detailSprite);
 
         const detailName = new Text({
-            text: '',
-            style: { fill: ctx.theme.accentColor, fontSize: cfg.fontSize, fontFamily: cfg.fontFamily, fontWeight: 'bold' }
+            style: { fill: context.theme.accentColor, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize, fontWeight: 'bold' },
+            text: ''
         });
         detailContainer.addChild(detailName);
 
         const detailDesc = new Text({
-            text: '',
-            style: { fill: cfg.textColor, fontSize: cfg.fontSize - 4, fontFamily: cfg.fontFamily, wordWrap: true, wordWrapWidth: detailWidth - 20 }
+            style: { fill: cfg.textColor, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize - 4, wordWrap: true, wordWrapWidth: detailWidth - 20 },
+            text: ''
         });
         detailContainer.addChild(detailDesc);
 
         const detailType = new Text({
-            text: '',
-            style: { fill: 0x888888, fontSize: cfg.fontSize - 6, fontFamily: cfg.fontFamily }
+            style: { fill: 0x88_88_88, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize - 6 },
+            text: ''
         });
         detailContainer.addChild(detailType);
 
@@ -117,36 +119,36 @@ export class ItemBrowserPanel implements MenuPanel {
         listContainer.position.set(padding, 100);
         root.addChild(listContainer);
 
-        const listMask = new Graphics().rect(padding, 100, listWidth, h - 170).fill(0xffffff);
+        const listMask = new Graphics().rect(padding, 100, listWidth, h - 170).fill(0xFF_FF_FF);
         root.addChild(listMask);
         listContainer.mask = listMask;
 
         if (currentList.length > 0) {
-            const { container: listContent } = createSelectableList(ctx, {
+            const { container: listContent } = createSelectableList(context, {
+                initialSelected: 0,
                 items: currentList.map((item, _) => ({
                     label: item.name,
-                    onSelect: (idx) => updateDetail(currentList, idx),
+                    onSelect: (index) => updateDetail(currentList, index),
                 })),
                 width: listWidth - 10,
-                initialSelected: 0,
             });
             listContainer.addChild(listContent);
             updateDetail(currentList, 0);
 
-            currentList.forEach((_, idx) => {
+            for (const [index, _] of currentList.entries()) {
                 focus.register({
-                    focus: () => {
-                        (listContent as any).select?.(idx);
-                        updateDetail(currentList, idx);
-                    },
+                    activate: () => updateDetail(currentList, index),
                     blur: () => {},
-                    activate: () => updateDetail(currentList, idx),
+                    focus: () => {
+                        (listContent as any).select?.(index);
+                        updateDetail(currentList, index);
+                    },
                 });
-            });
+            }
         } else {
             const emptyTab = new Text({
-                text: activeTab === 'evidence' ? 'No evidence yet.' : 'No profiles yet.',
-                style: { fill: 0x888888, fontSize: cfg.fontSize - 4, fontFamily: cfg.fontFamily }
+                style: { fill: 0x88_88_88, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize - 4 },
+                text: activeTab === 'evidence' ? 'No evidence yet.' : 'No profiles yet.'
             });
             emptyTab.position.set(0, 10);
             listContainer.addChild(emptyTab);
@@ -158,35 +160,35 @@ export class ItemBrowserPanel implements MenuPanel {
         const tabHeight = 35;
 
         const createTab = (tabLabel: string, tab: 'evidence' | 'profiles', x: number) => {
-            const tabBtn = new Container();
-            tabBtn.eventMode = 'static';
-            tabBtn.cursor = 'pointer';
-            tabBtn.position.set(x, tabY);
+            const tabButton = new Container();
+            tabButton.eventMode = 'static';
+            tabButton.cursor = 'pointer';
+            tabButton.position.set(x, tabY);
 
             const tabBg = new Graphics();
             tabBg.roundRect(0, 0, tabWidth, tabHeight, 6);
-            tabBg.fill({ color: activeTab === tab ? cfg.buttonHoverColor : cfg.buttonColor, alpha: activeTab === tab ? 1 : 0.6 });
-            tabBg.stroke({ color: activeTab === tab ? ctx.theme.accentColor : ctx.theme.borderColor, width: 1 });
+            tabBg.fill({ alpha: activeTab === tab ? 1 : 0.6, color: activeTab === tab ? cfg.buttonHoverColor : cfg.buttonColor });
+            tabBg.stroke({ color: activeTab === tab ? context.theme.accentColor : context.theme.borderColor, width: 1 });
 
             const tabText = new Text({
-                text: tabLabel,
-                style: { fill: cfg.textColor, fontSize: cfg.fontSize - 6, fontFamily: cfg.fontFamily, fontWeight: activeTab === tab ? 'bold' : 'normal' }
+                style: { fill: cfg.textColor, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize - 6, fontWeight: activeTab === tab ? 'bold' : 'normal' },
+                text: tabLabel
             });
             tabText.anchor.set(0.5);
             tabText.position.set(tabWidth / 2, tabHeight / 2);
-            tabBtn.addChild(tabBg, tabText);
+            tabButton.addChild(tabBg, tabText);
 
-            tabBtn.on('pointerdown', (e: any) => {
+            tabButton.on('pointerdown', (e: any) => {
                 e.stopPropagation();
                 engine.overlay.showPanel(this);
             });
-            return tabBtn;
+            return tabButton;
         };
 
         root.addChild(createTab('Evidence', 'evidence', padding));
         root.addChild(createTab('Profiles', 'profiles', padding + tabWidth + 5));
 
-        const divider = new Graphics().rect(listWidth + 5, 55, 2, h - 125).fill({ color: ctx.theme.borderColor, alpha: 0.4 });
+        const divider = new Graphics().rect(listWidth + 5, 55, 2, h - 125).fill({ alpha: 0.4, color: context.theme.borderColor });
         root.addChild(divider);
 
         // Scroll
@@ -207,14 +209,14 @@ export class ItemBrowserPanel implements MenuPanel {
         engine.app.canvas.addEventListener('wheel', onWheel, { passive: false });
 
         // Back button
-        const backBtn = createButton(ctx, { label: 'Back', x: w / 2, y: h - cfg.buttonHeight - backMargin }, onClose);
-        root.addChild(backBtn);
+        const backButton = createButton(context, { label: 'Back', x: w / 2, y: h - cfg.buttonHeight - backMargin }, onClose);
+        root.addChild(backButton);
 
-        registerFocusableButton(ctx, focus, backBtn, onClose);
+        registerFocusableButton(context, focus, backButton, onClose);
 
         return {
-            container: root,
             cleanup: () => engine.app.canvas.removeEventListener('wheel', onWheel),
+            container: root,
         };
     }
 }

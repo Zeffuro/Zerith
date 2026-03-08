@@ -1,8 +1,8 @@
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 
-export function IfInspector({ node, index }: { node: any, index?: number | null }) {
-    const { uiScale, handleChange, labelStyle, getFieldErrors, getFieldInputStyle } = useInspectorFieldEditor(index);
+export function IfInspector({ index, node }: { index?: null | number; node: any, }) {
+    const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle, uiScale } = useInspectorFieldEditor(index);
 
 
     return (
@@ -10,9 +10,9 @@ export function IfInspector({ node, index }: { node: any, index?: number | null 
             <div>
                 <label style={labelStyle}>Condition Source</label>
                 <select
-                    value={node.source || 'variable'}
                     onChange={e => handleChange('source', e.target.value)}
                     style={getFieldInputStyle('source')}
+                    value={node.source || 'variable'}
                 >
                     <option value="variable">Game Variable</option>
                     <option value="items">Items Inventory</option>
@@ -23,11 +23,11 @@ export function IfInspector({ node, index }: { node: any, index?: number | null 
             <div>
                 <label style={labelStyle}>Key / ID</label>
                 <input
-                    type="text"
-                    value={node.key || ''}
                     onChange={e => handleChange('key', e.target.value)}
                     placeholder="e.g. has_met_bob"
                     style={getFieldInputStyle('key')}
+                    type="text"
+                    value={node.key || ''}
                 />
                 <FieldError errors={getFieldErrors('key')} />
             </div>
@@ -35,7 +35,7 @@ export function IfInspector({ node, index }: { node: any, index?: number | null 
             <div style={{ display: 'flex', gap: '8px' }}>
                 <div style={{ flex: 1 }}>
                     <label style={labelStyle}>Operator</label>
-                    <select value={node.op || 'eq'} onChange={e => handleChange('op', e.target.value)} style={getFieldInputStyle('op')}>
+                    <select onChange={e => handleChange('op', e.target.value)} style={getFieldInputStyle('op')} value={node.op || 'eq'}>
                         <option value="eq">== (Equal)</option>
                         <option value="neq">!= (Not Equal)</option>
                         <option value="gt">&gt; (Greater)</option>
@@ -46,8 +46,6 @@ export function IfInspector({ node, index }: { node: any, index?: number | null 
                 <div style={{ flex: 1 }}>
                     <label style={labelStyle}>Value</label>
                     <input
-                        type="text"
-                        value={node.value !== undefined ? node.value : ''}
                         onChange={e => {
                             let v: any = e.target.value;
                             if (v === 'true') v = true;
@@ -57,6 +55,8 @@ export function IfInspector({ node, index }: { node: any, index?: number | null 
                         }}
                         placeholder="true"
                         style={getFieldInputStyle('value')}
+                        type="text"
+                        value={node.value === undefined ? '' : node.value}
                     />
                     <FieldError errors={getFieldErrors('value')} />
                 </div>

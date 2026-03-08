@@ -1,10 +1,12 @@
+import type { ComponentType, ReactNode } from 'react';
+
 import { BuiltInCommandTypes } from 'core';
 import { CommandSchemaRegistry } from 'core/schemas';
-import type { ComponentType, ReactNode } from 'react';
 import {
-    MessageSquare, Image as ImageIcon, Music, FileAudio, User, Workflow,
-    GitFork, ArrowRightCircle, Gamepad2, Repeat, Sigma
+    ArrowRightCircle, FileAudio, Gamepad2, GitFork, Image as ImageIcon, MessageSquare,
+    Music, Repeat, Sigma, User, Workflow
 } from 'lucide-react';
+
 import type {
     BranchSpec,
     CommandPlugin,
@@ -17,34 +19,45 @@ import type {
 
 import { BackgroundInspector } from '../components/inspector/BackgroundInspector';
 import { BgmInspector } from '../components/inspector/BgmInspector';
-import { DialogueInspector } from '../components/inspector/DialogueInspector';
-import { SpriteInspector } from '../components/inspector/SpriteInspector';
-import { MacroInspector } from '../components/inspector/MacroInspector';
-import { IfInspector } from '../components/inspector/IfInspector';
-import { WhileInspector } from '../components/inspector/WhileInspector';
-import { ForInspector } from '../components/inspector/ForInspector';
 import { ChoiceInspector } from '../components/inspector/ChoiceInspector';
+import { DialogueInspector } from '../components/inspector/DialogueInspector';
+import { FlashInspector } from '../components/inspector/FlashInspector';
+import { ForInspector } from '../components/inspector/ForInspector';
+import { GotoInspector } from '../components/inspector/GotoInspector';
+import { IfInspector } from '../components/inspector/IfInspector';
+import { ItemInspector } from '../components/inspector/ItemInspector';
 import { JumpInspector } from '../components/inspector/JumpInspector';
+import { LabelInspector } from '../components/inspector/LabelInspector';
+import { MacroHeaderInspector } from '../components/inspector/MacroHeaderInspector';
+import { MacroInspector } from '../components/inspector/MacroInspector';
 import { SetInspector } from '../components/inspector/SetInspector';
 import { SfxInspector } from '../components/inspector/SfxInspector';
-import { LabelInspector } from '../components/inspector/LabelInspector';
-import { GotoInspector } from '../components/inspector/GotoInspector';
-import { WaitInspector } from '../components/inspector/WaitInspector';
-import { TransitionInspector } from '../components/inspector/TransitionInspector';
 import { ShakeInspector } from '../components/inspector/ShakeInspector';
-import { FlashInspector } from '../components/inspector/FlashInspector';
-import { ItemInspector } from '../components/inspector/ItemInspector';
-import { MacroHeaderInspector } from '../components/inspector/MacroHeaderInspector';
+import { SpriteInspector } from '../components/inspector/SpriteInspector';
+import { TransitionInspector } from '../components/inspector/TransitionInspector';
+import { WaitInspector } from '../components/inspector/WaitInspector';
+import { WhileInspector } from '../components/inspector/WhileInspector';
 
-const FALLBACK_ICON = (size: number) => <Gamepad2 size={size} color="#94a3b8" />;
-const titleCase = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+const FALLBACK_ICON = (size: number) => <Gamepad2 color="#94a3b8" size={size} />;
+const titleCase = (s: string) => s.replaceAll('_', ' ').replaceAll(/\b\w/g, (c) => c.toUpperCase());
 
-const asRecord = (value: unknown): Record<string, unknown> | null =>
+const asRecord = (value: unknown): null | Record<string, unknown> =>
     value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
 
-function readString(node: unknown, key: string, fallback = ''): string {
+type UnknownCommandPlugin = {
+    createDefault?: () => PluginNode;
+    getBranches?: (node: PluginNode) => BranchSpec[];
+    getSummary?: (node: PluginNode) => string;
+    icon: (size: number) => ReactNode;
+    Inspector?: ComponentType<{ index?: null | number; node: PluginNode; }>;
+    label: string;
+    quickColor?: { bg: string; border: string };
+    type: string;
+};
+
+function readArray<T = unknown>(node: unknown, key: string): T[] {
     const value = asRecord(node)?.[key];
-    return typeof value === 'string' ? value : fallback;
+    return Array.isArray(value) ? (value as T[]) : [];
 }
 
 function readNumber(node: unknown, key: string, fallback: number): number {
@@ -52,55 +65,20 @@ function readNumber(node: unknown, key: string, fallback: number): number {
     return typeof value === 'number' ? value : fallback;
 }
 
-function readArray<T = unknown>(node: unknown, key: string): T[] {
+function readString(node: unknown, key: string, fallback = ''): string {
     const value = asRecord(node)?.[key];
-    return Array.isArray(value) ? (value as T[]) : [];
+    return typeof value === 'string' ? value : fallback;
 }
 
-type UnknownCommandPlugin = {
-    type: string;
-    label: string;
-    icon: (size: number) => ReactNode;
-    quickColor?: { bg: string; border: string };
-    createDefault?: () => PluginNode;
-    getSummary?: (node: PluginNode) => string;
-    getBranches?: (node: PluginNode) => BranchSpec[];
-    Inspector?: ComponentType<{ node: PluginNode; index?: number | null }>;
-};
-
 const PLUGIN_OVERRIDES: Partial<Record<EditorCommandType, Partial<CommandPlugin>>> = {
-    dialogue: {
-        icon: (s) => <MessageSquare size={s} color="#60a5fa" />,
-        createDefault: () => ({ type: 'dialogue', speaker: '???', text: '...' }),
-        getSummary: (n) => `${readString(n, 'speaker', '???')}: ${readString(n, 'text')}`,
-        Inspector: DialogueInspector,
-    },
     background: {
-        icon: (s) => <ImageIcon size={s} color="#34d399" />,
-        createDefault: () => ({ type: 'background', assetUrl: '' }),
+        createDefault: () => ({ assetUrl: '', type: 'background' }),
         getSummary: (n) => readString(n, 'assetUrl', '(no asset)'),
+        icon: (s) => <ImageIcon color="#34d399" size={s} />,
         Inspector: BackgroundInspector,
     },
-    sprite: {
-        icon: (s) => <User size={s} color="#a78bfa" />,
-        createDefault: () => ({ type: 'sprite', id: '', action: 'show' }),
-        getSummary: (n) => {
-            const id = readString(n, 'id', 'sprite');
-            const action = readString(n, 'action', 'show');
-            const pose = readString(n, 'pose');
-            return `${id} • ${action}${pose ? ` • ${pose}` : ''}`;
-        },
-        Inspector: SpriteInspector,
-    },
-    call: {
-        icon: (s) => <Workflow size={s} color="#f472b6" />,
-        createDefault: () => ({ type: 'call', name: '' }),
-        getSummary: (n) => readString(n, 'name'),
-        Inspector: MacroInspector,
-    },
     bgm: {
-        icon: (s) => <Music size={s} color="#f472b6" />,
-        createDefault: () => ({ type: 'bgm', action: 'play', assetUrl: '', volume: 0.5 }),
+        createDefault: () => ({ action: 'play', assetUrl: '', type: 'bgm', volume: 0.5 }),
         getSummary: (n) => {
             const action = readString(n, 'action');
             if (action !== 'play') return action;
@@ -109,57 +87,53 @@ const PLUGIN_OVERRIDES: Partial<Record<EditorCommandType, Partial<CommandPlugin>
             const loopSuffix = typeof loop === 'boolean' ? ` • loop:${loop}` : '';
             return `play ${assetUrl}${loopSuffix}`;
         },
+        icon: (s) => <Music color="#f472b6" size={s} />,
         Inspector: BgmInspector,
     },
-    sfx: {
-        icon: (s) => <FileAudio size={s} color="#f472b6" />,
-        createDefault: () => ({ type: 'sfx', assetUrl: '', volume: 0.8 }),
-        getSummary: (n) => readString(n, 'assetUrl'),
-        Inspector: SfxInspector,
+    call: {
+        createDefault: () => ({ name: '', type: 'call' }),
+        getSummary: (n) => readString(n, 'name'),
+        icon: (s) => <Workflow color="#f472b6" size={s} />,
+        Inspector: MacroInspector,
     },
     choice: {
-        icon: (s) => <GitFork size={s} color="#fbbf24" />,
-        quickColor: { bg: '#4a3b10', border: '#7a5f19' },
-        createDefault: () => ({ type: 'choice', options: [{ label: 'Option 1', commands: [] }] }),
-        getSummary: (n) => `${readArray(n, 'options').length} options`,
+        createDefault: () => ({ options: [{ commands: [], label: 'Option 1' }], type: 'choice' }),
         getBranches: (n) => {
             const options = readArray<unknown>(n, 'options');
-            return options.map((opt, i) => {
+            return options.map((opt, index) => {
                 const option = asRecord(opt);
                 const labelValue = typeof option?.label === 'string' ? option.label : '';
                 const commands = Array.isArray(option?.commands) ? (option.commands as PluginNode[]) : [];
                 return {
-                    label: `OPTION ${i + 1}${labelValue ? `: ${labelValue}` : ''}`,
-                    path: ['options', i, 'commands'],
+                    label: `OPTION ${index + 1}${labelValue ? `: ${labelValue}` : ''}`,
                     nodes: commands,
+                    path: ['options', index, 'commands'],
                 };
             });
         },
+        getSummary: (n) => `${readArray(n, 'options').length} options`,
+        icon: (s) => <GitFork color="#fbbf24" size={s} />,
         Inspector: ChoiceInspector,
+        quickColor: { bg: '#4a3b10', border: '#7a5f19' },
     },
-    if: {
-        icon: (s) => <GitFork size={s} color="#4ec9b0" />,
-        quickColor: { bg: '#103a38', border: '#1f6a66' },
-        createDefault: () => ({ type: 'if', source: 'variable', key: '', op: 'eq', value: true, then: [], else: [] }),
-        getSummary: (n) => readString(n, 'key'),
-        getBranches: (n) => [
-            { label: 'THEN', path: ['then'], nodes: readArray<PluginNode>(n, 'then') },
-            { label: 'ELSE', path: ['else'], nodes: readArray<PluginNode>(n, 'else') },
-        ],
-        Inspector: IfInspector,
+    dialogue: {
+        createDefault: () => ({ speaker: '???', text: '...', type: 'dialogue' }),
+        getSummary: (n) => `${readString(n, 'speaker', '???')}: ${readString(n, 'text')}`,
+        icon: (s) => <MessageSquare color="#60a5fa" size={s} />,
+        Inspector: DialogueInspector,
     },
-    while: {
-        icon: (s) => <Repeat size={s} color="#22c55e" />,
-        quickColor: { bg: '#11301b', border: '#1d5b32' },
-        createDefault: () => ({ type: 'while', source: 'variable', key: '', op: 'eq', value: true, body: [], maxIterations: 10000 }),
-        getSummary: (n) => readString(n, 'key', 'loop'),
-        getBranches: (n) => [{ label: 'BODY', path: ['body'], nodes: readArray<PluginNode>(n, 'body') }],
-        Inspector: WhileInspector,
+    flash: {
+        createDefault: () => ({ color: 0xFF_FF_FF, duration: 200, type: 'flash', wait: false }),
+        getSummary: (n) => {
+            const color = readNumber(n, 'color', 0xFF_FF_FF);
+            const hex = `#${color.toString(16).padStart(6, '0').toUpperCase()}`;
+            return `${hex} • ${readNumber(n, 'duration', 200)}ms`;
+        },
+        Inspector: FlashInspector,
     },
     for: {
-        icon: (s) => <Sigma size={s} color="#60a5fa" />,
-        quickColor: { bg: '#11263d', border: '#1f4b7a' },
-        createDefault: () => ({ type: 'for', iterator: 'i', from: 0, to: 3, step: 1, body: [] }),
+        createDefault: () => ({ body: [], from: 0, iterator: 'i', step: 1, to: 3, type: 'for' }),
+        getBranches: (n) => [{ label: 'BODY', nodes: readArray<PluginNode>(n, 'body'), path: ['body'] }],
         getSummary: (n) => {
             const iterator = readString(n, 'iterator', 'i');
             const from = readNumber(n, 'from', 0);
@@ -167,62 +141,90 @@ const PLUGIN_OVERRIDES: Partial<Record<EditorCommandType, Partial<CommandPlugin>
             const step = readNumber(n, 'step', 1);
             return `${iterator}: ${from}→${to} step ${step}`;
         },
-        getBranches: (n) => [{ label: 'BODY', path: ['body'], nodes: readArray<PluginNode>(n, 'body') }],
+        icon: (s) => <Sigma color="#60a5fa" size={s} />,
         Inspector: ForInspector,
-    },
-    jump: {
-        icon: (s) => <ArrowRightCircle size={s} color="#fbbf24" />,
-        createDefault: () => ({ type: 'jump', to: '' }),
-        getSummary: (n) => readString(n, 'to'),
-        Inspector: JumpInspector,
-    },
-    set: { Inspector: SetInspector },
-    scene_change: {
-        createDefault: () => ({ type: 'scene_change', assetUrl: '', duration: 500 }),
-    },
-    label: {
-        createDefault: () => ({ type: 'label', name: '' }),
-        Inspector: LabelInspector,
+        quickColor: { bg: '#11263d', border: '#1f4b7a' },
     },
     goto: {
-        createDefault: () => ({ type: 'goto', label: '' }),
+        createDefault: () => ({ label: '', type: 'goto' }),
         Inspector: GotoInspector,
     },
-    wait: {
-        createDefault: () => ({ type: 'wait', duration: 500 }),
-        Inspector: WaitInspector,
-    },
-    transition: {
-        createDefault: () => ({ type: 'transition', action: 'fade_out', duration: 300 }),
-        Inspector: TransitionInspector,
-    },
-    shake: {
-        createDefault: () => ({ type: 'shake', intensity: 10, duration: 500, wait: false }),
-        Inspector: ShakeInspector,
-        getSummary: (n) => `${readNumber(n, 'intensity', 10)} intensity • ${readNumber(n, 'duration', 500)}ms`,
-    },
-    flash: {
-        createDefault: () => ({ type: 'flash', color: 0xffffff, duration: 200, wait: false }),
-        Inspector: FlashInspector,
-        getSummary: (n) => {
-            const color = readNumber(n, 'color', 0xffffff);
-            const hex = `#${color.toString(16).padStart(6, '0').toUpperCase()}`;
-            return `${hex} • ${readNumber(n, 'duration', 200)}ms`;
-        },
+    if: {
+        createDefault: () => ({ else: [], key: '', op: 'eq', source: 'variable', then: [], type: 'if', value: true }),
+        getBranches: (n) => [
+            { label: 'THEN', nodes: readArray<PluginNode>(n, 'then'), path: ['then'] },
+            { label: 'ELSE', nodes: readArray<PluginNode>(n, 'else'), path: ['else'] },
+        ],
+        getSummary: (n) => readString(n, 'key'),
+        icon: (s) => <GitFork color="#4ec9b0" size={s} />,
+        Inspector: IfInspector,
+        quickColor: { bg: '#103a38', border: '#1f6a66' },
     },
     item: {
-        icon: (s) => <Gamepad2 size={s} color="#f87171" />,
-        createDefault: () => ({ type: 'item', action: 'add', id: '' }),
+        createDefault: () => ({ action: 'add', id: '', type: 'item' }),
         getSummary: (n) => `${readString(n, 'action', 'add')} ${readString(n, 'id')}`,
+        icon: (s) => <Gamepad2 color="#f87171" size={s} />,
         Inspector: ItemInspector,
     },
+    jump: {
+        createDefault: () => ({ to: '', type: 'jump' }),
+        getSummary: (n) => readString(n, 'to'),
+        icon: (s) => <ArrowRightCircle color="#fbbf24" size={s} />,
+        Inspector: JumpInspector,
+    },
+    label: {
+        createDefault: () => ({ name: '', type: 'label' }),
+        Inspector: LabelInspector,
+    },
     macro_header: {
-        label: 'Macro',
-        icon: (s) => <Workflow size={s} color="#f59e0b" />,
-        createDefault: () => ({ type: 'macro_header', name: 'new_macro', body: [] }),
+        createDefault: () => ({ body: [], name: 'new_macro', type: 'macro_header' }),
+        getBranches: (n) => [{ label: 'BODY', nodes: readArray<PluginNode>(n, 'body'), path: ['body'] }],
         getSummary: (n) => readString(n, 'name', '(unnamed macro)'),
-        getBranches: (n) => [{ label: 'BODY', path: ['body'], nodes: readArray<PluginNode>(n, 'body') }],
+        icon: (s) => <Workflow color="#f59e0b" size={s} />,
         Inspector: MacroHeaderInspector,
+        label: 'Macro',
+    },
+    scene_change: {
+        createDefault: () => ({ assetUrl: '', duration: 500, type: 'scene_change' }),
+    },
+    set: { Inspector: SetInspector },
+    sfx: {
+        createDefault: () => ({ assetUrl: '', type: 'sfx', volume: 0.8 }),
+        getSummary: (n) => readString(n, 'assetUrl'),
+        icon: (s) => <FileAudio color="#f472b6" size={s} />,
+        Inspector: SfxInspector,
+    },
+    shake: {
+        createDefault: () => ({ duration: 500, intensity: 10, type: 'shake', wait: false }),
+        getSummary: (n) => `${readNumber(n, 'intensity', 10)} intensity • ${readNumber(n, 'duration', 500)}ms`,
+        Inspector: ShakeInspector,
+    },
+    sprite: {
+        createDefault: () => ({ action: 'show', id: '', type: 'sprite' }),
+        getSummary: (n) => {
+            const id = readString(n, 'id', 'sprite');
+            const action = readString(n, 'action', 'show');
+            const pose = readString(n, 'pose');
+            return `${id} • ${action}${pose ? ` • ${pose}` : ''}`;
+        },
+        icon: (s) => <User color="#a78bfa" size={s} />,
+        Inspector: SpriteInspector,
+    },
+    transition: {
+        createDefault: () => ({ action: 'fade_out', duration: 300, type: 'transition' }),
+        Inspector: TransitionInspector,
+    },
+    wait: {
+        createDefault: () => ({ duration: 500, type: 'wait' }),
+        Inspector: WaitInspector,
+    },
+    while: {
+        createDefault: () => ({ body: [], key: '', maxIterations: 10_000, op: 'eq', source: 'variable', type: 'while', value: true }),
+        getBranches: (n) => [{ label: 'BODY', nodes: readArray<PluginNode>(n, 'body'), path: ['body'] }],
+        getSummary: (n) => readString(n, 'key', 'loop'),
+        icon: (s) => <Repeat color="#22c55e" size={s} />,
+        Inspector: WhileInspector,
+        quickColor: { bg: '#11301b', border: '#1d5b32' },
     },
 };
 
@@ -232,10 +234,10 @@ function isEditorCommandType(type: string): type is EditorCommandType {
     return editorCommandTypeSet.has(type as EditorCommandType);
 }
 
-export const COMMAND_TYPES: EditorCommandType[] = Array.from(new Set([
+export const COMMAND_TYPES: EditorCommandType[] = [...new Set([
     ...Object.keys(CommandSchemaRegistry),
     'macro_header',
-])).filter(isEditorCommandType);
+])].filter(isEditorCommandType);
 
 export const COMMAND_PLUGINS: Record<EditorCommandType, CommandPlugin> = Object.fromEntries(
     COMMAND_TYPES.map((type) => {
@@ -243,14 +245,14 @@ export const COMMAND_PLUGINS: Record<EditorCommandType, CommandPlugin> = Object.
         return [
             type,
             {
-                type,
-                label: o.label ?? titleCase(type),
-                icon: o.icon ?? FALLBACK_ICON,
-                quickColor: o.quickColor,
                 createDefault: o.createDefault ?? (() => ({ type } as EditorNodeByType<EditorCommandType>)),
-                getSummary: o.getSummary,
                 getBranches: o.getBranches,
+                getSummary: o.getSummary,
+                icon: o.icon ?? FALLBACK_ICON,
                 Inspector: o.Inspector,
+                label: o.label ?? titleCase(type),
+                quickColor: o.quickColor,
+                type,
             },
         ];
     })
@@ -259,21 +261,32 @@ export const COMMAND_PLUGINS: Record<EditorCommandType, CommandPlugin> = Object.
 const typedCommandTypes = [...COMMAND_TYPES];
 
 export const pluginApi: PluginAPI = {
-    getPlugin<TType extends EditorCommandType>(type: TType) {
-        return COMMAND_PLUGINS[type] as unknown as CommandPlugin<TType>;
+    createDefaultCommand<TType extends EditorCommandType>(type: TType) {
+        return this.getPlugin(type).createDefault?.() ?? ({ type } as EditorNodeByType<TType>);
     },
     getAllPlugins() {
         return typedCommandTypes
             .filter((type): type is NonMacroEditorCommandType => type !== 'macro_header')
             .map((type) => COMMAND_PLUGINS[type] as CommandPlugin<NonMacroEditorCommandType>);
     },
-    createDefaultCommand<TType extends EditorCommandType>(type: TType) {
-        return this.getPlugin(type).createDefault?.() ?? ({ type } as EditorNodeByType<TType>);
-    },
     getCommandTypes() {
         return [...typedCommandTypes];
     },
+    getPlugin<TType extends EditorCommandType>(type: TType) {
+        return COMMAND_PLUGINS[type] as unknown as CommandPlugin<TType>;
+    },
 };
+
+export function createDefaultCommand<TType extends EditorCommandType>(type: TType): EditorNodeByType<TType>;
+export function createDefaultCommand(type: string): PluginNode;
+export function createDefaultCommand(type: string): PluginNode {
+    const plugin = getPlugin(type);
+    return plugin.createDefault?.() ?? { type };
+}
+
+export function getAllPlugins(): CommandPlugin<NonMacroEditorCommandType>[] {
+    return pluginApi.getAllPlugins();
+}
 
 export function getPlugin<TType extends EditorCommandType>(type: TType): CommandPlugin<TType>;
 export function getPlugin(type: string): CommandPlugin | UnknownCommandPlugin;
@@ -282,20 +295,9 @@ export function getPlugin(type: string): CommandPlugin | UnknownCommandPlugin {
         return pluginApi.getPlugin(type);
     }
     return {
-        type,
-        label: titleCase(type),
-        icon: FALLBACK_ICON,
         createDefault: () => ({ type }),
+        icon: FALLBACK_ICON,
+        label: titleCase(type),
+        type,
     };
-}
-
-export function getAllPlugins(): CommandPlugin<NonMacroEditorCommandType>[] {
-    return pluginApi.getAllPlugins();
-}
-
-export function createDefaultCommand<TType extends EditorCommandType>(type: TType): EditorNodeByType<TType>;
-export function createDefaultCommand(type: string): PluginNode;
-export function createDefaultCommand(type: string): PluginNode {
-    const plugin = getPlugin(type);
-    return plugin.createDefault?.() ?? { type };
 }

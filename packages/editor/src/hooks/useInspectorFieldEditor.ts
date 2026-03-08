@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
-import { useEditorStore } from '../store/useEditorStore';
-import { useScriptStore } from '../store/useScriptStore';
-import { useProjectStore } from '../store/useProjectStore';
-import { executeInspectorFieldPatchAction } from '../store/actions/inspectorFieldActions';
 
-export function useInspectorFieldEditor(index?: number | null) {
+import { executeInspectorFieldPatchAction } from '../store/actions/inspectorFieldActions';
+import { useEditorStore } from '../store/useEditorStore';
+import { useProjectStore } from '../store/useProjectStore';
+import { useScriptStore } from '../store/useScriptStore';
+
+export function useInspectorFieldEditor(index?: null | number) {
     const { uiScale, validationErrors } = useEditorStore();
     const editingAllMacrosFile = useProjectStore((s) => s.editingAllMacrosFile);
 
@@ -13,7 +14,7 @@ export function useInspectorFieldEditor(index?: number | null) {
     } = useScriptStore();
 
     const applyNodePatch = (patch: Record<string, any>) => {
-        executeInspectorFieldPatchAction({ patch, index });
+        executeInspectorFieldPatchAction({ index, patch });
     };
 
     const handleChange = (field: string, value: any) => {
@@ -22,24 +23,24 @@ export function useInspectorFieldEditor(index?: number | null) {
 
     const labelStyle = useMemo(
         () => ({
-            display: 'block',
-            marginBottom: `${6 * uiScale}px`,
             color: '#888',
+            display: 'block',
             fontSize: '0.85em',
+            marginBottom: `${6 * uiScale}px`,
         }),
         [uiScale]
     );
 
     const inputStyle = useMemo(
         () => ({
-            width: '100%',
-            padding: `${8 * uiScale}px`,
             backgroundColor: '#1e1e1e',
             border: '1px solid #3c3c3c',
-            color: '#fff',
             borderRadius: '4px',
+            color: '#fff',
             fontSize: 'inherit',
             outline: 'none',
+            padding: `${8 * uiScale}px`,
+            width: '100%',
         }),
         [uiScale]
     );
@@ -63,5 +64,5 @@ export function useInspectorFieldEditor(index?: number | null) {
         return errs.length > 0 ? { ...inputStyle, border: '1px solid #ef4444' } : inputStyle;
     };
 
-    return { uiScale, applyNodePatch, handleChange, labelStyle, inputStyle, getFieldErrors, getFieldInputStyle };
+    return { applyNodePatch, getFieldErrors, getFieldInputStyle, handleChange, inputStyle, labelStyle, uiScale };
 }

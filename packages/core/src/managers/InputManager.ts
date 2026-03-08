@@ -3,58 +3,58 @@ import type { Engine } from '../Engine';
 export interface InputConfig {
     advanceKeys?: string[];
     backKeys?: string[];
-    saveKey?: string;
+    confirmKeys?: string[];
+    gamepadAdvanceButton?: number;
+    gamepadBackButton?: number;
+    gamepadConfirmButton?: number;
+    gamepadDownButton?: number;
+    gamepadLeftButton?: number;
+    gamepadMenuButton?: number;
+    gamepadRightButton?: number;
+    gamepadUpButton?: number;
     loadKey?: string;
     menuKey?: string;
-    navigateUpKeys?: string[];
     navigateDownKeys?: string[];
     navigateLeftKeys?: string[];
     navigateRightKeys?: string[];
-    confirmKeys?: string[];
-    gamepadAdvanceButton?: number;
-    gamepadMenuButton?: number;
-    gamepadBackButton?: number;
-    gamepadConfirmButton?: number;
-    gamepadUpButton?: number;
-    gamepadDownButton?: number;
-    gamepadLeftButton?: number;
-    gamepadRightButton?: number;
+    navigateUpKeys?: string[];
+    saveKey?: string;
 }
 
 export class InputManager {
-    private engine: Engine;
-    private config: Required<InputConfig>;
-    private canvas: HTMLCanvasElement | null = null;
-
+    private boundOnKeyDown: ((e: KeyboardEvent) => void) | null = null;
     // Initialize these as null
     private boundOnPointerDown: ((e: PointerEvent) => void) | null = null;
-    private boundOnKeyDown: ((e: KeyboardEvent) => void) | null = null;
+    private canvas: HTMLCanvasElement | null = null;
 
-    private gamepadPollId: number | null = null;
-    private prevGamepadButtons: boolean[] = [];
+    private config: Required<InputConfig>;
+    private engine: Engine;
+
+    private gamepadPollId: null | number = null;
     private prevGamepadAxes: number[] = [];
+    private prevGamepadButtons: boolean[] = [];
 
     constructor(engine: Engine, config: InputConfig = {}) {
         this.engine = engine;
         this.config = {
             advanceKeys: ['Enter', ' '],
             backKeys: ['Escape'],
-            saveKey: 's',
+            confirmKeys: ['Enter', ' '],
+            gamepadAdvanceButton: 0,
+            gamepadBackButton: 1,
+            gamepadConfirmButton: 0,
+            gamepadDownButton: 13,
+            gamepadLeftButton: 14,
+            gamepadMenuButton: 9,
+            gamepadRightButton: 15,
+            gamepadUpButton: 12,
             loadKey: 'l',
             menuKey: 'Escape',
-            navigateUpKeys: ['ArrowUp', 'w', 'W'],
             navigateDownKeys: ['ArrowDown', 's', 'S'],
             navigateLeftKeys: ['ArrowLeft', 'a', 'A'],
             navigateRightKeys: ['ArrowRight', 'd', 'D'],
-            confirmKeys: ['Enter', ' '],
-            gamepadAdvanceButton: 0,
-            gamepadMenuButton: 9,
-            gamepadBackButton: 1,
-            gamepadConfirmButton: 0,
-            gamepadUpButton: 12,
-            gamepadDownButton: 13,
-            gamepadLeftButton: 14,
-            gamepadRightButton: 15,
+            navigateUpKeys: ['ArrowUp', 'w', 'W'],
+            saveKey: 's',
             ...config
         };
     }
@@ -150,7 +150,7 @@ export class InputManager {
 
         // 3. Attach listeners
         canvas.addEventListener('pointerdown', this.boundOnPointerDown);
-        window.addEventListener('keydown', this.boundOnKeyDown);
+        globalThis.addEventListener('keydown', this.boundOnKeyDown);
 
         this.startGamepadPolling();
     }
@@ -161,7 +161,7 @@ export class InputManager {
         }
 
         if (this.boundOnKeyDown) {
-            window.removeEventListener('keydown', this.boundOnKeyDown);
+            globalThis.removeEventListener('keydown', this.boundOnKeyDown);
         }
 
         this.stopGamepadPolling();
@@ -180,7 +180,7 @@ export class InputManager {
                 const buttons = gamepad.buttons.map(b => b.pressed);
                 const axes = [...gamepad.axes];
 
-                const pressed = (btn: number) => buttons[btn] && !this.prevGamepadButtons[btn];
+                const pressed = (button: number) => buttons[button] && !this.prevGamepadButtons[button];
 
                 // D-pad buttons
                 if (pressed(this.config.gamepadUpButton)) this.engine.events.emit('input:navigate', 'up');
@@ -190,14 +190,14 @@ export class InputManager {
 
                 // Axes
                 const stickY = axes[1] ?? 0;
-                const prevStickY = this.prevGamepadAxes[1] ?? 0;
-                if (stickY < -0.5 && prevStickY >= -0.5) this.engine.events.emit('input:navigate', 'up');
-                if (stickY > 0.5 && prevStickY <= 0.5) this.engine.events.emit('input:navigate', 'down');
+                const previousStickY = this.prevGamepadAxes[1] ?? 0;
+                if (stickY < -0.5 && previousStickY >= -0.5) this.engine.events.emit('input:navigate', 'up');
+                if (stickY > 0.5 && previousStickY <= 0.5) this.engine.events.emit('input:navigate', 'down');
 
                 const stickX = axes[0] ?? 0;
-                const prevStickX = this.prevGamepadAxes[0] ?? 0;
-                if (stickX < -0.5 && prevStickX >= -0.5) this.engine.events.emit('input:navigate', 'left');
-                if (stickX > 0.5 && prevStickX <= 0.5) this.engine.events.emit('input:navigate', 'right');
+                const previousStickX = this.prevGamepadAxes[0] ?? 0;
+                if (stickX < -0.5 && previousStickX >= -0.5) this.engine.events.emit('input:navigate', 'left');
+                if (stickX > 0.5 && previousStickX <= 0.5) this.engine.events.emit('input:navigate', 'right');
 
                 // Buttons
                 if (pressed(this.config.gamepadConfirmButton)) this.engine.events.emit('input:confirm');
@@ -217,12 +217,10 @@ export class InputManager {
                     }
                 }
 
-                if (pressed(this.config.gamepadMenuButton)) {
-                    if (this.engine.isStarted) {
+                if (pressed(this.config.gamepadMenuButton) && this.engine.isStarted) {
                         if (this.engine.overlay.isOpen) this.engine.events.emit('input:back');
                         else this.engine.events.emit('menu:toggle');
                     }
-                }
 
                 this.prevGamepadButtons = buttons;
                 this.prevGamepadAxes = axes;

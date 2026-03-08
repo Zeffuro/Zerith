@@ -1,23 +1,24 @@
 import { CSSProperties, useMemo } from 'react';
+
 import { useAssetOptions } from '../../../hooks/useAssetOptions';
 
-type Props = {
-    value: string;
-    onChange: (next: string) => void;
-    kind?: 'bg' | 'sprite' | 'audio' | 'all';
-    placeholder?: string;
+type Properties = {
     inputStyle?: CSSProperties;
+    kind?: 'all' | 'audio' | 'bg' | 'sprite';
     listId: string;
+    onChange: (next: string) => void;
+    placeholder?: string;
+    value: string;
 };
 
 export function AssetPickerField({
-                                     value,
-                                     onChange,
-                                     kind = 'all',
-                                     placeholder = '/assets/...',
                                      inputStyle,
+                                     kind = 'all',
                                      listId,
-                                 }: Props) {
+                                     onChange,
+                                     placeholder = '/assets/...',
+                                     value,
+                                 }: Properties) {
     const { assets } = useAssetOptions(kind);
 
     const options = useMemo(() => assets.slice(0, 200), [assets]);
@@ -25,12 +26,12 @@ export function AssetPickerField({
     return (
         <>
             <input
+                list={listId}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder={placeholder}
+                style={inputStyle}
                 type="text"
                 value={value}
-                placeholder={placeholder}
-                onChange={(e) => onChange(e.target.value)}
-                style={inputStyle}
-                list={listId}
             />
             <datalist id={listId}>
                 {options.map((a) => (

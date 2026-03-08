@@ -1,5 +1,14 @@
 import type { ScriptPath } from '../../utils/scriptPathUtils';
 
+export function deepClone<T>(value: T): T {
+    if (typeof structuredClone === 'function') return structuredClone(value);
+    return JSON.parse(JSON.stringify(value));
+}
+
+export function isRootIndexPath(p: ScriptPath): p is [number] {
+    return p.length === 1 && typeof p[0] === 'number';
+}
+
 export function normalizeNode(node: any): any {
     if (!node || typeof node !== 'object') return node;
 
@@ -39,13 +48,4 @@ export function normalizeNode(node: any): any {
 
 export function normalizeScript(script: any[]): any[] {
     return Array.isArray(script) ? script.map(normalizeNode) : [];
-}
-
-export function deepClone<T>(value: T): T {
-    if (typeof structuredClone === 'function') return structuredClone(value);
-    return JSON.parse(JSON.stringify(value));
-}
-
-export function isRootIndexPath(p: ScriptPath): p is [number] {
-    return p.length === 1 && typeof p[0] === 'number';
 }

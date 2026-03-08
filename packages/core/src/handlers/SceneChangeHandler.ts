@@ -1,34 +1,34 @@
-import type { BaseCommand, CommandHandler } from '../types';
 import type { Engine } from '../Engine';
+import type { BaseCommand, CommandHandler } from '../types';
 
 export interface SceneChangeCommand extends BaseCommand {
-    type: 'scene_change';
     assetUrl: string;
     duration?: number;
+    type: 'scene_change';
 }
 
 export class SceneChangeHandler implements CommandHandler<SceneChangeCommand> {
-    public type: 'scene_change' = 'scene_change';
     public autoNext = true;
+    public type: 'scene_change' = 'scene_change';
 
     execute = async (command: SceneChangeCommand, engine: Engine) => {
         const fadeTime = (command.duration || 1000) / 2;
 
         await engine.runCommand({
-            type: 'transition',
             action: 'fade_out',
-            duration: fadeTime
+            duration: fadeTime,
+            type: 'transition'
         });
 
         await engine.runCommand({
-            type: 'background',
-            assetUrl: command.assetUrl
+            assetUrl: command.assetUrl,
+            type: 'background'
         });
 
         await engine.runCommand({
-            type: 'transition',
             action: 'fade_in',
-            duration: fadeTime
+            duration: fadeTime,
+            type: 'transition'
         });
     };
 }

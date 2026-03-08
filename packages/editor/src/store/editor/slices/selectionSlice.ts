@@ -3,22 +3,26 @@ import type { DeleteRequestSource, EditorSet, SelectionSlice } from '../types';
 
 export function createSelectionSlice(set: EditorSet): SelectionSlice {
     return {
-        selectedNodePaths: [],
-        selectionAnchorPath: null,
+        clearDeleteRequest: () =>
+            set({ pendingDeleteRequest: null }),
+        clearSelection: () =>
+            set({ selectedNodePaths: [], selectionAnchorPath: null }),
         pendingDeleteRequest: null,
+
+        requestDelete: (paths, source: DeleteRequestSource = 'keyboard') =>
+            set({ pendingDeleteRequest: { paths, source } }),
+
+        selectedNodePaths: [],
+
+        selectionAnchorPath: null,
 
         setSelectedNodePaths: (paths) =>
             set({
-                selectedNodePaths: Array.from(
-                    new Map(paths.map((p) => [p.join('.'), [...p] as ScriptPath])).values()
-                ),
+                selectedNodePaths: [...new Map(paths.map((p) => [p.join('.'), [...p] as ScriptPath])).values()],
             }),
 
         setSelectionAnchorPath: (path) =>
             set({ selectionAnchorPath: path ? ([...path] as ScriptPath) : null }),
-
-        clearSelection: () =>
-            set({ selectedNodePaths: [], selectionAnchorPath: null }),
 
         toggleSelectedNodePath: (path) =>
             set((state) => {
@@ -31,12 +35,6 @@ export function createSelectionSlice(set: EditorSet): SelectionSlice {
                         : [...state.selectedNodePaths, [...path] as ScriptPath],
                 };
             }),
-
-        requestDelete: (paths, source: DeleteRequestSource = 'keyboard') =>
-            set({ pendingDeleteRequest: { paths, source } }),
-
-        clearDeleteRequest: () =>
-            set({ pendingDeleteRequest: null }),
     };
 }
 

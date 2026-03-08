@@ -1,116 +1,237 @@
 import { Container, Graphics, Text } from 'pixi.js';
-import type { Theme } from '../utils/Theme';
+
 import type { OverlayConfig } from '../managers/OverlayManager';
+import type { Theme } from '../utils/Theme';
 import type { PanelFocusManager } from './PanelFocusManager';
 
-export interface UIContext {
-    theme: Theme;
-    overlayConfig: Required<OverlayConfig>;
-    canvasWidth: number;
-    canvasHeight: number;
-    getCanvasRect: () => DOMRect;
+export interface ButtonOptions {
+    bgAlpha?: number;
+    bgColor?: number;
+    borderColor?: number;
+    borderRadius?: number;
+    borderWidth?: number;
+    fontFamily?: string;
+    fontSize?: number;
+    height?: number;
+    hoverBorderColor?: number;
+    hoverColor?: number;
+    label: string;
+    textColor?: number;
+    width?: number;
+    x: number;
+    y: number;
 }
 
 /* Button */
 
-export interface ButtonOptions {
-    label: string;
-    x: number;
-    y: number;
-    width?: number;
-    height?: number;
-    fontSize?: number;
-    fontFamily?: string;
-    textColor?: number;
-    bgColor?: number;
-    bgAlpha?: number;
-    hoverColor?: number;
-    borderColor?: number;
-    hoverBorderColor?: number;
-    borderWidth?: number;
-    borderRadius?: number;
+export interface ListRowOptions {
+    initialSelected?: number;
+    items: { label: string; onSelect: (index: number) => void }[];
+    rowHeight?: number;
+    rowSpacing?: number;
+    width: number;
 }
 
-export function createButton(ctx: UIContext, opts: ButtonOptions, action: () => void): Container {
-    const cfg = ctx.overlayConfig;
-    const w = opts.width ?? cfg.buttonWidth;
-    const h = opts.height ?? cfg.buttonHeight;
-    const bgColor = opts.bgColor ?? cfg.buttonColor;
-    const bgAlpha = opts.bgAlpha ?? cfg.buttonAlpha;
-    const hoverColor = opts.hoverColor ?? cfg.buttonHoverColor;
-    const borderColor = opts.borderColor ?? ctx.theme.borderColor;
-    const hoverBorderColor = opts.hoverBorderColor ?? ctx.theme.accentColor;
-    const borderWidth = opts.borderWidth ?? 2;
-    const borderRadius = opts.borderRadius ?? 8;
-
-    const btn = new Container();
-    btn.eventMode = 'static';
-    btn.cursor = 'pointer';
-
-    const bg = new Graphics();
-    const drawNormal = () => {
-        bg.clear();
-        bg.roundRect(0, 0, w, h, borderRadius);
-        bg.fill({ color: bgColor, alpha: bgAlpha });
-        bg.stroke({ color: borderColor, width: borderWidth });
-    };
-    const drawHover = () => {
-        bg.clear();
-        bg.roundRect(0, 0, w, h, borderRadius);
-        bg.fill({ color: hoverColor, alpha: 1 });
-        bg.stroke({ color: hoverBorderColor, width: borderWidth });
-    };
-    drawNormal();
-
-    const txt = new Text({
-        text: opts.label,
-        style: {
-            fill: opts.textColor ?? cfg.textColor,
-            fontSize: opts.fontSize ?? cfg.fontSize,
-            fontFamily: opts.fontFamily ?? cfg.fontFamily,
-        }
-    });
-    txt.anchor.set(0.5);
-    txt.position.set(w / 2, h / 2);
-
-    btn.addChild(bg, txt);
-    btn.position.set(opts.x - w / 2, opts.y);
-
-    btn.on('pointerover', drawHover);
-    btn.on('pointerout', drawNormal);
-    btn.on('pointerdown', (e: any) => {
-        e.stopPropagation();
-        action();
-    });
-
-    return btn;
+export interface ListRowResult {
+    container: Container;
+    select: (index: number) => void;
 }
 
 /* Slider */
 
 export interface SliderOptions {
     label: string;
-    value: number;
-    trackWidth?: number;
     labelWidth?: number;
-    rowHeight?: number;
     onChange: (value: number) => void;
+    rowHeight?: number;
+    trackWidth?: number;
+    value: number;
 }
 
 export interface SliderResult {
-    container: Container;
-    cleanup: () => void;
     /** Programmatically set the slider to a 0–1 fraction */
     applyValue: (fraction: number) => void;
+    cleanup: () => void;
+    container: Container;
     /** Get the current 0–1 value */
     getValue: () => number;
 }
 
-export function createSlider(ctx: UIContext, opts: SliderOptions): SliderResult {
-    const cfg = ctx.overlayConfig;
-    const trackWidth = opts.trackWidth ?? Math.min(400, ctx.canvasWidth * 0.5);
-    const labelWidth = opts.labelWidth ?? 180;
-    const rowHeight = opts.rowHeight ?? 40;
+export interface ToggleOptions {
+    label: string;
+    labelWidth?: number;
+    onChange: (value: boolean) => void;
+    value: boolean;
+}
+
+/* Toggle */
+
+export interface ToggleResult {
+    container: Container;
+    toggle: () => void;
+}
+
+export interface UIContext {
+    canvasHeight: number;
+    canvasWidth: number;
+    getCanvasRect: () => DOMRect;
+    overlayConfig: Required<OverlayConfig>;
+    theme: Theme;
+}
+
+export function createButton(context: UIContext, options: ButtonOptions, action: () => void): Container {
+    const cfg = context.overlayConfig;
+    const w = options.width ?? cfg.buttonWidth;
+    const h = options.height ?? cfg.buttonHeight;
+    const bgColor = options.bgColor ?? cfg.buttonColor;
+    const bgAlpha = options.bgAlpha ?? cfg.buttonAlpha;
+    const hoverColor = options.hoverColor ?? cfg.buttonHoverColor;
+    const borderColor = options.borderColor ?? context.theme.borderColor;
+    const hoverBorderColor = options.hoverBorderColor ?? context.theme.accentColor;
+    const borderWidth = options.borderWidth ?? 2;
+    const borderRadius = options.borderRadius ?? 8;
+
+    const button = new Container();
+    button.eventMode = 'static';
+    button.cursor = 'pointer';
+
+    const bg = new Graphics();
+    const drawNormal = () => {
+        bg.clear();
+        bg.roundRect(0, 0, w, h, borderRadius);
+        bg.fill({ alpha: bgAlpha, color: bgColor });
+        bg.stroke({ color: borderColor, width: borderWidth });
+    };
+    const drawHover = () => {
+        bg.clear();
+        bg.roundRect(0, 0, w, h, borderRadius);
+        bg.fill({ alpha: 1, color: hoverColor });
+        bg.stroke({ color: hoverBorderColor, width: borderWidth });
+    };
+    drawNormal();
+
+    const txt = new Text({
+        style: {
+            fill: options.textColor ?? cfg.textColor,
+            fontFamily: options.fontFamily ?? cfg.fontFamily,
+            fontSize: options.fontSize ?? cfg.fontSize,
+        },
+        text: options.label
+    });
+    txt.anchor.set(0.5);
+    txt.position.set(w / 2, h / 2);
+
+    button.addChild(bg, txt);
+    button.position.set(options.x - w / 2, options.y);
+
+    button.on('pointerover', drawHover);
+    button.on('pointerout', drawNormal);
+    button.on('pointerdown', (e: any) => {
+        e.stopPropagation();
+        action();
+    });
+
+    return button;
+}
+
+/* Panel Title */
+
+export function createPanelTitle(context: UIContext, text: string): Text {
+    const cfg = context.overlayConfig;
+    const title = new Text({
+        style: {
+            fill: cfg.textColor,
+            fontFamily: cfg.fontFamily,
+            fontSize: cfg.fontSize + 6,
+            fontWeight: 'bold'
+        },
+        text
+    });
+    title.anchor.set(0.5, 0);
+    title.position.set(context.canvasWidth / 2, 20);
+    return title;
+}
+
+/* Selectable Row List */
+
+export function createSelectableList(context: UIContext, options: ListRowOptions): ListRowResult {
+    const cfg = context.overlayConfig;
+    const rowHeight = options.rowHeight ?? 45;
+    const rowSpacing = options.rowSpacing ?? 4;
+    const listW = options.width;
+
+    const content = new Container();
+    const rowBgs: Graphics[] = [];
+    let selectedIndex = options.initialSelected ?? 0;
+
+    const styleRow = (bg: Graphics, selected: boolean) => {
+        bg.clear();
+        bg.roundRect(0, 0, listW, rowHeight, 6);
+        bg.fill({
+            alpha: selected ? 1 : cfg.buttonAlpha,
+            color: selected ? cfg.buttonHoverColor : cfg.buttonColor
+        });
+        bg.stroke({
+            color: selected ? context.theme.accentColor : context.theme.borderColor,
+            width: selected ? 2 : 1
+        });
+    };
+
+    const select = (index: number) => {
+        if (rowBgs[selectedIndex]) styleRow(rowBgs[selectedIndex], false);
+        selectedIndex = index;
+        if (rowBgs[selectedIndex]) styleRow(rowBgs[selectedIndex], true);
+    };
+
+    let y = 0;
+    for (const [index, item] of options.items.entries()) {
+        const row = new Container();
+        row.eventMode = 'static';
+        row.cursor = 'pointer';
+
+        const rowBg = new Graphics();
+        styleRow(rowBg, index === selectedIndex);
+        rowBgs.push(rowBg);
+
+        const rowText = new Text({
+            style: { fill: cfg.textColor, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize - 4 },
+            text: item.label
+        });
+        rowText.anchor.set(0, 0.5);
+        rowText.position.set(12, rowHeight / 2);
+
+        row.addChild(rowBg, rowText);
+        row.position.set(0, y);
+
+        row.on('pointerover', () => {
+            if (index !== selectedIndex) {
+                rowBg.clear();
+                rowBg.roundRect(0, 0, listW, rowHeight, 6);
+                rowBg.fill({ alpha: 0.6, color: cfg.buttonHoverColor });
+                rowBg.stroke({ color: context.theme.accentColor, width: 1 });
+            }
+        });
+        row.on('pointerout', () => {
+            if (index !== selectedIndex) styleRow(rowBg, false);
+        });
+        row.on('pointerdown', (e: any) => {
+            e.stopPropagation();
+            select(index);
+            item.onSelect(index);
+        });
+
+        content.addChild(row);
+        y += rowHeight + rowSpacing;
+    }
+
+    return { container: content, select };
+}
+
+export function createSlider(context: UIContext, options: SliderOptions): SliderResult {
+    const cfg = context.overlayConfig;
+    const trackWidth = options.trackWidth ?? Math.min(400, context.canvasWidth * 0.5);
+    const labelWidth = options.labelWidth ?? 180;
+    const rowHeight = options.rowHeight ?? 40;
     const sliderHeight = 8;
     const handleRadius = 12;
     const trackX = labelWidth;
@@ -120,8 +241,8 @@ export function createSlider(ctx: UIContext, opts: SliderOptions): SliderResult 
 
     // Label
     const labelText = new Text({
-        text: opts.label,
-        style: { fill: cfg.textColor, fontSize: cfg.fontSize - 2, fontFamily: cfg.fontFamily }
+        style: { fill: cfg.textColor, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize - 2 },
+        text: options.label
     });
     labelText.anchor.set(0, 0.5);
     labelText.position.set(0, trackY);
@@ -129,8 +250,8 @@ export function createSlider(ctx: UIContext, opts: SliderOptions): SliderResult 
 
     // Value display
     const valueText = new Text({
-        text: `${Math.round(opts.value * 100)}%`,
-        style: { fill: ctx.theme.accentColor, fontSize: cfg.fontSize - 4, fontFamily: cfg.fontFamily }
+        style: { fill: context.theme.accentColor, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize - 4 },
+        text: `${Math.round(options.value * 100)}%`
     });
     valueText.anchor.set(0, 0.5);
     valueText.position.set(trackX + trackWidth + 15, trackY);
@@ -139,48 +260,48 @@ export function createSlider(ctx: UIContext, opts: SliderOptions): SliderResult 
     // Track background
     const trackBg = new Graphics();
     trackBg.roundRect(trackX, trackY - sliderHeight / 2, trackWidth, sliderHeight, 4);
-    trackBg.fill({ color: cfg.buttonColor, alpha: 0.8 });
-    trackBg.stroke({ color: ctx.theme.borderColor, width: 1 });
+    trackBg.fill({ alpha: 0.8, color: cfg.buttonColor });
+    trackBg.stroke({ color: context.theme.borderColor, width: 1 });
     row.addChild(trackBg);
 
     // Track fill
     const trackFill = new Graphics();
-    const drawFill = (val: number) => {
+    const drawFill = (value: number) => {
         trackFill.clear();
-        const fillWidth = Math.max(1, trackWidth * val);
+        const fillWidth = Math.max(1, trackWidth * value);
         trackFill.roundRect(trackX, trackY - sliderHeight / 2, fillWidth, sliderHeight, 4);
-        trackFill.fill({ color: ctx.theme.accentColor, alpha: 0.8 });
+        trackFill.fill({ alpha: 0.8, color: context.theme.accentColor });
     };
-    drawFill(opts.value);
+    drawFill(options.value);
     row.addChild(trackFill);
 
     // Handle
     const handle = new Graphics();
     handle.circle(0, 0, handleRadius);
-    handle.fill({ color: cfg.buttonHoverColor, alpha: 1 });
-    handle.stroke({ color: ctx.theme.accentColor, width: 2 });
-    handle.position.set(trackX + trackWidth * opts.value, trackY);
+    handle.fill({ alpha: 1, color: cfg.buttonHoverColor });
+    handle.stroke({ color: context.theme.accentColor, width: 2 });
+    handle.position.set(trackX + trackWidth * options.value, trackY);
     handle.eventMode = 'static';
     handle.cursor = 'pointer';
     row.addChild(handle);
 
     // State
     let dragging = false;
-    let currentValue = opts.value;
+    let currentValue = options.value;
 
     const applyValue = (fraction: number) => {
-        const val = Math.max(0, Math.min(1, fraction));
-        currentValue = val;
-        opts.onChange(val);
-        handle.x = trackX + trackWidth * val;
-        drawFill(val);
-        valueText.text = `${Math.round(val * 100)}%`;
+        const value = Math.max(0, Math.min(1, fraction));
+        currentValue = value;
+        options.onChange(value);
+        handle.x = trackX + trackWidth * value;
+        drawFill(value);
+        valueText.text = `${Math.round(value * 100)}%`;
     };
 
     // Hit area over track
     const hitArea = new Graphics();
     hitArea.rect(trackX - handleRadius, 0, trackWidth + handleRadius * 2, rowHeight);
-    hitArea.fill({ color: 0x000000, alpha: 0.001 });
+    hitArea.fill({ alpha: 0.001, color: 0x00_00_00 });
     hitArea.eventMode = 'static';
     hitArea.cursor = 'pointer';
     row.addChild(hitArea);
@@ -200,8 +321,8 @@ export function createSlider(ctx: UIContext, opts: SliderOptions): SliderResult 
 
     const onMouseMove = (e: MouseEvent) => {
         if (!dragging) return;
-        const rect = ctx.getCanvasRect();
-        const scaleX = ctx.canvasWidth / rect.width;
+        const rect = context.getCanvasRect();
+        const scaleX = context.canvasWidth / rect.width;
         const canvasX = (e.clientX - rect.left) * scaleX;
         const rowWorldX = row.getGlobalPosition().x;
         const fraction = (canvasX - rowWorldX - trackX) / trackWidth;
@@ -212,45 +333,31 @@ export function createSlider(ctx: UIContext, opts: SliderOptions): SliderResult 
         dragging = false;
     };
 
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
+    globalThis.addEventListener('mousemove', onMouseMove);
+    globalThis.addEventListener('mouseup', onMouseUp);
 
     return {
-        container: row,
-        cleanup: () => {
-            window.removeEventListener('mousemove', onMouseMove);
-            window.removeEventListener('mouseup', onMouseUp);
-        },
         applyValue,
+        cleanup: () => {
+            globalThis.removeEventListener('mousemove', onMouseMove);
+            globalThis.removeEventListener('mouseup', onMouseUp);
+        },
+        container: row,
         getValue: () => currentValue,
     };
 }
 
-/* Toggle */
-
-export interface ToggleOptions {
-    label: string;
-    value: boolean;
-    labelWidth?: number;
-    onChange: (value: boolean) => void;
-}
-
-export interface ToggleResult {
-    container: Container;
-    toggle: () => void;
-}
-
-export function createToggle(ctx: UIContext, opts: ToggleOptions): ToggleResult {
-    const cfg = ctx.overlayConfig;
-    const labelWidth = opts.labelWidth ?? 180;
+export function createToggle(context: UIContext, options: ToggleOptions): ToggleResult {
+    const cfg = context.overlayConfig;
+    const labelWidth = options.labelWidth ?? 180;
     const toggleW = 60;
     const toggleH = 30;
 
     const row = new Container();
 
     const labelText = new Text({
-        text: opts.label,
-        style: { fill: cfg.textColor, fontSize: cfg.fontSize - 2, fontFamily: cfg.fontFamily }
+        style: { fill: cfg.textColor, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize - 2 },
+        text: options.label
     });
     labelText.anchor.set(0, 0.5);
     labelText.position.set(0, 0);
@@ -262,7 +369,7 @@ export function createToggle(ctx: UIContext, opts: ToggleOptions): ToggleResult 
     toggleContainer.position.set(labelWidth, -toggleH / 2);
     row.addChild(toggleContainer);
 
-    let on = opts.value;
+    let on = options.value;
 
     const bg = new Graphics();
     const knob = new Graphics();
@@ -270,18 +377,18 @@ export function createToggle(ctx: UIContext, opts: ToggleOptions): ToggleResult 
     const draw = () => {
         bg.clear();
         bg.roundRect(0, 0, toggleW, toggleH, toggleH / 2);
-        bg.fill({ color: on ? ctx.theme.accentColor : cfg.buttonColor, alpha: on ? 0.8 : 0.6 });
-        bg.stroke({ color: ctx.theme.borderColor, width: 1 });
+        bg.fill({ alpha: on ? 0.8 : 0.6, color: on ? context.theme.accentColor : cfg.buttonColor });
+        bg.stroke({ color: context.theme.borderColor, width: 1 });
 
         knob.clear();
         const knobX = on ? toggleW - toggleH / 2 : toggleH / 2;
         knob.circle(knobX, toggleH / 2, toggleH / 2 - 3);
-        knob.fill({ color: 0xffffff, alpha: 1 });
+        knob.fill({ alpha: 1, color: 0xFF_FF_FF });
     };
 
     const doToggle = () => {
         on = !on;
-        opts.onChange(on);
+        options.onChange(on);
         draw();
     };
 
@@ -296,137 +403,31 @@ export function createToggle(ctx: UIContext, opts: ToggleOptions): ToggleResult 
     return { container: row, toggle: doToggle };
 }
 
-/* Panel Title */
-
-export function createPanelTitle(ctx: UIContext, text: string): Text {
-    const cfg = ctx.overlayConfig;
-    const title = new Text({
-        text,
-        style: {
-            fill: cfg.textColor,
-            fontSize: cfg.fontSize + 6,
-            fontFamily: cfg.fontFamily,
-            fontWeight: 'bold'
-        }
-    });
-    title.anchor.set(0.5, 0);
-    title.position.set(ctx.canvasWidth / 2, 20);
-    return title;
-}
-
-/* Selectable Row List */
-
-export interface ListRowOptions {
-    items: { label: string; onSelect: (index: number) => void }[];
-    width: number;
-    rowHeight?: number;
-    rowSpacing?: number;
-    initialSelected?: number;
-}
-
-export interface ListRowResult {
-    container: Container;
-    select: (index: number) => void;
-}
-
-export function createSelectableList(ctx: UIContext, opts: ListRowOptions): ListRowResult {
-    const cfg = ctx.overlayConfig;
-    const rowHeight = opts.rowHeight ?? 45;
-    const rowSpacing = opts.rowSpacing ?? 4;
-    const listW = opts.width;
-
-    const content = new Container();
-    const rowBgs: Graphics[] = [];
-    let selectedIndex = opts.initialSelected ?? 0;
-
-    const styleRow = (bg: Graphics, selected: boolean) => {
-        bg.clear();
-        bg.roundRect(0, 0, listW, rowHeight, 6);
-        bg.fill({
-            color: selected ? cfg.buttonHoverColor : cfg.buttonColor,
-            alpha: selected ? 1 : cfg.buttonAlpha
-        });
-        bg.stroke({
-            color: selected ? ctx.theme.accentColor : ctx.theme.borderColor,
-            width: selected ? 2 : 1
-        });
-    };
-
-    const select = (index: number) => {
-        if (rowBgs[selectedIndex]) styleRow(rowBgs[selectedIndex], false);
-        selectedIndex = index;
-        if (rowBgs[selectedIndex]) styleRow(rowBgs[selectedIndex], true);
-    };
-
-    let y = 0;
-    opts.items.forEach((item, index) => {
-        const row = new Container();
-        row.eventMode = 'static';
-        row.cursor = 'pointer';
-
-        const rowBg = new Graphics();
-        styleRow(rowBg, index === selectedIndex);
-        rowBgs.push(rowBg);
-
-        const rowText = new Text({
-            text: item.label,
-            style: { fill: cfg.textColor, fontSize: cfg.fontSize - 4, fontFamily: cfg.fontFamily }
-        });
-        rowText.anchor.set(0, 0.5);
-        rowText.position.set(12, rowHeight / 2);
-
-        row.addChild(rowBg, rowText);
-        row.position.set(0, y);
-
-        row.on('pointerover', () => {
-            if (index !== selectedIndex) {
-                rowBg.clear();
-                rowBg.roundRect(0, 0, listW, rowHeight, 6);
-                rowBg.fill({ color: cfg.buttonHoverColor, alpha: 0.6 });
-                rowBg.stroke({ color: ctx.theme.accentColor, width: 1 });
-            }
-        });
-        row.on('pointerout', () => {
-            if (index !== selectedIndex) styleRow(rowBg, false);
-        });
-        row.on('pointerdown', (e: any) => {
-            e.stopPropagation();
-            select(index);
-            item.onSelect(index);
-        });
-
-        content.addChild(row);
-        y += rowHeight + rowSpacing;
-    });
-
-    return { container: content, select };
-}
-
 export function registerFocusableButton(
-    ctx: UIContext,
+    context: UIContext,
     focus: PanelFocusManager,
-    btn: Container,
+    button: Container,
     action: () => void,
-    opts?: { width?: number; height?: number }
+    options?: { height?: number; width?: number; }
 ) {
-    const cfg = ctx.overlayConfig;
-    const bg = btn.children[0] as Graphics;
-    const w = opts?.width ?? cfg.buttonWidth;
-    const h = opts?.height ?? cfg.buttonHeight;
+    const cfg = context.overlayConfig;
+    const bg = button.children[0] as Graphics;
+    const w = options?.width ?? cfg.buttonWidth;
+    const h = options?.height ?? cfg.buttonHeight;
 
     focus.register({
-        focus: () => {
-            bg.clear();
-            bg.roundRect(0, 0, w, h, 8);
-            bg.fill({ color: cfg.buttonHoverColor, alpha: 1 });
-            bg.stroke({ color: ctx.theme.accentColor, width: 2 });
-        },
+        activate: action,
         blur: () => {
             bg.clear();
             bg.roundRect(0, 0, w, h, 8);
-            bg.fill({ color: cfg.buttonColor, alpha: cfg.buttonAlpha });
-            bg.stroke({ color: ctx.theme.borderColor, width: 2 });
+            bg.fill({ alpha: cfg.buttonAlpha, color: cfg.buttonColor });
+            bg.stroke({ color: context.theme.borderColor, width: 2 });
         },
-        activate: action,
+        focus: () => {
+            bg.clear();
+            bg.roundRect(0, 0, w, h, 8);
+            bg.fill({ alpha: 1, color: cfg.buttonHoverColor });
+            bg.stroke({ color: context.theme.accentColor, width: 2 });
+        },
     });
 }

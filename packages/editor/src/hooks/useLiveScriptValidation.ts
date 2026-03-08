@@ -1,9 +1,11 @@
-import { useEffect } from 'react';
 import { ScriptSchema } from 'core/schemas';
-import { zodIssuesToMap } from '../utils/validation';
-import { useProjectStore } from '../store/useProjectStore';
+import { useEffect } from 'react';
+
 import type { EditorNode } from '../types/EditorNode';
+
 import { executeValidationResultAction } from '../store/actions/validationActions';
+import { useProjectStore } from '../store/useProjectStore';
+import { zodIssuesToMap } from '../utils/validation';
 
 export function useLiveScriptValidation(rootScript: EditorNode[]) {
     const editingAllMacrosFile = useProjectStore((s) => s.editingAllMacrosFile);
@@ -14,12 +16,12 @@ export function useLiveScriptValidation(rootScript: EditorNode[]) {
             if (editingAllMacrosFile) {
                 const merged: Record<string, string[]> = {};
 
-                for (let i = 0; i < macroEntries.length; i++) {
-                    const result = ScriptSchema.safeParse(macroEntries[i]?.commands ?? []);
+                for (const [index, macroEntry] of macroEntries.entries()) {
+                    const result = ScriptSchema.safeParse(macroEntry?.commands ?? []);
                     if (!result.success) {
                         const mm = zodIssuesToMap(result.error);
                         for (const [k, v] of Object.entries(mm)) {
-                            merged[`macro.${i}.${k}`] = v;
+                            merged[`macro.${index}.${k}`] = v;
                         }
                     }
                 }

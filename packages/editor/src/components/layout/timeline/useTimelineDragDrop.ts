@@ -1,16 +1,19 @@
-import { useRef, useState } from 'react';
 import type { DragEvent } from 'react';
-import type { ScriptPath } from '../../../utils/scriptPathUtils';
-import { useEditorStore } from '../../../store/useEditorStore';
-import type { DropIndicator } from './types';
-import { executeTimelineDropAction } from '../../../store/actions/timelineDragDropActions';
 
-const sameArrayPath = (a: ScriptPath, b: ScriptPath) => a.length === b.length && a.every((v, i) => v === b[i]);
+import { useRef, useState } from 'react';
+
+import type { ScriptPath } from '../../../utils/scriptPathUtils';
+import type { DropIndicator } from './types';
+
+import { executeTimelineDropAction } from '../../../store/actions/timelineDragDropActions';
+import { useEditorStore } from '../../../store/useEditorStore';
+
+const sameArrayPath = (a: ScriptPath, b: ScriptPath) => a.length === b.length && a.every((v, index) => v === b[index]);
 const isRootPath = (p: ScriptPath) => p.length === 1 && typeof p[0] === 'number';
 
 export function useTimelineDragDrop() {
-    const dragSourceRef = useRef<ScriptPath | null>(null);
-    const dragSourcesRef = useRef<ScriptPath[] | null>(null);
+    const dragSourceReference = useRef<null | ScriptPath>(null);
+    const dragSourcesReference = useRef<null | ScriptPath[]>(null);
     const [dropIndicator, setDropIndicator] = useState<DropIndicator>(null);
 
     const handleNodeDragStart = (e: DragEvent, nodePath: ScriptPath) => {
@@ -19,17 +22,17 @@ export function useTimelineDragDrop() {
         const draggedIsSelectedRoot = isRootPath(nodePath) && selectedRoot.some((p) => p[0] === nodePath[0]);
 
         if (draggedIsSelectedRoot && selectedRoot.length > 1) {
-            dragSourcesRef.current = selectedRoot
+            dragSourcesReference.current = selectedRoot
                 .map((p) => [p[0]] as ScriptPath)
                 .sort((a, b) => (a[0] as number) - (b[0] as number));
-            dragSourceRef.current = nodePath;
+            dragSourceReference.current = nodePath;
             e.dataTransfer.effectAllowed = 'move';
             e.dataTransfer.setData('text/plain', `${selectedRoot.length} nodes`);
             return;
         }
 
-        dragSourcesRef.current = null;
-        dragSourceRef.current = nodePath;
+        dragSourcesReference.current = null;
+        dragSourceReference.current = nodePath;
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', nodePath.join('.'));
     };
@@ -45,28 +48,28 @@ export function useTimelineDragDrop() {
         e.preventDefault();
         e.stopPropagation();
 
-        const source = dragSourceRef.current;
-        const sources = dragSourcesRef.current;
+        const source = dragSourceReference.current;
+        const sources = dragSourcesReference.current;
 
-        dragSourceRef.current = null;
-        dragSourcesRef.current = null;
+        dragSourceReference.current = null;
+        dragSourcesReference.current = null;
 
-        executeTimelineDropAction({ source, sources, arrayPath, index });
+        executeTimelineDropAction({ arrayPath, index, source, sources });
         setDropIndicator(null);
     };
 
     const handleDragEnd = () => {
-        dragSourceRef.current = null;
-        dragSourcesRef.current = null;
+        dragSourceReference.current = null;
+        dragSourcesReference.current = null;
         setDropIndicator(null);
     };
 
     return {
         dropIndicator,
-        sameArrayPath,
-        handleNodeDragStart,
-        handleNodeDragOver,
-        handleNodeDrop,
         handleDragEnd,
+        handleNodeDragOver,
+        handleNodeDragStart,
+        handleNodeDrop,
+        sameArrayPath,
     };
 }

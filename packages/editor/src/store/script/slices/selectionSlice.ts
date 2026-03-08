@@ -1,29 +1,18 @@
-import type { ScriptStoreCreator, ScriptState } from '../types';
+import type { ScriptState, ScriptStoreCreator } from '../types';
 
 type SelectionSlice = Pick<
     ScriptState,
+    | 'popScope'
+    | 'pushScope'
+    | 'resetScope'
     | 'scopePath'
     | 'selectedNodeIndex'
     | 'selectedNodePath'
-    | 'pushScope'
-    | 'popScope'
-    | 'resetScope'
     | 'setSelectedNode'
     | 'setSelectedNodePath'
 >;
 
 export const createSelectionSlice: ScriptStoreCreator<SelectionSlice> = (set, get) => ({
-    scopePath: [],
-    selectedNodeIndex: null,
-    selectedNodePath: null,
-
-    pushScope: (index, branch) =>
-        set((state) => ({
-            scopePath: [...state.scopePath, index, branch],
-            selectedNodeIndex: null,
-            selectedNodePath: null,
-        })),
-
     popScope: () =>
         set((state) => {
             const newPath = [...state.scopePath];
@@ -31,9 +20,20 @@ export const createSelectionSlice: ScriptStoreCreator<SelectionSlice> = (set, ge
             newPath.pop();
             return { scopePath: newPath, selectedNodeIndex: null, selectedNodePath: null };
         }),
-
+    pushScope: (index, branch) =>
+        set((state) => ({
+            scopePath: [...state.scopePath, index, branch],
+            selectedNodeIndex: null,
+            selectedNodePath: null,
+        })),
     resetScope: () =>
         set({ scopePath: [], selectedNodeIndex: null, selectedNodePath: null }),
+
+    scopePath: [],
+
+    selectedNodeIndex: null,
+
+    selectedNodePath: null,
 
     setSelectedNode: (index) =>
         set((state) => ({
@@ -43,13 +43,13 @@ export const createSelectionSlice: ScriptStoreCreator<SelectionSlice> = (set, ge
 
     setSelectedNodePath: (path) =>
         set(() => ({
-            selectedNodePath: path ? [...path] : null,
             selectedNodeIndex:
                 path &&
                 path.length === get().scopePath.length + 1 &&
-                get().scopePath.every((v, i) => v === path[i]) &&
-                typeof path[path.length - 1] === 'number'
-                    ? (path[path.length - 1] as number)
+                get().scopePath.every((v, index) => v === path[index]) &&
+                typeof path.at(-1) === 'number'
+                    ? (path.at(-1) as number)
                     : null,
+            selectedNodePath: path ? [...path] : null,
         })),
 });

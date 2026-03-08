@@ -7,7 +7,7 @@ const logger = new Logger('[Manifest]');
  * If it's a string, fetches and parses the JSON file.
  * If it's already an object/array, returns it as-is.
  */
-export async function resolveManifestValue<T>(value: T | string): Promise<T> {
+export async function resolveManifestValue<T>(value: string | T): Promise<T> {
     if (typeof value === 'string') {
         try {
             const response = await fetch(value);
@@ -15,12 +15,12 @@ export async function resolveManifestValue<T>(value: T | string): Promise<T> {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             return await response.json();
-        } catch (err) {
-            logger.error(`Failed to load manifest file: ${value}`, err);
-            throw err;
+        } catch (error) {
+            logger.error(`Failed to load manifest file: ${value}`, error);
+            throw error;
         }
     }
-    return value as T;
+    return value;
 }
 
 /**

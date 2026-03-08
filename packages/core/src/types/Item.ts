@@ -1,7 +1,7 @@
 export interface ItemManifestEntry {
-    name: string;
+    [key: string]: any;
     description: string;
     imageUrl?: string;
+    name: string;
     type?: string;
-    [key: string]: any;
 }
