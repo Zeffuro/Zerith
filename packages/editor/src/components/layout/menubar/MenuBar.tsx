@@ -12,7 +12,7 @@ type MenuKey = 'Edit' | 'File' | 'Help' | 'Run' | 'View';
 
 export function MenuBar({ uiScale }: { uiScale: number }) {
     const rootReference = useRef<HTMLDivElement>(null);
-    const[openMenu, setOpenMenu] = useState<MenuKey | null>(null);
+    const [openMenu, setOpenMenu] = useState<MenuKey | undefined>();
 
     const {
         resetDockLayout,
@@ -26,7 +26,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
 
     const { activeFile, openProjectFromManifest, saveActiveFileFromCurrentScript } = useProjectStore();
 
-    useDismissiblePopup(!!openMenu, rootReference, () => setOpenMenu(null));
+    useDismissiblePopup(!!openMenu, rootReference, () => setOpenMenu(undefined));
 
     const handleOpenProject = useCallback(async () => {
         try {
@@ -52,8 +52,8 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
 
     const fileItems = useMemo<MenuItem[]>(
         () =>[
-            { label: 'Open Project…', onClick: handleOpenProject, shortcut: 'Ctrl+O' },
-            { disabled: !activeFile, label: 'Save', onClick: handleSave, shortcut: 'Ctrl+S' },
+            { label: 'Open Project…', onClick: () => { void handleOpenProject(); }, shortcut: 'Ctrl+O' },
+            { disabled: !activeFile, label: 'Save', onClick: () => { void handleSave(); }, shortcut: 'Ctrl+S' },
             { label: 'sep-1', separator: true },
             { label: 'Reset Layout', onClick: resetDockLayout },
         ],[activeFile, handleOpenProject, handleSave, resetDockLayout]
@@ -127,7 +127,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
                     active={openMenu === k}
                     key={k}
                     label={k}
-                    onClick={() => setOpenMenu((previous) => (previous === k ? null : k))}
+                    onClick={() => setOpenMenu((previous) => (previous === k ? undefined : k))}
                     uiScale={uiScale}
                 >
                     <MenuDropdown items={menuMap[k]} uiScale={uiScale} />

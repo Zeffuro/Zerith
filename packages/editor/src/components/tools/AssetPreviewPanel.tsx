@@ -1,5 +1,5 @@
 import { convertFileSrc } from '@tauri-apps/api/core';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useAssetOptions } from '../../hooks/useAssetOptions';
 import { useEditorStore } from '../../store/useEditorStore';

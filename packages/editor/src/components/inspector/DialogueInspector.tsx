@@ -34,7 +34,7 @@ export function DialogueInspector({ index, node }: { index?: null | number; node
     };
 
     const renderPreview = (text: string) => {
-        if (!text) return null;
+        if (!text) return;
         const html = text
             .replaceAll('<', '&lt;')
             .replaceAll('>', '&gt;')

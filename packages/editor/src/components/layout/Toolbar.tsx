@@ -62,10 +62,10 @@ export function Toolbar() {
                 Zerith Editor
             </strong>
 
-            <button className="toolbar-btn" onClick={handleOpenProject} style={{ padding: pad }} title="Open Project">
+            <button className="toolbar-btn" onClick={() => { void handleOpenProject(); }} style={{ padding: pad }} title="Open Project">
                 <FolderOpen size={iconSize} />
             </button>
-            <button className="toolbar-btn" onClick={handleSave} style={{ padding: pad }} title="Save Active File">
+            <button className="toolbar-btn" onClick={() => { void handleSave(); }} style={{ padding: pad }} title="Save Active File">
                 <Save size={iconSize} />
             </button>
 

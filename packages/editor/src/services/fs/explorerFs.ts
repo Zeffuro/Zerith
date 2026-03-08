@@ -2,7 +2,7 @@ import { dirname, join } from '@tauri-apps/api/path';
 import { type DirEntry, mkdir, readDir, readTextFile, remove, rename, writeTextFile } from '@tauri-apps/plugin-fs';
 import { openPath } from '@tauri-apps/plugin-opener';
 
-export type FsDirEntry = {
+export type FsDirectoryEntry = {
     isDirectory: boolean;
     isFile: boolean;
     isSymlink: boolean;
@@ -25,9 +25,9 @@ export async function fsOpenPath(path: string): Promise<void> {
     await openPath(path);
 }
 
-export async function fsReadDir(path: string): Promise<FsDirEntry[]> {
+export async function fsReadDirectory(path: string): Promise<FsDirectoryEntry[]> {
     const entries = await readDir(path);
-    return entries.map(mapDirEntry);
+    return entries.map((entry) => mapDirectoryEntry(entry));
 }
 
 export async function fsReadTextFile(path: string): Promise<string> {
@@ -46,7 +46,7 @@ export async function fsWriteTextFile(path: string, content: string): Promise<vo
     await writeTextFile(path, content);
 }
 
-function mapDirEntry(entry: DirEntry): FsDirEntry {
+function mapDirectoryEntry(entry: DirEntry): FsDirectoryEntry {
     return {
         isDirectory: entry.isDirectory,
         isFile: entry.isFile,

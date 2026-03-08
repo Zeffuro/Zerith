@@ -57,7 +57,7 @@ export function WhileInspector({ index, node }: { index?: null | number; node: W
                         }}
                         style={getFieldInputStyle('value')}
                         type="text"
-                        value={node.value === undefined ? '' : String(node.value)}
+                        value={getEditableValue(node.value)}
                     />
                     <FieldError errors={getFieldErrors('value')} />
                 </div>
@@ -75,4 +75,8 @@ export function WhileInspector({ index, node }: { index?: null | number; node: W
             </div>
         </div>
     );
+}
+
+function getEditableValue(value: unknown): string {
+    return typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string' ? String(value) : '';
 }

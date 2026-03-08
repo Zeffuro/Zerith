@@ -1,7 +1,7 @@
 import { MouseEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { NonMacroEditorCommandType, PluginNode } from '../../../plugins/types';
-import type { ScriptPath } from '../../../utils/scriptPathUtils';
+import type { ScriptPath } from '../../../utils/scriptPathUtilities';
 
 import { createDefaultCommand, getAllPlugins, getPlugin } from '../../../plugins/commandPlugins';
 import { hasLikelyIssue } from '../../../plugins/likelyIssues';
@@ -43,8 +43,8 @@ export function Timeline() {
     const addMacroEntry = useProjectStore((s) => s.addMacroEntry);
     const deleteMacroEntries = useProjectStore((s) => s.deleteMacroEntries);
 
-    const [contextMenu, setContextMenu] = useState<CommandContextMenuState>(null);
-    const contextPathReference = useRef<null | ScriptPath>(null);
+    const [contextMenu, setContextMenu] = useState<CommandContextMenuState>();
+    const contextPathReference = useRef<ScriptPath | undefined>(undefined);
 
     const { onNodeClick, selectedKeys } = useTimelineSelection();
     const {
@@ -90,7 +90,7 @@ export function Timeline() {
         }
         return [...map.entries()]
             .map(([type, count]) => ({ count, type }))
-            .sort((a, b) => a.type.localeCompare(b.type));
+            .toSorted((a, b) => a.type.localeCompare(b.type));
     }, [rootNodes]);
 
     const {
@@ -105,8 +105,8 @@ export function Timeline() {
     } = useTimelineSearch(rootNodes, typeFilter);
 
     useEffect(() => {
-        const onKeyDown = (e: KeyboardEvent) => {
-            const isFind = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f';
+        const onKeyDown = (event: KeyboardEvent) => {
+            const isFind = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f';
             if (!isFind) return;
 
             const rootElement = timelineRootReference.current;
@@ -116,8 +116,8 @@ export function Timeline() {
             const insideTimeline = !!(active && rootElement.contains(active));
             if (!insideTimeline) return;
 
-            e.preventDefault();
-            const input = document.getElementById(searchInputId) as HTMLInputElement | null;
+            event.preventDefault();
+            const input = document.querySelector<HTMLInputElement>(`#${searchInputId}`);
             if (!input) return;
             input.focus();
             input.select();
@@ -128,10 +128,10 @@ export function Timeline() {
     }, []);
 
     useEffect(() => {
-        const onKeyDown = (e: KeyboardEvent) => {
-            if (e.key !== 'Escape') return;
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape') return;
 
-            const input = document.getElementById(searchInputId) as HTMLInputElement | null;
+            const input = document.querySelector<HTMLInputElement>(`#${searchInputId}`);
             if (!input) return;
 
             const rootElement = timelineRootReference.current;
@@ -142,7 +142,7 @@ export function Timeline() {
             if (!insideTimeline) return;
 
             if (query) {
-                e.preventDefault();
+                event.preventDefault();
                 setQuery('');
                 input.focus();
             } else if (active === input) {
@@ -161,9 +161,9 @@ export function Timeline() {
 
     useEffect(() => {
         if (!contextMenu) return;
-        const onDown = () => setContextMenu(null);
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') setContextMenu(null);
+        const onDown = () => setContextMenu(undefined);
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setContextMenu(undefined);
         };
         document.addEventListener('mousedown', onDown);
         document.addEventListener('keydown', onKey);
@@ -178,14 +178,15 @@ export function Timeline() {
         setCollapsed((previous) => ({ ...previous, [key]: !previous[key] }));
     };
 
-    const handleDeleteRootNode = (e: MouseEvent, index: number) => {
-        e.stopPropagation();
+    const handleDeleteRootNode = (event_: MouseEvent, index: number) => {
+        event_.stopPropagation();
         requestDelete([[index]], 'click');
     };
 
-    const onContextMenuNode = (e: React.MouseEvent, path: ScriptPath, _node: any) => {
-        e.preventDefault();
-        e.stopPropagation();
+    const onContextMenuNode = (event_: React.MouseEvent, path: ScriptPath, _node: unknown) => {
+        void _node;
+        event_.preventDefault();
+        event_.stopPropagation();
 
         const canPlayFrom = path.length === 1 && typeof path[0] === 'number' && !editingAllMacrosFile;
         const clipboard = useEditorStore.getState().clipboardNode;
@@ -205,9 +206,9 @@ export function Timeline() {
                     triggerPlayFrom,
                 });
             },
-            onClose: () => setContextMenu(null),
-            x: e.clientX,
-            y: e.clientY,
+            onClose: () => setContextMenu(undefined),
+            x: event_.clientX,
+            y: event_.clientY,
         });
     };
 
@@ -251,11 +252,11 @@ export function Timeline() {
         }
 
         const selectedRoot = selectedNodePaths.find((p) => p.length > 0 && typeof p[0] === 'number');
-        let macroIndex = selectedRoot && typeof selectedRoot[0] === 'number' ? (selectedRoot[0]) : null;
+        let macroIndex = selectedRoot && typeof selectedRoot[0] === 'number' ? selectedRoot[0] : undefined;
 
         const next = [...macroEntries];
 
-        if (macroIndex === null || !next[macroIndex]) {
+        if (macroIndex === undefined || !next[macroIndex]) {
             const name = `new_macro_${next.length + 1}`;
             next.push({ commands: [], name });
             macroIndex = next.length - 1;
@@ -270,7 +271,7 @@ export function Timeline() {
     };
 
     const renderNode = (
-        node: any,
+        node: PluginNode,
         nodePath: ScriptPath,
         parentArrayPath: ScriptPath,
         indexInParent: number,
@@ -444,3 +445,4 @@ function macroNode(name: string, commands: PluginNode[]) {
 function pathKey(path: ScriptPath) {
     return path.join('.');
 }
+

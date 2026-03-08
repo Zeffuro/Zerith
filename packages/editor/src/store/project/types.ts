@@ -1,6 +1,6 @@
 import type { Command, GameManifest } from 'core';
 
-import type { FsDirEntry } from '../../services/fs';
+import type { FsDirectoryEntry } from '../../services/fs';
 import type { EditorNode } from '../../types/EditorNode';
 
 export type MacroEntry = { commands: Command[]; name: string; };
@@ -46,16 +46,16 @@ export interface ProjectScriptBridge {
 export interface ProjectSessionSlice {
     activeFile: string | undefined;
     bumpTreeRevision: () => void;
-    files: FsDirEntry[];
+    files: FsDirectoryEntry[];
     projectPath: string | undefined;
     setActiveFile: (file: string, content: EditorNode[]) => void;
-    setProject: (path: string, files: FsDirEntry[]) => void;
+    setProject: (path: string, files: FsDirectoryEntry[]) => void;
+    setProjectFiles: (files: FsDirectoryEntry[]) => void;
     treeRevision: number;
 }
 
 export type ProjectSet = (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    partial: ((state: Record<string, any>) => Record<string, any>) | Record<string, any>
+    partial: ((state: ProjectState) => Partial<ProjectState>) | Partial<ProjectState>
 ) => void;
 
 export interface ProjectState extends ProjectIoSlice, ProjectMacrosSlice, ProjectManifestSlice, ProjectSessionSlice {}

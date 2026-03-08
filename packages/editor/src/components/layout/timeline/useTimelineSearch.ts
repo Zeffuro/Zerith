@@ -1,12 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import type { ScriptPath } from '../../../utils/scriptPathUtils';
+import type { PluginNode } from '../../../plugins/types';
+import type { ScriptPath } from '../../../utils/scriptPathUtilities';
 
 import { getPlugin } from '../../../plugins/commandPlugins';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useScriptStore } from '../../../store/useScriptStore';
 
-export function useTimelineSearch(rootNodes: any[], typeFilter: string) {
+type TimelineBranch = { label: string; nodes: PluginNode[]; path: ScriptPath; };
+
+type TimelinePluginView = {
+    getBranches?: (node: PluginNode) => TimelineBranch[];
+};
+
+export function useTimelineSearch(rootNodes: PluginNode[], typeFilter: string) {
     const [query, setQuery] = useState('');
     const [activeMatchIndex, setActiveMatchIndex] = useState(0);
 
@@ -17,7 +24,7 @@ export function useTimelineSearch(rootNodes: any[], typeFilter: string) {
             rootNodes
                 .map((node, index) => ({ index, node }))
                 .filter(({ node }) => {
-                    const passType = typeFilter === 'all' || node?.type === typeFilter;
+                    const passType = typeFilter === 'all' || node.type === typeFilter;
                     const passQuery = nodeOrDescendantMatches(node, query);
                     return passType && passQuery;
                 }),
@@ -25,19 +32,19 @@ export function useTimelineSearch(rootNodes: any[], typeFilter: string) {
     );
 
     const matchPaths = useMemo(() => {
-        const q = query.trim();
-        if (!q) return [] as ScriptPath[];
+        const normalizedQuery = query.trim();
+        if (!normalizedQuery) return [] as ScriptPath[];
 
-        const out: ScriptPath[] = [];
+        const matchingPaths: ScriptPath[] = [];
         for (const { index, node } of visibleRoot) {
-            collectMatchingPaths(node, [index], q, out);
+            collectMatchingPaths(node, [index], normalizedQuery, matchingPaths);
         }
-        return out;
+        return matchingPaths;
     }, [visibleRoot, query]);
 
     const matchCount = matchPaths.length;
     const clampedMatchIndex = matchCount === 0 ? 0 : Math.min(activeMatchIndex, matchCount - 1);
-    const activeMatchPath = matchCount === 0 ? null : matchPaths[clampedMatchIndex];
+    const activeMatchPath = matchCount === 0 ? undefined : matchPaths[clampedMatchIndex];
     const activeMatchDisplayIndex = matchCount === 0 ? 0 : clampedMatchIndex + 1;
 
     const [previousQuery, setPreviousQuery] = useState(query);
@@ -82,13 +89,13 @@ export function useTimelineSearch(rootNodes: any[], typeFilter: string) {
     }, [matchCount]);
 
     useEffect(() => {
-        const onKeyDown = (e: KeyboardEvent) => {
+        const onKeyDown = (event: KeyboardEvent) => {
             if (matchCount === 0) return;
-            const isModuleG = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'g';
+            const isModuleG = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'g';
             if (!isModuleG) return;
 
-            e.preventDefault();
-            if (e.shiftKey) goToPreviousMatch();
+            event.preventDefault();
+            if (event.shiftKey) goToPreviousMatch();
             else goToNextMatch();
         };
 
@@ -108,36 +115,38 @@ export function useTimelineSearch(rootNodes: any[], typeFilter: string) {
     };
 }
 
-function collectMatchingPaths(node: any, nodePath: ScriptPath, query: string, out: ScriptPath[]) {
+function collectMatchingPaths(node: PluginNode, nodePath: ScriptPath, query: string, out: ScriptPath[]) {
     if (matchesNodeSelf(node, query)) out.push(nodePath);
 
-    const plugin = getPlugin(node?.type || '');
-    const branches = plugin.getBranches?.(node) ?? [];
+    const branches = getTimelineBranches(node);
     for (const branch of branches) {
         const branchArrayPath = [...nodePath, ...branch.path];
-        for (let index = 0; index < (branch.nodes ?? []).length; index++) {
+        for (let index = 0; index < branch.nodes.length; index++) {
             collectMatchingPaths(branch.nodes[index], [...branchArrayPath, index], query, out);
         }
     }
 }
 
-function matchesNodeSelf(node: any, query: string): boolean {
-    const q = query.trim().toLowerCase();
-    if (!q) return true;
-    return nodeSearchText(node).includes(q);
+function getTimelineBranches(node: PluginNode): TimelineBranch[] {
+    const plugin = getPlugin(node.type) as unknown as TimelinePluginView;
+    return plugin.getBranches?.(node) ?? [];
 }
 
-function nodeOrDescendantMatches(node: any, query: string): boolean {
+function matchesNodeSelf(node: PluginNode, query: string): boolean {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return true;
+    return nodeSearchText(node).includes(normalizedQuery);
+}
+
+function nodeOrDescendantMatches(node: PluginNode, query: string): boolean {
     if (!query.trim()) return true;
-    if (!node || typeof node !== 'object') return false;
 
     if (matchesNodeSelf(node, query)) return true;
 
-    const plugin = getPlugin(node.type || '');
-    const branches = plugin.getBranches?.(node) ?? [];
+    const branches = getTimelineBranches(node);
 
     for (const branch of branches) {
-        for (const child of branch.nodes ?? []) {
+        for (const child of branch.nodes) {
             if (nodeOrDescendantMatches(child, query)) return true;
         }
     }
@@ -145,20 +154,20 @@ function nodeOrDescendantMatches(node: any, query: string): boolean {
     return false;
 }
 
-function nodeSearchText(node: any): string {
-    if (!node || typeof node !== 'object') return '';
+function nodeSearchText(node: PluginNode): string {
+    const nodeRecord = node as Record<string, unknown>;
     return [
         node.type,
-        node.text,
-        node.name,
-        node.assetUrl,
-        node.label,
-        node.to,
-        node.scene,
-        node.id,
-        node.key,
+        nodeRecord.text,
+        nodeRecord.name,
+        nodeRecord.assetUrl,
+        nodeRecord.label,
+        nodeRecord.to,
+        nodeRecord.scene,
+        nodeRecord.id,
+        nodeRecord.key,
     ]
-        .filter((v) => typeof v === 'string' || typeof v === 'number')
+        .filter((value) => typeof value === 'string' || typeof value === 'number')
         .join(' ')
         .toLowerCase();
 }

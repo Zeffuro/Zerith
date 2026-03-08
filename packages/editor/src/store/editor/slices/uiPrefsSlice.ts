@@ -9,7 +9,7 @@ export function createUiPrefsSlice(set: EditorSet): UiPrefsSlice {
         themeKey: 'classic',
         toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
         uiScale: 1,
-        windowState: null,
+        windowState: undefined,
     };
 }
 

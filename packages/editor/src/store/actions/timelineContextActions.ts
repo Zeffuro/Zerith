@@ -1,4 +1,5 @@
-import type { ScriptPath } from '../../utils/scriptPathUtils';
+import type { EditorNode } from '../../types/EditorNode';
+import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
 import { createDefaultCommand } from '../../plugins/commandPlugins';
 import { useEditorStore } from '../useEditorStore';
@@ -38,11 +39,8 @@ export function executeTimelineContextAction(options: ExecuteTimelineContextActi
         case 'copy': {
             const node = scriptState.getNodeAtPath(path);
             if (node !== undefined) {
-                editorState.setClipboardNode(
-                    typeof structuredClone === 'function'
-                        ? structuredClone(node)
-                        : JSON.parse(JSON.stringify(node))
-                );
+                if (typeof structuredClone !== 'function') break;
+                editorState.setClipboardNode(structuredClone(node));
             }
             break;
         }
@@ -60,7 +58,7 @@ export function executeTimelineContextAction(options: ExecuteTimelineContextActi
         case 'paste': {
             const clip = editorState.clipboardNode;
             if (!clip) break;
-            scriptState.pasteNodeAtPath(path, clip);
+            scriptState.pasteNodeAtPath(path, clip as EditorNode);
             break;
         }
 
@@ -72,4 +70,5 @@ export function executeTimelineContextAction(options: ExecuteTimelineContextActi
         }
     }
 }
+
 

@@ -1,12 +1,12 @@
 import type { NonMacroEditorCommandType } from '../../plugins/types';
-import type { ScriptPath } from '../../utils/scriptPathUtils';
+import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
 export interface ClipboardValidationAssetSlice {
     clearValidationErrors: () => void;
-    clipboardNode: any | null;
-    selectedAssetPath: null | string;
-    setClipboardNode: (node: any | null) => void;
-    setSelectedAssetPath: (path: null | string) => void;
+    clipboardNode: unknown;
+    selectedAssetPath: string | undefined;
+    setClipboardNode: (node: unknown) => void;
+    setSelectedAssetPath: (path: string | undefined) => void;
     setValidationErrors: (errors: Record<string, string[]>) => void;
     validationErrors: Record<string, string[]>;
 }
@@ -14,14 +14,14 @@ export interface ClipboardValidationAssetSlice {
 export type DeleteRequestSource = 'click' | 'keyboard';
 
 export interface DockLayoutSlice {
-    dockLayoutJson: any;
+    dockLayoutJson: unknown;
     dockLayoutVersion: number;
     resetDockLayout: () => void;
-    setDockLayoutJson: (json: any) => void;
+    setDockLayoutJson: (json: unknown) => void;
 }
 
 export type EditorSet = (
-    partial: ((state: Record<string, any>) => Record<string, any>) | Record<string, any>
+    partial: ((state: EditorState) => Partial<EditorState>) | Partial<EditorState>
 ) => void;
 
 export interface EditorState
@@ -37,16 +37,16 @@ export type EditorWindowState = {
     width: number;
     x: number;
     y: number;
-} | null;
+} | undefined;
 
 export type PendingDeleteRequest = {
     paths: ScriptPath[];
     source: DeleteRequestSource;
-} | null;
+} | undefined;
 
 export interface PlaybackQuickCommandsSlice {
     moveQuickCommandType: (type: NonMacroEditorCommandType, direction: 'left' | 'right') => void;
-    playFromIndex: null | number;
+    playFromIndex: number | undefined;
     playTrigger: number;
     quickCommandTypes: NonMacroEditorCommandType[];
     setQuickCommandTypes: (types: NonMacroEditorCommandType[]) => void;
@@ -63,9 +63,9 @@ export interface SelectionSlice {
     pendingDeleteRequest: PendingDeleteRequest;
     requestDelete: (paths: ScriptPath[], source?: DeleteRequestSource) => void;
     selectedNodePaths: ScriptPath[];
-    selectionAnchorPath: null | ScriptPath;
+    selectionAnchorPath: ScriptPath | undefined;
     setSelectedNodePaths: (paths: ScriptPath[]) => void;
-    setSelectionAnchorPath: (path: null | ScriptPath) => void;
+    setSelectionAnchorPath: (path: ScriptPath | undefined) => void;
     toggleSelectedNodePath: (path: ScriptPath) => void;
 }
 
@@ -79,4 +79,5 @@ export interface UiPrefsSlice {
     uiScale: number;
     windowState: EditorWindowState;
 }
+
 

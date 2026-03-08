@@ -13,7 +13,7 @@ import { applyTheme } from './theme/applyTheme';
 import { getThemeRegistry } from './theme/themeRegistry';
 
 function App() {
-    const { setWindowState, themeKey, uiScale, windowState } = useEditorStore();
+    const { themeKey, uiScale } = useEditorStore();
     const rootScript = useScriptStore((state) => state.rootScript);
 
     useGlobalEditorShortcuts();
@@ -21,15 +21,15 @@ function App() {
 
     useEffect(() => {
         const store = useConsoleStore.getState();
-        const origLog = console.log;
-        const origInfo = console.info;
-        const origWarn = console.warn;
-        const origError = console.error;
+        const origLog = console.log.bind(console) as (...arguments_: unknown[]) => void;
+        const origInfo = console.info.bind(console) as (...arguments_: unknown[]) => void;
+        const origWarn = console.warn.bind(console) as (...arguments_: unknown[]) => void;
+        const origError = console.error.bind(console) as (...arguments_: unknown[]) => void;
 
-        console.log = (...arguments_: any[]) => { origLog(...arguments_); store.addMessage('editor', 'log', ...arguments_); };
-        console.info = (...arguments_: any[]) => { origInfo(...arguments_); store.addMessage('editor', 'info', ...arguments_); };
-        console.warn = (...arguments_: any[]) => { origWarn(...arguments_); store.addMessage('editor', 'warn', ...arguments_); };
-        console.error = (...arguments_: any[]) => { origError(...arguments_); store.addMessage('editor', 'error', ...arguments_); };
+        console.log = (...arguments_: unknown[]) => { origLog(...arguments_); store.addMessage('editor', 'log', ...arguments_); };
+        console.info = (...arguments_: unknown[]) => { origInfo(...arguments_); store.addMessage('editor', 'info', ...arguments_); };
+        console.warn = (...arguments_: unknown[]) => { origWarn(...arguments_); store.addMessage('editor', 'warn', ...arguments_); };
+        console.error = (...arguments_: unknown[]) => { origError(...arguments_); store.addMessage('editor', 'error', ...arguments_); };
 
         return () => {
             console.log = origLog;
@@ -37,15 +37,23 @@ function App() {
             console.warn = origWarn;
             console.error = origError;
         };
-    },[]);
+    }, []);
 
     useEffect(() => {
-        const appWindow = getCurrentWindow();
+        if (!hasTauriInternals()) return;
 
-        if (windowState) {
-            void appWindow.setSize(new PhysicalSize(windowState.width, windowState.height));
-            void appWindow.setPosition(new PhysicalPosition(windowState.x, windowState.y));
-            if (windowState.maximized) void appWindow.maximize();
+        const appWindow = getCurrentWindow();
+        const { setWindowState, windowState } = useEditorStore.getState();
+        const restoredWindowState = sanitizeRestoredWindowState(windowState);
+
+        if (windowState && !restoredWindowState) {
+            setWindowState(undefined);
+        }
+
+        if (restoredWindowState) {
+            void appWindow.setSize(new PhysicalSize(restoredWindowState.width, restoredWindowState.height));
+            void appWindow.setPosition(new PhysicalPosition(restoredWindowState.x, restoredWindowState.y));
+            if (restoredWindowState.maximized) void appWindow.maximize();
         }
 
         const saveState = async () => {
@@ -67,7 +75,6 @@ function App() {
             void unlistenResize.then((f) => f());
             window.removeEventListener('beforeunload', onEvent);
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
@@ -84,3 +91,20 @@ function App() {
 }
 
 export default App;
+
+function hasTauriInternals(): boolean {
+    const windowObject = globalThis.window as { __TAURI_INTERNALS__?: unknown } | undefined;
+    return windowObject?.__TAURI_INTERNALS__ !== undefined;
+}
+
+function sanitizeRestoredWindowState(value: ReturnType<typeof useEditorStore.getState>['windowState']) {
+    if (!value) return;
+
+    const isFinitePosition = Number.isFinite(value.x) && Number.isFinite(value.y);
+    const isFiniteSize = Number.isFinite(value.width) && Number.isFinite(value.height);
+    const hasMinimumSize = value.width >= 420 && value.height >= 320;
+    if (!isFinitePosition || !isFiniteSize || !hasMinimumSize) return;
+
+    return value;
+}
+

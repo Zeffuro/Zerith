@@ -12,6 +12,15 @@ type Properties = {
     uiScale: number;
 };
 
+type QuickButtonProperties = {
+    bg?: string;
+    border?: string;
+    icon: React.ReactNode;
+    onClick: () => void;
+    scale: number;
+    title: string;
+};
+
 export function TimelineCommandBar({
                                        commandMenuItems,
                                        getQuickMeta,
@@ -25,7 +34,7 @@ export function TimelineCommandBar({
             {quickTypes.map((type) => {
                 const meta = getQuickMeta(type);
                 return (
-                    <QuickBtn
+                    <QuickButton
                         bg={meta.bg}
                         border={meta.border}
                         icon={meta.icon}
@@ -40,7 +49,8 @@ export function TimelineCommandBar({
     );
 }
 
-function QuickBtn({ bg = '#333', border = '#444', icon, onClick, scale, title }: any) {
+
+function QuickButton({ bg = '#333', border = '#444', icon, onClick, scale, title }: QuickButtonProperties) {
     return (
         <button
             onClick={onClick}

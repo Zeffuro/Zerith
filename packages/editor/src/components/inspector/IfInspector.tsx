@@ -58,11 +58,15 @@ export function IfInspector({ index, node }: { index?: null | number; node: IfCo
                         placeholder="true"
                         style={getFieldInputStyle('value')}
                         type="text"
-                        value={node.value === undefined ? '' : String(node.value)}
+                        value={getEditableValue(node.value)}
                     />
                     <FieldError errors={getFieldErrors('value')} />
                 </div>
             </div>
         </div>
     );
+}
+
+function getEditableValue(value: unknown): string {
+    return typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string' ? String(value) : '';
 }

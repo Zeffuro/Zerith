@@ -1,4 +1,4 @@
-import type { ScriptPath } from '../../utils/scriptPathUtils';
+import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
 import { useEditorStore } from '../useEditorStore';
 import { useScriptStore } from '../useScriptStore';
@@ -25,7 +25,7 @@ export function executeSyncRootSelectionAfterMultiMoveAction(fallbackCount: numb
     const nextPaths: ScriptPath[] = Array.from({ length: count }, (_, index) => [startIndex + index]);
 
     editorState.setSelectedNodePaths(nextPaths);
-    editorState.setSelectionAnchorPath(nextPaths[0] ?? null);
+    editorState.setSelectionAnchorPath(nextPaths[0] ?? undefined);
 }
 
 export function executeTimelineNodeClickSelectionAction(
@@ -82,4 +82,5 @@ export function executeTimelineNodeClickSelectionAction(
     script.setSelectedNodePath(current);
     script.setSelectedNode(current[0] as number);
 }
+
 

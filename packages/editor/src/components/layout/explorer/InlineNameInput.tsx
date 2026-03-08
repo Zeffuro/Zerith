@@ -19,13 +19,13 @@ export function InlineNameInput({
         <input
             autoFocus={autoFocus}
             onBlur={() => void onSubmit()}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
+            onChange={(event) => onChange(event.target.value)}
+            onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
                     void onSubmit();
-                } else if (e.key === 'Escape') {
-                    e.preventDefault();
+                } else if (event.key === 'Escape') {
+                    event.preventDefault();
                     onCancel();
                 }
             }}

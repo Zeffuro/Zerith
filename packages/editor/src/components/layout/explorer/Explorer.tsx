@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronRight, FileJson, FolderGit2, FolderOpen, Image as ImageIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { type FsDirEntry, fsDirname, fsJoin, fsReadDir } from '../../../services/fs';
+import { type FsDirectoryEntry, fsDirname, fsJoin, fsReadDirectory } from '../../../services/fs';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useProjectStore } from '../../../store/useProjectStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
@@ -13,7 +13,7 @@ import {
 import { InlineNameInput } from './InlineNameInput';
 
 export function Explorer() {
-    const { files, projectPath, treeRevision } = useProjectStore();
+    const { files, projectPath } = useProjectStore();
     const { uiScale } = useEditorStore();
 
     return (
@@ -52,8 +52,8 @@ export function Explorer() {
                         {projectPath.split('\\').pop()?.split('/').pop()}
                     </div>
 
-                    {files.map((file, index) => (
-                        <FileNode entry={file} key={`${treeRevision}:${projectPath}:${file.name}:${index}`} parentPath={projectPath} />
+                    {files.map((file) => (
+                        <FileNode entry={file} key={`${projectPath}:${file.name}`} parentPath={projectPath} />
                     ))}
                 </div>
             ) : (
@@ -72,9 +72,9 @@ export function Explorer() {
     );
 }
 
-function FileNode({ entry, level = 0, parentPath }: { entry: FsDirEntry; level?: number; parentPath: string; }) {
+function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; level?: number; parentPath: string; }) {
     const [isOpen, setIsOpen] = useState(false);
-    const [children, setChildren] = useState<FsDirEntry[]>([]);
+    const [children, setChildren] = useState<FsDirectoryEntry[]>([]);
     const [fullPath, setFullPath] = useState<string>('');
     const [context, setContext] = useState<ExplorerContextMenuState>();
 
@@ -163,8 +163,8 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirEntry; level?:
         if (entry.isDirectory) {
             if (!isOpen && children.length === 0 && fullPath) {
                 try {
-                    const entries = await fsReadDir(fullPath);
-                    const sortedEntries = entries.sort((a, b) => {
+                    const entries = await fsReadDirectory(fullPath);
+                    const sortedEntries = entries.toSorted((a, b) => {
                         if (a.isDirectory && !b.isDirectory) return -1;
                         if (!a.isDirectory && b.isDirectory) return 1;
                         return a.name.localeCompare(b.name);
@@ -189,45 +189,47 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirEntry; level?:
         setContext({
             isDirectory: entry.isDirectory,
             name: entry.name,
-            onAction: async (action) => {
-                const { openProjectEntry } = await import('../../../services/openProjectEntry');
+            onAction: (action) => {
+                void (async () => {
+                    const { openProjectEntry } = await import('../../../services/openProjectEntry');
 
-                switch (action) {
-                    case 'delete': {
-                        setConfirmDeleteOpen(true);
-                        break;
+                    switch (action) {
+                        case 'delete': {
+                            setConfirmDeleteOpen(true);
+                            break;
+                        }
+                        case 'newFile': {
+                            await startCreate('file');
+                            break;
+                        }
+                        case 'newFolder': {
+                            await startCreate('folder');
+                            break;
+                        }
+                        case 'open': {
+                            await openDefault();
+                            break;
+                        }
+                        case 'openJson': {
+                            await openProjectEntry(fullPath, entry.name, { forceView: 'json' });
+                            break;
+                        }
+                        case 'openTimeline': {
+                            await openProjectEntry(fullPath, entry.name, { forceView: 'timeline' });
+                            break;
+                        }
+                        case 'rename': {
+                            setIsRenaming(true);
+                            setRenameDraft(entry.name);
+                            break;
+                        }
+                        case 'reveal': {
+                            const { revealPathInSystem } = await import('../../../services/explorerFileActions');
+                            await revealPathInSystem(fullPath);
+                            break;
+                        }
                     }
-                    case 'newFile': {
-                        await startCreate('file');
-                        break;
-                    }
-                    case 'newFolder': {
-                        await startCreate('folder');
-                        break;
-                    }
-                    case 'open': {
-                        await openDefault();
-                        break;
-                    }
-                    case 'openJson': {
-                        await openProjectEntry(fullPath, entry.name, { forceView: 'json' });
-                        break;
-                    }
-                    case 'openTimeline': {
-                        await openProjectEntry(fullPath, entry.name, { forceView: 'timeline' });
-                        break;
-                    }
-                    case 'rename': {
-                        setIsRenaming(true);
-                        setRenameDraft(entry.name);
-                        break;
-                    }
-                    case 'reveal': {
-                        const { revealPathInSystem } = await import('../../../services/explorerFileActions');
-                        await revealPathInSystem(fullPath);
-                        break;
-                    }
-                }
+                })();
             },
             onClose: () => setContext(undefined),
             path: fullPath,
@@ -357,8 +359,8 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirEntry; level?:
             )}
 
             {isOpen &&
-                children.map((child, index) => (
-                    <FileNode entry={child} key={index} level={level + 1} parentPath={fullPath} />
+                children.map((child) => (
+                    <FileNode entry={child} key={`${fullPath}:${child.name}:${child.isDirectory ? 'dir' : 'file'}`} level={level + 1} parentPath={fullPath} />
                 ))}
         </div>
     );

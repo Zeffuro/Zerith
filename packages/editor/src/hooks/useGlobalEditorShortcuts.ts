@@ -4,74 +4,75 @@ import { executeGlobalShortcutAction } from '../store/actions/globalShortcutActi
 
 export function useGlobalEditorShortcuts() {
     useEffect(() => {
-        const onKeyDown = async (e: KeyboardEvent) => {
-            const module_ = e.ctrlKey || e.metaKey;
-            const key = e.key.toLowerCase();
-
-            if (module_ && key === 's') {
-                e.preventDefault();
-                await executeGlobalShortcutAction('save');
-                return;
-            }
-
-            if (isTypingTarget(e.target)) return;
-
-            if (module_ && key === 'z' && !e.shiftKey) {
-                e.preventDefault();
-                await executeGlobalShortcutAction('undo');
-                return;
-            }
-
-            if ((module_ && key === 'y') || (module_ && e.shiftKey && key === 'z')) {
-                e.preventDefault();
-                await executeGlobalShortcutAction('redo');
-                return;
-            }
-
-            if (module_ && key === 'd') {
-                e.preventDefault();
-                await executeGlobalShortcutAction('duplicate');
-                return;
-            }
-
-            if (e.key === 'Delete' || e.key === 'Backspace') {
-                const handled = await executeGlobalShortcutAction('requestDelete');
-                if (handled) {
-                    e.preventDefault();
-                }
-                return;
-            }
-
-            if (module_ && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-                const handled = await executeGlobalShortcutAction(
-                    e.key === 'ArrowUp' ? 'moveSelectionUp' : 'moveSelectionDown'
-                );
-                if (handled) {
-                    e.preventDefault();
-                }
-                return;
-            }
-
-            // COPY
-            if (module_ && key === 'c') {
-                e.preventDefault();
-                await executeGlobalShortcutAction('copySelection');
-                return;
-            }
-
-            // PASTE
-            if (module_ && key === 'v') {
-                const handled = await executeGlobalShortcutAction('pasteSelection');
-                if (handled) {
-                    e.preventDefault();
-                }
-                return;
-            }
+        const onKeyDown = (event: KeyboardEvent) => {
+            void handleGlobalShortcut(event);
         };
 
         globalThis.addEventListener('keydown', onKeyDown);
         return () => globalThis.removeEventListener('keydown', onKeyDown);
     }, []);
+}
+
+async function handleGlobalShortcut(event: KeyboardEvent): Promise<void> {
+    const module_ = event.ctrlKey || event.metaKey;
+    const key = event.key.toLowerCase();
+
+    if (module_ && key === 's') {
+        event.preventDefault();
+        await executeGlobalShortcutAction('save');
+        return;
+    }
+
+    if (isTypingTarget(event.target)) return;
+
+    if (module_ && key === 'z' && !event.shiftKey) {
+        event.preventDefault();
+        await executeGlobalShortcutAction('undo');
+        return;
+    }
+
+    if ((module_ && key === 'y') || (module_ && event.shiftKey && key === 'z')) {
+        event.preventDefault();
+        await executeGlobalShortcutAction('redo');
+        return;
+    }
+
+    if (module_ && key === 'd') {
+        event.preventDefault();
+        await executeGlobalShortcutAction('duplicate');
+        return;
+    }
+
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+        const handled = await executeGlobalShortcutAction('requestDelete');
+        if (handled) {
+            event.preventDefault();
+        }
+        return;
+    }
+
+    if (module_ && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+        const handled = await executeGlobalShortcutAction(
+            event.key === 'ArrowUp' ? 'moveSelectionUp' : 'moveSelectionDown'
+        );
+        if (handled) {
+            event.preventDefault();
+        }
+        return;
+    }
+
+    if (module_ && key === 'c') {
+        event.preventDefault();
+        await executeGlobalShortcutAction('copySelection');
+        return;
+    }
+
+    if (module_ && key === 'v') {
+        const handled = await executeGlobalShortcutAction('pasteSelection');
+        if (handled) {
+            event.preventDefault();
+        }
+    }
 }
 
 function isTypingTarget(element: EventTarget | null) {
@@ -80,3 +81,4 @@ function isTypingTarget(element: EventTarget | null) {
     const tag = node.tagName?.toLowerCase();
     return tag === 'input' || tag === 'textarea' || node.isContentEditable;
 }
+

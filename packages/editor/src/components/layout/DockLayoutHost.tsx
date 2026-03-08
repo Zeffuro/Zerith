@@ -1,5 +1,7 @@
+import type { IJsonModel } from 'flexlayout-react';
+
 import { Actions, Layout, Model, TabNode } from 'flexlayout-react';
-import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import 'flexlayout-react/style/dark.css';
 
 import { useEditorStore } from '../../store/useEditorStore';
@@ -7,6 +9,7 @@ import { useScriptStore } from '../../store/useScriptStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { Inspector } from '../inspector/Inspector';
 import { ConsolePanel } from '../tools/ConsolePanel';
+import { createDefaultDockLayout } from './dock/defaultDockLayout';
 import { DOCK_PANELS } from './dock/dockPanelIds';
 import { EditorSurface } from './EditorSurface';
 import { Explorer } from './explorer/Explorer';
@@ -15,28 +18,34 @@ import { WorkbenchTabs } from './workbench/WorkbenchTabs';
 
 const GamePreview = lazy(() => import('../GamePreview').then((m) => ({ default: m.GamePreview })));
 
+type InitialModelState = {
+    jsonSig: string;
+    model: Model;
+    recoveryLayout: IJsonModel | undefined;
+};
+
 export function DockLayoutHost() {
     const dockLayoutJson = useEditorStore((s) => s.dockLayoutJson);
     const setDockLayoutJson = useEditorStore((s) => s.setDockLayoutJson);
     const rootScript = useScriptStore((s) => s.rootScript);
     const activeWorkbenchTabId = useWorkbenchStore((s) => s.activeTabId);
 
-    const lastJsonReference = useRef<string>('');
+    const [initialModelState] = useState(() => createInitialModelState(dockLayoutJson));
+    const model = initialModelState.model;
+    const lastJsonReference = useRef<string>(initialModelState.jsonSig);
 
-    const jsonSig = JSON.stringify(dockLayoutJson);
+    useEffect(() => {
+        if (!initialModelState.recoveryLayout) return;
+        setDockLayoutJson(initialModelState.recoveryLayout);
+    }, [initialModelState.recoveryLayout, setDockLayoutJson]);
 
-    const [model, setModel] = useState(() => Model.fromJson(dockLayoutJson));
+    useEffect(() => {
+        const incomingSig = safeJsonSignature(dockLayoutJson);
+        if (incomingSig === undefined) return;
+        lastJsonReference.current = incomingSig;
+    }, [dockLayoutJson]);
 
-    // rebuild only when store layout changed externally (e.g. reset)
-    useLayoutEffect(() => {
-        if (lastJsonReference.current !== jsonSig) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setModel(Model.fromJson(dockLayoutJson));
-            lastJsonReference.current = jsonSig;
-        }
-    }, [dockLayoutJson, jsonSig]);
-
-    const saveTimerReference = useRef<null | number>(null);
+    const saveTimerReference = useRef<ReturnType<typeof globalThis.setTimeout> | undefined>(undefined);
 
     const onModelChange = (m: Model) => {
         if (saveTimerReference.current) globalThis.clearTimeout(saveTimerReference.current);
@@ -47,7 +56,7 @@ export function DockLayoutHost() {
                 setDockLayoutJson(next);
                 lastJsonReference.current = nextSig;
             }
-            saveTimerReference.current = null;
+            saveTimerReference.current = undefined;
         }, 180);
     };
 
@@ -115,3 +124,33 @@ export function DockLayoutHost() {
         </div>
     );
 }
+
+
+function createInitialModelState(layoutJson: unknown): InitialModelState {
+    const fallbackLayout = createDefaultDockLayout() as IJsonModel;
+
+    try {
+        const parsed = layoutJson as IJsonModel;
+        return {
+            jsonSig: JSON.stringify(parsed),
+            model: Model.fromJson(parsed),
+            recoveryLayout: undefined,
+        };
+    } catch (error) {
+        console.warn('Invalid dock layout detected, resetting to defaults.', error);
+        return {
+            jsonSig: JSON.stringify(fallbackLayout),
+            model: Model.fromJson(fallbackLayout),
+            recoveryLayout: fallbackLayout,
+        };
+    }
+}
+
+function safeJsonSignature(value: unknown): string | undefined {
+    try {
+        return JSON.stringify(value);
+    } catch {
+        return undefined;
+    }
+}
+

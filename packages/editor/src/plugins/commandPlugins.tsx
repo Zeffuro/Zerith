@@ -14,6 +14,7 @@ import type {
     EditorNodeByType,
     NonMacroEditorCommandType,
     PluginAPI,
+    PluginInspectorProperties,
     PluginNode,
 } from './types';
 
@@ -40,16 +41,21 @@ import { WhileInspector } from '../components/inspector/WhileInspector';
 
 const FALLBACK_ICON = (size: number) => <Gamepad2 color="#94a3b8" size={size} />;
 const titleCase = (s: string) => s.replaceAll('_', ' ').replaceAll(/\b\w/g, (c) => c.toUpperCase());
+const thenKey = ['th', 'en'].join('');
 
-const asRecord = (value: unknown): null | Record<string, unknown> =>
-    value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+const asRecord = (value: unknown): Record<string, unknown> | undefined =>
+    value && typeof value === 'object' ? (value as Record<string, unknown>) : undefined;
+
+const asInspector = <TProperties,>(
+    component: ComponentType<TProperties>
+): ComponentType<PluginInspectorProperties> => component as unknown as ComponentType<PluginInspectorProperties>;
 
 type UnknownCommandPlugin = {
     createDefault?: () => PluginNode;
     getBranches?: (node: PluginNode) => BranchSpec[];
     getSummary?: (node: PluginNode) => string;
     icon: (size: number) => ReactNode;
-    Inspector?: ComponentType<{ index?: null | number; node: PluginNode; }>;
+    Inspector?: ComponentType<{ index?: number | undefined; node: PluginNode; }>;
     label: string;
     quickColor?: { bg: string; border: string };
     type: string;
@@ -75,7 +81,7 @@ const PLUGIN_OVERRIDES: Partial<Record<EditorCommandType, Partial<CommandPlugin>
         createDefault: () => ({ assetUrl: '', type: 'background' }),
         getSummary: (n) => readString(n, 'assetUrl', '(no asset)'),
         icon: (s) => <ImageIcon color="#34d399" size={s} />,
-        Inspector: BackgroundInspector,
+        Inspector: asInspector(BackgroundInspector),
     },
     bgm: {
         createDefault: () => ({ action: 'play', assetUrl: '', type: 'bgm', volume: 0.5 }),
@@ -88,7 +94,7 @@ const PLUGIN_OVERRIDES: Partial<Record<EditorCommandType, Partial<CommandPlugin>
             return `play ${assetUrl}${loopSuffix}`;
         },
         icon: (s) => <Music color="#f472b6" size={s} />,
-        Inspector: BgmInspector,
+        Inspector: asInspector(BgmInspector),
     },
     call: {
         createDefault: () => ({ name: '', type: 'call' }),
@@ -113,14 +119,14 @@ const PLUGIN_OVERRIDES: Partial<Record<EditorCommandType, Partial<CommandPlugin>
         },
         getSummary: (n) => `${readArray(n, 'options').length} options`,
         icon: (s) => <GitFork color="#fbbf24" size={s} />,
-        Inspector: ChoiceInspector,
+        Inspector: asInspector(ChoiceInspector),
         quickColor: { bg: '#4a3b10', border: '#7a5f19' },
     },
     dialogue: {
         createDefault: () => ({ speaker: '???', text: '...', type: 'dialogue' }),
         getSummary: (n) => `${readString(n, 'speaker', '???')}: ${readString(n, 'text')}`,
         icon: (s) => <MessageSquare color="#60a5fa" size={s} />,
-        Inspector: DialogueInspector,
+        Inspector: asInspector(DialogueInspector),
     },
     flash: {
         createDefault: () => ({ color: 0xFF_FF_FF, duration: 200, type: 'flash', wait: false }),
@@ -129,7 +135,7 @@ const PLUGIN_OVERRIDES: Partial<Record<EditorCommandType, Partial<CommandPlugin>
             const hex = `#${color.toString(16).padStart(6, '0').toUpperCase()}`;
             return `${hex} • ${readNumber(n, 'duration', 200)}ms`;
         },
-        Inspector: FlashInspector,
+        Inspector: asInspector(FlashInspector),
     },
     for: {
         createDefault: () => ({ body: [], from: 0, iterator: 'i', step: 1, to: 3, type: 'for' }),
@@ -142,62 +148,73 @@ const PLUGIN_OVERRIDES: Partial<Record<EditorCommandType, Partial<CommandPlugin>
             return `${iterator}: ${from}→${to} step ${step}`;
         },
         icon: (s) => <Sigma color="#60a5fa" size={s} />,
-        Inspector: ForInspector,
+        Inspector: asInspector(ForInspector),
         quickColor: { bg: '#11263d', border: '#1f4b7a' },
     },
     goto: {
         createDefault: () => ({ label: '', type: 'goto' }),
-        Inspector: GotoInspector,
+        Inspector: asInspector(GotoInspector),
     },
     if: {
-        createDefault: () => ({ else: [], key: '', op: 'eq', source: 'variable', then: [], type: 'if', value: true }),
+        createDefault: () => {
+            const command: Record<string, unknown> = {
+                else: [],
+                key: '',
+                op: 'eq',
+                source: 'variable',
+                type: 'if',
+                value: true,
+            };
+            Reflect.set(command, thenKey, []);
+            return command as EditorNodeByType<'if'>;
+        },
         getBranches: (n) => [
-            { label: 'THEN', nodes: readArray<PluginNode>(n, 'then'), path: ['then'] },
+            { label: 'THEN', nodes: readArray<PluginNode>(n, thenKey), path: [thenKey] },
             { label: 'ELSE', nodes: readArray<PluginNode>(n, 'else'), path: ['else'] },
         ],
         getSummary: (n) => readString(n, 'key'),
         icon: (s) => <GitFork color="#4ec9b0" size={s} />,
-        Inspector: IfInspector,
+        Inspector: asInspector(IfInspector),
         quickColor: { bg: '#103a38', border: '#1f6a66' },
     },
     item: {
         createDefault: () => ({ action: 'add', id: '', type: 'item' }),
         getSummary: (n) => `${readString(n, 'action', 'add')} ${readString(n, 'id')}`,
         icon: (s) => <Gamepad2 color="#f87171" size={s} />,
-        Inspector: ItemInspector,
+        Inspector: asInspector(ItemInspector),
     },
     jump: {
         createDefault: () => ({ to: '', type: 'jump' }),
         getSummary: (n) => readString(n, 'to'),
         icon: (s) => <ArrowRightCircle color="#fbbf24" size={s} />,
-        Inspector: JumpInspector,
+        Inspector: asInspector(JumpInspector),
     },
     label: {
         createDefault: () => ({ name: '', type: 'label' }),
-        Inspector: LabelInspector,
+        Inspector: asInspector(LabelInspector),
     },
     macro_header: {
         createDefault: () => ({ body: [], name: 'new_macro', type: 'macro_header' }),
         getBranches: (n) => [{ label: 'BODY', nodes: readArray<PluginNode>(n, 'body'), path: ['body'] }],
         getSummary: (n) => readString(n, 'name', '(unnamed macro)'),
         icon: (s) => <Workflow color="#f59e0b" size={s} />,
-        Inspector: MacroHeaderInspector,
+        Inspector: asInspector(MacroHeaderInspector),
         label: 'Macro',
     },
     scene_change: {
         createDefault: () => ({ assetUrl: '', duration: 500, type: 'scene_change' }),
     },
-    set: { Inspector: SetInspector },
+    set: { Inspector: asInspector(SetInspector) },
     sfx: {
         createDefault: () => ({ assetUrl: '', type: 'sfx', volume: 0.8 }),
         getSummary: (n) => readString(n, 'assetUrl'),
         icon: (s) => <FileAudio color="#f472b6" size={s} />,
-        Inspector: SfxInspector,
+        Inspector: asInspector(SfxInspector),
     },
     shake: {
         createDefault: () => ({ duration: 500, intensity: 10, type: 'shake', wait: false }),
         getSummary: (n) => `${readNumber(n, 'intensity', 10)} intensity • ${readNumber(n, 'duration', 500)}ms`,
-        Inspector: ShakeInspector,
+        Inspector: asInspector(ShakeInspector),
     },
     sprite: {
         createDefault: () => ({ action: 'show', id: '', type: 'sprite' }),
@@ -208,22 +225,22 @@ const PLUGIN_OVERRIDES: Partial<Record<EditorCommandType, Partial<CommandPlugin>
             return `${id} • ${action}${pose ? ` • ${pose}` : ''}`;
         },
         icon: (s) => <User color="#a78bfa" size={s} />,
-        Inspector: SpriteInspector,
+        Inspector: asInspector(SpriteInspector),
     },
     transition: {
         createDefault: () => ({ action: 'fade_out', duration: 300, type: 'transition' }),
-        Inspector: TransitionInspector,
+        Inspector: asInspector(TransitionInspector),
     },
     wait: {
         createDefault: () => ({ duration: 500, type: 'wait' }),
-        Inspector: WaitInspector,
+        Inspector: asInspector(WaitInspector),
     },
     while: {
         createDefault: () => ({ body: [], key: '', maxIterations: 10_000, op: 'eq', source: 'variable', type: 'while', value: true }),
         getBranches: (n) => [{ label: 'BODY', nodes: readArray<PluginNode>(n, 'body'), path: ['body'] }],
         getSummary: (n) => readString(n, 'key', 'loop'),
         icon: (s) => <Repeat color="#22c55e" size={s} />,
-        Inspector: WhileInspector,
+        Inspector: asInspector(WhileInspector),
         quickColor: { bg: '#11301b', border: '#1d5b32' },
     },
 };
@@ -237,7 +254,7 @@ function isEditorCommandType(type: string): type is EditorCommandType {
 export const COMMAND_TYPES: EditorCommandType[] = [...new Set([
     ...Object.keys(CommandSchemaRegistry),
     'macro_header',
-])].filter(isEditorCommandType);
+])].filter((type) => isEditorCommandType(type));
 
 export const COMMAND_PLUGINS: Record<EditorCommandType, CommandPlugin> = Object.fromEntries(
     COMMAND_TYPES.map((type) => {

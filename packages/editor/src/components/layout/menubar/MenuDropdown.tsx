@@ -57,11 +57,11 @@ export function MenuDropdown({
                         onClick={() => {
                             if (!disabled) item.onClick?.();
                         }}
-                        onMouseEnter={(e) => {
-                            if (!disabled) e.currentTarget.style.background = 'var(--editor-bg-hover)';
+                        onMouseEnter={(event) => {
+                            if (!disabled) event.currentTarget.style.background = 'var(--editor-bg-hover)';
                         }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'transparent';
+                        onMouseLeave={(event) => {
+                            event.currentTarget.style.background = 'transparent';
                         }}
                         role="menuitem"
                         style={{

@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { useEditorStore } from '../../store/useEditorStore';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useScriptStore } from '../../store/useScriptStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 
-export function MacroHeaderInspector(_properties: { index?: null | number; node: unknown; }) {
+export function MacroHeaderInspector() {
     const uiScale = useEditorStore((s) => s.uiScale);
     const selectedNodePath = useScriptStore((s) => s.selectedNodePath);
 

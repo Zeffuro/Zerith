@@ -1,7 +1,9 @@
 import { AlertTriangle, ChevronDown, ChevronRight, FolderTree, Play, Trash2 } from 'lucide-react';
 import * as React from 'react';
 
-import type { ScriptPath } from '../../../utils/scriptPathUtils';
+import type { PluginNode } from '../../../plugins/types';
+import type { ScriptPath } from '../../../utils/scriptPathUtilities';
+import type { DropIndicator } from './types';
 
 import { getPlugin } from '../../../plugins/commandPlugins';
 import { editorTheme as t } from '../../../theme/editorTheme';
@@ -9,29 +11,29 @@ import { editorTheme as t } from '../../../theme/editorTheme';
 type Properties = {
     depth: number;
     dragDisabled: boolean;
-    dropIndicator: { arrayPath: ScriptPath; index: number } | null;
+    dropIndicator: DropIndicator;
     hasLikelyIssue: boolean;
     hasValidationError: boolean;
     indexInParent: number;
 
     isCollapsed: boolean;
-    node: any;
+    node: PluginNode;
     nodePath: ScriptPath;
-    onClickNode: (e: React.MouseEvent, path: ScriptPath) => void;
+    onClickNode: (event: React.MouseEvent, path: ScriptPath) => void;
 
-    onContextMenuNode: (e: React.MouseEvent, path: ScriptPath, node: any) => void;
-    onDeleteRoot: (e: React.MouseEvent, index: number) => void;
+    onContextMenuNode: (event: React.MouseEvent, path: ScriptPath, node: PluginNode) => void;
+    onDeleteRoot: (event: React.MouseEvent, index: number) => void;
 
     onDragEnd: () => void;
-    onDragOver: (e: React.DragEvent, arrayPath: ScriptPath, index: number) => void;
+    onDragOver: (event: React.DragEvent, arrayPath: ScriptPath, index: number) => void;
 
-    onDragStart: (e: React.DragEvent, path: ScriptPath) => void;
-    onDrop: (e: React.DragEvent, arrayPath: ScriptPath, index: number) => void;
+    onDragStart: (event: React.DragEvent, path: ScriptPath) => void;
+    onDrop: (event: React.DragEvent, arrayPath: ScriptPath, index: number) => void;
     onPlayFrom: (index: number) => void;
     onToggleCollapse: (path: ScriptPath) => void;
     parentArrayPath: ScriptPath;
     renderChild: (
-        node: any,
+        node: PluginNode,
         nodePath: ScriptPath,
         parentArrayPath: ScriptPath,
         indexInParent: number,
@@ -42,9 +44,17 @@ type Properties = {
     searchQuery?: string;
     selected: boolean;
 
-    selectedNodeIndex: null | number;
+    selectedNodeIndex: number | undefined;
 
     uiScale: number;
+};
+
+type TimelineBranch = { label: string; nodes: PluginNode[]; path: ScriptPath; };
+
+type TimelinePluginView = {
+    getBranches?: (node: PluginNode) => TimelineBranch[];
+    getSummary?: (node: PluginNode) => string;
+    icon: (size: number) => React.ReactNode;
 };
 
 export function TimelineNode({
@@ -74,37 +84,34 @@ export function TimelineNode({
                                  selectedNodeIndex,
                                  uiScale,
                              }: Properties) {
-    const plugin = getPlugin(node?.type || '');
-    const branches: Array<{ label: string; nodes: any[]; path: ScriptPath; }> =
-        node?.type ? plugin.getBranches?.(node) ?? [] : [];
+    const plugin = getPlugin(node.type) as unknown as TimelinePluginView;
+    const branches: TimelineBranch[] = plugin.getBranches?.(node) ?? [];
     const hasBranches = branches.length > 0;
-    const isMacroHeader = node?.type === 'macro_header';
+    const isMacroHeader = node.type === 'macro_header';
 
-    const summary = String(
-        isMacroHeader
-            ? (node?.name || '')
-            : (plugin.getSummary?.(node) || (node?.id || node?.assetUrl || node?.name || node?.scene || node?.key || ''))
-    );
+    const summary = isMacroHeader
+        ? getStringField(node, 'name')
+        : (plugin.getSummary?.(node) ?? getNodeSummaryFallback(node));
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: `${2 * uiScale}px` }}>
             <div
                 data-node-path={nodePath.join('.')}
                 draggable={!dragDisabled}
-                onClick={(e) => onClickNode(e, nodePath)}
-                onContextMenu={(e) => onContextMenuNode(e, nodePath, node)}
+                onClick={(event) => onClickNode(event, nodePath)}
+                onContextMenu={(event) => onContextMenuNode(event, nodePath, node)}
                 onDragEnd={onDragEnd}
-                onDragOver={(e) => {
+                onDragOver={(event) => {
                     if (dragDisabled) return;
-                    onDragOver(e, parentArrayPath, indexInParent);
+                    onDragOver(event, parentArrayPath, indexInParent);
                 }}
-                onDragStart={(e) => {
+                onDragStart={(event) => {
                     if (dragDisabled) return;
-                    onDragStart(e, nodePath);
+                    onDragStart(event, nodePath);
                 }}
-                onDrop={(e) => {
+                onDrop={(event) => {
                     if (dragDisabled) return;
-                    onDrop(e, parentArrayPath, indexInParent);
+                    onDrop(event, parentArrayPath, indexInParent);
                 }}
                 style={{
                     alignItems: 'center',
@@ -137,8 +144,8 @@ export function TimelineNode({
                 >
                     {hasBranches ? (
                         <button
-                            onClick={(e) => {
-                                e.stopPropagation();
+                            onClick={(event) => {
+                                event.stopPropagation();
                                 onToggleCollapse(nodePath);
                             }}
                             style={{
@@ -161,7 +168,7 @@ export function TimelineNode({
                     {isMacroHeader ? <FolderTree color={t.syntax.flow} size={14 * uiScale} /> : plugin.icon(14 * uiScale)}
 
                     <span style={{ color: t.text.primary, fontWeight: 'bold' }}>
-                        {highlightText(String(isMacroHeader ? 'macro' : node.type ?? ''), searchQuery, uiScale)}
+                        {highlightText(String(isMacroHeader ? 'macro' : node.type), searchQuery, uiScale)}
                     </span>
 
                     <span
@@ -187,8 +194,8 @@ export function TimelineNode({
 
                 {!isMacroHeader && depth === 0 && (
                     <button
-                        onClick={(e) => {
-                            e.stopPropagation();
+                        onClick={(event) => {
+                            event.stopPropagation();
                             onPlayFrom(nodePath[0] as number);
                         }}
                         style={{
@@ -205,7 +212,7 @@ export function TimelineNode({
 
                 {depth === 0 && selectedNodeIndex === nodePath[0] && (
                     <button
-                        onClick={(e) => onDeleteRoot(e, nodePath[0] as number)}
+                        onClick={(event) => onDeleteRoot(event, nodePath[0] as number)}
                         style={{
                             background: 'transparent',
                             border: 'none',
@@ -221,35 +228,35 @@ export function TimelineNode({
 
             {hasBranches &&
                 !isCollapsed &&
-                branches.map((branch, bIndex) => {
+                branches.map((branch, branchIndex) => {
                     const branchArrayPath = [...nodePath, ...branch.path];
-                    const labelColor = bIndex % 2 === 0 ? t.syntax.logic : t.syntax.flow;
+                    const labelColor = branchIndex % 2 === 0 ? t.syntax.logic : t.syntax.flow;
 
                     return (
-                        <React.Fragment key={`${nodePath.join('.')}-branch-${bIndex}`}>
+                        <React.Fragment key={`${nodePath.join('.')}-branch-${branchIndex}`}>
                             <div
                                 style={{
                                     color: labelColor,
                                     fontSize: '0.8em',
                                     marginLeft: `${(depth + 1) * 16 * uiScale}px`,
-                                    marginTop: bIndex === 0 ? 0 : `${4 * uiScale}px`,
+                                    marginTop: branchIndex === 0 ? 0 : `${4 * uiScale}px`,
                                 }}
                             >
                                 {branch.label}
                             </div>
 
-                            {branch.nodes.map((child: any, index: number) =>
-                                renderChild(child, [...branchArrayPath, index], branchArrayPath, index, depth + 1)
+                            {branch.nodes.map((childNode, index) =>
+                                renderChild(childNode, [...branchArrayPath, index], branchArrayPath, index, depth + 1)
                             )}
 
                             <div
-                                onDragOver={(e) => {
+                                onDragOver={(event) => {
                                     if (dragDisabled) return;
-                                    onDragOver(e, branchArrayPath, branch.nodes.length);
+                                    onDragOver(event, branchArrayPath, branch.nodes.length);
                                 }}
-                                onDrop={(e) => {
+                                onDrop={(event) => {
                                     if (dragDisabled) return;
-                                    onDrop(e, branchArrayPath, branch.nodes.length);
+                                    onDrop(event, branchArrayPath, branch.nodes.length);
                                 }}
                                 style={{
                                     borderTop:
@@ -274,17 +281,32 @@ function escapeRegExp(input: string) {
     return input.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
 
-function highlightText(text: string, query: string, uiScale: number) {
-    const q = query.trim();
-    if (!q) return text;
+function getNodeSummaryFallback(node: PluginNode): string {
+    const summaryKeys = ['id', 'assetUrl', 'name', 'scene', 'key'] as const;
+    for (const key of summaryKeys) {
+        const value = getStringField(node, key);
+        if (value) return value;
+    }
 
-    const re = new RegExp(`(${escapeRegExp(q)})`, 'ig');
+    return '';
+}
+
+function getStringField(node: PluginNode, key: string): string {
+    const value = (node as Record<string, unknown>)[key];
+    return typeof value === 'string' ? value : '';
+}
+
+function highlightText(text: string, query: string, uiScale: number) {
+    const normalizedQuery = query.trim();
+    if (!normalizedQuery) return text;
+
+    const re = new RegExp(`(${escapeRegExp(normalizedQuery)})`, 'ig');
     const parts = text.split(re);
 
     return (
         <>
             {parts.map((part, index) => {
-                const isMatch = part.toLowerCase() === q.toLowerCase();
+                const isMatch = part.toLowerCase() === normalizedQuery.toLowerCase();
                 if (!isMatch) return <React.Fragment key={index}>{part}</React.Fragment>;
                 return (
                     <mark
@@ -303,3 +325,4 @@ function highlightText(text: string, query: string, uiScale: number) {
         </>
     );
 }
+

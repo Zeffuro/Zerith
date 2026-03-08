@@ -9,7 +9,7 @@ export type CommandContextMenuState = {
     onClose: () => void;
     x: number;
     y: number;
-} | null;
+} | undefined;
 
 type Action =
     | 'addAfter'
@@ -41,11 +41,11 @@ const ContextRow = ({
             menu.onAction(action);
             menu.onClose();
         }}
-        onMouseEnter={(e: MouseEvent<HTMLButtonElement>) => {
-            if (!disabled) e.currentTarget.style.background = t.bg.hover;
+        onMouseEnter={(event: MouseEvent<HTMLButtonElement>) => {
+            if (!disabled) event.currentTarget.style.background = t.bg.hover;
         }}
-        onMouseLeave={(e: MouseEvent<HTMLButtonElement>) => {
-            e.currentTarget.style.background = 'transparent';
+        onMouseLeave={(event: MouseEvent<HTMLButtonElement>) => {
+            event.currentTarget.style.background = 'transparent';
         }}
         style={disabled ? disabledStyle : itemStyle}
         type="button"
@@ -61,7 +61,7 @@ export function TimelineCommandContextMenu({
     menu: CommandContextMenuState;
     uiScale: number;
 }) {
-    if (!menu) return null;
+    if (!menu) return;
 
     const itemStyle: CSSProperties = {
         background: 'transparent',
@@ -83,12 +83,12 @@ export function TimelineCommandContextMenu({
 
     return (
         <div
-            onMouseDown={(e) => e.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
             style={{
                 background: t.bg.popup,
                 border: `1px solid ${t.border.subtle}`,
                 borderRadius: t.radius.md,
-                boxShadow: t.shadow.contextMenu,
+                boxShadow: t.shadow.popupStrong,
                 display: 'flex',
                 filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.4))',
                 flexDirection: 'column',

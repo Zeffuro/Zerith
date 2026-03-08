@@ -1,19 +1,20 @@
 import { executeConsoleMessageAction } from '../store/actions/consoleMessageActions';
 import { executeProjectTreeRefreshAction, getCurrentProjectPath } from '../store/actions/projectTreeActions';
 import {
+    type FsDirectoryEntry,
     fsDirname,
     fsJoin,
     fsMkdir,
     fsOpenPath,
-    fsReadDir,
+    fsReadDirectory,
     fsRemove,
     fsRename,
     fsWriteTextFile,
 } from './fs';
 
-export async function createFileInDirectory(dirPath: string, name: string, initialContent = '') {
+export async function createFileInDirectory(directoryPath: string, name: string, initialContent = '') {
     try {
-        const full = await fsJoin(dirPath, name);
+        const full = await fsJoin(directoryPath, name);
         await fsWriteTextFile(full, initialContent);
         await refreshProjectTree();
         return full;
@@ -24,9 +25,9 @@ export async function createFileInDirectory(dirPath: string, name: string, initi
     }
 }
 
-export async function createFolderInDirectory(dirPath: string, name: string) {
+export async function createFolderInDirectory(directoryPath: string, name: string) {
     try {
-        const full = await fsJoin(dirPath, name);
+        const full = await fsJoin(directoryPath, name);
         await fsMkdir(full, true);
         await refreshProjectTree();
         return full;
@@ -51,7 +52,7 @@ export async function refreshProjectTree() {
     const projectPath = getCurrentProjectPath();
     if (!projectPath) return;
 
-    const entries = await fsReadDir(projectPath);
+    const entries = await fsReadDirectory(projectPath);
     sortEntries(entries);
     executeProjectTreeRefreshAction(projectPath, entries);
 }
@@ -77,7 +78,7 @@ export async function revealPathInSystem(path: string) {
     }
 }
 
-function sortEntries(entries: any[]) {
+function sortEntries(entries: FsDirectoryEntry[]) {
     entries.sort((a, b) => {
         if (a.isDirectory && !b.isDirectory) return -1;
         if (!a.isDirectory && b.isDirectory) return 1;

@@ -1,8 +1,8 @@
-import type { ScriptPath } from '../../utils/scriptPathUtils';
+import type { EditorNode } from '../../types/EditorNode';
+import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
 export function deepClone<T>(value: T): T {
-    if (typeof structuredClone === 'function') return structuredClone(value);
-    return JSON.parse(JSON.stringify(value));
+    return structuredClone(value);
 }
 
 export function isRootIndexPath(p: ScriptPath): p is [number] {
@@ -12,13 +12,8 @@ export function isRootIndexPath(p: ScriptPath): p is [number] {
 export function normalizeNode(node: unknown): unknown {
     if (!node || typeof node !== 'object') return node;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const next: Record<string, any> = { ...(node as any) };
-
-    if (next.type === 'if') {
-        if (!Array.isArray(next.then)) next.then = [];
-        if (!Array.isArray(next.else)) next.else = [];
-    }
+    const next: Record<string, unknown> = { ...(node as Record<string, unknown>) };
+    if (next.type === 'if' && !Array.isArray(next.else)) next.else = [];
 
     if (next.type === 'while') {
         if (!Array.isArray(next.body)) next.body = [];
@@ -34,23 +29,25 @@ export function normalizeNode(node: unknown): unknown {
         if (next.step === undefined || next.step === 0) next.step = 1;
     }
 
-    if (Array.isArray(next.then)) next.then = next.then.map(normalizeNode);
-    if (Array.isArray(next.else)) next.else = next.else.map(normalizeNode);
-    if (Array.isArray(next.body)) next.body = next.body.map(normalizeNode);
+    if (Array.isArray(next.else)) next.else = next.else.map((child) => normalizeNode(child));
+    if (Array.isArray(next.body)) next.body = next.body.map((child) => normalizeNode(child));
     
     // Process options for choice command
     if (next.type === 'choice' && Array.isArray(next.options)) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        next.options = next.options.map((opt: any) => ({
-            ...opt,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-            commands: Array.isArray(opt?.commands) ? opt.commands.map(normalizeNode) : [],
-        }));
+        const options = [...(next.options as unknown[])];
+        next.options = options.map((option): unknown => {
+            if (!option || typeof option !== 'object') return option;
+            const optionRecord = option as Record<string, unknown>;
+            const commands = Array.isArray(optionRecord.commands)
+                ? optionRecord.commands.map((child) => normalizeNode(child))
+                : [];
+            return { ...optionRecord, commands };
+        });
     }
 
     return next;
 }
 
-export function normalizeScript(script: unknown[]): unknown[] {
-    return Array.isArray(script) ? script.map(normalizeNode) : [];
+export function normalizeScript(script: EditorNode[]): EditorNode[] {
+    return Array.isArray(script) ? (script.map((node) => normalizeNode(node)) as EditorNode[]) : [];
 }

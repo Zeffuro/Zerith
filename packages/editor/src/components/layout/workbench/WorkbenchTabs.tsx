@@ -11,20 +11,19 @@ type ContextMenuState = {
     tabId: string;
     x: number;
     y: number;
-} | null;
+} | undefined;
 
 export function WorkbenchTabs() {
     const uiScale = useEditorStore((s) => s.uiScale);
 
     const { activeTabId, tabs } = useWorkbenchStore();
 
-    const [context, setContext] = useState<ContextMenuState>(null);
+    const [context, setContext] = useState<ContextMenuState>();
 
-    // drag state
-    const [dragTabId, setDragTabId] = useState<null | string>(null);
-    const [dropIndex, setDropIndex] = useState<null | number>(null);
+    const [dragTabId, setDragTabId] = useState<string | undefined>();
+    const [dropIndex, setDropIndex] = useState<number | undefined>();
 
-    const stripReference = useRef<HTMLDivElement | null>(null);
+    const stripReference = useRef<HTMLDivElement | undefined>(undefined);
 
     const tabIndexById = useMemo(
         () => new Map(tabs.map((tab, index) => [tab.id, index])),
@@ -32,9 +31,9 @@ export function WorkbenchTabs() {
     );
 
     useEffect(() => {
-        const onDocumentClick = () => setContext(null);
-        const onEsc = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') setContext(null);
+        const onDocumentClick = () => setContext(undefined);
+        const onEsc = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setContext(undefined);
         };
         document.addEventListener('mousedown', onDocumentClick);
         document.addEventListener('keydown', onEsc);
@@ -44,7 +43,7 @@ export function WorkbenchTabs() {
         };
     }, []);
 
-    if (tabs.length === 0) return null;
+    if (tabs.length === 0) return;
 
     const menuButtonStyle: React.CSSProperties = {
         background: 'transparent',
@@ -62,35 +61,38 @@ export function WorkbenchTabs() {
         <div
             className="zerith-scrollbar"
             onDragEnd={() => {
-                setDragTabId(null);
-                setDropIndex(null);
+                setDragTabId(undefined);
+                setDropIndex(undefined);
             }}
-            onDragOver={(e) => {
+            onDragOver={(event) => {
                 if (!dragTabId) return;
-                e.preventDefault();
+                event.preventDefault();
 
-                const target = (e.target as HTMLElement).closest('[data-tab-id]');
+                const target = (event.target as Element | null)?.closest<HTMLElement>('[data-tab-id]');
                 if (!target) {
                     setDropIndex(tabs.length);
                     return;
                 }
 
-                const targetId = target.dataset.tabId!;
+                const targetId = target.dataset.tabId;
+                if (!targetId) return;
                 const index = tabIndexById.get(targetId);
                 if (index === undefined) return;
 
                 const rect = target.getBoundingClientRect();
-                const before = e.clientX < rect.left + rect.width / 2;
+                const before = event.clientX < rect.left + rect.width / 2;
                 setDropIndex(before ? index : index + 1);
             }}
-            onDrop={(e) => {
-                if (!dragTabId || dropIndex === null) return;
-                e.preventDefault();
+            onDrop={(event) => {
+                if (!dragTabId || dropIndex === undefined) return;
+                event.preventDefault();
                 executeWorkbenchTabAction({ action: 'reorder', fromId: dragTabId, toIndex: dropIndex });
-                setDragTabId(null);
-                setDropIndex(null);
+                setDragTabId(undefined);
+                setDropIndex(undefined);
             }}
-            ref={stripReference}
+            ref={(element) => {
+                stripReference.current = element ?? undefined;
+            }}
             style={{
                 alignItems: 'center',
                 background: t.bg.panel,
@@ -124,15 +126,15 @@ export function WorkbenchTabs() {
                             data-tab-id={tab.id}
                             draggable
                             onClick={() => void activateWorkbenchTab(tab.id)}
-                            onContextMenu={(e) => {
-                                e.preventDefault();
-                                setContext({ tabId: tab.id, x: e.clientX, y: e.clientY });
+                            onContextMenu={(event) => {
+                                event.preventDefault();
+                                setContext({ tabId: tab.id, x: event.clientX, y: event.clientY });
                                 executeWorkbenchTabAction({ action: 'activate', tabId: tab.id });
                             }}
-                            onDragStart={(e) => {
+                            onDragStart={(event) => {
                                 setDragTabId(tab.id);
-                                e.dataTransfer.effectAllowed = 'move';
-                                e.dataTransfer.setData('text/plain', tab.id);
+                                event.dataTransfer.effectAllowed = 'move';
+                                event.dataTransfer.setData('text/plain', tab.id);
                             }}
                             style={{
                                 alignItems: 'center',
@@ -152,8 +154,8 @@ export function WorkbenchTabs() {
                             <span style={{ fontSize: `${12 * uiScale}px` }}>{tab.title}</span>
 
                             <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
+                                onClick={(event) => {
+                                    event.stopPropagation();
                                     executeWorkbenchTabAction({ action: 'close', tabId: tab.id });
                                 }}
                                 style={{
@@ -187,7 +189,7 @@ export function WorkbenchTabs() {
 
             {context && (
                 <div
-                    onMouseDown={(e) => e.stopPropagation()}
+                    onMouseDown={(event) => event.stopPropagation()}
                     style={{
                         background: t.bg.popup,
                         border: `1px solid ${t.border.normal}`,
@@ -204,7 +206,7 @@ export function WorkbenchTabs() {
                     <button
                         onClick={() => {
                             executeWorkbenchTabAction({ action: 'close', tabId: context.tabId });
-                            setContext(null);
+                            setContext(undefined);
                         }}
                         style={menuButtonStyle}
                     >
@@ -214,7 +216,7 @@ export function WorkbenchTabs() {
                     <button
                         onClick={() => {
                             executeWorkbenchTabAction({ action: 'closeOthers', tabId: context.tabId });
-                            setContext(null);
+                            setContext(undefined);
                         }}
                         style={menuButtonStyle}
                     >
@@ -224,7 +226,7 @@ export function WorkbenchTabs() {
                     <button
                         onClick={() => {
                             executeWorkbenchTabAction({ action: 'closeToRight', tabId: context.tabId });
-                            setContext(null);
+                            setContext(undefined);
                         }}
                         style={menuButtonStyle}
                     >

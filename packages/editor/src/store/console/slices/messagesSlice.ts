@@ -21,7 +21,25 @@ export function createConsoleMessagesSlice(set: ConsoleSet): ConsoleMessagesSlic
     };
 }
 
-function formatArguments(arguments_: any[]): string {
+function formatArgument(argument: unknown): string {
+    if (argument == undefined) return String(argument);
+    if (argument instanceof Error) return argument.message;
+
+    switch (typeof argument) {
+        case 'bigint':
+        case 'boolean':
+        case 'number':
+        case 'string':
+        case 'symbol': {
+            return String(argument);
+        }
+        default: {
+            return safeJson(argument);
+        }
+    }
+}
+
+function formatArguments(arguments_: unknown[]): string {
     const cleaned = [...arguments_];
 
     if (typeof cleaned[0] === 'string' && cleaned[0].includes('%c')) {
@@ -32,15 +50,15 @@ function formatArguments(arguments_: any[]): string {
     }
 
     return cleaned
-        .map((argument) => (typeof argument === 'object' ? safeJson(argument) : String(argument)))
+        .map((argument) => formatArgument(argument))
         .join(' ');
 }
 
-function safeJson(v: any) {
+function safeJson(value: unknown): string {
     try {
-        return JSON.stringify(v);
+        return JSON.stringify(value);
     } catch {
-        return String(v);
+        return String(value);
     }
 }
 

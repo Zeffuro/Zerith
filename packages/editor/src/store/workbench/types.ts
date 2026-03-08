@@ -13,7 +13,7 @@ export type WorkbenchResourceKind =
 
 export type WorkbenchSet = (
     partial: ((state: WorkbenchState) => Partial<WorkbenchState> | WorkbenchState) | Partial<WorkbenchState> | WorkbenchState,
-    replace?: boolean
+    replace?: false  
 ) => void;
 
 export interface WorkbenchState extends WorkbenchTabsSlice, WorkbenchViewPrefsSlice {}

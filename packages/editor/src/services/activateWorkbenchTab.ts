@@ -16,7 +16,7 @@ export async function activateWorkbenchTab(tabId: string) {
 
     if (tab.kind === 'script' || tab.kind === 'macros') {
         const text = await fsReadTextFile(tab.path);
-        const data = JSON.parse(text);
+        const data: unknown = JSON.parse(text);
 
         if (Array.isArray(data)) {
             applyScriptFile(tab.path, data);

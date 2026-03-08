@@ -1,6 +1,6 @@
 import type { Command } from 'core';
 
-import { getAtPath, setAtPath } from '../../utils/scriptPathUtils';
+import { getAtPath, setAtPath } from '../../utils/scriptPathUtilities';
 import { useProjectStore } from '../useProjectStore';
 import { useScriptStore } from '../useScriptStore';
 
@@ -40,7 +40,9 @@ export function executeInspectorFieldPatchAction(options: ExecuteInspectorFieldP
         const updatedCmd = { ...currentCmd, ...patch };
         const updatedCommands = setAtPath(macro.commands, pathInsideMacro, updatedCmd);
 
-        projectState.updateMacroCommands(macroIndex, updatedCommands);
+        if (Array.isArray(updatedCommands)) {
+            projectState.updateMacroCommands(macroIndex, updatedCommands);
+        }
         return;
     }
 
@@ -55,4 +57,5 @@ export function executeInspectorFieldPatchAction(options: ExecuteInspectorFieldP
         scriptState.updateNodeAtPath(scriptState.selectedNodePath, patch);
     }
 }
+
 

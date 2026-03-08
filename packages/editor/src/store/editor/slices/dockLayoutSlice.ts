@@ -14,14 +14,24 @@ export function createDockLayoutSlice(set: EditorSet): DockLayoutSlice {
     };
 }
 
-export function normalizeDockLayoutState(state: any) {
-    const hasValidVersion = state?.dockLayoutVersion === DOCK_LAYOUT_VERSION;
-    const hasLayout = !!state?.dockLayoutJson;
+export function normalizeDockLayoutState(
+    state: unknown
+): Pick<DockLayoutSlice, 'dockLayoutJson' | 'dockLayoutVersion'> {
+    if (!isRecord(state)) {
+        return {
+            dockLayoutJson: createDefaultDockLayout(),
+            dockLayoutVersion: DOCK_LAYOUT_VERSION,
+        };
+    }
+
+    const persistedVersion = typeof state.dockLayoutVersion === 'number' ? state.dockLayoutVersion : undefined;
+    const hasValidVersion = persistedVersion === DOCK_LAYOUT_VERSION;
+    const hasLayout = isLikelyDockLayoutJson(state.dockLayoutJson);
 
     if (hasValidVersion && hasLayout) {
         return {
             dockLayoutJson: state.dockLayoutJson,
-            dockLayoutVersion: state.dockLayoutVersion,
+            dockLayoutVersion: persistedVersion,
         };
     }
 
@@ -29,5 +39,16 @@ export function normalizeDockLayoutState(state: any) {
         dockLayoutJson: createDefaultDockLayout(),
         dockLayoutVersion: DOCK_LAYOUT_VERSION,
     };
+}
+
+function isLikelyDockLayoutJson(value: unknown): boolean {
+    if (!isRecord(value)) return false;
+    const hasGlobal = isRecord(value.global);
+    const hasLayout = isRecord(value.layout);
+    return hasGlobal && hasLayout;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value) && typeof value === 'object';
 }
 

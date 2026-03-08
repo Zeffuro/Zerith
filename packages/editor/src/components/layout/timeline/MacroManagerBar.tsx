@@ -6,6 +6,14 @@ import { useEditorStore } from '../../../store/useEditorStore';
 import { useProjectStore } from '../../../store/useProjectStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
 
+const duplicateSelectedMacros = () => {
+    executeMacroTimelineAction('duplicateSelected');
+};
+
+const deleteSelectedMacros = () => {
+    executeMacroTimelineAction('deleteSelected');
+};
+
 export function MacroManagerBar({ uiScale }: { uiScale: number }) {
     const selectedNodePaths = useEditorStore((s) => s.selectedNodePaths);
 
@@ -14,11 +22,11 @@ export function MacroManagerBar({ uiScale }: { uiScale: number }) {
 
     const selectedMacroIndex = useMemo(() => {
         const first = selectedNodePaths[0];
-        if (!first || typeof first[0] !== 'number') return null;
+        if (!first || typeof first[0] !== 'number') return;
         return first[0];
     }, [selectedNodePaths]);
 
-    const selectedMacro = selectedMacroIndex === null ? null : macroEntries[selectedMacroIndex];
+    const selectedMacro = typeof selectedMacroIndex === 'number' ? macroEntries[selectedMacroIndex] : undefined;
     const [renameDraft, setRenameDraft] = useState('');
 
     const beginRename = () => {
@@ -27,16 +35,8 @@ export function MacroManagerBar({ uiScale }: { uiScale: number }) {
     };
 
     const applyRename = () => {
-        if (selectedMacroIndex === null) return;
+        if (selectedMacroIndex === undefined) return;
         renameMacroEntry(selectedMacroIndex, renameDraft);
-    };
-
-    const duplicateSelected = () => {
-        executeMacroTimelineAction('duplicateSelected');
-    };
-
-    const deleteSelected = () => {
-        executeMacroTimelineAction('deleteSelected');
     };
 
     const buttonStyle = {
@@ -71,13 +71,13 @@ export function MacroManagerBar({ uiScale }: { uiScale: number }) {
                 <>
                     <input
                         onBlur={applyRename}
-                        onChange={(e) => setRenameDraft(e.target.value)}
+                        onChange={(event) => setRenameDraft(event.target.value)}
                         onFocus={beginRename}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                                event.preventDefault();
                                 applyRename();
-                                (e.target as HTMLInputElement).blur();
+                                (event.target as HTMLInputElement).blur();
                             }
                         }}
                         style={{
@@ -99,12 +99,12 @@ export function MacroManagerBar({ uiScale }: { uiScale: number }) {
                         <Pencil size={12 * uiScale} /> Rename
                     </button>
 
-                    <button onClick={duplicateSelected} style={buttonStyle} title="Duplicate macro" type="button">
+                    <button onClick={duplicateSelectedMacros} style={buttonStyle} title="Duplicate macro" type="button">
                         <Copy size={12 * uiScale} /> Duplicate
                     </button>
 
                     <button
-                        onClick={deleteSelected}
+                        onClick={deleteSelectedMacros}
                         style={{ ...buttonStyle, border: `1px solid #7f1d1d`, color: '#fca5a5' }}
                         title="Delete macro"
                         type="button"

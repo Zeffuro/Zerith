@@ -27,7 +27,7 @@ export function QuickCommandsMenu({
 
     useDismissiblePopup(open, rootReference, onClose);
 
-    if (!open) return null;
+    if (!open) return;
 
     return (
         <div

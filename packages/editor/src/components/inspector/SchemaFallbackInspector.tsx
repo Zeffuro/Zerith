@@ -6,6 +6,8 @@ import { FieldError } from './FieldError';
 
 const HIDDEN_COMPLEX_KEYS = new Set(['body', 'commands', 'else', 'options', 'then']);
 
+const getNodeFieldValue = (node: BaseCommand, key: string): unknown => (node as Record<string, unknown>)[key];
+
 export function SchemaFallbackInspector({ index, node }: { index?: null | number; node: BaseCommand; }) {
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle } = useInspectorFieldEditor(index);
     const fields = inferCommandFields(node?.type).filter((f) => !HIDDEN_COMPLEX_KEYS.has(f.key));
@@ -25,7 +27,7 @@ export function SchemaFallbackInspector({ index, node }: { index?: null | number
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {fields.map((f) => {
-                const value = (node as Record<string, any>)[f.key];
+                const value = getNodeFieldValue(node, f.key);
 
                 if (f.kind === 'boolean') {
                     return (
@@ -34,7 +36,7 @@ export function SchemaFallbackInspector({ index, node }: { index?: null | number
                             <select
                                 onChange={(event) => handleChange(f.key, event.target.value === 'true')}
                                 style={getFieldInputStyle(f.key)}
-                                value={value ? 'true' : 'false'}
+                                value={value === true ? 'true' : 'false'}
                             >
                                 <option value="false">false</option>
                                 <option value="true">true</option>
@@ -54,7 +56,7 @@ export function SchemaFallbackInspector({ index, node }: { index?: null | number
                                 }
                                 style={getFieldInputStyle(f.key)}
                                 type="number"
-                                value={value ?? ''}
+                                value={typeof value === 'number' ? value : ''}
                             />
                             <FieldError errors={getFieldErrors(f.key)} />
                         </div>
@@ -68,7 +70,7 @@ export function SchemaFallbackInspector({ index, node }: { index?: null | number
                             <select
                                 onChange={(event) => handleChange(f.key, event.target.value)}
                                 style={getFieldInputStyle(f.key)}
-                                value={value ?? ''}
+                                value={typeof value === 'string' ? value : ''}
                             >
                                 <option value="">(unset)</option>
                                 {f.enumValues.map((v) => (
@@ -108,7 +110,7 @@ export function SchemaFallbackInspector({ index, node }: { index?: null | number
                             onChange={(event) => handleChange(f.key, event.target.value)}
                             style={getFieldInputStyle(f.key)}
                             type="text"
-                            value={value ?? ''}
+                            value={typeof value === 'string' ? value : ''}
                         />
                         <FieldError errors={getFieldErrors(f.key)} />
                     </div>

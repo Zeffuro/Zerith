@@ -5,10 +5,10 @@ export type PathOpsProjectBridge = Pick<
     'editingAllMacrosFile' | 'macroEntries' | 'moveMacroEntries' | 'updateMacroCommands'
 >;
 
-let bridgeGetter: (() => PathOpsProjectBridge) | null = null;
+let bridgeGetter: (() => PathOpsProjectBridge) | undefined;
 
-export function getPathOpsProjectBridge(): null | PathOpsProjectBridge {
-    return bridgeGetter ? bridgeGetter() : null;
+export function getPathOpsProjectBridge(): PathOpsProjectBridge | undefined {
+    return bridgeGetter ? bridgeGetter() : undefined;
 }
 
 export function setPathOpsProjectBridge(getter: () => PathOpsProjectBridge): void {

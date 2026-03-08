@@ -1,6 +1,6 @@
 import type { ScriptSlice, ScriptState } from '../types';
 
-import { getNestedArray, updateDeepScript } from '../../../utils/scriptUtils';
+import { getNestedArray, updateDeepScript } from '../../../utils/scriptUtilities';
 import { MAX_HISTORY } from '../constants';
 
 type ListOpsSlice = Pick<
@@ -13,7 +13,7 @@ export const createListOpsSlice: ScriptSlice<ListOpsSlice> = (set, get) => ({
         const { getActiveScript, selectedNodeIndex, updateActiveScript } = get();
         const currentList = getActiveScript();
 
-        const index = selectedNodeIndex === null ? currentList.length : selectedNodeIndex + 1;
+        const index = selectedNodeIndex === undefined ? currentList.length : selectedNodeIndex + 1;
         const newList = [...currentList];
         newList.splice(index, 0, node);
 
@@ -34,15 +34,15 @@ export const createListOpsSlice: ScriptSlice<ListOpsSlice> = (set, get) => ({
 
         const nextIndex =
             selectedNodeIndex === index
-                ? null
-                : (selectedNodeIndex !== null && selectedNodeIndex > index
+                ? undefined
+                : (selectedNodeIndex !== undefined && selectedNodeIndex > index
                     ? selectedNodeIndex - 1
                     : selectedNodeIndex);
 
         const scope = get().scopePath;
         set({
             selectedNodeIndex: nextIndex,
-            selectedNodePath: nextIndex === null ? null : [...scope, nextIndex],
+            selectedNodePath: nextIndex === undefined ? undefined : [...scope, nextIndex],
         });
     },
 
@@ -55,7 +55,7 @@ export const createListOpsSlice: ScriptSlice<ListOpsSlice> = (set, get) => ({
         const { getActiveScript, updateActiveScript } = get();
         const currentList = getActiveScript();
 
-        if (index === null || index < 0 || index >= currentList.length) return;
+        if (index < 0 || index >= currentList.length) return;
         const newIndex = direction === 'up' ? index - 1 : index + 1;
         if (newIndex < 0 || newIndex >= currentList.length) return;
 

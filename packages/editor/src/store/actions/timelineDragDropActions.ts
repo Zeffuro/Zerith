@@ -1,4 +1,4 @@
-import type { ScriptPath } from '../../utils/scriptPathUtils';
+import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
 import { useScriptStore } from '../useScriptStore';
 import { executeSyncRootSelectionAfterMultiMoveAction } from './timelineSelectionActions';
@@ -9,8 +9,8 @@ const isDescendantPath = (possibleDescendant: ScriptPath, ancestor: ScriptPath) 
 export interface ExecuteTimelineDropActionOptions {
     arrayPath: ScriptPath;
     index: number;
-    source: null | ScriptPath;
-    sources: null | ScriptPath[];
+    source: ScriptPath | undefined;
+    sources: ScriptPath[] | undefined;
 }
 
 export function executeTimelineDropAction(options: ExecuteTimelineDropActionOptions): boolean {
@@ -30,4 +30,5 @@ export function executeTimelineDropAction(options: ExecuteTimelineDropActionOpti
     scriptState.moveTimelineNode(source, arrayPath, index);
     return true;
 }
+
 

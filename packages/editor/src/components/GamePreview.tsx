@@ -1,3 +1,6 @@
+import type { CharacterDefinition } from 'core';
+import type { EvidenceItem } from 'core';
+
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { bootstrapEngine, Engine, type Script } from 'core';
 import { useEffect, useRef, useState } from 'react';
@@ -13,9 +16,15 @@ export function GamePreview({ script }: { script: Script }) {
 
     const canvasReference = useRef<HTMLCanvasElement>(null);
     const containerReference = useRef<HTMLDivElement>(null);
-    const engineReference = useRef<Engine>(); // Use undefined
+    const engineReference = useRef<Engine | undefined>(undefined);
     const [isFocused, setIsFocused] = useState(false);
-    const [isStarted, setIsStarted] = useState(false);
+    const isStarted = playTrigger > stopTrigger;
+    const scriptReference = useRef(script);
+    const playFromIndexReference = useRef(playFromIndex);
+    const charactersReference = useRef(characters);
+    const itemsReference = useRef(items);
+    const macrosReference = useRef(macros);
+    const scenesReference = useRef(scenes);
 
     const handleFocus = () => {
         setIsFocused(true);
@@ -27,46 +36,54 @@ export function GamePreview({ script }: { script: Script }) {
         engineReference.current?.setInputEnabled(false);
     };
 
-    // Bootstrap
+    useEffect(() => {
+        scriptReference.current = script;
+
+        if (engineReference.current) engineReference.current.scenes.addScene('preview', script);
+    }, [script]);
+
+    useEffect(() => {
+        playFromIndexReference.current = playFromIndex;
+    }, [playFromIndex]);
+
+    useEffect(() => {
+        charactersReference.current = characters;
+        itemsReference.current = items;
+        macrosReference.current = macros;
+        scenesReference.current = scenes;
+    }, [characters, items, macros, scenes]);
+
     useEffect(() => {
         if (!canvasReference.current || !projectPath || !manifest) return;
         let destroyed = false;
+        const bootstrapCharacters = charactersReference.current as Record<string, CharacterDefinition>;
+        const bootstrapItems = itemsReference.current as Record<string, Omit<EvidenceItem, 'id'>>;
+        const bootstrapMacros = macrosReference.current as Record<string, Script>;
+        const bootstrapScenes = scenesReference.current;
         void bootstrapEngine({
             assetResolver: (url: string) => {
                 if (projectPath && !url.startsWith('http')) return convertFileSrc(projectPath + url);
                 return url;
             },
             canvas: canvasReference.current,
-            characters, config: {
-                audio: { muted: isMuted },
+            characters: bootstrapCharacters, config: {
+                audio: { muted: useEditorStore.getState().isMuted },
                 display: { height: 720, scaleMode: 'fit', width: 1280 },
                 onSceneNavigation: () => 'skip',
                 theme: { boxColor: 0x00_00_33, fontFamily: 'Courier New', fontSize: 24 },
-            }, defaultBlipUrl: '/assets/sfx/blip.wav', items, macros,
+            }, defaultBlipUrl: '/assets/sfx/blip.wav', items: bootstrapItems, macros: bootstrapMacros,
             manifest,
-            scenes,
+            scenes: bootstrapScenes,
         }).then(engine => {
             if (destroyed) { engine.destroy(); return; }
             engine.persistentState.projectPath = projectPath;
             engineReference.current = engine;
             engine.setInputEnabled(false);
-            engine.scenes.addScene('preview', script);
+            engine.scenes.addScene('preview', scriptReference.current);
             void engine.scenes.jumpToScene('preview');
         });
         return () => { destroyed = true; engineReference.current?.destroy(); engineReference.current = undefined; };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [projectPath, manifest]);
-
-    // Sync
-    const scriptReference = useRef(script);
-    useEffect(() => {
-        scriptReference.current = script;
-         
-        if (engineReference.current) engineReference.current.scenes.addScene('preview', script);
-    }, [script]);
-
-    const playFromIndexReference = useRef(playFromIndex);
-    useEffect(() => { playFromIndexReference.current = playFromIndex; }, [playFromIndex]);
 
     // Play
     useEffect(() => {
@@ -77,7 +94,6 @@ export function GamePreview({ script }: { script: Script }) {
             engineReference.current.scenes.addScene('preview', scriptReference.current);
             void engineReference.current.scenes.jumpToScene('preview', startIndex);
             void engineReference.current.start();
-            setIsStarted(true);
             containerReference.current?.focus();
         }
     }, [playTrigger]);
@@ -88,7 +104,6 @@ export function GamePreview({ script }: { script: Script }) {
              
             engineReference.current.scenes.addScene('preview', scriptReference.current);
             void engineReference.current.scenes.jumpToScene('preview', 0);
-            setIsStarted(false);
             containerReference.current?.blur();
         }
     }, [stopTrigger]);

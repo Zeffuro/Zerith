@@ -4,11 +4,18 @@ import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { useProjectStore } from '../../store/useProjectStore';
 import { FieldError } from './FieldError';
 
+const asRecord = (value: unknown): Record<string, unknown> | undefined =>
+    value && typeof value === 'object' ? (value as Record<string, unknown>) : undefined;
+
 export function SpriteInspector({ index, node }: { index?: null | number; node: SpriteCommand, }) {
     const { characters } = useProjectStore();
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle } = useInspectorFieldEditor(index);
 
-    const characterData = node.id ? characters[node.id] : undefined;
+    const characterData = node.id ? asRecord(characters[node.id]) : undefined;
+    const poses = asRecord(characterData?.poses);
+    const animations = asRecord(characterData?.animations);
+    const poseNames = poses ? Object.keys(poses) : [];
+    const animationNames = animations ? Object.keys(animations) : [];
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -45,29 +52,29 @@ export function SpriteInspector({ index, node }: { index?: null | number; node: 
                         <FieldError errors={getFieldErrors('action')} />
                     </div>
 
-                    {(node.action === 'show' || node.action === 'pose') && characterData.poses && (
+                    {(node.action === 'show' || node.action === 'pose') && poses && (
                         <div>
                             <label style={labelStyle}>Pose</label>
                             <select
                                 onChange={(event) => handleChange('pose', event.target.value)}
                                 style={getFieldInputStyle('pose')}
-                                value={node.pose || Object.keys(characterData.poses)[0]}
+                                value={node.pose || poseNames[0] || ''}
                             >
-                                {Object.keys(characterData.poses).map((p) => <option key={p} value={p} >{p}</option>)}
+                                {poseNames.map((poseName) => <option key={poseName} value={poseName}>{poseName}</option>)}
                             </select>
                             <FieldError errors={getFieldErrors('pose')} />
                         </div>
                     )}
 
-                    {node.action === 'animate' && characterData.animations && (
+                    {node.action === 'animate' && animations && (
                         <div>
                             <label style={labelStyle}>Animation</label>
                             <select
                                 onChange={(event) => handleChange('animation', event.target.value)}
                                 style={getFieldInputStyle('animation')}
-                                value={node.animation || Object.keys(characterData.animations)[0]}
+                                value={node.animation || animationNames[0] || ''}
                             >
-                                {Object.keys(characterData.animations).map((a) => <option key={a} value={a} >{a}</option>)}
+                                {animationNames.map((animationName) => <option key={animationName} value={animationName}>{animationName}</option>)}
                             </select>
                             <FieldError errors={getFieldErrors('animation')} />
                         </div>

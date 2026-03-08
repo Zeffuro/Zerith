@@ -2,7 +2,7 @@ import type { Command } from 'core';
 
 import type { ProjectGet, ProjectIoSlice, ProjectScriptBridge } from '../types';
 
-import { fsReadDir, fsReadTextFile, fsWriteTextFile } from '../../../services/fs';
+import { fsReadDirectory, fsReadTextFile, fsWriteTextFile } from '../../../services/fs';
 
 export function createProjectIoSlice(get: ProjectGet, scriptBridge: ProjectScriptBridge): ProjectIoSlice {
     return {
@@ -13,14 +13,14 @@ export function createProjectIoSlice(get: ProjectGet, scriptBridge: ProjectScrip
             const projectRoot = pathParts.join(separator);
 
             try {
-                const entries = await fsReadDir(projectRoot);
-                entries.sort((a, b) => {
+                const entries = await fsReadDirectory(projectRoot);
+                const sortedEntries = entries.toSorted((a, b) => {
                     if (a.isDirectory && !b.isDirectory) return -1;
                     if (!a.isDirectory && b.isDirectory) return 1;
                     return a.name.localeCompare(b.name);
                 });
 
-                get().setProject(projectRoot, entries);
+                get().setProject(projectRoot, sortedEntries);
                 await get().loadManifest();
             } catch (error) {
                 console.error('Failed to open project:', error);
@@ -37,22 +37,29 @@ export function createProjectIoSlice(get: ProjectGet, scriptBridge: ProjectScrip
                 if (editingAllMacrosFile) {
                     const out: Record<string, Command[]> = {};
                     for (const m of macroEntries) out[m.name] = Array.isArray(m.commands) ? m.commands : [];
-                    await fsWriteTextFile(activeFile, JSON.stringify(out, null, 4));
+                    await fsWriteTextFile(activeFile, JSON.stringify(out, undefined, 4));
                     return;
                 }
 
                 if (activeMacroName) {
                     const raw = await fsReadTextFile(activeFile);
-                    const object = JSON.parse(raw);
-                    object[activeMacroName] = rootScript;
-                    await fsWriteTextFile(activeFile, JSON.stringify(object, null, 4));
+                    const parsed: unknown = JSON.parse(raw);
+                    if (!isRecord(parsed)) {
+                        throw new TypeError('Macro file must be a JSON object');
+                    }
+                    parsed[activeMacroName] = rootScript;
+                    await fsWriteTextFile(activeFile, JSON.stringify(parsed, undefined, 4));
                 } else {
-                    await fsWriteTextFile(activeFile, JSON.stringify(rootScript, null, 4));
+                    await fsWriteTextFile(activeFile, JSON.stringify(rootScript, undefined, 4));
                 }
             } catch (error) {
                 console.error('Failed to save active file:', error);
             }
         },
     };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value) && typeof value === 'object';
 }
 

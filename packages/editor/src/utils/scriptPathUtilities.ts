@@ -1,11 +1,12 @@
 export type ScriptPath = (number | string)[];
 
+type Indexable = Record<string, unknown> | unknown[];
+
 export function getAtPath<T = unknown>(root: unknown, path: ScriptPath): T | undefined {
-    let current: any = root;
+    let current: unknown = root;
     for (const key of path) {
-        if (current === undefined || current === null) return undefined;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        current = current[key];
+        if (current === undefined) return undefined;
+        current = readAtKey(current, key);
     }
     return current as T;
 }
@@ -24,7 +25,7 @@ export function getParentArrayPath(nodePath: ScriptPath): ScriptPath {
     return nodePath.slice(0, -1);
 }
 
-export function insertNodeAtPath(root: unknown[], arrayPath: ScriptPath, index: number, node: unknown): unknown[] {
+export function insertNodeAtPath<TRoot extends unknown[]>(root: TRoot, arrayPath: ScriptPath, index: number, node: unknown): TRoot {
     const array = getAtPath<unknown[]>(root, arrayPath);
     if (!Array.isArray(array)) {
         throw new TypeError(`Target at path is not an array: ${JSON.stringify(arrayPath)}`);
@@ -38,35 +39,37 @@ export function isNodePath(path: ScriptPath): boolean {
     return path.length > 0 && typeof path.at(-1) === 'number';
 }
 
-export function moveNode(
-    root: unknown[],
+export function moveNode<TRoot extends unknown[]>(
+    root: TRoot,
     nodePath: ScriptPath,
     destinationArrayPath: ScriptPath,
     destinationIndex: 'end' | number
-): unknown[] {
-    // 1. Remove node
+): TRoot {
     const [intermediateRoot, node] = removeNodeAtPath(root, nodePath);
 
-    // 2. Insert at new location
     if (destinationArrayPath.length === 0) {
-        // Special case: moving to the root level
         return insertNodeAtPath(intermediateRoot, destinationArrayPath, 0, node);
     }
 
     if (isNodePath(nodePath) && isNodePath(destinationArrayPath)) {
         const sourceIndex = getNodeIndex(nodePath);
-        const destinationIndex_ = destinationIndex === 'end' ? 'end' : Math.max(0, Math.min(getNodeIndex(destinationArrayPath), Number.MAX_SAFE_INTEGER));
+        const boundedDestinationIndex = destinationIndex === 'end'
+            ? undefined
+            : Math.max(0, Math.min(getNodeIndex(destinationArrayPath), Number.MAX_SAFE_INTEGER));
 
-        // If we're moving within the same array and the destination index is greater than the source index,
-        // explicitly adjust because removal shifted indices.
-        // However, removeNodeAtPath creates a new root clone, so indices in other arrays are unaffected.
-        // BUT if destination is in the SAME array, we need to be careful.
-        if (JSON.stringify(getParentArrayPath(nodePath)) === JSON.stringify(getParentArrayPath(destinationArrayPath)) && sourceIndex < destinationIndex_) {
-                return insertNodeAtPath(intermediateRoot, destinationArrayPath, destinationIndex_ - 1, node);
+        if (
+            boundedDestinationIndex !== undefined
+            && JSON.stringify(getParentArrayPath(nodePath)) === JSON.stringify(getParentArrayPath(destinationArrayPath))
+            && sourceIndex < boundedDestinationIndex
+        ) {
+                return insertNodeAtPath(intermediateRoot, destinationArrayPath, boundedDestinationIndex - 1, node);
             }
 
         if (destinationIndex === 'end') {
             const destinationArray = getAtPath<unknown[]>(intermediateRoot, destinationArrayPath);
+            if (!Array.isArray(destinationArray)) {
+                throw new TypeError(`Destination at path is not an array: ${JSON.stringify(destinationArrayPath)}`);
+            }
             return insertNodeAtPath(intermediateRoot, destinationArrayPath, destinationArray.length, node);
         } else {
             return insertNodeAtPath(intermediateRoot, destinationArrayPath, destinationIndex, node);
@@ -75,7 +78,7 @@ export function moveNode(
     return intermediateRoot;
 }
 
-export function removeNodeAtPath(root: unknown[], nodePath: ScriptPath): [unknown[], unknown] {
+export function removeNodeAtPath<TRoot extends unknown[]>(root: TRoot, nodePath: ScriptPath): [TRoot, unknown] {
     const index = getNodeIndex(nodePath);
     const parentPath = getParentArrayPath(nodePath);
     const parent = getAtPath<unknown[]>(root, parentPath);
@@ -94,17 +97,38 @@ export function removeNodeAtPath(root: unknown[], nodePath: ScriptPath): [unknow
     return [setAtPath(root, parentPath, newParent), node];
 }
 
-export function setAtPath(root: unknown, path: ScriptPath, value: unknown): any {
-    if (path.length === 0) return value;
+export function setAtPath<TRoot>(root: TRoot, path: ScriptPath, value: unknown): TRoot {
+    if (path.length === 0) return value as TRoot;
 
     const [head, ...rest] = path;
-    const current = root as any;
-    
-    // Check if current is array or object to execute shallow copy
-    const clone: any = Array.isArray(current) ? [...current] : { ...current };
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    clone[head] = setAtPath(current[head], rest, value);
-
-    return clone;
+    const currentContainer: Indexable = isIndexable(root) ? root : (typeof head === 'number' ? [] : {});
+    const currentValue = readAtKey(currentContainer, head);
+    const nextValue = setAtPath(currentValue, rest, value);
+    return writeAtKey(currentContainer, head, nextValue) as TRoot;
 }
+
+function isIndexable(value: unknown): value is Indexable {
+    return Boolean(value) && typeof value === 'object';
+}
+
+function readAtKey(value: unknown, key: number | string): unknown {
+    if (!isIndexable(value)) return undefined;
+    return value[key as keyof typeof value];
+}
+
+
+function writeAtKey(value: Indexable, key: number | string, nextValue: unknown): Indexable {
+    if (Array.isArray(value)) {
+        const clonedArray = [...value];
+        clonedArray[key as number] = nextValue;
+        return clonedArray;
+    }
+
+    return {
+        ...value,
+        [key]: nextValue,
+    };
+}
+
+
+

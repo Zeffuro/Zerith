@@ -1,5 +1,5 @@
 import type { EditorNode } from '../../types/EditorNode';
-import type { ScriptPath } from '../../utils/scriptPathUtils';
+import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
 export type ScriptGet = () => ScriptState;
 
@@ -54,3 +54,4 @@ export interface ScriptState {
 
 // Backward-compatible alias used by older slice modules.
 export type ScriptStoreCreator<T> = ScriptSlice<T>;
+

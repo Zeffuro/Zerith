@@ -1,20 +1,20 @@
-import type { ScriptPath } from '../../../utils/scriptPathUtils';
+import type { ScriptPath } from '../../../utils/scriptPathUtilities';
 import type { DeleteRequestSource, EditorSet, SelectionSlice } from '../types';
 
 export function createSelectionSlice(set: EditorSet): SelectionSlice {
     return {
         clearDeleteRequest: () =>
-            set({ pendingDeleteRequest: null }),
+            set({ pendingDeleteRequest: undefined }),
         clearSelection: () =>
-            set({ selectedNodePaths: [], selectionAnchorPath: null }),
-        pendingDeleteRequest: null,
+            set({ selectedNodePaths: [], selectionAnchorPath: undefined }),
+        pendingDeleteRequest: undefined,
 
         requestDelete: (paths, source: DeleteRequestSource = 'keyboard') =>
             set({ pendingDeleteRequest: { paths, source } }),
 
         selectedNodePaths: [],
 
-        selectionAnchorPath: null,
+        selectionAnchorPath: undefined,
 
         setSelectedNodePaths: (paths) =>
             set({
@@ -22,7 +22,7 @@ export function createSelectionSlice(set: EditorSet): SelectionSlice {
             }),
 
         setSelectionAnchorPath: (path) =>
-            set({ selectionAnchorPath: path ? ([...path] as ScriptPath) : null }),
+            set({ selectionAnchorPath: path ? ([...path] as ScriptPath) : undefined }),
 
         toggleSelectedNodePath: (path) =>
             set((state) => {
@@ -37,4 +37,5 @@ export function createSelectionSlice(set: EditorSet): SelectionSlice {
             }),
     };
 }
+
 

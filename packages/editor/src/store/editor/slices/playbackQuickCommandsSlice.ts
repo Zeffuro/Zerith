@@ -26,7 +26,7 @@ export function createPlaybackQuickCommandsSlice(set: EditorSet): PlaybackQuickC
                 [list[index], list[nextIndex]] = [list[nextIndex], list[index]];
                 return { quickCommandTypes: list };
             }),
-        playFromIndex: null,
+        playFromIndex: undefined,
         playTrigger: 0,
 
         quickCommandTypes: DEFAULT_QUICK,
@@ -49,7 +49,7 @@ export function createPlaybackQuickCommandsSlice(set: EditorSet): PlaybackQuickC
 
         triggerPlay: () =>
             set((state) => ({
-                playFromIndex: null,
+                playFromIndex: undefined,
                 playTrigger: state.playTrigger + 1,
             })),
 

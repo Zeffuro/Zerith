@@ -39,6 +39,6 @@ export function hasLikelyIssue(node: unknown): boolean {
     }
 }
 
-function asObject(value: unknown): null | Record<string, unknown> {
-    return value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+function asObject(value: unknown): Record<string, unknown> | undefined {
+    return value && typeof value === 'object' ? (value as Record<string, unknown>) : undefined;
 }

@@ -7,11 +7,11 @@ import {
     getNodeIndex,
     getParentArrayPath,
     insertNodeAtPath,
-    moveNodeByPath as moveNodeByPathUtility,
+    moveNode as moveNodeByPathUtility,
     removeNodeAtPath,
     type ScriptPath,
     setAtPath,
-} from '../../../utils/scriptPathUtils';
+} from '../../../utils/scriptPathUtilities';
 import { MAX_HISTORY } from '../constants';
 import { deepClone, isRootIndexPath } from '../helpers';
 
@@ -124,7 +124,7 @@ export const createPathOpsSlice = (
     duplicateNodesByPaths: (paths) =>
         set((state) => {
             const indices = paths
-                .filter(isRootIndexPath)
+                .filter((path) => isRootIndexPath(path))
                 .map((p) => p[0])
                 .filter((index, index_, array) => array.indexOf(index) === index_)
                 .toSorted((a, b) => a - b);
@@ -160,8 +160,7 @@ export const createPathOpsSlice = (
 
     getNodeAtPath: (path) => {
         const { rootScript } = get();
-        // @ts-expect-error script generic hell
-        return getAtPath(rootScript, path);
+        return getAtPath<EditorNode | EditorNode[]>(rootScript, path);
     },
 
     moveNodeByPath: (sourceNodePath, targetArrayPath, targetIndex) =>
@@ -286,7 +285,7 @@ export const createPathOpsSlice = (
         if (targetArrayPath.length > 0) return;
 
         const from = paths
-            .filter(isRootNodePath)
+            .filter((path) => isRootNodePath(path))
             .map((p) => p[0] as number);
 
         if (from.length <= 1) return;
@@ -330,4 +329,5 @@ export const createPathOpsSlice = (
             };
         }),
 });
+
 

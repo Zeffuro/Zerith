@@ -1,6 +1,6 @@
 import type { ItemCommand } from 'core';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
@@ -25,7 +25,7 @@ export function ItemInspector({ index, node }: { index?: null | number; node: It
 
     const onChangesBlur = () => {
         try {
-            const parsed = changesJson.trim() ? JSON.parse(changesJson) : {};
+            const parsed: unknown = changesJson.trim() ? JSON.parse(changesJson) : {};
             if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
                 setJsonError('changes must be a JSON object');
                 return;

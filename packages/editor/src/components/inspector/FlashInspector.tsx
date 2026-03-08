@@ -1,6 +1,6 @@
 import type { FlashCommand } from 'core';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';

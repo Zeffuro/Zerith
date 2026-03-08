@@ -8,14 +8,14 @@ export function useDismissiblePopup(
     useEffect(() => {
         if (!open) return;
 
-        const onDocumentClick = (e: MouseEvent) => {
+        const onDocumentClick = (event: MouseEvent) => {
             const element = rootReference.current;
             if (!element) return;
-            if (!element.contains(e.target as Node)) onClose();
+            if (!element.contains(event.target as Node)) onClose();
         };
 
-        const onKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') onClose();
         };
 
         document.addEventListener('mousedown', onDocumentClick);

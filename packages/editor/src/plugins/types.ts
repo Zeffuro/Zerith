@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type React from 'react';
 
 import type { EditorNode } from '../types/EditorNode';
-import type { ScriptPath } from '../utils/scriptPathUtils';
+import type { ScriptPath } from '../utils/scriptPathUtilities';
 
 export type BranchSpec<TNode extends PluginNode = PluginNode> = {
     label: string;
@@ -15,7 +15,7 @@ export type CommandPlugin<TType extends EditorCommandType = EditorCommandType> =
     getBranches?: (node: EditorNodeByType<TType>) => BranchSpec[];
     getSummary?: (node: EditorNodeByType<TType>) => string;
     icon: (size: number) => ReactNode;
-    Inspector?: React.ComponentType<PluginInspectorProps<EditorNodeByType<TType>>>;
+    Inspector?: React.ComponentType<PluginInspectorProperties>;
     label: string;
     quickColor?: { bg: string; border: string };
     type: TType;
@@ -33,10 +33,11 @@ export interface PluginAPI {
     getPlugin: <TType extends EditorCommandType>(type: TType) => CommandPlugin<TType>;
 }
 
-export type PluginInspectorProps<TNode extends PluginNode = PluginNode> = {
-    index?: null | number;
+export type PluginInspectorProperties<TNode extends PluginNode = PluginNode> = {
+    index?: null | number | undefined;
     node: TNode;
 };
 
 export type PluginNode = ({ type: string } & Record<string, unknown>) | EditorNode;
+
 

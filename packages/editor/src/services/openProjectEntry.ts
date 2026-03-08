@@ -22,11 +22,11 @@ export async function openProjectEntry(fullPath: string, entryName: string, opti
     try {
         if (IMG_EXT.has(extension) || AUDIO_EXT.has(extension)) {
             const projectPath = getCurrentProjectPath();
-            const rel = toProjectRelativePath(fullPath, projectPath);
-            applyAssetSelection(rel);
+            const relativePath = toProjectRelativePath(fullPath, projectPath);
+            applyAssetSelection(relativePath);
 
             executeWorkbenchOpenAction({ action: 'openTab', tab: {
-                assetPath: rel,
+                assetPath: relativePath,
                 id: makeTabId('asset', fullPath),
                 kind: 'asset',
                 path: fullPath,
@@ -37,7 +37,7 @@ export async function openProjectEntry(fullPath: string, entryName: string, opti
 
         if (extension === '.json') {
             const contents = await fsReadTextFile(fullPath);
-            const data = JSON.parse(contents);
+            const data: unknown = JSON.parse(contents);
 
             const base = basename(fullPath).toLowerCase();
 
@@ -134,7 +134,7 @@ function focusMainEditorFor(kind: 'asset' | 'scriptLike' | 'text') {
     void kind;
 }
 
-function toProjectRelativePath(fullPath: string, projectPath: null | string) {
+function toProjectRelativePath(fullPath: string, projectPath: string | undefined) {
     if (!projectPath) return fullPath;
     const base = projectPath.replaceAll('\\', '/').replace(/\/+$/, '');
     const abs = fullPath.replaceAll('\\', '/');

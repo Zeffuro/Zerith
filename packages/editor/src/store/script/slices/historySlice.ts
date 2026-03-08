@@ -23,8 +23,8 @@ export const createHistorySlice: ScriptStoreCreator<HistorySlice> = (set, get) =
                 past: [...state.past, state.rootScript].slice(-MAX_HISTORY),
                 rootScript: next,
                 scopePath: [],
-                selectedNodeIndex: null,
-                selectedNodePath: null,
+                selectedNodeIndex: undefined,
+                selectedNodePath: undefined,
             };
         }),
 
@@ -37,8 +37,8 @@ export const createHistorySlice: ScriptStoreCreator<HistorySlice> = (set, get) =
                 past: state.past.slice(0, -1),
                 rootScript: previous,
                 scopePath: [],
-                selectedNodeIndex: null,
-                selectedNodePath: null,
+                selectedNodeIndex: undefined,
+                selectedNodePath: undefined,
             };
         }),
 });

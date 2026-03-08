@@ -60,5 +60,5 @@ export const DEFAULT_DOCK_LAYOUT = {
 };
 
 export function createDefaultDockLayout() {
-    return JSON.parse(JSON.stringify(DEFAULT_DOCK_LAYOUT));
+    return structuredClone(DEFAULT_DOCK_LAYOUT);
 }

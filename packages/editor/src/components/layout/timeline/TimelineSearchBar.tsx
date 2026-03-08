@@ -60,11 +60,11 @@ export function TimelineSearchBar({
 
             <input
                 id={inputId}
-                onChange={(e) => onChangeQuery(e.target.value)}
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        if (e.shiftKey) onPrevMatch();
+                onChange={(event) => onChangeQuery(event.target.value)}
+                onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        if (event.shiftKey) onPrevMatch();
                         else onNextMatch();
                     }
                 }}

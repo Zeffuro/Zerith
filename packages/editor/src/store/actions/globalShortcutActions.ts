@@ -1,6 +1,7 @@
 import type { Command } from 'core';
 
-import type { ScriptPath } from '../../utils/scriptPathUtils';
+import type { EditorNode } from '../../types/EditorNode';
+import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
 import { useEditorStore } from '../useEditorStore';
 import { useProjectStore } from '../useProjectStore';
@@ -73,10 +74,7 @@ export async function executeGlobalShortcutAction(action: GlobalShortcutAction):
 }
 
 function cloneValue<T>(value: T): T {
-    if (typeof structuredClone === 'function') {
-        return structuredClone(value);
-    }
-    return JSON.parse(JSON.stringify(value));
+    return structuredClone(value);
 }
 
 function copySelectionToClipboard(): void {
@@ -116,14 +114,14 @@ function duplicateSelection(): void {
             .filter((p) => Array.isArray(p) && p.length === 1 && typeof p[0] === 'number')
             .map((p) => p[0] as number)
             .filter((v, index, a) => a.indexOf(v) === index)
-            .sort((a, b) => a - b);
+            .toSorted((a, b) => a - b);
 
         if (rootIndices.length > 0) {
             useProjectStore.getState().duplicateMacroEntries(rootIndices);
             const duplicated = rootIndices.map((index, index_) => index + 1 + index_);
             const dupPaths = duplicated.map((index) => [index] as ScriptPath);
             editor.setSelectedNodePaths(dupPaths);
-            editor.setSelectionAnchorPath(dupPaths[0] ?? null);
+            editor.setSelectionAnchorPath(dupPaths[0] ?? undefined);
         }
         return;
     }
@@ -135,7 +133,7 @@ function duplicateSelection(): void {
             .filter((p) => Array.isArray(p) && p.length === 1 && typeof p[0] === 'number')
             .map((p) => p[0] as number)
             .filter((v, index, a) => a.indexOf(v) === index)
-            .sort((a, b) => a - b);
+            .toSorted((a, b) => a - b);
 
         script.duplicateNodesByPaths(editor.selectedNodePaths);
 
@@ -144,7 +142,7 @@ function duplicateSelection(): void {
 
         const dupPaths = duplicated.map((index) => [index] as ScriptPath);
         editor.setSelectedNodePaths(dupPaths);
-        editor.setSelectionAnchorPath(dupPaths[0] ?? null);
+        editor.setSelectionAnchorPath(dupPaths[0] ?? undefined);
         return;
     }
 
@@ -153,12 +151,16 @@ function duplicateSelection(): void {
         const index =
             script.selectedNodePath.length === 1 && typeof script.selectedNodePath[0] === 'number'
                 ? (script.selectedNodePath[0]) + 1
-                : null;
-        if (index !== null) {
+                : undefined;
+        if (index !== undefined) {
             editor.setSelectedNodePaths([[index]]);
             editor.setSelectionAnchorPath([index]);
         }
     }
+}
+
+function isEditorNode(value: unknown): value is EditorNode {
+    return Boolean(value) && typeof value === 'object' && typeof (value as { type?: unknown }).type === 'string';
 }
 
 function isMacroClipboardNode(value: unknown): value is MacroClipboardNode {
@@ -260,7 +262,7 @@ function pasteClipboardSelection(): boolean {
     }
 
     const script = useScriptStore.getState();
-    if (script.selectedNodePath && clipboardNode && !isMacroClipboardNode(clipboardNode)) {
+    if (script.selectedNodePath && isEditorNode(clipboardNode) && !isMacroClipboardNode(clipboardNode)) {
         script.pasteNodeAtPath(script.selectedNodePath, clipboardNode);
         return true;
     }
@@ -286,4 +288,5 @@ function requestDeleteSelection(): boolean {
 
     return false;
 }
+
 

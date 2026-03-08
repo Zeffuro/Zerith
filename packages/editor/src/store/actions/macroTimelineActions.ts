@@ -8,9 +8,9 @@ export function executeMacroTimelineAction(action: MacroTimelineAction): void {
     const projectState = useProjectStore.getState();
 
     const first = editorState.selectedNodePaths[0];
-    const selectedMacroIndex = first && typeof first[0] === 'number' ? (first[0]) : null;
+    const selectedMacroIndex = first && typeof first[0] === 'number' ? (first[0]) : undefined;
 
-    if (selectedMacroIndex === null) return;
+    if (selectedMacroIndex === undefined) return;
 
     if (action === 'duplicateSelected') {
         const selectedMacro = projectState.macroEntries[selectedMacroIndex];
@@ -27,10 +27,7 @@ export function executeMacroTimelineAction(action: MacroTimelineAction): void {
 
         const next = [...projectState.macroEntries];
         next.splice(selectedMacroIndex + 1, 0, {
-            commands:
-                typeof structuredClone === 'function'
-                    ? structuredClone(selectedMacro.commands)
-                    : JSON.parse(JSON.stringify(selectedMacro.commands)),
+            commands: structuredClone(selectedMacro.commands),
             name: nextName,
         });
 
@@ -44,6 +41,6 @@ export function executeMacroTimelineAction(action: MacroTimelineAction): void {
     const nextIndex = Math.max(0, selectedMacroIndex - 1);
     const hasAnyLeft = projectState.macroEntries.length - 1 > 0;
     editorState.setSelectedNodePaths(hasAnyLeft ? [[nextIndex]] : []);
-    editorState.setSelectionAnchorPath(hasAnyLeft ? [nextIndex] : null);
+    editorState.setSelectionAnchorPath(hasAnyLeft ? [nextIndex] : undefined);
 }
 

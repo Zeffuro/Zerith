@@ -1,4 +1,4 @@
-import type { Command } from 'core';
+import type { CharacterDefinition, Command, GameManifest, ItemManifestEntry } from 'core';
 
 import type { ProjectGet, ProjectManifestSlice, ProjectSet } from '../types';
 
@@ -14,16 +14,29 @@ export function createProjectManifestSlice(set: ProjectSet, get: ProjectGet): Pr
 
             try {
                 const manifestText = await fsReadTextFile(`${projectPath}/game.json`);
-                const manifest = JSON.parse(manifestText);
+                const parsedManifest: unknown = JSON.parse(manifestText);
+                if (!isRecord(parsedManifest)) {
+                    throw new TypeError('Manifest root must be an object');
+                }
+
+                const manifest = parsedManifest as GameManifest;
 
                 const [characters, items, macros, scenes] = await Promise.all([
-                    manifest.characters ? resolveManifestValueFromDisk(manifest.characters, projectPath) : Promise.resolve({}),
-                    manifest.items ? resolveManifestValueFromDisk(manifest.items, projectPath) : Promise.resolve({}),
-                    manifest.macros ? resolveManifestValueFromDisk(manifest.macros, projectPath) : Promise.resolve({}),
-                    manifest.scenes ? resolveScenesDisk(manifest.scenes, projectPath) : Promise.resolve({}),
+                    manifest.characters
+                        ? resolveManifestValueFromDisk<Record<string, CharacterDefinition>>(manifest.characters, projectPath)
+                        : Promise.resolve<Record<string, CharacterDefinition>>({}),
+                    manifest.items
+                        ? resolveManifestValueFromDisk<Record<string, ItemManifestEntry>>(manifest.items, projectPath)
+                        : Promise.resolve<Record<string, ItemManifestEntry>>({}),
+                    manifest.macros
+                        ? resolveManifestValueFromDisk<Record<string, Command[]>>(manifest.macros, projectPath)
+                        : Promise.resolve<Record<string, Command[]>>({}),
+                    manifest.scenes && isRecord(manifest.scenes)
+                        ? resolveScenesDisk(manifest.scenes, projectPath)
+                        : Promise.resolve<Record<string, Command[]>>({}),
                 ]);
 
-                set({ characters, items, macros, manifest, scenes });
+                set({ characters, items, macros, manifest: manifest as ProjectManifestSlice['manifest'], scenes });
             } catch (error) {
                 console.error('Failed to load manifest:', error);
             }
@@ -35,14 +48,20 @@ export function createProjectManifestSlice(set: ProjectSet, get: ProjectGet): Pr
     };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value) && typeof value === 'object';
+}
+
 async function resolveManifestValueFromDisk<T>(value: string | T, projectPath: string): Promise<T> {
     if (typeof value === 'string') {
         const filePath = `${projectPath}${value}`;
         const text = await fsReadTextFile(filePath);
-        return JSON.parse(text);
+        const parsed: unknown = JSON.parse(text);
+        return parsed as T;
     }
     return value;
 }
+
 
 async function resolveScenesDisk(
     scenes: Record<string, unknown>,
@@ -56,4 +75,5 @@ async function resolveScenesDisk(
     );
     return resolved;
 }
+
 

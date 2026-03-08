@@ -4,7 +4,7 @@ import { useAssetOptions } from '../../../hooks/useAssetOptions';
 
 type Properties = {
     inputStyle?: CSSProperties;
-    kind?: 'all' | 'audio' | 'bg' | 'sprite';
+    kind?: 'all' | 'audio' | 'bg' | 'bgm' | 'sfx' | 'sprite';
     listId: string;
     onChange: (next: string) => void;
     placeholder?: string;
@@ -27,7 +27,7 @@ export function AssetPickerField({
         <>
             <input
                 list={listId}
-                onChange={(e) => onChange(e.target.value)}
+                onChange={(event) => onChange(event.target.value)}
                 placeholder={placeholder}
                 style={inputStyle}
                 type="text"

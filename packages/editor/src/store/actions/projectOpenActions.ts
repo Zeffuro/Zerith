@@ -22,13 +22,13 @@ export function executeProjectOpenAction(options: ExecuteProjectOpenActionOption
 
     if (options.action === 'applyScriptFile') {
         project.setActiveFile(options.path, options.script);
-        project.setActiveMacroName(null);
+        project.setActiveMacroName(undefined);
         project.setEditingAllMacrosFile(false);
         project.setMacroEntries([]);
         return;
     }
 
-    project.setActiveMacroName(null);
+    project.setActiveMacroName(undefined);
     project.setEditingAllMacrosFile(true);
     project.setMacroEntries(options.entries);
     project.setActiveFile(options.path, []);

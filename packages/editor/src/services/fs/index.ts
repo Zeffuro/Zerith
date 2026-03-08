@@ -3,12 +3,12 @@ export {
     fsJoin,
     fsMkdir,
     fsOpenPath,
-    fsReadDir,
+    fsReadDirectory,
     fsReadTextFile,
     fsRemove,
     fsRename,
     fsWriteTextFile,
 } from './explorerFs';
 
-export type { FsDirEntry } from './explorerFs';
+export type { FsDirectoryEntry } from './explorerFs';
 

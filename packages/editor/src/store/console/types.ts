@@ -10,15 +10,15 @@ export interface ConsoleMessagesSlice {
     addMessage: (
         source: ConsoleMessage['source'],
         type: ConsoleMessage['type'],
-        ...arguments_: any[]
+        ...arguments_: unknown[]
     ) => void;
     clear: () => void;
     messages: ConsoleMessage[];
 }
 
 export type ConsoleSet = (
-    partial: ((state: Record<string, any>) => Record<string, any>) | Record<string, any>
+    partial: ((state: ConsoleState) => Partial<ConsoleState>) | Partial<ConsoleState>
 ) => void;
 
-export interface ConsoleState extends ConsoleMessagesSlice {}
+export type ConsoleState = ConsoleMessagesSlice;
 

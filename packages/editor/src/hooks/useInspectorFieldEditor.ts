@@ -13,11 +13,11 @@ export function useInspectorFieldEditor(index?: null | number) {
         selectedNodePath,
     } = useScriptStore();
 
-    const applyNodePatch = (patch: Record<string, any>) => {
+    const applyNodePatch = (patch: Record<string, unknown>) => {
         executeInspectorFieldPatchAction({ index, patch });
     };
 
-    const handleChange = (field: string, value: any) => {
+    const handleChange = (field: string, value: unknown) => {
         applyNodePatch({ [field]: value });
     };
 
@@ -46,7 +46,7 @@ export function useInspectorFieldEditor(index?: null | number) {
     );
 
     const getFieldErrors = (field: string): string[] => {
-        if (!selectedNodePath) return[];
+        if (!selectedNodePath) return [];
 
         if (!editingAllMacrosFile) {
             const key = [...selectedNodePath, field].join('.');
@@ -56,7 +56,7 @@ export function useInspectorFieldEditor(index?: null | number) {
         const [macroIndex, ...rest] = selectedNodePath;
         if (typeof macroIndex !== 'number') return [];
         const key = `macro.${macroIndex}.${[...rest, field].join('.')}`;
-        return validationErrors[key] ??[];
+        return validationErrors[key] ?? [];
     };
 
     const getFieldInputStyle = (field: string) => {

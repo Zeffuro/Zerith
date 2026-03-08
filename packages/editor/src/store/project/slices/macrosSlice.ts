@@ -18,7 +18,7 @@ export function createProjectMacrosSlice(set: ProjectSet, get: ProjectGet): Proj
             }),
         duplicateMacroEntries: (indices) =>
             set((state) => {
-                const sorted = [...new Set(indices)].sort((a: number, b: number) => a - b);
+                const sorted = [...new Set(indices)].toSorted((a: number, b: number) => a - b);
                 if (sorted.length === 0) return {};
 
                 const next = [...state.macroEntries];
@@ -34,9 +34,7 @@ export function createProjectMacrosSlice(set: ProjectSet, get: ProjectGet): Proj
                     let index_ = 2;
                     while (taken.has(copyName)) copyName = `${source.name}_copy_${index_++}`;
 
-                    const clone = typeof structuredClone === 'function'
-                        ? structuredClone(source.commands)
-                        : JSON.parse(JSON.stringify(source.commands));
+                    const clone = structuredClone(source.commands);
 
                     next.splice(sourceIndex + 1, 0, { commands: clone, name: copyName });
                     inserted += 1;
@@ -50,11 +48,12 @@ export function createProjectMacrosSlice(set: ProjectSet, get: ProjectGet): Proj
 
         moveMacroEntries: (fromIndices, targetIndex) =>
             set((state) => {
-                const uniqueSorted = [...new Set(fromIndices)].sort((a: number, b: number) => a - b);
+                const uniqueSorted = [...new Set(fromIndices)].toSorted((a: number, b: number) => a - b);
                 if (uniqueSorted.length === 0) return {};
 
                 const first = uniqueSorted[0];
                 const last = uniqueSorted.at(-1);
+                if (last === undefined) return {};
                 const dropInsideBlock = targetIndex >= first && targetIndex <= last + 1;
                 if (dropInsideBlock) return {};
 

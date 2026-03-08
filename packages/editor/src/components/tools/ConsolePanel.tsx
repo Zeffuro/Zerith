@@ -21,19 +21,11 @@ export function ConsolePanel() {
         return messages.filter((m) => m.source === sourceFilter);
     }, [messages, sourceFilter]);
 
-    const copyText = async (text: string) => {
-        try {
-            await navigator.clipboard.writeText(text);
-        } catch (error) {
-            console.warn('Clipboard write failed:', error);
-        }
-    };
-
     const copyAll = async () => {
         const payload = filtered
             .map((m) => `[${m.timestamp.toLocaleTimeString()}][${m.source}][${m.type}] ${m.text}`)
             .join('\n');
-        await copyText(payload);
+        await copyTextToClipboard(payload);
     };
 
     const getColor = (type: string) => {
@@ -87,7 +79,9 @@ export function ConsolePanel() {
                 </div>
 
                 <button
-                    onClick={copyAll}
+                    onClick={() => {
+                        void copyAll();
+                    }}
                     style={{ background: 'transparent', border: 'none', color: t.text.muted, cursor: 'pointer' }}
                     title="Copy visible logs"
                 >
@@ -145,9 +139,9 @@ export function ConsolePanel() {
                         </span>
 
                         <button
-                            onClick={() =>
-                                copyText(`[${message.timestamp.toLocaleTimeString()}][${message.source}][${message.type}] ${message.text}`)
-                            }
+                            onClick={() => {
+                                void copyTextToClipboard(`[${message.timestamp.toLocaleTimeString()}][${message.source}][${message.type}] ${message.text}`);
+                            }}
                             style={{ background: 'transparent', border: 'none', color: t.text.muted, cursor: 'pointer' }}
                             title="Copy line"
                         >
@@ -159,4 +153,12 @@ export function ConsolePanel() {
             </div>
         </div>
     );
+}
+
+async function copyTextToClipboard(text: string): Promise<void> {
+    try {
+        await navigator.clipboard.writeText(text);
+    } catch (error) {
+        console.warn('Clipboard write failed:', error);
+    }
 }

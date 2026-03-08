@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { type FsDirEntry, fsReadDir } from '../services/fs';
+import { type FsDirectoryEntry, fsReadDirectory } from '../services/fs';
 import { useProjectStore } from '../store/useProjectStore';
 
-type AssetKind = 'all' | 'audio' | 'bg' | 'sprite';
+type AssetKind = 'all' | 'audio' | 'bg' | 'bgm' | 'sfx' | 'sprite';
 
 type AssetOption = {
     absPath: string;
@@ -20,17 +20,17 @@ export function useAssetOptions(kind: AssetKind = 'all') {
 
     const [assets, setAssets] = useState<AssetOption[]>([]);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<null | string>(null);
+    const [error, setError] = useState<string | undefined>();
 
     const reload = useCallback(async () => {
         if (!projectPath) {
             setAssets([]);
-            setError(null);
+            setError(undefined);
             return;
         }
 
         setLoading(true);
-        setError(null);
+        setError(undefined);
 
         try {
             const assetsRoot = joinPath(projectPath, 'assets');
@@ -39,16 +39,17 @@ export function useAssetOptions(kind: AssetKind = 'all') {
             const next = files
                 .filter((p) => matchKind(p, kind))
                 .map((absPath) => {
-                    const value = normalizeRel(projectPath, absPath);
+                    const value = normalizeRelativePath(projectPath, absPath);
                     const label = value.replace(/^\/+/, '');
                     return { absPath, label, value };
                 })
-                .sort((a, b) => a.label.localeCompare(b.label));
+                .toSorted((a, b) => a.label.localeCompare(b.label));
 
             setAssets(next);
-        } catch (error_: any) {
+        } catch (error_) {
             setAssets([]);
-            setError(error_?.message ?? 'Failed to load assets');
+            const message = error_ instanceof Error ? error_.message : 'Failed to load assets';
+            setError(message);
         } finally {
             setLoading(false);
         }
@@ -78,26 +79,26 @@ function matchKind(path: string, kind: AssetKind) {
     const extension = getExtension(path);
     if (kind === 'bg') return BG_EXT.has(extension);
     if (kind === 'sprite') return SPRITE_EXT.has(extension);
-    if (kind === 'audio') return AUDIO_EXT.has(extension);
+    if (kind === 'audio' || kind === 'bgm' || kind === 'sfx') return AUDIO_EXT.has(extension);
     return true;
 }
 
-function normalizeRel(projectPath: string, absPath: string) {
+function normalizeRelativePath(projectPath: string, absPath: string) {
     const base = projectPath.replaceAll('\\', '/').replace(/\/+$/, '');
     const abs = absPath.replaceAll('\\', '/');
     if (abs.startsWith(base)) {
-        const rel = abs.slice(base.length);
-        return rel.startsWith('/') ? rel : `/${rel}`;
+        const relative = abs.slice(base.length);
+        return relative.startsWith('/') ? relative : `/${relative}`;
     }
     return absPath;
 }
 
-async function walk(dir: string): Promise<string[]> {
+async function walk(directory: string): Promise<string[]> {
     const out: string[] = [];
-    const entries: FsDirEntry[] = await fsReadDir(dir);
+    const entries: FsDirectoryEntry[] = await fsReadDirectory(directory);
 
     for (const entry of entries) {
-        const full = joinPath(dir, entry.name);
+        const full = joinPath(directory, entry.name);
         if (entry.isDirectory) {
             out.push(...(await walk(full)));
         } else {

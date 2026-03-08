@@ -1,12 +1,28 @@
+import type { Command } from 'core';
 import type * as Monaco from 'monaco-editor';
 
 import Editor, { type OnMount } from '@monaco-editor/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import type { EditorNode } from '../../../types/EditorNode';
+
 import { useProjectStore } from '../../../store/useProjectStore';
 import { useScriptStore } from '../../../store/useScriptStore';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
+
+type MonacoThemeApi = {
+    editor: {
+        defineTheme: (themeName: string, themeData: Monaco.editor.IStandaloneThemeData) => void;
+        setTheme: (themeName: string) => void;
+    };
+    KeyCode: {
+        KeyS: number;
+    };
+    KeyMod: {
+        CtrlCmd: number;
+    };
+};
 
 export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
     const rootScript = useScriptStore((s) => s.rootScript);
@@ -22,21 +38,24 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
 
     const initial = useMemo(() => {
         if (editingAllMacrosFile) {
-            const object: Record<string, any[]> = {};
-            for (const m of macroEntries) (object[m.name] = m.commands);
-            return JSON.stringify(object, null, 2);
+            const macrosByName: Record<string, Command[]> = {};
+            for (const macroEntry of macroEntries) {
+                macrosByName[macroEntry.name] = macroEntry.commands;
+            }
+            return JSON.stringify(macrosByName, undefined, 2);
         }
-        return JSON.stringify(rootScript, null, 2);
+        return JSON.stringify(rootScript, undefined, 2);
     }, [rootScript, editingAllMacrosFile, macroEntries]);
 
+    const editorReference = useRef<Monaco.editor.IStandaloneCodeEditor | undefined>(undefined);
     const [value, setValue] = useState(initial);
-    const [error, setError] = useState<null | string>(null);
+    const [error, setError] = useState<string | undefined>();
     const [previousInitial, setPreviousInitial] = useState(initial);
 
     if (initial !== previousInitial) {
         setPreviousInitial(initial);
         setValue(initial);
-        setError(null);
+        setError(undefined);
     }
 
     useEffect(() => {
@@ -47,44 +66,48 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
         }
     }, [editingAllMacrosFile, setLastMacrosView, setLastScriptView]);
 
-    const apply = () => {
+    const apply = (): boolean => {
         try {
-            const parsed = JSON.parse(value);
+            const parsed: unknown = JSON.parse(value);
 
             if (editingAllMacrosFile) {
-                if (typeof parsed !== 'object' || Array.isArray(parsed)) {
+                const entries = toMacroEntries(parsed);
+                if (!entries) {
                     setError('Macros JSON must be an object { "macro_name": [...] }');
-                    return;
+                    return false;
                 }
-                const entries = Object.keys(parsed).map((name) => ({ commands: parsed[name], name }));
                 setMacroEntries(entries);
             } else {
                 if (!Array.isArray(parsed)) {
                     setError('Root JSON must be an array.');
-                    return;
+                    return false;
                 }
-                setScript(parsed);
+                setScript(parsed as EditorNode[]);
             }
-            setError(null);
-        } catch (error_: any) {
-            setError(error_?.message ?? 'Invalid JSON');
+            setError(undefined);
+            return true;
+        } catch (caughtError: unknown) {
+            setError(caughtError instanceof Error ? caughtError.message : 'Invalid JSON');
+            return false;
         }
     };
 
-    const formatDocument = async () => {
-        if (!editorReference.current) return;
-        await editorReference.current.getAction('editor.action.formatDocument')?.run();
+    const formatDocument = () => {
+        const editor = editorReference.current;
+        if (!editor) return;
+        void runFormatDocument(editor);
     };
 
     const saveNow = async () => {
-        apply();
+        if (!apply()) return;
         await saveActiveFileFromCurrentScript();
     };
 
     const onMount: OnMount = (editor, monaco) => {
         editorReference.current = editor;
+        const monacoApi = monaco as unknown as MonacoThemeApi;
 
-        monaco.editor.defineTheme('zerith-json-dark', {
+        monacoApi.editor.defineTheme('zerith-json-dark', {
             base: 'vs-dark',
             colors: {
                 'editor.background': '#1e1e1e',
@@ -96,9 +119,9 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
             inherit: true,
             rules: [],
         });
-        monaco.editor.setTheme('zerith-json-dark');
+        monacoApi.editor.setTheme('zerith-json-dark');
 
-        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+        editor.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.KeyS, () => {
             void saveNow();
         });
     };
@@ -119,7 +142,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
                     height="100%"
                     onChange={(v) => {
                         setValue(v ?? '');
-                        setError(null);
+                        setError(undefined);
                     }}
                     onMount={onMount}
                     options={{
@@ -140,3 +163,21 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
         </div>
     );
 }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+async function runFormatDocument(editor: Monaco.editor.IStandaloneCodeEditor): Promise<void> {
+    await editor.getAction('editor.action.formatDocument')?.run();
+}
+
+function toMacroEntries(value: unknown): { commands: Command[]; name: string; }[] | undefined {
+    if (!isRecord(value)) return undefined;
+
+    return Object.entries(value).map(([name, commands]) => ({
+        commands: Array.isArray(commands) ? (commands as Command[]) : [],
+        name,
+    }));
+}
+

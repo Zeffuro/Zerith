@@ -76,7 +76,7 @@ export function AddCommandMenu({
                     }}
                 >
                     <input
-                        onChange={(e) => setQuery(e.target.value)}
+                        onChange={(event) => setQuery(event.target.value)}
                         placeholder="Search commands..."
                         ref={inputReference}
                         style={{
@@ -100,8 +100,8 @@ export function AddCommandMenu({
                                 setOpen(false);
                                 setQuery('');
                             }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = t.bg.hover)}
-                            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                            onMouseEnter={(event) => (event.currentTarget.style.background = t.bg.hover)}
+                            onMouseLeave={(event) => (event.currentTarget.style.background = 'transparent')}
                             style={{
                                 alignItems: 'center',
                                 background: 'transparent',

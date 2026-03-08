@@ -1,10 +1,12 @@
+import type { EditorCommandType, PluginNode } from '../../plugins/types';
+
 import { getPlugin } from '../../plugins/commandPlugins';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useScriptStore } from '../../store/useScriptStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { styles } from '../../theme/styleHelpers';
-import { getAtPath, type ScriptPath } from '../../utils/scriptPathUtils';
+import { getAtPath } from '../../utils/scriptPathUtilities';
 import { SchemaFallbackInspector } from './SchemaFallbackInspector';
 
 export function Inspector() {
@@ -18,7 +20,7 @@ export function Inspector() {
 
     const script = getActiveScript();
 
-    let node: any = null;
+    let node: PluginNode | undefined;
 
     if (editingAllMacrosFile) {
         const path = selectedNodePaths[0] ?? selectedNodePath;
@@ -26,14 +28,17 @@ export function Inspector() {
             const macroIndex = path[0];
             const macro = macroEntries[macroIndex];
             if (macro) {
-                const syntheticRoot = { commands: macro.commands };
-                node = path.length === 1 ? syntheticRoot : getAtPath(syntheticRoot, path.slice(1));
+                const syntheticRoot: PluginNode = { body: macro.commands, name: macro.name, type: 'macro_header' };
+                const candidate = path.length === 1 ? syntheticRoot : getAtPath(syntheticRoot, path.slice(1));
+                node = isPluginNode(candidate) ? candidate : undefined;
             }
         }
     } else if (selectedNodePath) {
-        node = getNodeAtPath(selectedNodePath);
-    } else if (selectedNodeIndex !== null && script[selectedNodeIndex]) {
-        node = script[selectedNodeIndex];
+        const candidate = getNodeAtPath(selectedNodePath);
+        node = isPluginNode(candidate) ? candidate : undefined;
+    } else if (selectedNodeIndex !== undefined && script[selectedNodeIndex]) {
+        const candidate = script[selectedNodeIndex];
+        node = isPluginNode(candidate) ? candidate : undefined;
     }
 
     if (!node) {
@@ -54,7 +59,7 @@ export function Inspector() {
         );
     }
 
-    const plugin = getPlugin(node.type);
+    const plugin = getPlugin(node.type as EditorCommandType);
     const PluginInspector = plugin.Inspector;
 
     return (
@@ -86,6 +91,12 @@ export function Inspector() {
             </div>
         </div>
     );
+}
+
+function isPluginNode(value: unknown): value is PluginNode {
+    if (!value || typeof value !== 'object') return false;
+    const record = value as Record<string, unknown>;
+    return typeof record.type === 'string';
 }
 
 

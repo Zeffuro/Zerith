@@ -15,7 +15,7 @@ export function ThemeMenu({
 
     return (
         <select
-            onChange={(e) => onSelect(e.target.value)}
+            onChange={(event) => onSelect(event.target.value)}
             style={{
                 background: 'transparent',
                 border: '1px solid var(--editor-border-button)',
