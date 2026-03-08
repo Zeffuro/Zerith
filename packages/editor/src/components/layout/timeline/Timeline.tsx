@@ -157,7 +157,7 @@ export function Timeline() {
     useEffect(() => {
         if (editingAllMacrosFile) setLastMacrosView('timeline');
         else setLastScriptView('timeline');
-    }, [editingAllMacrosFile]);
+    }, [editingAllMacrosFile, setLastMacrosView, setLastScriptView]);
 
     useEffect(() => {
         if (!contextMenu) return;

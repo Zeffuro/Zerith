@@ -1,7 +1,8 @@
+import type { ShakeCommand } from 'core';
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 
-export function ShakeInspector({ index, node }: { index?: null | number; node: any; }) {
+export function ShakeInspector({ index, node }: { index?: null | number; node: ShakeCommand; }) {
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle } = useInspectorFieldEditor(index);
 
     return (
@@ -10,7 +11,7 @@ export function ShakeInspector({ index, node }: { index?: null | number; node: a
                 <label style={labelStyle}>Duration (ms)</label>
                 <input
                     min={0}
-                    onChange={(e) => handleChange('duration', Number(e.target.value))}
+                    onChange={(event) => handleChange('duration', Number(event.target.value))}
                     style={getFieldInputStyle('duration')}
                     type="number"
                     value={node.duration ?? 500}
@@ -20,8 +21,8 @@ export function ShakeInspector({ index, node }: { index?: null | number; node: a
             <div>
                 <label style={labelStyle}>Intensity</label>
                 <input
-                    min={0}
-                    onChange={(e) => handleChange('intensity', Number(e.target.value))}
+                    onChange={(event) => handleChange('intensity', Number(event.target.value))}
+                    step="1"
                     style={getFieldInputStyle('intensity')}
                     type="number"
                     value={node.intensity ?? 10}
@@ -31,7 +32,7 @@ export function ShakeInspector({ index, node }: { index?: null | number; node: a
             <div>
                 <label style={labelStyle}>Wait for completion</label>
                 <select
-                    onChange={(e) => handleChange('wait', e.target.value === 'true')}
+                    onChange={(event) => handleChange('wait', event.target.value === 'true')}
                     style={getFieldInputStyle('wait')}
                     value={node.wait ? 'true' : 'false'}
                 >

@@ -31,18 +31,21 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
 
     const [value, setValue] = useState(initial);
     const [error, setError] = useState<null | string>(null);
+    const [prevInitial, setPrevInitial] = useState(initial);
 
-    const editorReference = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
-
-    useEffect(() => {
+    if (initial !== prevInitial) {
+        setPrevInitial(initial);
         setValue(initial);
         setError(null);
-    }, [initial]);
+    }
 
     useEffect(() => {
-        if (editingAllMacrosFile) setLastMacrosView('json');
-        else setLastScriptView('json');
-    }, [editingAllMacrosFile]);
+        if (editingAllMacrosFile) {
+            setLastMacrosView('json');
+        } else {
+            setLastScriptView('json');
+        }
+    }, [editingAllMacrosFile, setLastMacrosView, setLastScriptView]);
 
     const apply = () => {
         try {

@@ -1,4 +1,4 @@
-import type { Command } from 'core';
+import type { Command, GameManifest } from 'core';
 
 import type { FsDirEntry } from '../../services/fs';
 import type { EditorNode } from '../../types/EditorNode';
@@ -13,7 +13,7 @@ export interface ProjectIoSlice {
 }
 
 export interface ProjectMacrosSlice {
-    activeMacroName: null | string;
+    activeMacroName: string | undefined;
     addMacroEntry: (name?: string) => void;
     deleteMacroEntries: (indices: number[]) => void;
     duplicateMacroEntries: (indices: number[]) => void;
@@ -23,18 +23,18 @@ export interface ProjectMacrosSlice {
     removeMacroEntry: (index: number) => void;
     renameMacroEntry: (index: number, nextName: string) => void;
     saveActiveMacroFromScript: (script: Command[]) => void;
-    setActiveMacroName: (name: null | string) => void;
+    setActiveMacroName: (name: string | undefined) => void;
     setEditingAllMacrosFile: (v: boolean) => void;
     setMacroEntries: (entries: MacroEntry[]) => void;
     updateMacroCommands: (index: number, commands: Command[]) => void;
 }
 
 export interface ProjectManifestSlice {
-    characters: Record<string, any>;
-    items: Record<string, any>;
+    characters: Record<string, unknown>;
+    items: Record<string, unknown>;
     loadManifest: () => Promise<void>;
     macros: Record<string, Command[]>;
-    manifest: any | null;
+    manifest: GameManifest | undefined;
     scenes: Record<string, Command[]>;
 }
 
@@ -44,18 +44,18 @@ export interface ProjectScriptBridge {
 }
 
 export interface ProjectSessionSlice {
-    activeFile: null | string;
+    activeFile: string | undefined;
     bumpTreeRevision: () => void;
     files: FsDirEntry[];
-    projectPath: null | string;
+    projectPath: string | undefined;
     setActiveFile: (file: string, content: EditorNode[]) => void;
     setProject: (path: string, files: FsDirEntry[]) => void;
     treeRevision: number;
 }
 
 export type ProjectSet = (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     partial: ((state: Record<string, any>) => Record<string, any>) | Record<string, any>
 ) => void;
 
 export interface ProjectState extends ProjectIoSlice, ProjectMacrosSlice, ProjectManifestSlice, ProjectSessionSlice {}
-

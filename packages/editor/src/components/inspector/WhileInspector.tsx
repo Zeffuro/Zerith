@@ -1,7 +1,8 @@
+import type { WhileCommand } from 'core';
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 
-export function WhileInspector({ index, node }: { index?: null | number; node: any; }) {
+export function WhileInspector({ index, node }: { index?: null | number; node: WhileCommand; }) {
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle, uiScale } = useInspectorFieldEditor(index);
 
     return (
@@ -9,7 +10,7 @@ export function WhileInspector({ index, node }: { index?: null | number; node: a
             <div>
                 <label style={labelStyle}>Condition Source</label>
                 <select
-                    onChange={(e) => handleChange('source', e.target.value)}
+                    onChange={(event) => handleChange('source', event.target.value)}
                     style={getFieldInputStyle('source')}
                     value={node.source || 'variable'}
                 >
@@ -22,8 +23,8 @@ export function WhileInspector({ index, node }: { index?: null | number; node: a
             <div>
                 <label style={labelStyle}>Key / ID</label>
                 <input
-                    onChange={(e) => handleChange('key', e.target.value)}
-                    placeholder="e.g. focus"
+                    onChange={(event) => handleChange('key', event.target.value)}
+                    placeholder="e.g. has_met_bob"
                     style={getFieldInputStyle('key')}
                     type="text"
                     value={node.key || ''}
@@ -34,31 +35,25 @@ export function WhileInspector({ index, node }: { index?: null | number; node: a
             <div style={{ display: 'flex', gap: '8px' }}>
                 <div style={{ flex: 1 }}>
                     <label style={labelStyle}>Operator</label>
-                    <select
-                        onChange={(e) => handleChange('op', e.target.value)}
-                        style={getFieldInputStyle('op')}
-                        value={node.op || 'eq'}
-                    >
-                        <option value="eq">==</option>
-                        <option value="neq">!=</option>
-                        <option value="gt">&gt;</option>
-                        <option value="gte">&gt;=</option>
-                        <option value="lt">&lt;</option>
-                        <option value="lte">&lt;=</option>
+                    <select onChange={(event) => handleChange('op', event.target.value)} style={getFieldInputStyle('op')} value={node.op || 'eq'}>
+                        <option value="eq">== (Equal)</option>
+                        <option value="neq">!= (Not Equal)</option>
+                        <option value="gt">&gt; (Greater)</option>
+                        <option value="lt">&lt; (Less)</option>
                     </select>
                     <FieldError errors={getFieldErrors('op')} />
                 </div>
                 <div style={{ flex: 1 }}>
                     <label style={labelStyle}>Value</label>
                     <input
-                        onChange={(e) => {
-                            let v: any = e.target.value;
-                            if (v === 'true') v = true;
-                            else if (v === 'false') v = false;
-                            else if (v !== '' && !isNaN(Number(v))) v = Number(v);
-                            handleChange('value', v);
+                        onChange={(event) => {
+                            let value: boolean | number | string = event.target.value;
+                            const numberValue = Number(value);
+                            if (value === 'true') value = true;
+                            else if (value === 'false') value = false;
+                            else if (!Number.isNaN(numberValue) && value !== '') value = numberValue;
+                            handleChange('value', value);
                         }}
-                        placeholder="true / 3 / text"
                         style={getFieldInputStyle('value')}
                         type="text"
                         value={node.value === undefined ? '' : String(node.value)}
@@ -68,13 +63,12 @@ export function WhileInspector({ index, node }: { index?: null | number; node: a
             </div>
 
             <div>
-                <label style={labelStyle}>Max Iterations (safety)</label>
+                <label style={labelStyle}>Max Iterations (Safety)</label>
                 <input
-                    min={1}
-                    onChange={(e) => handleChange('maxIterations', Number(e.target.value))}
+                    onChange={(event) => handleChange('maxIterations', Number(event.target.value))}
                     style={getFieldInputStyle('maxIterations')}
                     type="number"
-                    value={node.maxIterations ?? 10_000}
+                    value={node.maxIterations ?? 1000}
                 />
                 <FieldError errors={getFieldErrors('maxIterations')} />
             </div>

@@ -1,11 +1,11 @@
+import type { BaseCommand } from 'core';
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { inferCommandFields } from '../../utils/zodInference';
 import { FieldError } from './FieldError';
 
-
 const HIDDEN_COMPLEX_KEYS = new Set(['body', 'commands', 'else', 'options', 'then']);
 
-export function SchemaFallbackInspector({ index, node }: { index?: null | number; node: any; }) {
+export function SchemaFallbackInspector({ index, node }: { index?: null | number; node: BaseCommand; }) {
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle } = useInspectorFieldEditor(index);
     const fields = inferCommandFields(node?.type).filter((f) => !HIDDEN_COMPLEX_KEYS.has(f.key));
 
@@ -24,14 +24,14 @@ export function SchemaFallbackInspector({ index, node }: { index?: null | number
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {fields.map((f) => {
-                const value = node[f.key];
+                const value = (node as Record<string, any>)[f.key];
 
                 if (f.kind === 'boolean') {
                     return (
                         <div key={f.key}>
                             <label style={labelStyle}>{f.key}</label>
                             <select
-                                onChange={(e) => handleChange(f.key, e.target.value === 'true')}
+                                onChange={(event) => handleChange(f.key, event.target.value === 'true')}
                                 style={getFieldInputStyle(f.key)}
                                 value={value ? 'true' : 'false'}
                             >
@@ -48,8 +48,8 @@ export function SchemaFallbackInspector({ index, node }: { index?: null | number
                         <div key={f.key}>
                             <label style={labelStyle}>{f.key}</label>
                             <input
-                                onChange={(e) =>
-                                    handleChange(f.key, e.target.value === '' ? undefined : Number(e.target.value))
+                                onChange={(event) =>
+                                    handleChange(f.key, event.target.value === '' ? undefined : Number(event.target.value))
                                 }
                                 style={getFieldInputStyle(f.key)}
                                 type="number"
@@ -65,7 +65,7 @@ export function SchemaFallbackInspector({ index, node }: { index?: null | number
                         <div key={f.key}>
                             <label style={labelStyle}>{f.key}</label>
                             <select
-                                onChange={(e) => handleChange(f.key, e.target.value)}
+                                onChange={(event) => handleChange(f.key, event.target.value)}
                                 style={getFieldInputStyle(f.key)}
                                 value={value ?? ''}
                             >
@@ -104,7 +104,7 @@ export function SchemaFallbackInspector({ index, node }: { index?: null | number
                     <div key={f.key}>
                         <label style={labelStyle}>{f.key}</label>
                         <input
-                            onChange={(e) => handleChange(f.key, e.target.value)}
+                            onChange={(event) => handleChange(f.key, event.target.value)}
                             style={getFieldInputStyle(f.key)}
                             type="text"
                             value={value ?? ''}

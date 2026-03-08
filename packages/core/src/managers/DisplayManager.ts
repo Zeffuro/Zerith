@@ -15,14 +15,14 @@ export const DefaultDisplayConfig: DisplayConfig = {
 };
 
 export class DisplayManager {
-    public canvas: HTMLCanvasElement | null = null;
+    public canvas: HTMLCanvasElement | undefined;
     public get height(): number { return this.config.height; }
     public get width(): number { return this.config.width; }
     private app: Application;
-    private boundApplyScale: (() => void) | null = null;
+    private boundApplyScale: (() => void) | undefined;
 
     private config: DisplayConfig;
-    private resizeObserver: null | ResizeObserver = null;
+    private resizeObserver: ResizeObserver | undefined;
 
     constructor(app: Application, config: Partial<DisplayConfig> = {}) {
         this.app = app;
@@ -34,8 +34,8 @@ export class DisplayManager {
             window.removeEventListener('resize', this.boundApplyScale);
         }
         this.resizeObserver?.disconnect();
-        this.resizeObserver = null;
-        this.boundApplyScale = null;
+        this.resizeObserver = undefined;
+        this.boundApplyScale = undefined;
     }
 
     public async init(canvas: HTMLCanvasElement) {

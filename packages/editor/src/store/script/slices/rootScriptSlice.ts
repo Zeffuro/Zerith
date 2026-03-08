@@ -13,8 +13,7 @@ export const createRootScriptSlice: ScriptSlice<RootScriptSlice> = (set) => ({
             past: [],
             rootScript: normalizeScript(script),
             scopePath: [],
-            selectedNodeIndex: null,
-            selectedNodePath: null,
+            selectedNodeIndex: undefined,
+            selectedNodePath: undefined,
         }),
 });
-

@@ -2,6 +2,14 @@ import { sound } from '@pixi/sound';
 import { Assets } from 'pixi.js';
 
 import type { AssetResolver } from '../Engine';
+import type { BackgroundCommand } from '../handlers/BackgroundHandler';
+import type { BgmCommand } from '../handlers/BgmHandler';
+import type { BlockCommand } from '../handlers/BlockHandler';
+import type { ForCommand } from '../handlers/ForHandler';
+import type { IfCommand } from '../handlers/IfHandler';
+import type { SfxCommand } from '../handlers/SfxHandler';
+import type { SpriteCommand } from '../handlers/SpriteHandler';
+import type { WhileCommand } from '../handlers/WhileHandler';
 import type { BaseCommand, CharacterDefinition, Script, SpritesheetConfig } from '../types';
 import type { SpritesheetManager } from './SpritesheetManager';
 
@@ -23,36 +31,44 @@ export class AssetManager {
         const textures = new Set<string>();
         const audio = new Set<string>();
 
-        const walk = (commands: BaseCommand[]) => {
-            for (const cmd of commands) {
-                if ((cmd.type === 'background' || cmd.type === 'scene_change') && cmd.assetUrl) {
-                    textures.add(cmd.assetUrl);
+        const walk = (cmds: BaseCommand[]) => {
+            for (const cmd of cmds) {
+                if (cmd.type === 'background') {
+                    const bgCmd = cmd as BackgroundCommand;
+                    if (bgCmd.assetUrl) textures.add(bgCmd.assetUrl);
                 }
-                if (cmd.type === 'sprite' && cmd.assetUrl) {
-                    textures.add(cmd.assetUrl);
+                if (cmd.type === 'sfx') {
+                    const sfxCmd = cmd as SfxCommand;
+                    if (sfxCmd.assetUrl) audio.add(sfxCmd.assetUrl);
                 }
-                if (cmd.type === 'bgm' && cmd.action === 'play' && cmd.assetUrl) {
-                    audio.add(cmd.assetUrl);
+                if (cmd.type === 'bgm') {
+                    const bgmCmd = cmd as BgmCommand;
+                    if (bgmCmd.assetUrl) audio.add(bgmCmd.assetUrl);
                 }
-                if (cmd.type === 'sfx' && cmd.assetUrl) {
-                    audio.add(cmd.assetUrl);
+                if (cmd.type === 'sprite') {
+                    const spriteCmd = cmd as SpriteCommand;
+                    if (spriteCmd.assetUrl) textures.add(spriteCmd.assetUrl);
                 }
-                if (cmd.type === 'block' && Array.isArray(cmd.commands)) {
-                    walk(cmd.commands);
+
+                if (cmd.type === 'block') {
+                    const blockCmd = cmd as BlockCommand;
+                    if (Array.isArray(blockCmd.commands)) {
+                        walk(blockCmd.commands);
+                    }
                 }
                 if (cmd.type === 'if') {
-                    if (Array.isArray(cmd.then)) walk(cmd.then);
-                    if (Array.isArray(cmd.else)) walk(cmd.else);
+                    const ifCmd = cmd as IfCommand;
+                    if (Array.isArray(ifCmd.then)) walk(ifCmd.then);
+                    if (Array.isArray(ifCmd.else)) walk(ifCmd.else);
                 }
-                if (cmd.type === 'while' && Array.isArray(cmd.body)) {
-                    walk(cmd.body);
+                if (cmd.type === 'while') {
+                    const whileCmd = cmd as WhileCommand;
+                    if (Array.isArray(whileCmd.body)) walk(whileCmd.body);
                 }
-                if (cmd.type === 'for' && Array.isArray(cmd.body)) {
-                    walk(cmd.body);
-                }
-                if (cmd.type === 'choice' && Array.isArray(cmd.options)) {
-                    for (const option of cmd.options) {
-                        if (Array.isArray(option.commands)) walk(option.commands);
+                if (cmd.type === 'for') {
+                    const forCmd = cmd as ForCommand;
+                    if (Array.isArray(forCmd.body)) {
+                        walk(forCmd.body);
                     }
                 }
             }
@@ -151,4 +167,3 @@ export class AssetManager {
         }
     }
 }
-

@@ -1,8 +1,9 @@
 import { z } from 'zod';
 
-/* Base */
+import type { BaseCommand } from './types';
 
-const BaseCommandSchema = z.object({
+
+export const BaseCommandSchema = z.object({
     type: z.string(),
 }).catchall(z.unknown());
 
@@ -96,11 +97,12 @@ const ConditionSchema = z.object({
 export const IfCommandSchema = z.object({
     all: z.array(ConditionSchema).optional(),
     any: z.array(ConditionSchema).optional(),
-    else: z.array(BaseCommandSchema).optional(),
+    else: z.array(z.lazy(() => CommandSchema)).optional(),
     key: z.string().optional(),
     op: ComparisonOpSchema.optional(),
     source: z.string().optional(),
-    then: z.array(BaseCommandSchema).optional(),
+    // eslint-disable-next-line unicorn/no-thenable
+    then: z.array(z.lazy(() => CommandSchema)).optional(),
     type: z.literal('if'),
     value: z.any().optional(),
 });
@@ -110,7 +112,7 @@ export const IfCommandSchema = z.object({
 export const WhileCommandSchema = z.object({
     all: z.array(ConditionSchema).optional(),
     any: z.array(ConditionSchema).optional(),
-    body: z.array(BaseCommandSchema).optional(),
+    body: z.array(z.lazy(() => CommandSchema)).optional(),
     key: z.string().optional(),
     maxIterations: z.number().int().positive().optional(),
     op: ComparisonOpSchema.optional(),
@@ -122,7 +124,7 @@ export const WhileCommandSchema = z.object({
 /* For */
 
 export const ForCommandSchema = z.object({
-    body: z.array(BaseCommandSchema).optional(),
+    body: z.array(z.lazy(() => CommandSchema)).optional(),
     from: z.number().optional(),
     iterator: z.string().optional(),
     step: z.number().optional(),
@@ -133,7 +135,7 @@ export const ForCommandSchema = z.object({
 /* Choice */
 
 export const ChoiceOptionSchema = z.object({
-    commands: z.array(BaseCommandSchema).optional(),
+    commands: z.array(z.lazy(() => CommandSchema)).optional(),
     label: z.string(),
 });
 
@@ -166,7 +168,7 @@ export const LabelCommandSchema = z.object({
 /* Block */
 
 export const BlockCommandSchema = z.object({
-    commands: z.array(BaseCommandSchema),
+    commands: z.array(z.lazy(() => CommandSchema)),
     type: z.literal('block'),
 });
 
@@ -242,7 +244,7 @@ const BuiltInCommandSchemas = [
     ItemCommandSchema,
 ] as const;
 
-export const CommandSchema = z.discriminatedUnion('type', BuiltInCommandSchemas);
+export const CommandSchema: z.ZodType<BaseCommand> = z.discriminatedUnion('type', BuiltInCommandSchemas);
 
 const BuiltInCommandSchemaRegistry: Record<string, z.ZodType> = {
     background: BackgroundCommandSchema,
@@ -268,7 +270,7 @@ const BuiltInCommandSchemaRegistry: Record<string, z.ZodType> = {
     while: WhileCommandSchema,
 };
 
-type DiscriminatedOption = z.ZodTypeAny;
+type DiscriminatedOption = z.ZodObject<z.ZodRawShape>;
 
 class SchemaRegistrySingleton {
     public readonly schemas: Record<string, z.ZodType>;
@@ -277,35 +279,40 @@ class SchemaRegistrySingleton {
         this.schemas = { ...initialSchemas };
     }
 
-    get(type: string): undefined | z.ZodType {
+    /*
+    public get(type: string): undefined | z.ZodType {
         return this.schemas[type];
     }
+    */
 
-    getCommandSchema(): z.ZodType {
+    public getCommandSchema(): z.ZodType {
         const options = Object.values(this.schemas) as DiscriminatedOption[];
         const knownTypes = new Set(Object.keys(this.schemas));
 
-        const UnknownCommandSchema = BaseCommandSchema.refine((cmd) => !knownTypes.has(cmd.type));
+        const FallbackSchema = BaseCommandSchema.refine((cmd) => !knownTypes.has(cmd.type));
 
         if (options.length === 0) {
-            return UnknownCommandSchema;
+            return FallbackSchema;
         }
 
         if (options.length === 1) {
-            return z.union([options[0], UnknownCommandSchema]);
+            return z.union([options[0], FallbackSchema]);
         }
 
-        const KnownCommandSchema = z.discriminatedUnion('type', options as any);
-        return z.union([KnownCommandSchema, UnknownCommandSchema]);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const KnownCommandSchema = z.discriminatedUnion('type', options as [any, ...any[]]);
+        return z.union([KnownCommandSchema, FallbackSchema]);
     }
 
-    getRegistry(): Record<string, z.ZodType> {
+    public getRegistry(): Record<string, z.ZodType> {
         return this.schemas;
     }
 
-    register(type: string, schema: z.ZodType): void {
+    /*
+    public register(type: string, schema: z.ZodType): void {
         this.schemas[type] = schema;
     }
+    */
 }
 
 export const SchemaRegistry = new SchemaRegistrySingleton(BuiltInCommandSchemaRegistry);
@@ -318,14 +325,14 @@ export const ScriptSchema = z.array(z.lazy(() => SchemaRegistry.getCommandSchema
 /**
  * Validates an entire script array. Returns parsed commands or throws.
  */
-export function validateScript(script: unknown[]): z.infer<typeof CommandSchema>[] {
+export function validateScript(script: unknown[]): BaseCommand[] {
     const commandSchema = SchemaRegistry.getCommandSchema();
     return script.map((cmd, index) => {
         const result = commandSchema.safeParse(cmd);
         if (!result.success) {
             console.warn(`[Schema] Invalid command at index ${index}:`, result.error.issues);
-            return cmd;
+            return cmd as BaseCommand;
         }
-        return result.data;
-    }) as any;
+        return result.data as BaseCommand;
+    });
 }

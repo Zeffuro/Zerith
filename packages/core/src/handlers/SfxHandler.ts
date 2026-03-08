@@ -12,7 +12,7 @@ export interface SfxCommand extends BaseCommand {
 
 export class SfxHandler implements CommandHandler<SfxCommand> {
     public autoNext = true;
-    public type: 'sfx' = 'sfx';
+    public type = 'sfx' as const;
 
     execute = async (command: SfxCommand, engine: Engine) => {
         const url = command.assetUrl;
@@ -31,7 +31,7 @@ export class SfxHandler implements CommandHandler<SfxCommand> {
                 });
             }
 
-            sound.play(resolvedUrl, {
+            await sound.play(resolvedUrl, {
                 volume: (command.volume ?? 0.8) * engine.audio.sfxVolume,
             });
 

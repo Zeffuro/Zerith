@@ -12,10 +12,10 @@ export interface TransitionCommand extends BaseCommand {
 
 export class TransitionHandler implements CommandHandler<TransitionCommand> {
     public autoNext = true;
-    public type: 'transition' = 'transition';
-    private fadeRect: Graphics | null = null;
+    public type = 'transition' as const;
+    private fadeRect: Graphics | undefined;
 
-    execute = async (command: TransitionCommand, engine: Engine) => {
+    execute = (command: TransitionCommand, engine: Engine) => {
         const duration = (command.duration || 500) / 1000;
 
         if (!this.fadeRect) {
@@ -28,7 +28,7 @@ export class TransitionHandler implements CommandHandler<TransitionCommand> {
         const targetAlpha = command.action === 'fade_out' ? 1 : 0;
 
         return new Promise<void>((resolve) => {
-            gsap.to(this.fadeRect, {
+            gsap.to(this.fadeRect!, {
                 alpha: targetAlpha,
                 duration: duration,
                 ease: "power2.inOut",

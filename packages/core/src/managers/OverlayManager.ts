@@ -1,4 +1,4 @@
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, FederatedPointerEvent, Graphics, Text } from 'pixi.js';
 
 import type { Engine } from '../Engine';
 import type { MenuPanel } from '../types';
@@ -32,19 +32,19 @@ export class OverlayManager {
     public get isOpen(): boolean {
         return this._isOpen;
     }
-    private _activeCleanup: (() => void) | null = null;
-    private _focus: null | PanelFocusManager = null;
+    private _activeCleanup: (() => void) | undefined;
+    private _focus: PanelFocusManager | undefined;
     private _isOpen = false;
-    private _onBack: (() => void) | null = null;
-    private _onConfirm: (() => void) | null = null;
-    private _onNavigate: ((dir: string) => void) | null = null;
-    private container: Container | null = null;
+    private _onBack: (() => void) | undefined;
+    private _onConfirm: (() => void) | undefined;
+    private _onNavigate: ((direction: unknown) => void) | undefined;
+    private container: Container | undefined;
     private readonly engine: Engine;
-    private panelContainer: Container | null = null;
+    private panelContainer: Container | undefined;
 
     private panels: MenuPanel[] = [];
 
-    private sceneLoadingText: null | Text = null;
+    private sceneLoadingText: Text | undefined;
 
     constructor(engine: Engine, config: OverlayConfig = {}) {
         this.engine = engine;
@@ -65,7 +65,7 @@ export class OverlayManager {
         };
 
         this.engine.events.on('menu:toggle', () => this.toggle());
-        this.engine.events.on('scene:loading', (sceneName: string) => this.showSceneLoading(sceneName));
+        this.engine.events.on('scene:loading', (sceneName: unknown) => this.showSceneLoading(sceneName as string));
         this.engine.events.on('scene:loaded', () => this.hideSceneLoading());
     }
 
@@ -79,17 +79,19 @@ export class OverlayManager {
     public closePanel() {
         if (this._activeCleanup) {
             this._activeCleanup();
-            this._activeCleanup = null;
+            this._activeCleanup = undefined;
         }
         if (this.panelContainer) {
             this.panelContainer.destroy({ children: true });
-            this.panelContainer = null;
+            this.panelContainer = undefined;
         }
     }
 
+    /*
     public createButton(label: string, x: number, y: number, action: () => void): Container {
         return createButton(this.getUIContext(), { label, x, y }, action);
     }
+    */
 
     public createPanelBase(): Container {
         const w = this.engine.display.width;
@@ -102,7 +104,7 @@ export class OverlayManager {
             .rect(0, 0, w, h)
             .fill({ alpha: 0.95, color: this.config.backgroundColor });
         bg.eventMode = 'static';
-        bg.on('pointerdown', (e: any) => e.stopPropagation());
+        bg.on('pointerdown', (event: FederatedPointerEvent) => event.stopPropagation());
         root.addChild(bg);
 
         return root;
@@ -126,55 +128,58 @@ export class OverlayManager {
     }
 
     public registerPanel(panel: MenuPanel) {
-        if (!this.panels.find(p => p.id === panel.id)) {
+        if (!this.panels.some(p => p.id === panel.id)) {
             this.panels.push(panel);
         }
     }
 
+    /*
     public removePanel(id: string) {
         this.panels = this.panels.filter(p => p.id !== id);
     }
+    */
 
     public scale(value: number): number {
         return Math.round(value * this.config.uiScale);
     }
 
+    /*
     public setFocus(fm: PanelFocusManager) {
         this._focus = fm;
     }
+    */
 
     public showPanel(panel: MenuPanel) {
-        this.closePanel();
+        if (this.panelContainer) this.closePanel();
+
         if (this.container) this.container.visible = false;
-
+        
         this._focus = new PanelFocusManager();
-
-        const onClose = () => {
+        this._focus.onBack = () => {
             this.closePanel();
             if (this.container) this.container.visible = true;
             this.rebuildMainMenuFocus();
         };
 
-        this._focus.onBack = onClose;
-
-        const { cleanup, container } = panel.build(this.engine, onClose);
+        const { cleanup, container } = panel.build(this.engine, this._focus.onBack);
 
         this.panelContainer = container;
-        this._activeCleanup = cleanup ?? null;
+        this._activeCleanup = cleanup;
         this.engine.layers.overlay.addChild(this.panelContainer);
 
         this._focus.focusInitial(0);
     }
 
     public toggle() {
-        this._isOpen ? this.close() : this.open();
+        if (this._isOpen) this.close();
+        else this.open();
     }
 
     private clearAll() {
         this.closePanel();
         if (this.container) {
             this.container.destroy({ children: true });
-            this.container = null;
+            this.container = undefined;
         }
         this.hideSceneLoading();
     }
@@ -182,7 +187,7 @@ export class OverlayManager {
     private hideSceneLoading() {
         if (!this.sceneLoadingText) return;
         this.sceneLoadingText.destroy();
-        this.sceneLoadingText = null;
+        this.sceneLoadingText = undefined;
     }
 
     private rebuildMainMenuFocus() {
@@ -203,7 +208,7 @@ export class OverlayManager {
             .rect(0, 0, w, h)
             .fill({ alpha: this.config.backgroundAlpha, color: this.config.backgroundColor });
         bg.eventMode = 'static';
-        bg.on('pointerdown', (e: any) => e.stopPropagation());
+        bg.on('pointerdown', (event: FederatedPointerEvent) => event.stopPropagation());
         this.container.addChild(bg);
 
         const title = new Text({
@@ -261,8 +266,8 @@ export class OverlayManager {
     }
 
     private subscribeInput() {
-        this._onNavigate = (dir: string) => {
-            this._focus?.navigate(dir as 'down' | 'left' | 'right' | 'up');
+        this._onNavigate = (direction: unknown) => {
+            this._focus?.navigate(direction as 'down' | 'left' | 'right' | 'up');
         };
         this._onConfirm = () => {
             this._focus?.confirm();
@@ -278,16 +283,16 @@ export class OverlayManager {
     private unsubscribeInput() {
         if (this._onNavigate) {
             this.engine.events.off('input:navigate', this._onNavigate);
-            this._onNavigate = null;
+            this._onNavigate = undefined;
         }
         if (this._onConfirm) {
             this.engine.events.off('input:confirm', this._onConfirm);
-            this._onConfirm = null;
+            this._onConfirm = undefined;
         }
         if (this._onBack) {
             this.engine.events.off('input:back', this._onBack);
-            this._onBack = null;
+            this._onBack = undefined;
         }
-        this._focus = null;
+        this._focus = undefined;
     }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { ScriptPath } from '../../../utils/scriptPathUtils';
 
@@ -40,9 +40,14 @@ export function useTimelineSearch(rootNodes: any[], typeFilter: string) {
     const activeMatchPath = matchCount === 0 ? null : matchPaths[clampedMatchIndex];
     const activeMatchDisplayIndex = matchCount === 0 ? 0 : clampedMatchIndex + 1;
 
-    useEffect(() => {
+    const [prevQuery, setPrevQuery] = useState(query);
+    const [prevTypeFilter, setPrevTypeFilter] = useState(typeFilter);
+
+    if (query !== prevQuery || typeFilter !== prevTypeFilter) {
+        setPrevQuery(query);
+        setPrevTypeFilter(typeFilter);
         setActiveMatchIndex(0);
-    }, [query, typeFilter]);
+    }
 
     const setSelectedNodePath = useScriptStore((s) => s.setSelectedNodePath);
     const setSelectedNode = useScriptStore((s) => s.setSelectedNode);
@@ -66,15 +71,15 @@ export function useTimelineSearch(rootNodes: any[], typeFilter: string) {
         }
     }, [activeMatchPath, setSelectedNodePath, setSelectedNode, setSelectedNodePaths, setSelectionAnchorPath]);
 
-    const goToNextMatch = () => {
+    const goToNextMatch = useCallback(() => {
         if (matchCount === 0) return;
         setActiveMatchIndex((previous) => (previous + 1) % matchCount);
-    };
+    }, [matchCount]);
 
-    const goToPreviousMatch = () => {
+    const goToPreviousMatch = useCallback(() => {
         if (matchCount === 0) return;
         setActiveMatchIndex((previous) => (previous - 1 + matchCount) % matchCount);
-    };
+    }, [matchCount]);
 
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
@@ -89,7 +94,7 @@ export function useTimelineSearch(rootNodes: any[], typeFilter: string) {
 
         globalThis.addEventListener('keydown', onKeyDown);
         return () => globalThis.removeEventListener('keydown', onKeyDown);
-    }, [matchCount]);
+    }, [matchCount, goToNextMatch, goToPreviousMatch]);
 
     return {
         activeMatchDisplayIndex,

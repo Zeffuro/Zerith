@@ -10,7 +10,7 @@ export interface AudioConfig {
 
 export class AudioManager {
     public bgmVolume: number;
-    public currentBgmUrl: null | string = null;
+    public currentBgmUrl: string | undefined;
     public masterVolume: number;
     public sfxVolume: number;
 
@@ -80,6 +80,7 @@ export class AudioManager {
 
     private applyBgmVolume() {
         if (!this.currentBgmUrl || !sound.exists(this.currentBgmUrl)) return;
+        // eslint-disable-next-line unicorn/no-array-callback-reference
         const snd = sound.find(this.currentBgmUrl);
         if (snd) {
             snd.volume = this.bgmVolume;

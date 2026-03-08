@@ -1,7 +1,8 @@
+import type { TransitionCommand } from 'core';
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 
-export function TransitionInspector({ index, node }: { index?: null | number; node: any; }) {
+export function TransitionInspector({ index, node }: { index?: null | number; node: TransitionCommand; }) {
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle } = useInspectorFieldEditor(index);
 
     return (
@@ -9,12 +10,12 @@ export function TransitionInspector({ index, node }: { index?: null | number; no
             <div>
                 <label style={labelStyle}>Action</label>
                 <select
-                    onChange={(e) => handleChange('action', e.target.value)}
+                    onChange={(event) => handleChange('action', event.target.value)}
                     style={getFieldInputStyle('action')}
-                    value={node.action || 'fade_out'}
+                    value={node.action || 'fadein'}
                 >
-                    <option value="fade_out">Fade Out</option>
-                    <option value="fade_in">Fade In</option>
+                    <option value="fadein">Fade In (Transparent)</option>
+                    <option value="fadeout">Fade Out (Black)</option>
                 </select>
                 <FieldError errors={getFieldErrors('action')} />
             </div>
@@ -23,7 +24,7 @@ export function TransitionInspector({ index, node }: { index?: null | number; no
                 <label style={labelStyle}>Duration (ms)</label>
                 <input
                     min={0}
-                    onChange={(e) => handleChange('duration', Number(e.target.value))}
+                    onChange={(event) => handleChange('duration', Number(event.target.value))}
                     style={getFieldInputStyle('duration')}
                     type="number"
                     value={node.duration ?? 500}

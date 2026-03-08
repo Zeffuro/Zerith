@@ -9,7 +9,7 @@ export interface SceneChangeCommand extends BaseCommand {
 
 export class SceneChangeHandler implements CommandHandler<SceneChangeCommand> {
     public autoNext = true;
-    public type: 'scene_change' = 'scene_change';
+    public type = 'scene_change' as const;
 
     execute = async (command: SceneChangeCommand, engine: Engine) => {
         const fadeTime = (command.duration || 1000) / 2;

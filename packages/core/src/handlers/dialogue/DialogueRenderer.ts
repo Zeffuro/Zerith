@@ -1,5 +1,5 @@
 import gsap from 'gsap';
-import { Container, Graphics, HTMLText, Sprite, Text, type TextStyleOptions } from 'pixi.js';
+import { Container, Graphics, HTMLText, Sprite, Text, type TextStyleOptions, type Texture } from 'pixi.js';
 
 import type { Engine } from '../../Engine';
 
@@ -18,7 +18,7 @@ export interface DialogueRendererConfig {
 
 export class DialogueRenderer {
     private readonly config: DialogueRendererConfig;
-    private container: Container | null = null;
+    private container: Container | undefined;
     private messageText!: HTMLText;
     private nameText!: Text;
     private portraitSprite!: Sprite;
@@ -73,27 +73,31 @@ export class DialogueRenderer {
 
         this.nameText = new Text({
             style: {
+                ...this.config.nameStyle,
                 fontFamily: t.fontFamily,
                 fontSize: t.fontSize + 4,
                 fontWeight: 'bold',
-                ...this.config.nameStyle,
             },
             text: ''
         });
-        this.nameText.position.set(boxX + padding, boxY + 15);
+        const nameX = boxX + padding;
+        const nameY = boxY + 15;
+        this.nameText.position.set(nameX, nameY);
 
         this.messageText = new HTMLText({
             style: {
+                align: 'left',
                 fill: '#ffffff',
                 fontFamily: t.fontFamily,
                 fontSize: t.fontSize,
                 wordWrap: true,
                 wordWrapWidth: boxWidth - (padding * 2),
-                ...this.config.messageStyle,
             },
             text: ''
         });
-        this.messageText.position.set(boxX + padding, boxY + 55);
+        const messageX = boxX + padding;
+        const messageY = boxY + 55;
+        this.messageText.position.set(messageX, messageY);
 
         this.container.addChild(bg, this.nameText, this.messageText);
         engine.layers.ui.addChild(this.container);
@@ -108,7 +112,7 @@ export class DialogueRenderer {
     }
 
     public reset() {
-        this.container = null;
+        this.container = undefined;
     }
 
     public setMessageText(text: string) {
@@ -117,11 +121,11 @@ export class DialogueRenderer {
 
     public setSpeaker(displayName: string, fill: number | string) {
         this.nameText.text = displayName;
-        this.nameText.style.fill = fill as any;
+        this.nameText.style.fill = fill;
     }
 
     public async showPortrait(engine: Engine, portraitUrl: string, side: 'left' | 'right') {
-        this.portraitSprite.texture = await engine.loadAsset(portraitUrl);
+        this.portraitSprite.texture = await engine.loadAsset<Texture>(portraitUrl);
         this.portraitSprite.visible = true;
         this.portraitSprite.anchor.set(0.5, 1);
 
@@ -136,4 +140,3 @@ export class DialogueRenderer {
         this.portraitSprite.scale.set(side === 'right' ? -scale : scale, scale);
     }
 }
-

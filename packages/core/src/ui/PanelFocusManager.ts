@@ -9,18 +9,18 @@ export class PanelFocusManager {
         return this.items.length;
     }
     public set onBack(handler: (() => void) | null) {
-        this._onBack = handler;
+        this._onBack = handler ?? undefined;
     }
     public set onNavigateRaw(handler: ((direction: 'down' | 'left' | 'right' | 'up') => boolean) | null) {
-        this._onNavigateRaw = handler;
+        this._onNavigateRaw = handler ?? undefined;
     }
     public get selectedIndex(): number {
         return this._selectedIndex;
     }
 
-    private _onBack: (() => void) | null = null;
+    private _onBack: (() => void) | undefined = undefined;
 
-    private _onNavigateRaw: ((direction: 'down' | 'left' | 'right' | 'up') => boolean) | null = null;
+    private _onNavigateRaw: ((direction: 'down' | 'left' | 'right' | 'up') => boolean) | undefined = undefined;
 
     private _selectedIndex = 0;
 

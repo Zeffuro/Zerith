@@ -7,6 +7,7 @@ export interface CharacterDefinition {
     blipUrl?: string;
     displayDefaults?: DisplayDefaults;
     displayName: string;
+    name: string;
     nameColor?: string;
     portraitUrl?: string;
     poses?: Record<string, string>;

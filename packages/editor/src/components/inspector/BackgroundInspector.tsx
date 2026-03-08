@@ -1,8 +1,9 @@
+import type { BackgroundCommand } from 'core';
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 import { AssetPickerField } from './fields/AssetPickerField';
 
-export function BackgroundInspector({ index, node }: { index?: null | number; node: any; }) {
+export function BackgroundInspector({ index, node }: { index?: null | number; node: BackgroundCommand; }) {
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle } = useInspectorFieldEditor(index);
     const assetErrors = getFieldErrors('assetUrl');
 

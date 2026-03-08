@@ -1,4 +1,4 @@
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, type FederatedPointerEvent, Graphics, Text } from 'pixi.js';
 
 import type { Engine } from '../Engine';
 import type { MenuPanel } from '../types';
@@ -82,12 +82,12 @@ export class SaveLoadPanel implements MenuPanel {
 
             const activateSlot = () => {
                 if (this.mode === 'save') {
-                    engine.saves.save(slotNumber);
+                    void engine.saves.save(slotNumber);
                     engine.notifications.show(`Saved to Slot ${slotNumber}`);
                     engine.overlay.close();
                 } else {
                     if (!meta) { engine.notifications.show('Slot is empty'); return; }
-                    engine.saves.load(slotNumber).then(() => {
+                    void engine.saves.load(slotNumber).then(() => {
                         engine.notifications.show(`Loaded Slot ${slotNumber}`);
                         engine.overlay.close();
                     });
@@ -96,8 +96,8 @@ export class SaveLoadPanel implements MenuPanel {
 
             slotContainer.on('pointerover', () => styleSlot(slotBg, true));
             slotContainer.on('pointerout', () => styleSlot(slotBg, false));
-            slotContainer.on('pointerdown', (e: any) => {
-                e.stopPropagation();
+            slotContainer.on('pointerdown', (event: FederatedPointerEvent) => {
+                event.stopPropagation();
                 activateSlot();
             });
 

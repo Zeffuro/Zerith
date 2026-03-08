@@ -1,16 +1,18 @@
 import type { TextStyleOptions } from 'pixi.js';
 
-import {sound} from '@pixi/sound';
+import { sound } from '@pixi/sound';
 
-import type {Engine} from '../Engine';
-import type {CommandHandler} from '../types';
-import type {CharacterDefinition} from '../types';
+import type { Engine } from '../Engine';
+import type { CharacterDefinition } from '../types';
+import type { CommandHandler } from '../types';
+import type { BaseCommand } from '../types';
+import type { SpriteCommand } from './SpriteHandler';
 
 import { parseTextTags, transformShorthands } from '../utils/TextParser';
 import { DialogueRenderer } from './dialogue/DialogueRenderer';
 import { TypewriterController } from './dialogue/TypewriterController';
 
-export interface DialogueCommand {
+export interface DialogueCommand extends BaseCommand {
     instant?: boolean;
     portraitSide?: 'left' | 'right';
     speaker: string;
@@ -36,9 +38,9 @@ export interface DialogueConfig {
 
 export class DialogueHandler implements CommandHandler<DialogueCommand> {
     public autoNext = false;
-    public type: 'dialogue' = 'dialogue';
-    private activeAbortController: AbortController | null = null;
-    private config: DialogueConfig;
+    public type = 'dialogue' as const;
+    private activeAbortController: AbortController | undefined;
+    private readonly config: DialogueConfig;
     private readonly renderer: DialogueRenderer;
     private readonly typewriter: TypewriterController;
 
@@ -60,9 +62,9 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         const resolvedText = engine.resolveText(command.text);
 
         const speakerKey = command.speaker.toLowerCase();
-        const charData = this.config.characters?.[speakerKey] ||
-            Object.entries(this.config.characters || {})
-                .find(([k]) => k.toLowerCase() === speakerKey)?.[1];
+        const charData = (this.config.characters?.[speakerKey] ||
+            Object.values(this.config.characters || {})
+                .find((c) => c.name.toLowerCase() === speakerKey));
 
         const displayName = charData?.displayName || command.speaker;
 
@@ -83,8 +85,8 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         } else {
             this.renderer.hidePortrait();
             engine.setState('__sys_dialogue', {
-                portraitSide: null,
-                portraitUrl: null,
+                portraitSide: undefined,
+                portraitUrl: undefined,
                 speaker: command.speaker,
                 text: command.text,
             });
@@ -92,15 +94,16 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
 
         const fullCharData = engine.manifest?.characters?.[speakerKey];
         if (fullCharData?.talkAnimation) {
-            const spriteState = engine.getState('__sys_sprites');
+            const spriteState = engine.getState<Record<string, unknown>>('__sys_sprites');
             if (spriteState?.[command.speaker] || spriteState?.[speakerKey]) {
                 const spriteId = spriteState[command.speaker] ? command.speaker : speakerKey;
-                await engine.runCommand({
+                const animCommand: SpriteCommand = {
                     action: 'animate',
                     animation: fullCharData.talkAnimation,
                     id: spriteId,
                     type: 'sprite',
-                });
+                };
+                await engine.runCommand(animCommand);
                 if (signal.aborted) return;
             }
         }
@@ -110,9 +113,9 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         if (resolvedBlipUrl) {
             try {
                 if (!sound.exists(resolvedBlipUrl)) {
-                    await new Promise((res, rej) => {
+                    await new Promise<void>((resolve, reject) => {
                         sound.add(resolvedBlipUrl, {
-                            loaded: (error) => error ? rej(error) : res(null),
+                            loaded: (error) => error ? reject(error) : resolve(),
                             preload: true,
                             url: resolvedBlipUrl
                         });
@@ -150,17 +153,17 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
             waitForPromptInput: (abortSignal) => this.waitForPromptInput(engine, abortSignal),
         });
 
-        if (!signal.aborted && engine.autoAdvanceDelay !== null) {
+        if (!signal.aborted && engine.autoAdvanceDelay !== undefined) {
             await this.waitForDelay(engine.autoAdvanceDelay, signal);
             if (!signal.aborted) {
-                engine.playNext();
+                void engine.playNext();
             }
         }
     };
 
     reset = () => {
         this.activeAbortController?.abort();
-        this.activeAbortController = null;
+        this.activeAbortController = undefined;
         this.renderer.reset();
     };
 

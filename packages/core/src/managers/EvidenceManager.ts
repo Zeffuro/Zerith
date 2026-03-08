@@ -6,10 +6,10 @@ export interface EvidenceItem extends ItemDefinition {
 
 export class EvidenceManager extends ItemManager<EvidenceItem> {
     public getEvidence(): EvidenceItem[] {
-        return this.getAll().filter(e => e.type === 'evidence');
+        return this.getAll().filter(item => item.type === 'evidence');
     }
 
     public getProfiles(): EvidenceItem[] {
-        return this.getAll().filter(e => e.type === 'profile');
+        return this.getAll().filter(item => item.type === 'profile');
     }
 }

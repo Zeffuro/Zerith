@@ -2,7 +2,7 @@ import type { MacroEntry, ProjectGet, ProjectMacrosSlice, ProjectSet } from '../
 
 export function createProjectMacrosSlice(set: ProjectSet, get: ProjectGet): ProjectMacrosSlice {
     return {
-        activeMacroName: null,
+        activeMacroName: undefined,
         addMacroEntry: (name) =>
             set((state) => {
                 const taken = state.macroEntries.map((m: MacroEntry) => m.name);
@@ -18,7 +18,7 @@ export function createProjectMacrosSlice(set: ProjectSet, get: ProjectGet): Proj
             }),
         duplicateMacroEntries: (indices) =>
             set((state) => {
-                const sorted = [...new Set(indices)].sort((a, b) => a - b);
+                const sorted = [...new Set(indices)].sort((a: number, b: number) => a - b);
                 if (sorted.length === 0) return {};
 
                 const next = [...state.macroEntries];
@@ -50,7 +50,7 @@ export function createProjectMacrosSlice(set: ProjectSet, get: ProjectGet): Proj
 
         moveMacroEntries: (fromIndices, targetIndex) =>
             set((state) => {
-                const uniqueSorted = [...new Set(fromIndices)].sort((a, b) => a - b);
+                const uniqueSorted = [...new Set(fromIndices)].sort((a: number, b: number) => a - b);
                 if (uniqueSorted.length === 0) return {};
 
                 const first = uniqueSorted[0];
@@ -59,12 +59,12 @@ export function createProjectMacrosSlice(set: ProjectSet, get: ProjectGet): Proj
                 if (dropInsideBlock) return {};
 
                 const source = [...state.macroEntries];
-                const moving = uniqueSorted.map((index) => source[index]).filter(Boolean);
+                const moving = uniqueSorted.map((index: number) => source[index]).filter(Boolean);
                 if (moving.length === 0) return {};
 
                 for (let index = uniqueSorted.length - 1; index >= 0; index--) source.splice(uniqueSorted[index], 1);
 
-                const removedBefore = uniqueSorted.filter((index) => index < targetIndex).length;
+                const removedBefore = uniqueSorted.filter((index: number) => index < targetIndex).length;
                 let insertAt = targetIndex - removedBefore;
                 if (insertAt < 0) insertAt = 0;
                 if (insertAt > source.length) insertAt = source.length;

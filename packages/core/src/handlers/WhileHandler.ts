@@ -2,20 +2,27 @@ import type { Engine } from '../Engine';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface WhileCommand extends BaseCommand {
-    all?: Array<{ key: string; op?: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'neq'; source?: string; value?: any; }>;
-    any?: Array<{ key: string; op?: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'neq'; source?: string; value?: any; }>;
+    all?: WhileCondition[];
+    any?: WhileCondition[];
     body?: BaseCommand[];
     key?: string;
     maxIterations?: number;
     op?: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'neq';
     source?: string;
     type: 'while';
-    value?: any;
+    value?: unknown;
+}
+
+export interface WhileCondition {
+    key: string;
+    op?: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'neq';
+    source?: string;
+    value?: unknown;
 }
 
 export class WhileHandler implements CommandHandler<WhileCommand> {
     public autoNext = true;
-    public type: 'while' = 'while';
+    public type = 'while' as const;
 
     execute = async (command: WhileCommand, engine: Engine) => {
         const body = Array.isArray(command.body) ? command.body : [];
@@ -47,7 +54,7 @@ export class WhileHandler implements CommandHandler<WhileCommand> {
     }
 
     private evaluateCondition(
-        condition: { key: string; op?: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'neq'; source?: string; value?: any; },
+        condition: WhileCondition,
         engine: Engine
     ): boolean {
         if (condition.source === 'items' || condition.source === 'evidence') {
@@ -64,13 +71,13 @@ export class WhileHandler implements CommandHandler<WhileCommand> {
         switch (op) {
             case 'eq': { return actual === condition.value;
             }
-            case 'gt': { return actual > condition.value;
+            case 'gt': { return (actual as number | string) > (condition.value as number | string);
             }
-            case 'gte': { return actual >= condition.value;
+            case 'gte': { return (actual as number | string) >= (condition.value as number | string);
             }
-            case 'lt': { return actual < condition.value;
+            case 'lt': { return (actual as number | string) < (condition.value as number | string);
             }
-            case 'lte': { return actual <= condition.value;
+            case 'lte': { return (actual as number | string) <= (condition.value as number | string);
             }
             case 'neq': { return actual !== condition.value;
             }

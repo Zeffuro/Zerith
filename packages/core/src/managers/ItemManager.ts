@@ -1,5 +1,5 @@
 export interface ItemDefinition {
-    [key: string]: any;
+    [key: string]: unknown;
     description: string;
     id: string;
     imageUrl?: string;
@@ -11,12 +11,12 @@ export class ItemManager<T extends ItemDefinition = ItemDefinition> {
     protected items: Map<string, T> = new Map();
 
     public add(id: string): boolean {
-        const def = this.definitions.get(id);
-        if (!def) {
+        const definition = this.definitions.get(id);
+        if (!definition) {
             console.warn(`[ItemManager] Unknown item id: '${id}'`);
             return false;
         }
-        this.items.set(id, { ...def });
+        this.items.set(id, { ...definition });
         return true;
     }
 
@@ -43,8 +43,8 @@ export class ItemManager<T extends ItemDefinition = ItemDefinition> {
 
     public loadDefinitions(defs: Record<string, Omit<T, 'id'>>) {
         this.definitions.clear();
-        for (const [id, def] of Object.entries(defs)) {
-            this.definitions.set(id, { ...def, id } as T);
+        for (const [id, definition] of Object.entries(defs)) {
+            this.definitions.set(id, { ...definition, id } as T);
         }
     }
 

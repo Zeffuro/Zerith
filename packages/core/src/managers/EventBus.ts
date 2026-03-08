@@ -1,10 +1,15 @@
-type Listener = (...arguments_: any[]) => void;
+type Listener = (...arguments_: unknown[]) => void;
 
 export class EventBus {
     private listeners: Map<string, Set<Listener>> = new Map();
 
-    public emit(event: string, ...arguments_: any[]) {
-        this.listeners.get(event)?.forEach(function_ => function_(...arguments_));
+    public emit(event: string, ...arguments_: unknown[]) {
+        const listeners = this.listeners.get(event);
+        if (listeners) {
+            for (const listener of listeners) {
+                listener(...arguments_);
+            }
+        }
     }
 
     public off(event: string, listener: Listener) {
@@ -19,7 +24,7 @@ export class EventBus {
     }
 
     public once(event: string, listener: Listener) {
-        const wrapper = (...arguments_: any[]) => {
+        const wrapper = (...arguments_: unknown[]) => {
             listener(...arguments_);
             this.off(event, wrapper);
         };

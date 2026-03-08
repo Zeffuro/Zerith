@@ -1,5 +1,3 @@
-import type { Engine } from '../Engine';
-
 export const BuiltInCommandTypes = [
     'dialogue',
     'choice',
@@ -25,19 +23,22 @@ export const BuiltInCommandTypes = [
 ] as const;
 
 export interface BaseCommand {
-    [key: string]: any;
-    type: CommandType;
-}
-export interface CommandHandler<TCmd extends BaseCommand = BaseCommand> {
-    autoNext?: boolean;
-    execute: (command: TCmd, engine: Engine) => Promise<void>;
-    reset?: () => void;
+    [key: string]: unknown;
     type: CommandType;
 }
 
-export type CommandType = (typeof BuiltInCommandTypes)[number];
+export interface CommandHandler<T extends BaseCommand> {
+    autoNext?: boolean;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    execute: (command: T, engine: any) => Promise<void>;
+    reset?: () => void;
+    type: T['type'];
+}
+
+export type CommandType = ({} & string) | typeof BuiltInCommandTypes[number];
 
 export type SceneMap = Record<string, Script>;
 
-export type SceneNavigationCommandType = Extract<CommandType, 'jump' | 'scene_change'>;
+export type SceneNavigationCommandType = 'call' | 'jump' | 'scene_change';
+
 export type Script = BaseCommand[];

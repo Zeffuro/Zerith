@@ -61,11 +61,11 @@ export class SpritesheetManager {
         if (!response.ok) {
             throw new Error(`Failed to fetch spritesheet atlas: ${config.atlasUrl} (${response.status})`);
         }
-        const atlasData: SpritesheetData = await response.json();
+        const atlasData = (await response.json()) as SpritesheetData;
 
-        const atlasDir = config.atlasUrl.slice(0, Math.max(0, config.atlasUrl.lastIndexOf('/') + 1));
+        const atlasDirectory = config.atlasUrl.slice(0, Math.max(0, config.atlasUrl.lastIndexOf('/') + 1));
         const imageName = atlasData.meta?.image ?? '';
-        const imagePath = imageName.startsWith('/') ? imageName : atlasDir + imageName;
+        const imagePath = imageName.startsWith('/') ? imageName : atlasDirectory + imageName;
 
         const img = await this.loadImage(this.resolver(imagePath));
 
@@ -91,7 +91,7 @@ export class SpritesheetManager {
             const img = new Image();
             img.crossOrigin = 'anonymous';
             img.addEventListener('load', () => resolve(img));
-            img.onerror = () => reject(new Error(`Failed to load image: ${url}`));
+            img.addEventListener('error', () => reject(new Error(`Failed to load image: ${url}`)));
             img.src = url;
         });
     }

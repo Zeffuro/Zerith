@@ -13,8 +13,8 @@ export interface BgmCommand extends BaseCommand {
 
 export class BgmHandler implements CommandHandler<BgmCommand> {
     public autoNext = true;
-    public type: 'bgm' = 'bgm';
-    private currentBgmUrl: null | string = null;
+    public type = 'bgm' as const;
+    private currentBgmUrl: string | undefined;
     private isPaused = false;
 
     execute = async (command: BgmCommand, engine: Engine) => {
@@ -23,7 +23,7 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
                 sound.stop(this.currentBgmUrl);
                 engine.logger.info('BGM stopped.');
             }
-            this.currentBgmUrl = null;
+            this.currentBgmUrl = undefined;
             this.isPaused = false;
             return;
         }
@@ -77,7 +77,7 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
                 this.currentBgmUrl = resolvedUrl;
                 this.isPaused = false;
 
-                sound.play(resolvedUrl, {
+                await sound.play(resolvedUrl, {
                     loop: command.loop ?? true,
                     singleInstance: true,
                     volume: (command.volume ?? 0.5) * engine.audio.bgmVolume

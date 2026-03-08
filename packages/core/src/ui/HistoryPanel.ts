@@ -97,9 +97,9 @@ export class HistoryPanel implements MenuPanel {
         };
 
         // Mouse wheel
-        const onWheel = (e: WheelEvent) => {
-            e.preventDefault();
-            applyScroll(-e.deltaY);
+        const onWheel = (event: WheelEvent) => {
+            event.preventDefault();
+            applyScroll(-event.deltaY);
         };
         engine.app.canvas.addEventListener('wheel', onWheel, { passive: false });
 

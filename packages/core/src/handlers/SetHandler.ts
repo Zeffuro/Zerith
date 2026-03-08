@@ -5,19 +5,19 @@ export interface SetCommand extends BaseCommand {
     key: string;
     op?: 'add' | 'set' | 'sub' | 'toggle';
     type: 'set';
-    value?: any;
+    value?: unknown;
 }
 
 export class SetHandler implements CommandHandler<SetCommand> {
     public autoNext = true;
-    public type: 'set' = 'set';
+    public type = 'set' as const;
 
-    execute = async (command: SetCommand, engine: Engine) => {
+    execute = (command: SetCommand, engine: Engine) => {
         const current = engine.getState(command.key);
 
         switch (command.op ?? 'set') {
             case 'add': {
-                engine.setState(command.key, (current ?? 0) + (command.value ?? 1));
+                engine.setState(command.key, ((current as number | undefined) ?? 0) + ((command.value as number | undefined) ?? 1));
                 break;
             }
             case 'set': {
@@ -25,7 +25,7 @@ export class SetHandler implements CommandHandler<SetCommand> {
                 break;
             }
             case 'sub': {
-                engine.setState(command.key, (current ?? 0) - (command.value ?? 1));
+                engine.setState(command.key, ((current as number | undefined) ?? 0) - ((command.value as number | undefined) ?? 1));
                 break;
             }
             case 'toggle': {
@@ -33,5 +33,6 @@ export class SetHandler implements CommandHandler<SetCommand> {
                 break;
             }
         }
+        return Promise.resolve();
     };
 }

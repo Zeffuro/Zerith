@@ -1,5 +1,5 @@
 import { open } from '@tauri-apps/plugin-dialog';
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useDismissiblePopup } from '../../../hooks/useDismissiblePopup';
 import { useEditorStore } from '../../../store/useEditorStore';
@@ -28,7 +28,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
 
     useDismissiblePopup(!!openMenu, rootReference, () => setOpenMenu(null));
 
-    const handleOpenProject = async () => {
+    const handleOpenProject = useCallback(async () => {
         try {
             const selectedFile = await open({
                 directory: false,
@@ -37,18 +37,18 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
                 title: 'Select game.json',
             });
 
-            if (selectedFile && typeof selectedFile === 'string') {
+            if (selectedFile) {
                 await openProjectFromManifest(selectedFile);
             }
         } catch (error) {
             console.error('Failed to open project dialog:', error);
         }
-    };
+    }, [openProjectFromManifest]);
 
-    const handleSave = async () => {
+    const handleSave = useCallback(async () => {
         if (!activeFile) return;
         await saveActiveFileFromCurrentScript();
-    };
+    }, [activeFile, saveActiveFileFromCurrentScript]);
 
     const fileItems = useMemo<MenuItem[]>(
         () =>[

@@ -22,15 +22,14 @@ export interface InputConfig {
 }
 
 export class InputManager {
-    private boundOnKeyDown: ((e: KeyboardEvent) => void) | null = null;
-    // Initialize these as null
-    private boundOnPointerDown: ((e: PointerEvent) => void) | null = null;
-    private canvas: HTMLCanvasElement | null = null;
+    private boundOnKeyDown: ((event: KeyboardEvent) => void) | undefined;
+    private boundOnPointerDown: ((event: PointerEvent) => void) | undefined;
+    private canvas: HTMLCanvasElement | undefined;
 
     private config: Required<InputConfig>;
     private engine: Engine;
 
-    private gamepadPollId: null | number = null;
+    private gamepadPollId: number | undefined;
     private prevGamepadAxes: number[] = [];
     private prevGamepadButtons: boolean[] = [];
 
@@ -66,49 +65,49 @@ export class InputManager {
 
         this.canvas = canvas;
 
-        this.boundOnPointerDown = (_: PointerEvent) => {
+        this.boundOnPointerDown = () => {
             if (this.engine.isStarted && !this.engine.overlay.isOpen) {
                 this.engine.events.emit('input:next');
                 this.engine.requestSkip();
-                this.engine.playNext();
+                void this.engine.playNext();
             }
         };
 
-        this.boundOnKeyDown = (e: KeyboardEvent) => {
+        this.boundOnKeyDown = (event: KeyboardEvent) => {
             const isGameKey = [
                 ...this.config.navigateUpKeys,
                 ...this.config.navigateDownKeys,
                 ...this.config.navigateLeftKeys,
                 ...this.config.navigateRightKeys,
                 ...this.config.advanceKeys
-            ].includes(e.key);
+            ].includes(event.key);
 
             if (isGameKey) {
-                // e.preventDefault();
+                // event.preventDefault();
             }
 
             // Navigation
-            if (this.config.navigateUpKeys.includes(e.key)) {
+            if (this.config.navigateUpKeys.includes(event.key)) {
                 this.engine.events.emit('input:navigate', 'up');
             }
-            if (this.config.navigateDownKeys.includes(e.key)) {
+            if (this.config.navigateDownKeys.includes(event.key)) {
                 this.engine.events.emit('input:navigate', 'down');
             }
-            if (this.config.navigateLeftKeys.includes(e.key)) {
+            if (this.config.navigateLeftKeys.includes(event.key)) {
                 this.engine.events.emit('input:navigate', 'left');
             }
-            if (this.config.navigateRightKeys.includes(e.key)) {
+            if (this.config.navigateRightKeys.includes(event.key)) {
                 this.engine.events.emit('input:navigate', 'right');
             }
 
             // Confirm
-            if (this.config.confirmKeys.includes(e.key)) {
+            if (this.config.confirmKeys.includes(event.key)) {
                 this.engine.events.emit('input:confirm');
             }
 
             // Back / Menu
-            if (this.config.backKeys.includes(e.key)) {
-                e.preventDefault();
+            if (this.config.backKeys.includes(event.key)) {
+                event.preventDefault();
                 if (this.engine.overlay.isOpen) {
                     this.engine.events.emit('input:back');
                 } else if (this.engine.isStarted) {
@@ -119,31 +118,31 @@ export class InputManager {
 
             // Start screen
             if (!this.engine.isStarted) {
-                if (this.config.advanceKeys.includes(e.key)) {
-                    e.preventDefault();
+                if (this.config.advanceKeys.includes(event.key)) {
+                    event.preventDefault();
                     this.engine.events.emit('input:start');
                 }
                 return;
             }
 
             // Advance dialogue
-            if (this.config.advanceKeys.includes(e.key)) {
-                e.preventDefault();
+            if (this.config.advanceKeys.includes(event.key)) {
+                event.preventDefault();
                 if (!this.engine.overlay.isOpen) {
                     this.engine.events.emit('input:next');
                     this.engine.requestSkip();
-                    this.engine.playNext();
+                    void this.engine.playNext();
                 }
                 return;
             }
 
             // Save/Load Shortcuts
-            const key = e.key.toLowerCase();
+            const key = event.key.toLowerCase();
             if (key === this.config.saveKey) {
-                this.engine.saves.save(1);
+                void this.engine.saves.save(1);
                 this.engine.notifications.show('Game Saved!');
             } else if (key === this.config.loadKey) {
-                this.engine.saves.load(1);
+                void this.engine.saves.load(1);
                 this.engine.notifications.show('Game Loaded!');
             }
         };
@@ -166,9 +165,9 @@ export class InputManager {
 
         this.stopGamepadPolling();
 
-        this.boundOnPointerDown = null;
-        this.boundOnKeyDown = null;
-        this.canvas = null;
+        this.boundOnPointerDown = undefined;
+        this.boundOnKeyDown = undefined;
+        this.canvas = undefined;
     }
 
     private startGamepadPolling() {
@@ -211,7 +210,7 @@ export class InputManager {
                     if (this.engine.isStarted && !this.engine.overlay.isOpen) {
                         this.engine.events.emit('input:next');
                         this.engine.requestSkip();
-                        this.engine.playNext();
+                        void this.engine.playNext();
                     } else if (!this.engine.isStarted) {
                         this.engine.events.emit('input:start');
                     }
@@ -231,9 +230,9 @@ export class InputManager {
     }
 
     private stopGamepadPolling() {
-        if (this.gamepadPollId !== null) {
+        if (this.gamepadPollId !== undefined) {
             cancelAnimationFrame(this.gamepadPollId);
-            this.gamepadPollId = null;
+            this.gamepadPollId = undefined;
         }
     }
 }

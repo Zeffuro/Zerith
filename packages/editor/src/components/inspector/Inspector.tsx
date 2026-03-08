@@ -4,6 +4,7 @@ import { useProjectStore } from '../../store/useProjectStore';
 import { useScriptStore } from '../../store/useScriptStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { styles } from '../../theme/styleHelpers';
+import { getAtPath, type ScriptPath } from '../../utils/scriptPathUtils';
 import { SchemaFallbackInspector } from './SchemaFallbackInspector';
 
 export function Inspector() {
@@ -25,13 +26,14 @@ export function Inspector() {
             const macroIndex = path[0];
             const macro = macroEntries[macroIndex];
             if (macro) {
-                const syntheticRoot = { body: macro.commands, name: macro.name, type: 'macro_header' };
+                const syntheticRoot = { commands: macro.commands };
                 node = path.length === 1 ? syntheticRoot : getAtPath(syntheticRoot, path.slice(1));
             }
         }
-    } else {
-        if (selectedNodePath) node = getNodeAtPath(selectedNodePath);
-        else if (selectedNodeIndex !== null && script[selectedNodeIndex]) node = script[selectedNodeIndex];
+    } else if (selectedNodePath) {
+        node = getNodeAtPath(selectedNodePath);
+    } else if (selectedNodeIndex !== null && script[selectedNodeIndex]) {
+        node = script[selectedNodeIndex];
     }
 
     if (!node) {
@@ -86,13 +88,5 @@ export function Inspector() {
     );
 }
 
-function getAtPath(root: any, path: Array<number | string>) {
-    let current = root;
-    for (const key of path) {
-        if (current == undefined) return null;
-        current = current[key as any];
-    }
-    return current ?? null;
-}
 
 export default Inspector;

@@ -11,7 +11,7 @@ import { createUiPrefsSlice } from './editor/slices/uiPrefsSlice';
 
 export const useEditorStore = create<EditorState>()(
     persist(
-        (set, _) => ({
+        (set) => ({
             ...createUiPrefsSlice(set),
             ...createPlaybackQuickCommandsSlice(set),
 
@@ -23,11 +23,11 @@ export const useEditorStore = create<EditorState>()(
             ...createDockLayoutSlice(set),
         }),
         {
-            merge: (persisted: any, current) => {
+            merge: (persisted: unknown, current) => {
                 const normalized = normalizeDockLayoutState(persisted);
                 return {
                     ...current,
-                    ...persisted,
+                    ...(persisted as Partial<EditorState>),
                     dockLayoutJson: normalized.dockLayoutJson,
                     dockLayoutVersion: normalized.dockLayoutVersion,
                 };

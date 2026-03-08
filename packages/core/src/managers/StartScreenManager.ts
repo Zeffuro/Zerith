@@ -81,9 +81,10 @@ export class StartScreenManager {
         return new Promise<void>((resolve) => {
             const onStart = () => {
                 startLayer.destroy({ children: true });
-                this.engine.scenes.jumpToScene(startScene);
-                this.engine.start();
-                resolve();
+                void this.engine.scenes.jumpToScene(startScene).then(() => {
+                    this.engine.start();
+                    resolve();
+                });
             };
 
             startLayer.on('pointerdown', onStart);

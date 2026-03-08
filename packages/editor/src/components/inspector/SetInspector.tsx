@@ -1,16 +1,17 @@
+import type { SetCommand } from 'core';
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 
-export function SetInspector({ index, node }: { index?: null | number; node: any; }) {
+export function SetInspector({ index, node }: { index?: null | number; node: SetCommand; }) {
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle } = useInspectorFieldEditor(index);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
-                <label style={labelStyle}>Key</label>
+                <label style={labelStyle}>Variable Key</label>
                 <input
-                    onChange={(e) => handleChange('key', e.target.value)}
-                    placeholder="e.g. has_badge"
+                    onChange={(event) => handleChange('key', event.target.value)}
+                    placeholder="e.g. has_met_bob"
                     style={getFieldInputStyle('key')}
                     type="text"
                     value={node.key || ''}
@@ -18,37 +19,37 @@ export function SetInspector({ index, node }: { index?: null | number; node: any
                 <FieldError errors={getFieldErrors('key')} />
             </div>
 
-            <div>
-                <label style={labelStyle}>Operation</label>
-                <select
-                    onChange={(e) => handleChange('op', e.target.value)}
-                    style={getFieldInputStyle('op')}
-                    value={node.op || 'set'}
-                >
-                    <option value="set">Set</option>
-                    <option value="add">Add</option>
-                    <option value="sub">Subtract</option>
-                    <option value="toggle">Toggle</option>
-                </select>
-                <FieldError errors={getFieldErrors('op')} />
-            </div>
-
-            <div>
-                <label style={labelStyle}>Value</label>
-                <input
-                    onChange={(e) => {
-                        let v: any = e.target.value;
-                        if (v === 'true') v = true;
-                        else if (v === 'false') v = false;
-                        else if (v !== '' && !isNaN(Number(v))) v = Number(v);
-                        handleChange('value', v);
-                    }}
-                    placeholder="true / 1 / some text"
-                    style={getFieldInputStyle('value')}
-                    type="text"
-                    value={node.value === undefined ? '' : String(node.value)}
-                />
-                <FieldError errors={getFieldErrors('value')} />
+            <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Operator</label>
+                    <select
+                        onChange={(event) => handleChange('op', event.target.value)}
+                        style={getFieldInputStyle('op')}
+                        value={node.op || 'set'}
+                    >
+                        <option value="set">=</option>
+                        <option value="add">+</option>
+                        <option value="sub">-</option>
+                    </select>
+                    <FieldError errors={getFieldErrors('op')} />
+                </div>
+                <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Value</label>
+                    <input
+                        onChange={(event) => {
+                            let value: boolean | number | string = event.target.value;
+                            const numberValue = Number(value);
+                            if (value === 'true') value = true;
+                            else if (value === 'false') value = false;
+                            else if (!Number.isNaN(numberValue) && value !== '') value = numberValue;
+                            handleChange('value', value);
+                        }}
+                        style={getFieldInputStyle('value')}
+                        type="text"
+                        value={node.value === undefined ? '' : String(node.value)}
+                    />
+                    <FieldError errors={getFieldErrors('value')} />
+                </div>
             </div>
         </div>
     );

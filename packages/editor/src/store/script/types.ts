@@ -41,15 +41,15 @@ export interface ScriptState {
     resetScope: () => void;
     rootScript: EditorNode[];
     scopePath: (number | string)[];
-    selectedNodeIndex: null | number;
-    selectedNodePath: null | ScriptPath;
+    selectedNodeIndex: number | undefined;
+    selectedNodePath: ScriptPath | undefined;
     setScript: (script: EditorNode[]) => void;
-    setSelectedNode: (index: null | number) => void;
+    setSelectedNode: (index: number | undefined) => void;
 
-    setSelectedNodePath: (path: null | ScriptPath) => void;
+    setSelectedNodePath: (path: ScriptPath | undefined) => void;
     undo: () => void;
     updateActiveScript: (newSubArray: EditorNode[]) => void;
-    updateNodeAtPath: (path: ScriptPath, patch: Record<string, any>) => void;
+    updateNodeAtPath: (path: ScriptPath, patch: Record<string, unknown>) => void;
 }
 
 // Backward-compatible alias used by older slice modules.

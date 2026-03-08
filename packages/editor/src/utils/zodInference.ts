@@ -27,7 +27,7 @@ export function inferCommandFields(type: string): FieldInfo[] {
     return Object.entries(shape)
         .filter(([key]) => key !== 'type')
         .map(([key, rawFieldSchema]) => {
-            const { optional, schema: fieldSchema } = unwrapSchema(rawFieldSchema);
+            const { optional, schema: fieldSchema } = unwrapSchema(rawFieldSchema as z.ZodTypeAny);
             return {
                 key,
                 optional,

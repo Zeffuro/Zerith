@@ -1,37 +1,35 @@
+import type { SfxCommand } from 'core';
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
+import { AssetPickerField } from './fields/AssetPickerField';
 
-export function SfxInspector({ index, node }: { index?: null | number; node: any; }) {
+export function SfxInspector({ index, node }: { index?: null | number; node: SfxCommand; }) {
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle } = useInspectorFieldEditor(index);
-    const assetErrors = getFieldErrors('assetUrl');
-    const volumeErrors = getFieldErrors('volume');
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
                 <label style={labelStyle}>Asset URL</label>
-                <input
-                    onChange={(e) => handleChange('assetUrl', e.target.value)}
-                    placeholder="/assets/sfx/click.wav"
-                    style={getFieldInputStyle('assetUrl')}
-                    type="text"
-                    value={node.assetUrl || ''}
+                <AssetPickerField
+                    inputStyle={getFieldInputStyle('assetUrl')}
+                    kind="sfx"
+                    listId="sfx-asset-options"
+                    onChange={(assetUrl) => handleChange('assetUrl', assetUrl)}
+                    value={node.assetUrl ?? ''}
                 />
-                <FieldError errors={assetErrors} />
+                <FieldError errors={getFieldErrors('assetUrl')} />
             </div>
 
             <div>
-                <label style={labelStyle}>Volume (0.0 - 1.0)</label>
+                <label style={labelStyle}>Volume (0-1)</label>
                 <input
-                    max={1}
-                    min={0}
-                    onChange={(e) => handleChange('volume', Number(e.target.value))}
-                    step="0.01"
+                    onChange={(event) => handleChange('volume', Number(event.target.value))}
+                    step="0.1"
                     style={getFieldInputStyle('volume')}
                     type="number"
-                    value={node.volume ?? 0.8}
+                    value={node.volume ?? 1}
                 />
-                <FieldError errors={volumeErrors} />
+                <FieldError errors={getFieldErrors('volume')} />
             </div>
         </div>
     );

@@ -5,7 +5,7 @@ import { useProjectStore } from '../../store/useProjectStore';
 import { useScriptStore } from '../../store/useScriptStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 
-export function MacroHeaderInspector({}: { index?: null | number; node: any; }) {
+export function MacroHeaderInspector(_props: { index?: null | number; node: unknown; }) {
     const uiScale = useEditorStore((s) => s.uiScale);
     const selectedNodePath = useScriptStore((s) => s.selectedNodePath);
 
@@ -14,13 +14,19 @@ export function MacroHeaderInspector({}: { index?: null | number; node: any; }) 
     const removeMacroEntry = useProjectStore((s) => s.removeMacroEntry);
     const duplicateMacroEntries = useProjectStore((s) => s.duplicateMacroEntries);
 
-    const index = typeof selectedNodePath?.[0] === 'number' ? (selectedNodePath[0]) : null;
-    const macro = index === null ? null : macroEntries[index];
+    const index = typeof selectedNodePath?.[0] === 'number' ? (selectedNodePath[0]) : undefined;
+    const macro = index === undefined ? undefined : macroEntries[index];
 
-    const [name, setName] = useState(macro?.name ?? '');
-    useEffect(() => setName(macro?.name ?? ''), [macro?.name]);
+    const currentName = macro?.name ?? '';
+    const [name, setName] = useState(currentName);
+    const [prevName, setPrevName] = useState(currentName);
 
-    if (index === null || !macro) {
+    if (currentName !== prevName) {
+        setPrevName(currentName);
+        setName(currentName);
+    }
+
+    if (index === undefined || !macro) {
         return <div style={{ color: t.text.faint, fontStyle: 'italic' }}>Select a macro header.</div>;
     }
 
@@ -53,12 +59,11 @@ export function MacroHeaderInspector({}: { index?: null | number; node: any; }) 
                 </label>
                 <input
                     onBlur={() => renameMacroEntry(index, name)}
-                    onChange={(e) => setName(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
+                    onChange={(event) => setName(event.target.value)}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                            event.preventDefault();
                             renameMacroEntry(index, name);
-                            (e.target as HTMLInputElement).blur();
                         }
                     }}
                     style={inputStyle}

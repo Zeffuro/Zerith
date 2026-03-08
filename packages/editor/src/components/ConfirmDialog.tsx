@@ -20,19 +20,19 @@ export function ConfirmDialog({ cancelText = 'Cancel', confirmText = 'Confirm', 
 
     useEffect(() => {
         if (!open) return;
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onCancel();
-            if (e.key === 'Enter') onConfirm();
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') onCancel();
+            if (event.key === 'Enter') onConfirm();
         };
         globalThis.addEventListener('keydown', onKey);
         return () => globalThis.removeEventListener('keydown', onKey);
     },[open, onCancel, onConfirm]);
 
-    if (!open) return null;
+    if (!open) return undefined;
 
     return (
         <div onClick={onCancel} style={{ background: 'rgba(0,0,0,.45)', display: 'grid', inset: 0, placeItems: 'center', position: 'fixed', zIndex: 2000 }}>
-            <div onClick={(e) => e.stopPropagation()} style={{ background: t.bg.panel, border: `1px solid ${t.border.normal}`, borderRadius: t.radius.lg, boxShadow: t.shadow.popupStrong, color: t.text.primary, padding: `${16 * uiScale}px`, width: `${380 * uiScale}px` }}>
+            <div onClick={(event) => event.stopPropagation()} style={{ background: t.bg.panel, border: `1px solid ${t.border.normal}`, borderRadius: t.radius.lg, boxShadow: t.shadow.popupStrong, color: t.text.primary, padding: `${16 * uiScale}px`, width: `${380 * uiScale}px` }}>
                 <div style={{ fontSize: `${14 * uiScale}px`, fontWeight: 700, marginBottom: `${8 * uiScale}px` }}>{title}</div>
                 <div style={{ color: t.text.normal, fontSize: `${13 * uiScale}px`, marginBottom: `${16 * uiScale}px`, opacity: .9 }}>{message}</div>
                 <div style={{ display: 'flex', gap: `${8 * uiScale}px`, justifyContent: 'flex-end' }}>

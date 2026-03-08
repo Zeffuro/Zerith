@@ -1,4 +1,4 @@
-import { Container, Graphics, Text, type TextStyleOptions } from 'pixi.js';
+import { Container, FederatedPointerEvent, Graphics, Text, type TextStyleOptions } from 'pixi.js';
 
 import type { Engine } from '../Engine';
 import type { BaseCommand, CommandHandler } from '../types';
@@ -26,7 +26,7 @@ export interface ChoiceOption {
 
 export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
     public autoNext = true;
-    public type: 'choice' = 'choice';
+    public type = 'choice' as const;
     private config: Required<ChoiceConfig>;
 
     constructor(config: ChoiceConfig = {}) {
@@ -115,8 +115,8 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
                     updateSelection(index);
                 });
 
-                button.on('pointerdown', (e: any) => {
-                    e.stopPropagation();
+                button.on('pointerdown', (event: FederatedPointerEvent) => {
+                    event.stopPropagation();
                     selectedIndex = index;
                     confirmSelection();
                 });
@@ -127,7 +127,8 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
             }
 
             // Subscribe to InputManager events
-            const onNavigate = (direction: string) => {
+            const onNavigate = (navigationArgument: unknown) => {
+                const direction = navigationArgument as string;
                 if (direction === 'up') updateSelection(selectedIndex - 1);
                 if (direction === 'down') updateSelection(selectedIndex + 1);
             };

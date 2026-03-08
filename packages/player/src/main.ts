@@ -1,9 +1,9 @@
-import { bootstrapEngine, type GameManifest, resolveManifestValue, resolveScenes, validateScript } from 'core';
+import { bootstrapEngine, type GameManifest, resolveManifestValue, resolveScenes, type Script, validateScript } from 'core';
 
 async function bootstrap() {
     const canvas = document.querySelector('#game-canvas') as HTMLCanvasElement;
 
-    const manifest: GameManifest = await fetch('/game.json').then(r => r.json());
+    const manifest = await fetch('/game.json').then(r => r.json() as Promise<GameManifest>);
 
     const [characters, items, macros, scenes] = await Promise.all([
         manifest.characters ? resolveManifestValue(manifest.characters) : Promise.resolve({}),
@@ -12,9 +12,9 @@ async function bootstrap() {
         manifest.scenes ? resolveScenes(manifest.scenes) : Promise.resolve({}),
     ]);
 
-    const validatedScenes: Record<string, any[]> = {};
+    const validatedScenes: Record<string, Script> = {};
     for (const [name, script] of Object.entries(scenes)) {
-        validatedScenes[name] = validateScript(script as unknown[]);
+        validatedScenes[name] = validateScript(script as unknown[]) as Script;
     }
 
     const engine = await bootstrapEngine({

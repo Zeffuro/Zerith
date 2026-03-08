@@ -1,11 +1,10 @@
 import type { AssetResolver, EngineDeps } from './Engine';
 import type {EngineConfig} from './EngineConfig';
-import type {GameManifest} from './types';
+import type { EvidenceItem } from './managers/EvidenceManager';
+import type { CharacterDefinition, GameManifest, Script } from './types';
 
 import { Engine } from './Engine';
-import { BuiltInHandlers } from './handlers/builtins';
-import { ChoiceHandler } from './handlers/ChoiceHandler';
-import { DialogueHandler } from './handlers/DialogueHandler';
+import { BuiltInHandlers, ChoiceHandler, DialogueHandler } from './handlers';
 import { AssetManager } from './managers/AssetManager';
 import { AudioManager } from './managers/AudioManager';
 import { DisplayManager } from './managers/DisplayManager';
@@ -23,14 +22,14 @@ import { StartScreenManager } from './managers/StartScreenManager';
 export interface EngineBootstrapOptions {
     assetResolver?: AssetResolver;
     canvas: HTMLCanvasElement;
-    characters?: Record<string, any>;
+    characters?: Record<string, CharacterDefinition>;
     config?: EngineConfig;
     defaultBlipUrl?: string;
-    items?: Record<string, any>;
-    macros?: Record<string, any[]>;
+    items?: Record<string, Omit<EvidenceItem, 'id'>>;
+    macros?: Record<string, Script>;
     manifest?: GameManifest;
     preloadAssets?: boolean;
-    scenes?: Record<string, any[]>;
+    scenes?: Record<string, Script>;
 }
 
 export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<Engine> {
@@ -75,12 +74,15 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
     }));
 
     if (Object.keys(macros).length > 0) {
-        for (const [name, script] of Object.entries(macros)) engine.scenes.registerTemplate(name, script as any)
-        ;
+        for (const [name, script] of Object.entries(macros)) engine.scenes.registerTemplate(name, script);
     }
-
+    
     if (Object.keys(scenes).length > 0) {
         engine.scenes.loadScenes(scenes);
+    }
+
+    if (engine.config.debug) {
+        (globalThis as unknown as { zerith: Engine }).zerith = engine;
     }
 
     await engine.init(canvas);

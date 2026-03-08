@@ -65,8 +65,8 @@ export class SettingsPanel implements MenuPanel {
         yPos += 10;
         const toggleResult: ToggleResult = createToggle(context, {
             label: 'Auto-Advance',
-            onChange: (on) => engine.setAutoAdvance(on ? 3000 : null),
-            value: engine.autoAdvanceDelay !== null,
+            onChange: (on) => engine.setAutoAdvance(on ? 3000 : undefined),
+            value: engine.autoAdvanceDelay !== undefined,
         });
         toggleResult.container.position.set(contentStartX, yPos);
         root.addChild(toggleResult.container);
@@ -79,8 +79,8 @@ export class SettingsPanel implements MenuPanel {
                 const newSize = Math.round(14 + v * 26);
                 engine.theme.fontSize = newSize;
 
-                const dh = engine.getHandler('dialogue') as any;
-                if (dh) { dh.container = null; }
+                const dh = engine.getHandler('dialogue');
+                dh?.reset?.();
             },
             value: (engine.theme.fontSize - 14) / 26,
         });

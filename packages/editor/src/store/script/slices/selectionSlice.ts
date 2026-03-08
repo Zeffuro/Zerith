@@ -18,27 +18,27 @@ export const createSelectionSlice: ScriptStoreCreator<SelectionSlice> = (set, ge
             const newPath = [...state.scopePath];
             newPath.pop();
             newPath.pop();
-            return { scopePath: newPath, selectedNodeIndex: null, selectedNodePath: null };
+            return { scopePath: newPath, selectedNodeIndex: undefined, selectedNodePath: undefined };
         }),
     pushScope: (index, branch) =>
         set((state) => ({
             scopePath: [...state.scopePath, index, branch],
-            selectedNodeIndex: null,
-            selectedNodePath: null,
+            selectedNodeIndex: undefined,
+            selectedNodePath: undefined,
         })),
     resetScope: () =>
-        set({ scopePath: [], selectedNodeIndex: null, selectedNodePath: null }),
+        set({ scopePath: [], selectedNodeIndex: undefined, selectedNodePath: undefined }),
 
     scopePath: [],
 
-    selectedNodeIndex: null,
+    selectedNodeIndex: undefined,
 
-    selectedNodePath: null,
+    selectedNodePath: undefined,
 
     setSelectedNode: (index) =>
         set((state) => ({
-            selectedNodeIndex: index,
-            selectedNodePath: index === null ? null : [...state.scopePath, index],
+            selectedNodeIndex: index === null ? undefined : index,
+            selectedNodePath: index === null || index === undefined ? undefined : [...state.scopePath, index],
         })),
 
     setSelectedNodePath: (path) =>
@@ -49,7 +49,7 @@ export const createSelectionSlice: ScriptStoreCreator<SelectionSlice> = (set, ge
                 get().scopePath.every((v, index) => v === path[index]) &&
                 typeof path.at(-1) === 'number'
                     ? (path.at(-1) as number)
-                    : null,
-            selectedNodePath: path ? [...path] : null,
+                    : undefined,
+            selectedNodePath: path ? [...path] : undefined,
         })),
 });

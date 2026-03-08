@@ -8,7 +8,7 @@ export type ExplorerContextMenuState = {
     path: string;
     x: number;
     y: number;
-} | null;
+} | undefined;
 
 export type ExplorerMenuAction =
     | 'delete'
@@ -20,8 +20,16 @@ export type ExplorerMenuAction =
     | 'rename'
     | 'reveal';
 
+type ActionRowProperties = {
+    action: ExplorerMenuAction;
+    disabled?: boolean;
+    itemStyle: React.CSSProperties;
+    label: string;
+    menu: Exclude<ExplorerContextMenuState, undefined>;
+};
+
 export function ExplorerContextMenu({ menu, uiScale }: { menu: ExplorerContextMenuState; uiScale: number; }) {
-    if (!menu) return null;
+    if (!menu) return;
 
     const itemStyle: React.CSSProperties = {
         background: 'transparent',
@@ -35,30 +43,9 @@ export function ExplorerContextMenu({ menu, uiScale }: { menu: ExplorerContextMe
         width: '100%',
     };
 
-    const Row = ({ action, disabled = false, label }: { action: ExplorerMenuAction; disabled?: boolean; label: string; }) => (
-        <button
-            disabled={disabled}
-            onClick={() => {
-                if (disabled) return;
-                menu.onAction(action);
-                menu.onClose();
-            }}
-            onMouseEnter={(e) => {
-                if (!disabled) e.currentTarget.style.background = t.bg.hover;
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-            }}
-            style={{ ...itemStyle, color: disabled ? t.text.faint : t.text.normal, cursor: disabled ? 'not-allowed' : 'pointer' }}
-            type="button"
-        >
-            {label}
-        </button>
-    );
-
     return (
         <div
-            onMouseDown={(e) => e.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
             style={{
                 background: t.bg.popup,
                 border: `1px solid ${t.border.normal}`,
@@ -72,21 +59,44 @@ export function ExplorerContextMenu({ menu, uiScale }: { menu: ExplorerContextMe
                 zIndex: 7000,
             }}
         >
-            <Row action="open" disabled={menu.isDirectory} label="Open" />
+            <ActionRow action="open" disabled={menu.isDirectory} itemStyle={itemStyle} label="Open" menu={menu} />
             {!menu.isDirectory && (
                 <>
-                    <Row action="openJson" label="Open in JSON View" />
-                    <Row action="openTimeline" label="Open in Timeline View" />
+                    <ActionRow action="openJson" itemStyle={itemStyle} label="Open in JSON View" menu={menu} />
+                    <ActionRow action="openTimeline" itemStyle={itemStyle} label="Open in Timeline View" menu={menu} />
                 </>
             )}
 
             <div style={{ background: t.border.subtle, height: 1, margin: `${6 * uiScale}px 0` }} />
 
-            <Row action="newFile" label="New File…" />
-            <Row action="newFolder" label="New Folder…" />
-            <Row action="rename" label="Rename…" />
-            <Row action="delete" label="Delete…" />
-            <Row action="reveal" label="Reveal in File Manager" />
+            <ActionRow action="newFile" itemStyle={itemStyle} label="New File…" menu={menu} />
+            <ActionRow action="newFolder" itemStyle={itemStyle} label="New Folder…" menu={menu} />
+            <ActionRow action="rename" itemStyle={itemStyle} label="Rename…" menu={menu} />
+            <ActionRow action="delete" itemStyle={itemStyle} label="Delete…" menu={menu} />
+            <ActionRow action="reveal" itemStyle={itemStyle} label="Reveal in File Manager" menu={menu} />
         </div>
+    );
+}
+
+function ActionRow({ action, disabled = false, itemStyle, label, menu }: ActionRowProperties) {
+    return (
+        <button
+            disabled={disabled}
+            onClick={() => {
+                if (disabled) return;
+                menu.onAction(action);
+                menu.onClose();
+            }}
+            onMouseEnter={(event) => {
+                if (!disabled) event.currentTarget.style.background = t.bg.hover;
+            }}
+            onMouseLeave={(event) => {
+                event.currentTarget.style.background = 'transparent';
+            }}
+            style={{ ...itemStyle, color: disabled ? t.text.faint : t.text.normal, cursor: disabled ? 'not-allowed' : 'pointer' }}
+            type="button"
+        >
+            {label}
+        </button>
     );
 }

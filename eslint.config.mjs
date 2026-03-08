@@ -36,6 +36,7 @@ export default [
         rules: {
             "@typescript-eslint/no-explicit-any": "error",
             "unicorn/consistent-function-scoping": "error",
+            "unicorn/filename-case": "off",
             "unicorn/no-array-reduce": "warn",
             "perfectionist/sort-imports": "error",
         },

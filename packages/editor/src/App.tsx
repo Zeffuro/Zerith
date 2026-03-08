@@ -1,6 +1,6 @@
 import { PhysicalPosition, PhysicalSize } from '@tauri-apps/api/dpi';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { useEffect } from 'react';
+import { type CSSProperties, useEffect } from 'react';
 
 import { DockLayoutHost } from './components/layout/DockLayoutHost';
 import { useGlobalEditorShortcuts } from './hooks/useGlobalEditorShortcuts';
@@ -26,10 +26,10 @@ function App() {
         const origWarn = console.warn;
         const origError = console.error;
 
-        console.log = (...arguments_) => { origLog(...arguments_); store.addMessage('editor', 'log', ...arguments_); };
-        console.info = (...arguments_) => { origInfo(...arguments_); store.addMessage('editor', 'info', ...arguments_); };
-        console.warn = (...arguments_) => { origWarn(...arguments_); store.addMessage('editor', 'warn', ...arguments_); };
-        console.error = (...arguments_) => { origError(...arguments_); store.addMessage('editor', 'error', ...arguments_); };
+        console.log = (...arguments_: any[]) => { origLog(...arguments_); store.addMessage('editor', 'log', ...arguments_); };
+        console.info = (...arguments_: any[]) => { origInfo(...arguments_); store.addMessage('editor', 'info', ...arguments_); };
+        console.warn = (...arguments_: any[]) => { origWarn(...arguments_); store.addMessage('editor', 'warn', ...arguments_); };
+        console.error = (...arguments_: any[]) => { origError(...arguments_); store.addMessage('editor', 'error', ...arguments_); };
 
         return () => {
             console.log = origLog;
@@ -43,9 +43,9 @@ function App() {
         const appWindow = getCurrentWindow();
 
         if (windowState) {
-            appWindow.setSize(new PhysicalSize(windowState.width, windowState.height));
-            appWindow.setPosition(new PhysicalPosition(windowState.x, windowState.y));
-            if (windowState.maximized) appWindow.maximize();
+            void appWindow.setSize(new PhysicalSize(windowState.width, windowState.height));
+            void appWindow.setPosition(new PhysicalPosition(windowState.x, windowState.y));
+            if (windowState.maximized) void appWindow.maximize();
         }
 
         const saveState = async () => {
@@ -55,17 +55,20 @@ function App() {
 
             setWindowState({ height: size.height, maximized: max, width: size.width, x: pos.x, y: pos.y });
         };
+        
+        const onEvent = () => { void saveState(); };
 
-        const unlistenMove = appWindow.listen('tauri://move', saveState);
-        const unlistenResize = appWindow.listen('tauri://resize', saveState);
-        window.addEventListener('beforeunload', saveState);
+        const unlistenMove = appWindow.listen('tauri://move', onEvent);
+        const unlistenResize = appWindow.listen('tauri://resize', onEvent);
+        window.addEventListener('beforeunload', onEvent);
 
         return () => {
-            unlistenMove.then((f) => f());
-            unlistenResize.then((f) => f());
-            window.removeEventListener('beforeunload', saveState);
+            void unlistenMove.then((f) => f());
+            void unlistenResize.then((f) => f());
+            window.removeEventListener('beforeunload', onEvent);
         };
-    },[]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         const themes = getThemeRegistry();
@@ -74,7 +77,7 @@ function App() {
     }, [themeKey]);
 
     return (
-        <div style={{ ['--ui-scale' as any]: uiScale, inset: 0, overflow: 'hidden', position: 'fixed' }}>
+        <div style={{ '--ui-scale': uiScale, inset: 0, overflow: 'hidden', position: 'fixed' } as CSSProperties}>
             <DockLayoutHost />
         </div>
     );

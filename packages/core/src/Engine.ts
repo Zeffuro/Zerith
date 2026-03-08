@@ -1,6 +1,8 @@
 import { Application, Assets, Container } from 'pixi.js';
 
 import type { EngineConfig } from './EngineConfig';
+import type { JumpCommand } from './handlers/JumpHandler';
+import type { SceneChangeCommand } from './handlers/SceneChangeHandler';
 import type { AssetManager } from './managers/AssetManager';
 import type { AudioManager } from './managers/AudioManager';
 import type { DisplayManager } from './managers/DisplayManager';
@@ -46,8 +48,9 @@ export type EngineDepsFactory = (engine: Engine, config: EngineConfig) => Engine
 export class Engine {
     public app: Application;
     public assets: AssetManager;
-
     public audio: AudioManager;
+    public config: EngineConfig;
+
     public display: DisplayManager;
     public events: EventBus;
     public history: HistoryManager;
@@ -63,12 +66,12 @@ export class Engine {
     public manifest: GameManifest = {};
     public notifications: NotificationManager;
     public overlay: OverlayManager;
-    public persistentState: Record<string, any> = {};
+    public persistentState: Record<string, unknown> = {};
     public saves: SaveManager;
     public scenes: SceneManager;
     public spritesheets: SpritesheetManager;
     public startScreen: StartScreenManager;
-    public state: Record<string, any> = {};
+    public state: Record<string, unknown> = {};
     public theme: Theme = DefaultTheme;
 
     public get assetResolver(): AssetResolver {
@@ -79,7 +82,7 @@ export class Engine {
         this.spritesheets.setResolver(resolver);
         this.assets.setResolver(resolver);
     }
-    public get autoAdvanceDelay(): null | number {
+    public get autoAdvanceDelay(): number | undefined {
         return this._autoAdvanceDelay;
     }
     public get currentIndex(): number {
@@ -96,7 +99,7 @@ export class Engine {
         return this._lastSavePoint;
     }
 
-    private _autoAdvanceDelay: null | number = null;
+    private _autoAdvanceDelay: number | undefined;
 
     private _isStarted = false;
 
@@ -106,13 +109,14 @@ export class Engine {
 
     private _skipRequested = false;
 
-    private handlers: Map<CommandType, CommandHandler<any>> = new Map();
+    private handlers: Map<CommandType, CommandHandler<BaseCommand>> = new Map();
 
     private isExecuting = false;
 
     private readonly onSceneNavigation?: EngineConfig['onSceneNavigation'];
 
     constructor(config: EngineConfig = {}, depsFactory: EngineDepsFactory) {
+        this.config = config;
         this.app = new Application();
         this.layers = {
             background: new Container(),
@@ -149,7 +153,7 @@ export class Engine {
         for (const c of this.layers.ui.removeChildren()) c.destroy({ children: true });
         for (const c of this.layers.sprites.removeChildren()) c.destroy({ children: true });
         for (const c of this.layers.overlay.removeChildren()) c.destroy({ children: true });
-        for (const h of this.handlers) h.reset?.();
+        for (const h of this.handlers.values()) h.reset?.();
         this.history.clear();
         this.items.clear();
         this.state = {};
@@ -174,33 +178,34 @@ export class Engine {
 
     /* State */
 
-    public getHandler(type: CommandType): CommandHandler<any> | undefined {
+    public getHandler(type: CommandType): CommandHandler<BaseCommand> | undefined {
         return this.handlers.get(type);
     }
 
-    public getState(k: string) {
-        return this.state[k];
+    public getState<T = unknown>(k: string): T {
+        return this.state[k] as T;
     }
 
     /* Text Control */
 
     public async init(canvasElement: HTMLCanvasElement) {
-        await this.display.init(canvasElement);
-        this.audio.init();
+        return this.display.init(canvasElement).then(() => {
+            this.audio.init();
 
-        this.app.stage.addChild(
-            this.layers.background,
-            this.layers.sprites,
-            this.layers.ui,
-            this.layers.overlay
-        );
+            this.app.stage.addChild(
+                this.layers.background,
+                this.layers.sprites,
+                this.layers.ui,
+                this.layers.overlay
+            );
 
-        this.input.attach(canvasElement);
+            this.input.attach(canvasElement);
+        });
     }
 
-    public async loadAsset(url: string): Promise<any> {
+    public async loadAsset<T = unknown>(url: string): Promise<T> {
         const resolvedUrl = this.assetResolver(url);
-        return await Assets.load(resolvedUrl);
+        return await Assets.load<T>(resolvedUrl);
     }
 
     public async playNext() {
@@ -228,8 +233,9 @@ export class Engine {
         } catch (error) {
             const index = this.scenes.currentIndex - 1;
             const command = this.scenes.getCommandAt(index);
+            const type = command ? command.type : 'unknown';
             this.logger.error(
-                `Error executing command at index ${index} (type: '${command?.type}'): ${error}`
+                `Error executing command at index ${index} (type: '${type}'): ${String(error)}`
             );
         } finally {
             this.isExecuting = false;
@@ -245,12 +251,13 @@ export class Engine {
     }
 
     public registerHandler<T extends BaseCommand>(h: CommandHandler<T>) {
-        this.handlers.set(h.type, h);
+        this.handlers.set(h.type, h as unknown as CommandHandler<BaseCommand>);
     }
 
     /* Command Execution */
 
-    public registerHandlers(hs: (CommandHandler<any> | (new (...arguments_: any[]) => CommandHandler<any>))[]) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    public registerHandlers(hs: (CommandHandler<any> | (new (...arguments_: unknown[]) => CommandHandler<any>))[]) {
         for (const h of hs) this.registerHandler(typeof h === 'function' ? new h() : h);
     }
 
@@ -261,10 +268,11 @@ export class Engine {
     }
 
     public resolveText(text: string): string {
-        return text.replaceAll(/\{(\w+)}/g, (match, key) => {
-            if (this.state[key] !== undefined) return this.state[key];
-            if (this.persistentState[key] !== undefined) return this.persistentState[key];
-            return match;
+        return text.replaceAll(/\{(\w+)}/g, (match: string, key: string) => {
+            const value = this.state[key] ?? this.persistentState[key];
+            if (value === undefined || value === null) return match;
+            if (typeof value === 'object') return JSON.stringify(value);
+            return String(value as boolean | number | string);
         });
     }
 
@@ -284,12 +292,12 @@ export class Engine {
             await handler.execute(command, this);
         } catch (error) {
             this.logger.error(
-                `Handler '${command.type}' threw during execute: ${error}`
+                `Handler '${command.type}' threw during execute: ${String(error)}`
             );
         }
     }
 
-    public setAutoAdvance(delayMs: null | number) {
+    public setAutoAdvance(delayMs: number | undefined) {
         this._autoAdvanceDelay = delayMs;
     }
 
@@ -306,7 +314,7 @@ export class Engine {
 
     /* Input */
 
-    public setState(k: string, v: any) {
+    public setState(k: string, v: unknown) {
         this.state[k] = v;
     }
 
@@ -314,7 +322,7 @@ export class Engine {
 
     public start() {
         this._isStarted = true;
-        this.playNext();
+        void this.playNext();
     }
 
     private _assetResolver: AssetResolver = (url) => url;
@@ -324,8 +332,14 @@ export class Engine {
             return false;
         }
 
-        const sceneName = String((command as any).to ?? (command as any).scene ?? '');
-        const action = this.onSceneNavigation?.(sceneName, command.type);
+        let sceneName = '';
+        if (command.type === 'jump') {
+            sceneName = (command as JumpCommand).to;
+        } else if (command.type === 'scene_change') {
+            sceneName = (command as SceneChangeCommand).assetUrl;
+        }
+
+        const action = this.onSceneNavigation?.(sceneName, command.type as 'jump' | 'scene_change');
         if (action === 'skip') {
             this.logger.info(`[Engine] Skipping scene navigation to '${sceneName}'`);
             return true;
@@ -334,3 +348,4 @@ export class Engine {
         return false;
     }
 }
+

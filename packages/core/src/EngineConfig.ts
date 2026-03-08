@@ -10,6 +10,7 @@ import type { Theme } from './utils/Theme';
 export type { SceneNavigationCommandType } from './types';
 export interface EngineConfig {
     audio?: AudioConfig;
+    debug?: boolean;
     display?: Partial<DisplayConfig>;
     input?: InputConfig;
     notifications?: NotificationConfig;

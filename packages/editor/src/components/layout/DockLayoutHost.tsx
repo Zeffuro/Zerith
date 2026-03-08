@@ -1,5 +1,5 @@
 import { Actions, Layout, Model, TabNode } from 'flexlayout-react';
-import { lazy, Suspense, useEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import 'flexlayout-react/style/dark.css';
 
 import { useEditorStore } from '../../store/useEditorStore';
@@ -21,24 +21,21 @@ export function DockLayoutHost() {
     const rootScript = useScriptStore((s) => s.rootScript);
     const activeWorkbenchTabId = useWorkbenchStore((s) => s.activeTabId);
 
-    const modelReference = useRef<Model | null>(null);
     const lastJsonReference = useRef<string>('');
 
     const jsonSig = JSON.stringify(dockLayoutJson);
 
-    // create once
-    if (!modelReference.current) {
-        modelReference.current = Model.fromJson(dockLayoutJson);
-        lastJsonReference.current = jsonSig;
-    }
+    const [model, setModel] = useState(() => Model.fromJson(dockLayoutJson));
 
     // rebuild only when store layout changed externally (e.g. reset)
-    if (lastJsonReference.current !== jsonSig) {
-        modelReference.current = Model.fromJson(dockLayoutJson);
-        lastJsonReference.current = jsonSig;
-    }
+    useLayoutEffect(() => {
+        if (lastJsonReference.current !== jsonSig) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setModel(Model.fromJson(dockLayoutJson));
+            lastJsonReference.current = jsonSig;
+        }
+    }, [dockLayoutJson, jsonSig]);
 
-    const model = modelReference.current;
     const saveTimerReference = useRef<null | number>(null);
 
     const onModelChange = (m: Model) => {

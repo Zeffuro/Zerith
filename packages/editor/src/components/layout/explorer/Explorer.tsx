@@ -76,21 +76,21 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirEntry; level?:
     const [isOpen, setIsOpen] = useState(false);
     const [children, setChildren] = useState<FsDirEntry[]>([]);
     const [fullPath, setFullPath] = useState<string>('');
-    const [context, setContext] = useState<ExplorerContextMenuState>(null);
+    const [context, setContext] = useState<ExplorerContextMenuState>();
 
     const [isRenaming, setIsRenaming] = useState(false);
     const [renameDraft, setRenameDraft] = useState(entry.name);
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
-    const [createMode, setCreateMode] = useState<'file' | 'folder' | null>(null);
+    const [createMode, setCreateMode] = useState<'file' | 'folder'>();
     const [createDraft, setCreateDraft] = useState('');
-    const [createTargetDir, setCreateTargetDir] = useState<null | string>(null);
+    const [createTargetDirectory, setCreateTargetDirectory] = useState<string>();
 
     const { activeFile } = useProjectStore();
     const { uiScale } = useEditorStore();
 
     useEffect(() => {
-        fsJoin(parentPath, entry.name).then(setFullPath);
+        void fsJoin(parentPath, entry.name).then(setFullPath);
     }, [parentPath, entry.name]);
 
     useEffect(() => {
@@ -99,13 +99,13 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirEntry; level?:
 
     useEffect(() => {
         if (!context) return;
-        const onDown = () => setContext(null);
-        const onEsc = (e: KeyboardEvent) => e.key === 'Escape' && setContext(null);
+        const onDown = () => setContext(undefined);
+        const onEscape = (event: KeyboardEvent) => event.key === 'Escape' && setContext(undefined);
         document.addEventListener('mousedown', onDown);
-        document.addEventListener('keydown', onEsc);
+        document.addEventListener('keydown', onEscape);
         return () => {
             document.removeEventListener('mousedown', onDown);
-            document.removeEventListener('keydown', onEsc);
+            document.removeEventListener('keydown', onEscape);
         };
     }, [context]);
 
@@ -128,18 +128,18 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirEntry; level?:
     };
 
     const startCreate = async (mode: 'file' | 'folder') => {
-        const baseDir = entry.isDirectory ? fullPath : await fsDirname(fullPath);
-        setCreateTargetDir(baseDir);
+        const baseDirectory = entry.isDirectory ? fullPath : await fsDirname(fullPath);
+        setCreateTargetDirectory(baseDirectory);
         setCreateMode(mode);
         setCreateDraft(mode === 'file' ? 'new-file.json' : 'new-folder');
         if (entry.isDirectory && !isOpen) setIsOpen(true);
     };
 
     const commitCreate = async () => {
-        if (!createMode || !createTargetDir) return;
+        if (!createMode || !createTargetDirectory) return;
         const name = createDraft.trim();
         if (!name) {
-            setCreateMode(null);
+            setCreateMode(undefined);
             return;
         }
 
@@ -148,11 +148,13 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirEntry; level?:
             createFolderInDirectory,
         } = await import('../../../services/explorerFileActions');
 
-        await (createMode === 'file' ? createFileInDirectory(createTargetDir, name, '') : createFolderInDirectory(createTargetDir, name));
+        await (createMode === 'file'
+            ? createFileInDirectory(createTargetDirectory, name, '')
+            : createFolderInDirectory(createTargetDirectory, name));
 
-        setCreateMode(null);
+        setCreateMode(undefined);
         setCreateDraft('');
-        setCreateTargetDir(null);
+        setCreateTargetDirectory(undefined);
     };
 
     const handleClick = async () => {
@@ -162,12 +164,12 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirEntry; level?:
             if (!isOpen && children.length === 0 && fullPath) {
                 try {
                     const entries = await fsReadDir(fullPath);
-                    entries.sort((a, b) => {
+                    const sortedEntries = entries.sort((a, b) => {
                         if (a.isDirectory && !b.isDirectory) return -1;
                         if (!a.isDirectory && b.isDirectory) return 1;
                         return a.name.localeCompare(b.name);
                     });
-                    setChildren(entries);
+                    setChildren(sortedEntries);
                 } catch (error) {
                     console.error('Failed to read directory:', error);
                 }
@@ -179,9 +181,9 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirEntry; level?:
         await openDefault();
     };
 
-    const onContextMenu = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
+    const onContextMenu = (event: React.MouseEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
         if (!fullPath) return;
 
         setContext({
@@ -227,23 +229,23 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirEntry; level?:
                     }
                 }
             },
-            onClose: () => setContext(null),
+            onClose: () => setContext(undefined),
             path: fullPath,
-            x: e.clientX,
-            y: e.clientY,
+            x: event.clientX,
+            y: event.clientY,
         });
     };
 
-    const onRowKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-        if (e.key === 'F2' && !isRenaming) {
-            e.preventDefault();
+    const onRowKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === 'F2' && !isRenaming) {
+            event.preventDefault();
             setIsRenaming(true);
             setRenameDraft(entry.name);
             return;
         }
 
-        if (e.key === 'Enter' && !entry.isDirectory && !isRenaming) {
-            e.preventDefault();
+        if (event.key === 'Enter' && !entry.isDirectory && !isRenaming) {
+            event.preventDefault();
             void openDefault();
         }
     };
@@ -254,14 +256,16 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirEntry; level?:
     return (
         <div>
             <div
-                onClick={handleClick}
+                onClick={() => {
+                    void handleClick();
+                }}
                 onContextMenu={onContextMenu}
                 onKeyDown={onRowKeyDown}
-                onMouseEnter={(e) => {
-                    if (!isSelected) e.currentTarget.style.backgroundColor = t.bg.hover;
+                onMouseEnter={(event) => {
+                    if (!isSelected) event.currentTarget.style.backgroundColor = t.bg.hover;
                 }}
-                onMouseLeave={(e) => {
-                    if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                onMouseLeave={(event) => {
+                    if (!isSelected) event.currentTarget.style.backgroundColor = 'transparent';
                 }}
                 style={{
                     alignItems: 'center',
@@ -316,10 +320,12 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirEntry; level?:
                 danger
                 message={`Delete "${entry.name}"? This cannot be undone.`}
                 onCancel={() => setConfirmDeleteOpen(false)}
-                onConfirm={async () => {
+                onConfirm={() => {
                     setConfirmDeleteOpen(false);
-                    const { deletePath } = await import('../../../services/explorerFileActions');
-                    await deletePath(fullPath);
+                    void (async () => {
+                        const { deletePath } = await import('../../../services/explorerFileActions');
+                        await deletePath(fullPath);
+                    })();
                 }}
                 open={confirmDeleteOpen}
                 title="Delete item?"
@@ -338,9 +344,9 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirEntry; level?:
                     <span style={{ width: 14 * uiScale }} />
                     <InlineNameInput
                         onCancel={() => {
-                            setCreateMode(null);
+                            setCreateMode(undefined);
                             setCreateDraft('');
-                            setCreateTargetDir(null);
+                            setCreateTargetDirectory(undefined);
                         }}
                         onChange={setCreateDraft}
                         onSubmit={commitCreate}

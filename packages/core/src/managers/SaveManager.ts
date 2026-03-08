@@ -1,4 +1,5 @@
 import type { Engine } from '../Engine';
+import type { SpriteState } from '../handlers/SpriteHandler';
 
 export interface SaveMeta {
     label?: string;
@@ -11,7 +12,7 @@ export interface SaveState {
     index: number;
     meta: SaveMeta;
     sceneName: string;
-    state: Record<string, any>;
+    state: Record<string, unknown>;
 }
 
 export class SaveManager {
@@ -28,19 +29,19 @@ export class SaveManager {
         this.engine.logger.info(`Save slot ${slot} deleted`);
     }
 
-    public getMeta(slot: number): null | SaveMeta {
+    public getMeta(slot: number): SaveMeta | undefined {
         const saveString = localStorage.getItem(`${this.prefix}_${slot}`);
-        if (!saveString) return null;
+        if (!saveString) return undefined;
 
         try {
-            const saveData: SaveState = JSON.parse(saveString);
+            const saveData = JSON.parse(saveString) as SaveState;
             return saveData.meta ?? {
                 savedAt: 0,
                 sceneName: saveData.sceneName,
                 slot
             };
         } catch {
-            return null;
+            return undefined;
         }
     }
 
@@ -48,8 +49,8 @@ export class SaveManager {
         return localStorage.getItem(`${this.prefix}_${slot}`) !== null;
     }
 
-    public listSlots(maxSlots: number = 10): (null | SaveMeta)[] {
-        const slots: (null | SaveMeta)[] = [];
+    public listSlots(maxSlots: number = 10): (SaveMeta | undefined)[] {
+        const slots: (SaveMeta | undefined)[] = [];
         for (let index = 1; index <= maxSlots; index++) {
             slots.push(this.getMeta(index));
         }
@@ -63,36 +64,38 @@ export class SaveManager {
             return;
         }
 
-        const saveData: SaveState = JSON.parse(saveString);
+        const saveData = JSON.parse(saveString) as SaveState;
         this.engine.logger.info(`Loading save from slot ${slot}...`);
 
         this.engine.clear();
 
         this.engine.state = saveData.state;
-        const itemIds = this.engine.getState('__sys_items');
+        const itemIds = this.engine.getState<unknown>('__sys_items');
         if (Array.isArray(itemIds)) {
-            this.engine.items.deserialize(itemIds);
+            this.engine.items.deserialize(itemIds as string[]);
         }
 
-        const bgUrl = this.engine.getState('__sys_bg');
+        const bgUrl = this.engine.getState<string | undefined>('__sys_bg');
         if (bgUrl) await this.engine.runCommand({ assetUrl: bgUrl, type: 'background' });
 
-        const bgmUrl = this.engine.getState('__sys_bgm');
+        const bgmUrl = this.engine.getState<string | undefined>('__sys_bgm');
         if (bgmUrl) await this.engine.runCommand({ action: 'play', assetUrl: bgmUrl, type: 'bgm' });
 
-        const sprites = this.engine.getState('__sys_sprites');
+        const sprites = this.engine.getState<Record<string, SpriteState> | undefined>('__sys_sprites');
         if (sprites && typeof sprites === 'object') {
-            for (const [id, data] of Object.entries(sprites)) {
-                const s = data as any;
+            for (const [id, s] of Object.entries(sprites)) {
                 await this.engine.runCommand({
                     action: 'show',
                     anchorX: s.anchorX,
                     anchorY: s.anchorY,
                     assetUrl: s.assetUrl,
                     flip: s.flip,
-                    id, pose: s.pose,
-                    scaleX: s.scaleX, scaleY: s.scaleY,
-                    transition: 'instant', type: 'sprite',
+                    id,
+                    pose: s.pose,
+                    scaleX: s.scaleX,
+                    scaleY: s.scaleY,
+                    transition: 'instant',
+                    type: 'sprite',
                     x: s.x,
                     y: s.y,
                 });
@@ -126,7 +129,7 @@ export class SaveManager {
             index: this.engine.lastSavePoint,
             meta,
             sceneName: this.engine.currentSceneName,
-            state: JSON.parse(JSON.stringify(this.engine.state))
+            state: structuredClone(this.engine.state)
         };
 
         localStorage.setItem(`${this.prefix}_${slot}`, JSON.stringify(saveData));

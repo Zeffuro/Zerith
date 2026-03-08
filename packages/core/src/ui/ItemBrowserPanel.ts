@@ -1,11 +1,11 @@
-import { Container, Graphics, Sprite, Text } from 'pixi.js';
+import { Container, type FederatedPointerEvent, Graphics, Sprite, Text } from 'pixi.js';
 
 import type { Engine } from '../Engine';
-import type { MenuPanel } from '../types';
+import type { MenuPanel as Panel } from '../types';
 
 import { createButton, createPanelTitle, createSelectableList, registerFocusableButton } from './UIComponents';
 
-export class ItemBrowserPanel implements MenuPanel {
+export class ItemBrowserPanel implements Panel {
     public id = 'evidence';
     public label = 'Evidence';
 
@@ -88,7 +88,7 @@ export class ItemBrowserPanel implements MenuPanel {
 
             if (item.imageUrl) {
                 try {
-                    const texture = await engine.loadAsset(item.imageUrl);
+                    const texture = await engine.loadAsset<import('pixi.js').Texture>(item.imageUrl);
                     detailSprite.texture = texture;
                     detailSprite.visible = true;
                     const maxImgW = detailWidth * 0.6;
@@ -124,24 +124,24 @@ export class ItemBrowserPanel implements MenuPanel {
         listContainer.mask = listMask;
 
         if (currentList.length > 0) {
-            const { container: listContent } = createSelectableList(context, {
+            const { container: listContent, select: selectList } = createSelectableList(context, {
                 initialSelected: 0,
-                items: currentList.map((item, _) => ({
+                items: currentList.map((item) => ({
                     label: item.name,
-                    onSelect: (index) => updateDetail(currentList, index),
+                    onSelect: (index) => void updateDetail(currentList, index),
                 })),
                 width: listWidth - 10,
             });
             listContainer.addChild(listContent);
-            updateDetail(currentList, 0);
+            void updateDetail(currentList, 0);
 
-            for (const [index, _] of currentList.entries()) {
+            for (const [index] of currentList.entries()) {
                 focus.register({
-                    activate: () => updateDetail(currentList, index),
+                    activate: () => { void updateDetail(currentList, index); },
                     blur: () => {},
                     focus: () => {
-                        (listContent as any).select?.(index);
-                        updateDetail(currentList, index);
+                        selectList(index);
+                        void updateDetail(currentList, index);
                     },
                 });
             }
@@ -178,8 +178,8 @@ export class ItemBrowserPanel implements MenuPanel {
             tabText.position.set(tabWidth / 2, tabHeight / 2);
             tabButton.addChild(tabBg, tabText);
 
-            tabButton.on('pointerdown', (e: any) => {
-                e.stopPropagation();
+            tabButton.on('pointerdown', (event: FederatedPointerEvent) => {
+                event.stopPropagation();
                 engine.overlay.showPanel(this);
             });
             return tabButton;
@@ -199,10 +199,10 @@ export class ItemBrowserPanel implements MenuPanel {
         const maxScroll = Math.max(0, totalListHeight - visibleHeight);
         let scrollY = 0;
 
-        const onWheel = (e: WheelEvent) => {
-            e.preventDefault();
+        const onWheel = (event: WheelEvent) => {
+            event.preventDefault();
             if (listContainer.destroyed) return;
-            scrollY += e.deltaY;
+            scrollY += event.deltaY;
             scrollY = Math.max(0, Math.min(maxScroll, scrollY));
             listContainer.children[0].y = -scrollY;
         };

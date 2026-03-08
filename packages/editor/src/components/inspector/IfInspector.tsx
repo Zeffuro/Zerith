@@ -1,16 +1,16 @@
+import type { IfCommand } from 'core';
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 
-export function IfInspector({ index, node }: { index?: null | number; node: any, }) {
+export function IfInspector({ index, node }: { index?: null | number; node: IfCommand, }) {
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle, uiScale } = useInspectorFieldEditor(index);
-
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: `${12 * uiScale}px` }}>
             <div>
                 <label style={labelStyle}>Condition Source</label>
                 <select
-                    onChange={e => handleChange('source', e.target.value)}
+                    onChange={(event) => handleChange('source', event.target.value)}
                     style={getFieldInputStyle('source')}
                     value={node.source || 'variable'}
                 >
@@ -23,7 +23,7 @@ export function IfInspector({ index, node }: { index?: null | number; node: any,
             <div>
                 <label style={labelStyle}>Key / ID</label>
                 <input
-                    onChange={e => handleChange('key', e.target.value)}
+                    onChange={(event) => handleChange('key', event.target.value)}
                     placeholder="e.g. has_met_bob"
                     style={getFieldInputStyle('key')}
                     type="text"
@@ -35,7 +35,7 @@ export function IfInspector({ index, node }: { index?: null | number; node: any,
             <div style={{ display: 'flex', gap: '8px' }}>
                 <div style={{ flex: 1 }}>
                     <label style={labelStyle}>Operator</label>
-                    <select onChange={e => handleChange('op', e.target.value)} style={getFieldInputStyle('op')} value={node.op || 'eq'}>
+                    <select onChange={(event) => handleChange('op', event.target.value)} style={getFieldInputStyle('op')} value={node.op || 'eq'}>
                         <option value="eq">== (Equal)</option>
                         <option value="neq">!= (Not Equal)</option>
                         <option value="gt">&gt; (Greater)</option>
@@ -46,17 +46,18 @@ export function IfInspector({ index, node }: { index?: null | number; node: any,
                 <div style={{ flex: 1 }}>
                     <label style={labelStyle}>Value</label>
                     <input
-                        onChange={e => {
-                            let v: any = e.target.value;
-                            if (v === 'true') v = true;
-                            else if (v === 'false') v = false;
-                            else if (!isNaN(Number(v)) && v !== '') v = Number(v);
-                            handleChange('value', v);
+                        onChange={(event) => {
+                            let value: boolean | number | string = event.target.value;
+                            const numberValue = Number(value);
+                            if (value === 'true') value = true;
+                            else if (value === 'false') value = false;
+                            else if (!Number.isNaN(numberValue) && value !== '') value = numberValue;
+                            handleChange('value', value);
                         }}
                         placeholder="true"
                         style={getFieldInputStyle('value')}
                         type="text"
-                        value={node.value === undefined ? '' : node.value}
+                        value={node.value === undefined ? '' : String(node.value)}
                     />
                     <FieldError errors={getFieldErrors('value')} />
                 </div>

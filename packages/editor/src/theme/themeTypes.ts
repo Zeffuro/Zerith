@@ -1,7 +1,7 @@
 export interface ThemeFile {
     key: string;
     label: string;
-    vars: ThemeVars;
+    vars: ThemeVariables;
 }
 
-export type ThemeVars = Record<string, string>;
+export type ThemeVariables = Record<string, string>;

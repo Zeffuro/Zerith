@@ -8,18 +8,19 @@ export interface GotoCommand extends BaseCommand {
 
 export class GotoHandler implements CommandHandler<GotoCommand> {
     public autoNext = true;
-    public type: 'goto' = 'goto';
+    public type = 'goto' as const;
 
-    execute = async (command: GotoCommand, engine: Engine) => {
+    execute = (command: GotoCommand, engine: Engine) => {
         const script = engine.scenes.script;
         const targetIndex = script.findIndex(
-            cmd => cmd.type === 'label' && 'name' in cmd && cmd.name === command.label
+            (cmd) => cmd.type === 'label' && (cmd as unknown as { name: string }).name === command.label
         );
 
         if (targetIndex === -1) {
-            engine.logger.warn(`Label '${command.label}' not found in current scene.`);
+            engine.logger.warn(`Label '${command.label}' not found.`);
         } else {
-            engine.scenes.currentIndex = targetIndex + 1;
+            engine.scenes.currentIndex = targetIndex;
         }
+        return Promise.resolve();
     };
 }

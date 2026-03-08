@@ -1,6 +1,6 @@
 export type ScriptViewMode = 'json' | 'timeline';
 
-export type WorkbenchGet = () => Record<string, any>;
+export type WorkbenchGet = () => WorkbenchState;
 
 export type WorkbenchResourceKind =
     | 'asset'
@@ -12,7 +12,8 @@ export type WorkbenchResourceKind =
     | 'unknown';
 
 export type WorkbenchSet = (
-    partial: ((state: Record<string, any>) => Record<string, any>) | Record<string, any>
+    partial: ((state: WorkbenchState) => Partial<WorkbenchState> | WorkbenchState) | Partial<WorkbenchState> | WorkbenchState,
+    replace?: boolean
 ) => void;
 
 export interface WorkbenchState extends WorkbenchTabsSlice, WorkbenchViewPrefsSlice {}
@@ -30,14 +31,14 @@ export type WorkbenchTab = {
 };
 
 export interface WorkbenchTabsSlice {
-    activeTab: () => null | WorkbenchTab;
-    activeTabId: null | string;
+    activeTab: () => undefined | WorkbenchTab;
+    activeTabId: string | undefined;
     clearTabs: () => void;
     closeOthers: (tabId: string) => void;
     closeTab: (tabId: string) => void;
     closeToRight: (tabId: string) => void;
     openOrFocusTab: (tab: WorkbenchTab) => void;
-    setActiveTab: (tabId: null | string) => void;
+    setActiveTab: (tabId: string | undefined) => void;
     tabs: WorkbenchTab[];
 }
 
@@ -47,4 +48,3 @@ export interface WorkbenchViewPrefsSlice {
     setLastMacrosView: (view: ScriptViewMode) => void;
     setLastScriptView: (view: ScriptViewMode) => void;
 }
-

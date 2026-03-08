@@ -1,4 +1,3 @@
-import type { Engine } from '../Engine';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface LabelCommand extends BaseCommand {
@@ -8,10 +7,11 @@ export interface LabelCommand extends BaseCommand {
 
 export class LabelHandler implements CommandHandler<LabelCommand> {
     public autoNext = true;
-    public type: 'label' = 'label';
+    public type = 'label' as const;
 
-    execute = async (_command: LabelCommand, _engine: Engine) => {
+    execute = () => {
         // Labels are no-ops at execution time.
         // They're used as targets by GotoHandler.
+        return Promise.resolve();
     };
 }

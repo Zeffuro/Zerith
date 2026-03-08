@@ -1,17 +1,19 @@
+import type { FlashCommand } from 'core';
 import { useEffect, useState } from 'react';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 
-export function FlashInspector({ index, node }: { index?: null | number; node: any; }) {
+export function FlashInspector({ index, node }: { index?: null | number; node: FlashCommand; }) {
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle, uiScale } = useInspectorFieldEditor(index);
 
-    // Use local state to prevent lag when dragging the color picker!
-    const [localColor, setLocalColor] = useState(node.color ?? 16_777_215);
+    const [localColor, setLocalColor] = useState(node.color ?? 0xFF_FF_FF);
+    const [prevColor, setPrevColor] = useState(node.color);
 
-    useEffect(() => {
-        setLocalColor(node.color ?? 16_777_215);
-    }, [node.color]);
+    if (node.color !== prevColor) {
+        setPrevColor(node.color);
+        setLocalColor(node.color ?? 0xFF_FF_FF);
+    }
 
     const hexColor = '#' + localColor.toString(16).padStart(6, '0').toUpperCase();
 
@@ -22,7 +24,7 @@ export function FlashInspector({ index, node }: { index?: null | number; node: a
                 <div style={{ alignItems: 'center', display: 'flex', gap: '8px' }}>
                     <input
                         onBlur={() => handleChange('color', localColor)} // Only save to JSON when finished
-                        onChange={(e) => setLocalColor(Number.parseInt(e.target.value.replace('#', ''), 16))}
+                        onChange={(event) => setLocalColor(Number.parseInt(event.target.value.replace('#', ''), 16))}
                         style={{
                             background: 'transparent',
                             border: 'none',
@@ -36,8 +38,8 @@ export function FlashInspector({ index, node }: { index?: null | number; node: a
                         value={hexColor}
                     />
                     <input
-                        onChange={(e) => {
-                            const value = Number(e.target.value);
+                        onChange={(event) => {
+                            const value = Number(event.target.value);
                             setLocalColor(value);
                             handleChange('color', value);
                         }}
@@ -52,7 +54,7 @@ export function FlashInspector({ index, node }: { index?: null | number; node: a
                 <label style={labelStyle}>Duration (ms)</label>
                 <input
                     min={0}
-                    onChange={(e) => handleChange('duration', Number(e.target.value))}
+                    onChange={(event) => handleChange('duration', Number(event.target.value))}
                     style={getFieldInputStyle('duration')}
                     type="number"
                     value={node.duration ?? 200}
@@ -62,7 +64,7 @@ export function FlashInspector({ index, node }: { index?: null | number; node: a
             <div>
                 <label style={labelStyle}>Wait for completion</label>
                 <select
-                    onChange={(e) => handleChange('wait', e.target.value === 'true')}
+                    onChange={(event) => handleChange('wait', event.target.value === 'true')}
                     style={getFieldInputStyle('wait')}
                     value={node.wait ? 'true' : 'false'}
                 >

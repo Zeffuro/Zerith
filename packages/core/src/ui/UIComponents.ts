@@ -1,4 +1,4 @@
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, type FederatedPointerEvent, Graphics, Text } from 'pixi.js';
 
 import type { OverlayConfig } from '../managers/OverlayManager';
 import type { Theme } from '../utils/Theme';
@@ -126,8 +126,8 @@ export function createButton(context: UIContext, options: ButtonOptions, action:
 
     button.on('pointerover', drawHover);
     button.on('pointerout', drawNormal);
-    button.on('pointerdown', (e: any) => {
-        e.stopPropagation();
+    button.on('pointerdown', (event: FederatedPointerEvent) => {
+        event.stopPropagation();
         action();
     });
 
@@ -214,8 +214,8 @@ export function createSelectableList(context: UIContext, options: ListRowOptions
         row.on('pointerout', () => {
             if (index !== selectedIndex) styleRow(rowBg, false);
         });
-        row.on('pointerdown', (e: any) => {
-            e.stopPropagation();
+        row.on('pointerdown', (event: FederatedPointerEvent) => {
+            event.stopPropagation();
             select(index);
             item.onSelect(index);
         });
@@ -306,24 +306,24 @@ export function createSlider(context: UIContext, options: SliderOptions): Slider
     hitArea.cursor = 'pointer';
     row.addChild(hitArea);
 
-    hitArea.on('pointerdown', (e: any) => {
-        e.stopPropagation();
+    hitArea.on('pointerdown', (event: FederatedPointerEvent) => {
+        event.stopPropagation();
         dragging = true;
         const rowWorldX = row.getGlobalPosition().x;
-        const fraction = (e.global.x - rowWorldX - trackX) / trackWidth;
+        const fraction = (event.global.x - rowWorldX - trackX) / trackWidth;
         applyValue(fraction);
     });
 
-    handle.on('pointerdown', (e: any) => {
-        e.stopPropagation();
+    handle.on('pointerdown', (event: FederatedPointerEvent) => {
+        event.stopPropagation();
         dragging = true;
     });
 
-    const onMouseMove = (e: MouseEvent) => {
+    const onMouseMove = (event: MouseEvent) => {
         if (!dragging) return;
         const rect = context.getCanvasRect();
         const scaleX = context.canvasWidth / rect.width;
-        const canvasX = (e.clientX - rect.left) * scaleX;
+        const canvasX = (event.clientX - rect.left) * scaleX;
         const rowWorldX = row.getGlobalPosition().x;
         const fraction = (canvasX - rowWorldX - trackX) / trackWidth;
         applyValue(fraction);
@@ -395,8 +395,8 @@ export function createToggle(context: UIContext, options: ToggleOptions): Toggle
     draw();
     toggleContainer.addChild(bg, knob);
 
-    toggleContainer.on('pointerdown', (e: any) => {
-        e.stopPropagation();
+    toggleContainer.on('pointerdown', (event: FederatedPointerEvent) => {
+        event.stopPropagation();
         doToggle();
     });
 

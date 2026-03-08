@@ -1,4 +1,3 @@
-import type { Engine } from '../Engine';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface WaitCommand extends BaseCommand {
@@ -8,9 +7,9 @@ export interface WaitCommand extends BaseCommand {
 
 export class WaitHandler implements CommandHandler<WaitCommand> {
     public autoNext = true;
-    public type: 'wait' = 'wait';
+    public type = 'wait' as const;
 
-    execute = async (command: WaitCommand, _engine: Engine) => {
-        await new Promise(resolve => setTimeout(resolve, command.duration));
+    execute = (command: WaitCommand) => {
+        return new Promise<void>(resolve => setTimeout(resolve, command.duration));
     };
 }

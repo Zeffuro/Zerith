@@ -1,8 +1,9 @@
+import type { BgmCommand } from 'core';
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 import { AssetPickerField } from './fields/AssetPickerField';
 
-export function BgmInspector({ index, node }: { index?: null | number; node: any; }) {
+export function BgmInspector({ index, node }: { index?: null | number; node: BgmCommand; }) {
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle } = useInspectorFieldEditor(index);
 
     return (
@@ -10,7 +11,7 @@ export function BgmInspector({ index, node }: { index?: null | number; node: any
             <div>
                 <label style={labelStyle}>Action</label>
                 <select
-                    onChange={(e) => handleChange('action', e.target.value)}
+                    onChange={(event) => handleChange('action', event.target.value)}
                     style={getFieldInputStyle('action')}
                     value={node.action || 'play'}
                 >
@@ -28,10 +29,10 @@ export function BgmInspector({ index, node }: { index?: null | number; node: any
                         <label style={labelStyle}>Asset URL</label>
                         <AssetPickerField
                             inputStyle={getFieldInputStyle('assetUrl')}
-                            kind="audio"
+                            kind="bgm"
                             listId="bgm-asset-options"
                             onChange={(assetUrl) => handleChange('assetUrl', assetUrl)}
-                            value={node.assetUrl || ''}
+                            value={node.assetUrl ?? ''}
                         />
                         <FieldError errors={getFieldErrors('assetUrl')} />
                     </div>
@@ -39,27 +40,22 @@ export function BgmInspector({ index, node }: { index?: null | number; node: any
                     <div>
                         <label style={labelStyle}>Volume (0-1)</label>
                         <input
-                            max={1}
-                            min={0}
-                            onChange={(e) => handleChange('volume', Number(e.target.value))}
-                            step="0.01"
+                            onChange={(event) => handleChange('volume', Number(event.target.value))}
+                            step="0.1"
                             style={getFieldInputStyle('volume')}
                             type="number"
-                            value={node.volume ?? 0.5}
+                            value={node.volume ?? 1}
                         />
                         <FieldError errors={getFieldErrors('volume')} />
                     </div>
 
                     <div>
                         <label style={labelStyle}>Loop</label>
-                        <select
-                            onChange={(e) => handleChange('loop', e.target.value === 'true')}
-                            style={getFieldInputStyle('loop')}
-                            value={node.loop ? 'true' : 'false'}
-                        >
-                            <option value="true">true</option>
-                            <option value="false">false</option>
-                        </select>
+                        <input
+                            checked={node.loop !== false}
+                            onChange={(event) => handleChange('loop', event.target.checked)}
+                            type="checkbox"
+                        />
                         <FieldError errors={getFieldErrors('loop')} />
                     </div>
                 </>

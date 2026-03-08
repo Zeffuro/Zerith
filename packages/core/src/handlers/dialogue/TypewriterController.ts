@@ -147,7 +147,7 @@ export class TypewriterController {
                 current += ch;
 
                 if (blipUrl && ch !== ' ' && ch !== '\n' && sound.exists(blipUrl)) {
-                    sound.play(blipUrl, { volume: 0.1 * getVoiceVolume() });
+                    await sound.play(blipUrl, { volume: 0.1 * getVoiceVolume() });
                 }
                 index++;
             }
@@ -159,4 +159,3 @@ export class TypewriterController {
         }
     }
 }
-

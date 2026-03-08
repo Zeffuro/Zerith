@@ -12,7 +12,7 @@ export interface ShakeCommand extends BaseCommand {
 
 export class ShakeHandler implements CommandHandler<ShakeCommand> {
     public autoNext = true;
-    public type: 'shake' = 'shake';
+    public type = 'shake' as const;
 
     execute = async (command: ShakeCommand, engine: Engine) => {
         const duration = (command.duration ?? 500) / 1000;

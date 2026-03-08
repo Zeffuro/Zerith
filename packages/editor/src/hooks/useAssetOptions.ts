@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { type FsDirEntry, fsReadDir } from '../services/fs';
 import { useProjectStore } from '../store/useProjectStore';
@@ -22,7 +22,7 @@ export function useAssetOptions(kind: AssetKind = 'all') {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<null | string>(null);
 
-    const reload = async () => {
+    const reload = useCallback(async () => {
         if (!projectPath) {
             setAssets([]);
             setError(null);
@@ -52,11 +52,11 @@ export function useAssetOptions(kind: AssetKind = 'all') {
         } finally {
             setLoading(false);
         }
-    };
+    }, [kind, projectPath]);
 
     useEffect(() => {
         void reload();
-    }, [projectPath, kind]);
+    }, [reload]);
 
     const values = useMemo(() => assets.map((a) => a.value), [assets]);
 

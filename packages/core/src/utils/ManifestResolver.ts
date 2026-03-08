@@ -14,7 +14,7 @@ export async function resolveManifestValue<T>(value: string | T): Promise<T> {
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            return await response.json();
+            return (await response.json()) as T;
         } catch (error) {
             logger.error(`Failed to load manifest file: ${value}`, error);
             throw error;
@@ -28,14 +28,14 @@ export async function resolveManifestValue<T>(value: string | T): Promise<T> {
  * Returns a flat Record<string, Script>.
  */
 export async function resolveScenes(
-    scenes: Record<string, any>
-): Promise<Record<string, any[]>> {
-    const resolved: Record<string, any[]> = {};
+    scenes: Record<string, unknown>
+): Promise<Record<string, unknown[]>> {
+    const resolved: Record<string, unknown[]> = {};
     const entries = Object.entries(scenes);
 
     await Promise.all(
         entries.map(async ([name, value]) => {
-            resolved[name] = await resolveManifestValue<any[]>(value);
+            resolved[name] = await resolveManifestValue<unknown[]>(value as string | unknown[]);
         })
     );
 

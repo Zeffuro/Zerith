@@ -13,7 +13,7 @@ export interface FlashCommand extends BaseCommand {
 
 export class FlashHandler implements CommandHandler<FlashCommand> {
     public autoNext = true;
-    public type: 'flash' = 'flash';
+    public type = 'flash' as const;
 
     execute = async (command: FlashCommand, engine: Engine) => {
         const color = command.color ?? 0xFF_FF_FF;

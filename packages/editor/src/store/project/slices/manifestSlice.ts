@@ -1,3 +1,5 @@
+import type { Command } from 'core';
+
 import type { ProjectGet, ProjectManifestSlice, ProjectSet } from '../types';
 
 import { fsReadTextFile } from '../../../services/fs';
@@ -11,7 +13,7 @@ export function createProjectManifestSlice(set: ProjectSet, get: ProjectGet): Pr
             if (!projectPath) return;
 
             try {
-                const manifestText = await fsReadTextFile(projectPath + '/game.json');
+                const manifestText = await fsReadTextFile(`${projectPath}/game.json`);
                 const manifest = JSON.parse(manifestText);
 
                 const [characters, items, macros, scenes] = await Promise.all([
@@ -27,7 +29,7 @@ export function createProjectManifestSlice(set: ProjectSet, get: ProjectGet): Pr
             }
         },
         macros: {},
-        manifest: null,
+        manifest: undefined,
 
         scenes: {},
     };
@@ -35,7 +37,7 @@ export function createProjectManifestSlice(set: ProjectSet, get: ProjectGet): Pr
 
 async function resolveManifestValueFromDisk<T>(value: string | T, projectPath: string): Promise<T> {
     if (typeof value === 'string') {
-        const filePath = projectPath + value;
+        const filePath = `${projectPath}${value}`;
         const text = await fsReadTextFile(filePath);
         return JSON.parse(text);
     }
@@ -43,13 +45,13 @@ async function resolveManifestValueFromDisk<T>(value: string | T, projectPath: s
 }
 
 async function resolveScenesDisk(
-    scenes: Record<string, any>,
+    scenes: Record<string, unknown>,
     projectPath: string
-): Promise<Record<string, any[]>> {
-    const resolved: Record<string, any[]> = {};
+): Promise<Record<string, Command[]>> {
+    const resolved: Record<string, Command[]> = {};
     await Promise.all(
         Object.entries(scenes).map(async ([name, value]) => {
-            resolved[name] = await resolveManifestValueFromDisk<any[]>(value, projectPath);
+            resolved[name] = await resolveManifestValueFromDisk<Command[]>(value as Command[] | string, projectPath);
         })
     );
     return resolved;

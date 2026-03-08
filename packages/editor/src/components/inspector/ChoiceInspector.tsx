@@ -1,25 +1,26 @@
 import { Plus, Trash2 } from 'lucide-react';
+import type { ChoiceCommand, ChoiceOption } from 'core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { editorTheme as t } from '../../theme/editorTheme';
 
-export function ChoiceInspector({ index, node }: { index?: null | number; node: any; }) {
+export function ChoiceInspector({ index, node }: { index?: null | number; node: ChoiceCommand; }) {
     const { applyNodePatch, inputStyle, labelStyle, uiScale } = useInspectorFieldEditor(index);
 
     const options = Array.isArray(node.options) ? node.options : [];
 
-    const updateOption = (optIndex: number, patch: Record<string, any>) => {
-        const next = options.map((opt: any, index_: number) => (index_ === optIndex ? { ...opt, ...patch } : opt));
+    const updateOption = (optIndex: number, patch: Partial<ChoiceOption>) => {
+        const next = options.map((opt, index_) => (index_ === optIndex ? { ...opt, ...patch } : opt));
         applyNodePatch({ options: next });
     };
 
     const addOption = () => {
-        const next = [...options, { commands: [], label: `Option ${options.length + 1}` }];
+        const next: ChoiceOption[] = [...options, { commands: [], label: `Option ${options.length + 1}` }];
         applyNodePatch({ options: next });
     };
 
     const removeOption = (optIndex: number) => {
-        const next = options.filter((_: any, index_: number) => index_ !== optIndex);
+        const next = options.filter((_, index_) => index_ !== optIndex);
         applyNodePatch({ options: next });
     };
 
@@ -51,7 +52,7 @@ export function ChoiceInspector({ index, node }: { index?: null | number; node: 
                 </div>
             )}
 
-            {options.map((opt: any, index_: number) => (
+            {options.map((opt, index_) => (
                 <div
                     key={index_}
                     style={{
@@ -80,7 +81,7 @@ export function ChoiceInspector({ index, node }: { index?: null | number; node: 
                     <div>
                         <label style={labelStyle}>Label</label>
                         <input
-                            onChange={(e) => updateOption(index_, { label: e.target.value })}
+                            onChange={(event) => updateOption(index_, { label: event.target.value })}
                             placeholder="Choice text shown to player"
                             style={inputStyle}
                             type="text"

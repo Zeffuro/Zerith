@@ -1,4 +1,4 @@
-import { Sprite } from 'pixi.js';
+import { Sprite, Texture } from 'pixi.js';
 
 import type { Engine } from '../Engine';
 import type { BaseCommand, CommandHandler } from '../types';
@@ -10,36 +10,22 @@ export interface BackgroundCommand extends BaseCommand {
 
 export class BackgroundHandler implements CommandHandler<BackgroundCommand> {
     public autoNext = true;
-    public type: 'background' = 'background';
-    private sprite: null | Sprite = null;
+    public type = 'background' as const;
+    private sprite: Sprite | undefined;
 
     execute = async (command: BackgroundCommand, engine: Engine) => {
-        const texture = await engine.loadAsset(command.assetUrl);
+        const texture = await engine.loadAsset<Texture>(command.assetUrl);
 
         if (this.sprite) {
             this.sprite.texture = texture;
+            this.sprite.width = engine.display.width;
+            this.sprite.height = engine.display.height;
         } else {
             this.sprite = new Sprite(texture);
-            this.sprite.anchor.set(0.5);
+            this.sprite.width = engine.display.width;
+            this.sprite.height = engine.display.height;
             engine.layers.background.addChild(this.sprite);
+            engine.setState('__sys_background', { assetUrl: command.assetUrl });
         }
-
-        const w = engine.display.width;
-        const h = engine.display.height;
-
-        this.sprite.x = w / 2;
-        this.sprite.y = h / 2;
-
-        const screenAspect = w / h;
-        const textureAspect = texture.width / texture.height;
-
-        if (textureAspect > screenAspect) {
-            this.sprite.height = h;
-            this.sprite.scale.x = this.sprite.scale.y;
-        } else {
-            this.sprite.width = w;
-            this.sprite.scale.y = this.sprite.scale.x;
-        }
-        engine.setState('__sys_bg', command.assetUrl);
     };
 }

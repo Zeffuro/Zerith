@@ -4,10 +4,10 @@ import type { ProjectScriptBridge, ProjectSessionSlice, ProjectSet } from '../ty
 
 export function createProjectSessionSlice(set: ProjectSet, scriptBridge: ProjectScriptBridge): ProjectSessionSlice {
     return {
-        activeFile: null,
+        activeFile: undefined,
         bumpTreeRevision: () => set((s) => ({ treeRevision: s.treeRevision + 1 })),
         files: [],
-        projectPath: null,
+        projectPath: undefined,
 
         setActiveFile: (file: string, content: EditorNode[]) => {
             set({ activeFile: file });
@@ -16,20 +16,20 @@ export function createProjectSessionSlice(set: ProjectSet, scriptBridge: Project
 
         setProject: (path: string, files: FsDirEntry[]) =>
             set({
-                activeFile: null,
-                activeMacroName: null,
+                activeFile: undefined,
+                activeMacroName: undefined,
                 characters: {},
                 editingAllMacrosFile: false,
                 files,
                 items: {},
                 macroEntries: [],
                 macros: {},
-                manifest: null,
+                manifest: undefined,
                 projectPath: path,
                 scenes: {},
+                treeRevision: 0,
             }),
 
         treeRevision: 0,
     };
 }
-

@@ -20,10 +20,14 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
     const selectedAssetPath = useEditorStore((s) => s.selectedAssetPath);
 
     const [value, setValue] = useState('');
+    const [prevSelected, setPrevSelected] = useState(selectedAssetPath);
 
-    useEffect(() => {
-        if (selectedAssetPath) setValue(selectedAssetPath);
-    }, [selectedAssetPath]);
+    if (selectedAssetPath !== prevSelected) {
+        setPrevSelected(selectedAssetPath);
+        if (selectedAssetPath) {
+            setValue(selectedAssetPath);
+        }
+    }
 
     const resolvedSource = useMemo(() => {
         if (!value) return '';
@@ -42,7 +46,7 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
 
             <input
                 list="asset-preview-options"
-                onChange={(e) => setValue(e.target.value)}
+                onChange={(event) => setValue(event.target.value)}
                 placeholder="/assets/..."
                 style={{
                     background: t.bg.input,

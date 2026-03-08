@@ -12,7 +12,7 @@ export interface ForCommand extends BaseCommand {
 
 export class ForHandler implements CommandHandler<ForCommand> {
     public autoNext = true;
-    public type: 'for' = 'for';
+    public type = 'for' as const;
 
     execute = async (command: ForCommand, engine: Engine) => {
         const iterator = command.iterator ?? 'i';

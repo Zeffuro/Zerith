@@ -4,10 +4,10 @@ export function createWorkbenchTabsSlice(set: WorkbenchSet, get: WorkbenchGet): 
     return {
         activeTab: () => {
             const s = get();
-            return s.tabs.find((t: WorkbenchTab) => t.id === s.activeTabId) ?? null;
+            return s.tabs.find((t: WorkbenchTab) => t.id === s.activeTabId);
         },
-        activeTabId: null,
-        clearTabs: () => set({ activeTabId: null, tabs: [] }),
+        activeTabId: undefined,
+        clearTabs: () => set({ activeTabId: undefined, tabs: [] }),
 
         closeOthers: (tabId) =>
             set((state) => {
@@ -25,7 +25,7 @@ export function createWorkbenchTabsSlice(set: WorkbenchSet, get: WorkbenchGet): 
                 let nextActive = state.activeTabId;
 
                 if (state.activeTabId === tabId) {
-                    nextActive = nextTabs.length === 0 ? null : nextTabs[Math.max(0, index - 1)]?.id ?? nextTabs[0].id;
+                    nextActive = nextTabs.length === 0 ? undefined : nextTabs[Math.max(0, index - 1)]?.id ?? nextTabs[0].id;
                 }
 
                 return { activeTabId: nextActive, tabs: nextTabs };
@@ -54,4 +54,3 @@ export function createWorkbenchTabsSlice(set: WorkbenchSet, get: WorkbenchGet): 
         tabs: [],
     };
 }
-

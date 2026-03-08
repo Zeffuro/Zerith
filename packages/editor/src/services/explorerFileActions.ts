@@ -20,7 +20,7 @@ export async function createFileInDirectory(dirPath: string, name: string, initi
     } catch (error) {
         console.error('Create file failed:', error);
         executeConsoleMessageAction('editor', 'error', 'Create file failed:', String(error));
-        return null;
+        return;
     }
 }
 
@@ -33,7 +33,7 @@ export async function createFolderInDirectory(dirPath: string, name: string) {
     } catch (error) {
         console.error('Create folder failed:', error);
         executeConsoleMessageAction('editor', 'error', 'Create folder failed:', String(error));
-        return null;
+        return;
     }
 }
 

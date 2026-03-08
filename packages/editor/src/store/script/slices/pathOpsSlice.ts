@@ -36,7 +36,7 @@ const isRootNodePath = (p: ScriptPath) => p.length === 1 && typeof p[0] === 'num
 export const createPathOpsSlice = (
     set: ScriptSet,
     get: ScriptGet,
-    getProjectBridge: () => null | PathOpsProjectBridge,
+    getProjectBridge: () => PathOpsProjectBridge | undefined,
 ): PathOpsSlice => ({
     addNodeAtPath: (arrayPath, node, index) =>
         set((state) => {
@@ -65,7 +65,7 @@ export const createPathOpsSlice = (
                 future: [],
                 past: [...state.past, state.rootScript].slice(-MAX_HISTORY),
                 rootScript: nextRoot,
-                selectedNodePath: isSameSelected ? null : selected,
+                selectedNodePath: isSameSelected ? undefined : selected,
             };
         }),
 
@@ -75,7 +75,7 @@ export const createPathOpsSlice = (
                 .filter((p) => p.length === 1 && typeof p[0] === 'number')
                 .map((p) => p[0] as number)
                 .filter((index, index_, array) => array.indexOf(index) === index_)
-                .sort((a, b) => b - a);
+                .toSorted((a, b) => b - a);
 
             if (rootIndices.length === 0) return {};
 
@@ -89,8 +89,8 @@ export const createPathOpsSlice = (
                 past: [...state.past, state.rootScript].slice(-MAX_HISTORY),
                 rootScript: nextRoot,
                 scopePath: [],
-                selectedNodeIndex: null,
-                selectedNodePath: null,
+                selectedNodeIndex: undefined,
+                selectedNodePath: undefined,
             };
         }),
 
@@ -127,7 +127,7 @@ export const createPathOpsSlice = (
                 .filter(isRootIndexPath)
                 .map((p) => p[0])
                 .filter((index, index_, array) => array.indexOf(index) === index_)
-                .sort((a, b) => a - b);
+                .toSorted((a, b) => a - b);
 
             if (indices.length === 0) return {};
 
@@ -136,7 +136,7 @@ export const createPathOpsSlice = (
 
             let inserted = 0;
             for (const index of indices) {
-                const sourceIndex = index + inserted;
+                const sourceIndex = (index) + inserted;
                 const source = nextRoot[sourceIndex];
                 if (source === undefined) continue;
 
@@ -147,19 +147,20 @@ export const createPathOpsSlice = (
                 inserted += 1;
             }
 
-            const last = selectedCopies.at(-1) ?? null;
+            const last = selectedCopies.at(-1) ?? undefined;
 
             return {
                 future: [],
                 past: [...state.past, state.rootScript].slice(-MAX_HISTORY),
                 rootScript: nextRoot,
-                selectedNodeIndex: last ? (last[0] as number) : null,
+                selectedNodeIndex: last ? (last[0] as number) : undefined,
                 selectedNodePath: last,
             };
         }),
 
     getNodeAtPath: (path) => {
         const { rootScript } = get();
+        // @ts-expect-error script generic hell
         return getAtPath(rootScript, path);
     },
 
@@ -199,12 +200,12 @@ export const createPathOpsSlice = (
                 .filter((p) => p.length === 1 && typeof p[0] === 'number')
                 .map((p) => p[0] as number)
                 .filter((v, index, a) => a.indexOf(v) === index)
-                .sort((a, b) => a - b);
+                .toSorted((a, b) => a - b);
 
             if (!isRootTarget || rootIndices.length <= 1) return {};
 
             const first = rootIndices[0];
-            const last = rootIndices.at(-1);
+            const last = rootIndices.at(-1)!;
             const dropInsideBlock = targetIndex >= first && targetIndex <= last + 1;
             if (dropInsideBlock) return {};
 
@@ -222,13 +223,13 @@ export const createPathOpsSlice = (
             root.splice(insertAt, 0, ...movingNodes);
 
             const selectedPaths: ScriptPath[] = movingNodes.map((_, index) => [insertAt + index]);
-            const lastSelected = selectedPaths.at(-1) ?? null;
+            const lastSelected = selectedPaths.at(-1) ?? undefined;
 
             return {
                 future: [],
                 past: [...state.past, state.rootScript].slice(-MAX_HISTORY),
                 rootScript: root,
-                selectedNodeIndex: lastSelected ? (lastSelected[0] as number) : null,
+                selectedNodeIndex: lastSelected ? (lastSelected[0] as number) : undefined,
                 selectedNodePath: lastSelected,
             };
         }),
@@ -329,3 +330,4 @@ export const createPathOpsSlice = (
             };
         }),
 });
+

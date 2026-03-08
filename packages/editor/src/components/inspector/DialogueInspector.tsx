@@ -1,4 +1,5 @@
 import { Bold, Clock, FastForward, Italic, Palette, Underline } from 'lucide-react';
+import type { DialogueCommand } from 'core';
 import { useRef } from 'react';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
@@ -6,7 +7,7 @@ import { useProjectStore } from '../../store/useProjectStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { FieldError } from './FieldError';
 
-export function DialogueInspector({ index, node }: { index?: null | number; node: any, }) {
+export function DialogueInspector({ index, node }: { index?: null | number; node: DialogueCommand, }) {
     const { getFieldErrors, getFieldInputStyle, handleChange, uiScale } = useInspectorFieldEditor(index);
     const speakerErrors = getFieldErrors('speaker');
     const textErrors = getFieldErrors('text');
@@ -15,14 +16,14 @@ export function DialogueInspector({ index, node }: { index?: null | number; node
     const { characters } = useProjectStore();
     const charKeys = Object.keys(characters);
 
-    const insertTag = (before: string, after: string = '') => {
+    const insertTag = (before: string, after = '') => {
         const element = textareaReference.current;
         if (!element) return;
         const start = element.selectionStart;
         const end = element.selectionEnd;
         const currentText = node.text || '';
 
-        const newText = currentText.slice(0, Math.max(0, start)) + before + currentText.substring(start, end) + after + currentText.slice(Math.max(0, end));
+        const newText = currentText.slice(0, Math.max(0, start)) + before + currentText.slice(start, end) + after + currentText.slice(Math.max(0, end));
         handleChange('text', newText);
 
         setTimeout(() => {
@@ -56,14 +57,14 @@ export function DialogueInspector({ index, node }: { index?: null | number; node
                 <label style={labelStyle}>Speaker</label>
                 <input
                     list="dialogue-character-ids"
-                    onChange={e => handleChange('speaker', e.target.value)}
+                    onChange={(event) => handleChange('speaker', event.target.value)}
                     style={getFieldInputStyle('speaker')}
                     type="text"
                     value={node.speaker || ''}
                 />
                 <FieldError errors={speakerErrors} />
                 <datalist id="dialogue-character-ids">
-                    {charKeys.map(k => <option key={k} value={k} />)}
+                    {charKeys.map((k) => <option key={k} value={k} />)}
                 </datalist>
             </div>
 
@@ -80,7 +81,7 @@ export function DialogueInspector({ index, node }: { index?: null | number; node
                     </div>
                 </div>
                 <textarea
-                    onChange={e => handleChange('text', e.target.value)}
+                    onChange={(event) => handleChange('text', event.target.value)}
                     ref={textareaReference}
                     rows={5}
                     style={{ ...getFieldInputStyle('text'), fontFamily: 'monospace' }}

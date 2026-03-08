@@ -1,11 +1,11 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { bootstrapEngine, Engine } from 'core';
+import { bootstrapEngine, Engine, type Script } from 'core';
 import { useEffect, useRef, useState } from 'react';
 
 import { useEditorStore } from '../store/useEditorStore';
 import { useProjectStore } from '../store/useProjectStore';
 
-export function GamePreview({ script }: { script: any[] }) {
+export function GamePreview({ script }: { script: Script }) {
     // Manifest data
     const { characters, items, macros, manifest, projectPath, scenes } = useProjectStore();
     // Triggers
@@ -13,8 +13,9 @@ export function GamePreview({ script }: { script: any[] }) {
 
     const canvasReference = useRef<HTMLCanvasElement>(null);
     const containerReference = useRef<HTMLDivElement>(null);
-    const engineReference = useRef<Engine | null>(null);
+    const engineReference = useRef<Engine>(); // Use undefined
     const [isFocused, setIsFocused] = useState(false);
+    const [isStarted, setIsStarted] = useState(false);
 
     const handleFocus = () => {
         setIsFocused(true);
@@ -30,7 +31,7 @@ export function GamePreview({ script }: { script: any[] }) {
     useEffect(() => {
         if (!canvasReference.current || !projectPath || !manifest) return;
         let destroyed = false;
-        bootstrapEngine({
+        void bootstrapEngine({
             assetResolver: (url: string) => {
                 if (projectPath && !url.startsWith('http')) return convertFileSrc(projectPath + url);
                 return url;
@@ -50,24 +51,33 @@ export function GamePreview({ script }: { script: any[] }) {
             engineReference.current = engine;
             engine.setInputEnabled(false);
             engine.scenes.addScene('preview', script);
-            engine.scenes.jumpToScene('preview');
+            void engine.scenes.jumpToScene('preview');
         });
-        return () => { destroyed = true; engineReference.current?.destroy(); engineReference.current = null; };
+        return () => { destroyed = true; engineReference.current?.destroy(); engineReference.current = undefined; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [projectPath, manifest]);
 
     // Sync
+    const scriptRef = useRef(script);
     useEffect(() => {
+        scriptRef.current = script;
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         if (engineReference.current) engineReference.current.scenes.addScene('preview', script);
     }, [script]);
+
+    const playFromIndexRef = useRef(playFromIndex);
+    useEffect(() => { playFromIndexRef.current = playFromIndex; }, [playFromIndex]);
 
     // Play
     useEffect(() => {
         if (engineReference.current && playTrigger > 0) {
-            const startIndex = typeof playFromIndex === 'number' ? playFromIndex : 0;
+            const startIndex = typeof playFromIndexRef.current === 'number' ? playFromIndexRef.current : 0;
             engineReference.current.clear();
-            engineReference.current.scenes.addScene('preview', script);
-            engineReference.current.scenes.jumpToScene('preview', startIndex);
-            engineReference.current.start();
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
+            engineReference.current.scenes.addScene('preview', scriptRef.current);
+            void engineReference.current.scenes.jumpToScene('preview', startIndex);
+            void engineReference.current.start();
+            setIsStarted(true);
             containerReference.current?.focus();
         }
     }, [playTrigger]);
@@ -75,8 +85,10 @@ export function GamePreview({ script }: { script: any[] }) {
     useEffect(() => {
         if (engineReference.current && stopTrigger > 0) {
             engineReference.current.clear();
-            engineReference.current.scenes.addScene('preview', script);
-            engineReference.current.scenes.jumpToScene('preview', 0);
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
+            engineReference.current.scenes.addScene('preview', scriptRef.current);
+            void engineReference.current.scenes.jumpToScene('preview', 0);
+            setIsStarted(false);
             containerReference.current?.blur();
         }
     }, [stopTrigger]);
@@ -102,7 +114,7 @@ export function GamePreview({ script }: { script: any[] }) {
             tabIndex={0}
         >
             <canvas ref={canvasReference} />
-            {!isFocused && engineReference.current?.isStarted && (
+            {!isFocused && isStarted && (
                 <div style={{ background: 'rgba(0,0,0,0.6)', borderRadius: '4px', bottom: 10, color: '#aaa', fontSize: '10px', padding: '4px 8px', pointerEvents: 'none', position: 'absolute', right: 10 }}>
                     Click to control
                 </div>

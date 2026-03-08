@@ -7,7 +7,7 @@ export interface Condition {
     key: string;
     op?: ComparisonOp;
     source?: string;
-    value?: any;
+    value?: unknown;
 }
 
 export interface IfCommand extends BaseCommand {
@@ -19,20 +19,26 @@ export interface IfCommand extends BaseCommand {
     source?: string;
     then?: BaseCommand[];
     type: 'if';
-    value?: any;
+    value?: unknown;
 }
 
 export class IfHandler implements CommandHandler<IfCommand> {
     public autoNext = true;
-    public type: 'if' = 'if';
+    public type = 'if' as const;
 
-    execute = async (command: IfCommand, engine: Engine) => {
+    execute = (command: IfCommand, engine: Engine) => {
         let conditionMet: boolean;
 
         if (command.all) {
-            conditionMet = command.all.every(c => this.evaluate(c, engine));
+            conditionMet = command.all.every(c => this.evaluate(
+                { key: c.key, op: c.op, source: c.source, value: c.value },
+                engine
+            ));
         } else if (command.any) {
-            conditionMet = command.any.some(c => this.evaluate(c, engine));
+            conditionMet = command.any.some(c => this.evaluate(
+                { key: c.key, op: c.op, source: c.source, value: c.value },
+                engine
+            ));
         } else {
             conditionMet = this.evaluate(
                 { key: command.key!, op: command.op, source: command.source, value: command.value },
@@ -45,6 +51,7 @@ export class IfHandler implements CommandHandler<IfCommand> {
         } else if (!conditionMet && command.else) {
             engine.scenes.injectCommands(command.else);
         }
+        return Promise.resolve();
     };
 
     private evaluate(condition: Condition, engine: Engine): boolean {
@@ -64,13 +71,13 @@ export class IfHandler implements CommandHandler<IfCommand> {
         switch (op) {
             case 'eq': { return actual === condition.value;
             }
-            case 'gt': { return actual > condition.value;
+            case 'gt': { return (actual as number | string) > (condition.value as number | string);
             }
-            case 'gte': { return actual >= condition.value;
+            case 'gte': { return (actual as number | string) >= (condition.value as number | string);
             }
-            case 'lt': { return actual < condition.value;
+            case 'lt': { return (actual as number | string) < (condition.value as number | string);
             }
-            case 'lte': { return actual <= condition.value;
+            case 'lte': { return (actual as number | string) <= (condition.value as number | string);
             }
             case 'neq': { return actual !== condition.value;
             }

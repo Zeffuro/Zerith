@@ -14,11 +14,20 @@ export function getThemeRegistry(): ThemeFile[] {
     return out;
 }
 
-function normalizeTheme(module_: any, _: string): null | ThemeFile {
-    const data = module_?.default ?? module_;
-    if (!data || typeof data !== 'object') return null;
-    if (!data.key || !data.label || !data.vars) return null;
+function normalizeTheme(module_: unknown, _path: string): ThemeFile | undefined {
+    const data = (module_ && typeof module_ === 'object' && 'default' in module_)
+        ? (module_ as { default: unknown }).default
+        : module_;
 
-    const variables = data.vars as Record<string, string>;
-    return { key: String(data.key), label: String(data.label), vars: variables };
+    if (!data || typeof data !== 'object') return undefined;
+    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const d = data as Record<string, any>;
+    if (!d.key || !d.label || !d.vars) return undefined;
+
+    return {
+        key: String(d.key),
+        label: String(d.label),
+        vars: d.vars,
+    };
 }
