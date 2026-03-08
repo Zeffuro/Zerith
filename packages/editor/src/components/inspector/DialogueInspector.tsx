@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { useInspectorFieldEditor } from './useInspectorFieldEditor';
+import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { useProjectStore } from '../../store/useProjectStore';
 import { FieldError } from './FieldError';
 import { Bold, Italic, Underline, Palette, Clock, FastForward } from 'lucide-react';
@@ -35,11 +35,11 @@ export function DialogueInspector({ node, index }: { node: any, index?: number |
         let html = text
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
-            .replace(/\{wait:(\d+)\}/gi, '<span style="color: #fbbf24; font-size: 10px; border: 1px solid #fbbf24; padding: 0 2px; border-radius: 3px;">WAIT $1</span>')
-            .replace(/\{speed:(\d+)\}/gi, '<span style="color: #34d399; font-size: 10px; border: 1px solid #34d399; padding: 0 2px; border-radius: 3px;">SPEED $1</span>')
-            .replace(/\{color=['"]?([^'"\}]+)['"]?\}(.*?)\{\/color\}/gi, '<span style="color: $1">$2</span>')
-            .replace(/\{u color=['"]?([^'"\}]+)['"]?\}(.*?)\{\/u\}/gi, '<span style="text-decoration: underline; text-decoration-color: $1; color: $1">$2</span>')
-            .replace(/\{u\}(.*?)\{\/u\}/gi, '<span style="text-decoration: underline;">$1</span>')
+            .replace(/\{wait:(\d+)}/gi, '<span style="color: #fbbf24; font-size: 10px; border: 1px solid #fbbf24; padding: 0 2px; border-radius: 3px;">WAIT $1</span>')
+            .replace(/\{speed:(\d+)}/gi, '<span style="color: #34d399; font-size: 10px; border: 1px solid #34d399; padding: 0 2px; border-radius: 3px;">SPEED $1</span>')
+            .replace(/\{color=['"]?([^'"}]+)['"]?}(.*?)\{\/color}/gi, '<span style="color: $1">$2</span>')
+            .replace(/\{u color=['"]?([^'"}]+)['"]?}(.*?)\{\/u}/gi, '<span style="text-decoration: underline; text-decoration-color: $1; color: $1">$2</span>')
+            .replace(/\{u}(.*?)\{\/u}/gi, '<span style="text-decoration: underline;">$1</span>')
             .replace(/&lt;b&gt;(.*?)&lt;\/b&gt;/gi, '<b>$1</b>')
             .replace(/&lt;i&gt;(.*?)&lt;\/i&gt;/gi, '<i>$1</i>');
 

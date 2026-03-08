@@ -6,6 +6,9 @@ import type { StartScreenConfig } from './managers/StartScreenManager';
 import type { OverlayConfig } from './managers/OverlayManager.ts';
 import type { Theme } from './utils/Theme';
 
+export type SceneNavigationCommandType = 'jump' | 'scene_change';
+export type SceneNavigationAction = 'execute' | 'skip';
+
 export interface EngineConfig {
     display?: Partial<DisplayConfig>;
     audio?: AudioConfig;
@@ -14,4 +17,5 @@ export interface EngineConfig {
     startScreen?: StartScreenConfig;
     overlay?: OverlayConfig;
     theme?: Partial<Theme>;
+    onSceneNavigation?: (sceneName: string, commandType: SceneNavigationCommandType) => SceneNavigationAction;
 }

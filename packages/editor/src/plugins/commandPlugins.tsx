@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type React from 'react';
-import { CommandSchemaRegistry } from 'core';
+import { CommandSchemaRegistry } from 'core/schemas';
 import {
     MessageSquare, Image as ImageIcon, Music, FileAudio, User, Workflow,
     GitFork, ArrowRightCircle, Gamepad2, Repeat, Sigma

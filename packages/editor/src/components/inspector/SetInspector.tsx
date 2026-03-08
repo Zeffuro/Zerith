@@ -1,4 +1,4 @@
-import { useInspectorFieldEditor } from './useInspectorFieldEditor';
+import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 
 export function SetInspector({ node, index }: { node: any; index?: number | null }) {

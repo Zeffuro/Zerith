@@ -1,7 +1,7 @@
 import { useEditorStore } from '../../store/useEditorStore';
 import { useScriptStore } from '../../store/useScriptStore';
 import { useProjectStore } from '../../store/useProjectStore';
-import { getPlugin } from '../../editor/commandPlugins';
+import { getPlugin } from '../../plugins/commandPlugins';
 import { SchemaFallbackInspector } from './SchemaFallbackInspector';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { styles } from '../../theme/styleHelpers';

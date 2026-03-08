@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useDismissiblePopup } from '../../hooks/useDismissiblePopup';
-import { editorTheme as t } from '../../theme/editorTheme';
-import { styles } from '../../theme/styleHelpers';
+import { useDismissiblePopup } from '../../../hooks/useDismissiblePopup';
+import { editorTheme as t } from '../../../theme/editorTheme';
+import { styles } from '../../../theme/styleHelpers';
 
 type CommandItem = { type: string; label: string; icon?: ReactNode };
 

@@ -1,25 +1,25 @@
 import { ReactNode, MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
-import type { ScriptPath } from '../../utils/scriptPathUtils';
+import type { ScriptPath } from '../../../utils/scriptPathUtils';
 
-import { useScriptStore } from '../../store/useScriptStore';
-import { useEditorStore } from '../../store/useEditorStore';
-import { useProjectStore } from '../../store/useProjectStore';
-import { useWorkbenchStore } from '../../store/useWorkbenchStore';
-import { createDefaultCommand, getPlugin, getAllPlugins } from '../../editor/commandPlugins';
-import { hasLikelyIssue } from '../../editor/likelyIssues';
-import { editorTheme as t } from '../../theme/editorTheme';
+import { useScriptStore } from '../../../store/useScriptStore';
+import { useEditorStore } from '../../../store/useEditorStore';
+import { useProjectStore } from '../../../store/useProjectStore';
+import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
+import { createDefaultCommand, getPlugin, getAllPlugins } from '../../../plugins/commandPlugins';
+import { hasLikelyIssue } from '../../../plugins/likelyIssues';
+import { editorTheme as t } from '../../../theme/editorTheme';
 
-import { useTimelineSelection } from './timeline/useTimelineSelection';
-import { useTimelineDragDrop } from './timeline/useTimelineDragDrop';
-import { useTimelineSearch } from './timeline/useTimelineSearch';
-import { TimelineNode } from './timeline/TimelineNode';
-import { TimelineCommandBar } from './timeline/TimelineCommandBar';
-import { TimelineDropZone } from './timeline/TimelineDropZone';
-import { TimelineEmptyState } from './timeline/TimelineEmptyState';
-import { TimelineSearchBar } from './timeline/TimelineSearchBar';
-import { TimelineTypeFilterChips } from './timeline/TimelineTypeFilterChips';
-import { type CommandContextMenuState, TimelineCommandContextMenu } from './timeline/TimelineCommandContextMenu';
-import { ConfirmDialog } from '../common/ConfirmDialog';
+import { useTimelineSelection } from './useTimelineSelection';
+import { useTimelineDragDrop } from './useTimelineDragDrop';
+import { useTimelineSearch } from './useTimelineSearch';
+import { TimelineNode } from './TimelineNode';
+import { TimelineCommandBar } from './TimelineCommandBar';
+import { TimelineDropZone } from './TimelineDropZone';
+import { TimelineEmptyState } from './TimelineEmptyState';
+import { TimelineSearchBar } from './TimelineSearchBar';
+import { TimelineTypeFilterChips } from './TimelineTypeFilterChips';
+import { type CommandContextMenuState, TimelineCommandContextMenu } from './TimelineCommandContextMenu';
+import { ConfirmDialog } from '../../ConfirmDialog';
 
 
 function pathKey(path: ScriptPath) {

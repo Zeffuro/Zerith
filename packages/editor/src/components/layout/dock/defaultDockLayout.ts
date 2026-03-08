@@ -40,7 +40,6 @@ export const DEFAULT_DOCK_LAYOUT = {
                                         weight: 55,
                                         children:[
                                             { type: 'tab', name: 'Inspector', component: 'inspector', id: 'inspector' },
-                                            { type: 'tab', name: 'Assets', component: 'assets', id: 'assets' },
                                         ],
                                     },
                                 ],

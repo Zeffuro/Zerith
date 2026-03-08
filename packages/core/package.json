@@ -5,12 +5,14 @@
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./handlers": "./src/handlers/index.ts",
+    "./schemas": "./src/schemas.ts",
+    "./types": "./src/types/index.ts"
   },
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "dev": "tsc --noEmit --watch",
+    "build": "tsc --noEmit"
   },
   "dependencies": {
     "@pixi/sound": "^6.0.1",

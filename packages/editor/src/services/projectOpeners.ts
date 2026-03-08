@@ -1,4 +1,4 @@
-import { validateScript } from 'core';
+import { validateScript } from 'core/schemas';
 import { useProjectStore } from '../store/useProjectStore';
 import { useEditorStore } from '../store/useEditorStore';
 

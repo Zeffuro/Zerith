@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { getThemeRegistry } from '../../theme/themeRegistry';
+import { getThemeRegistry } from '../../../theme/themeRegistry';
 
 export function ThemeMenu({
                               uiScale,

@@ -1,9 +1,11 @@
+import { Suspense, lazy } from 'react';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { useEditorStore } from '../../store/useEditorStore';
-import { Timeline } from './Timeline';
-import { ScriptJsonEditor } from './ScriptJsonEditor';
+import { Timeline } from './timeline/Timeline';
 import { AssetPreviewPanel } from '../tools/AssetPreviewPanel';
 import { editorTheme as t } from '../../theme/editorTheme';
+
+const ScriptJsonEditor = lazy(() => import('./workbench/ScriptJsonEditor').then((m) => ({ default: m.ScriptJsonEditor })));
 
 export function EditorSurface() {
     const uiScale = useEditorStore((s) => s.uiScale);
@@ -12,6 +14,12 @@ export function EditorSurface() {
     const lastMacrosView = useWorkbenchStore((s) => s.lastMacrosView);
     const setLastScriptView = useWorkbenchStore((s) => s.setLastScriptView);
     const setLastMacrosView = useWorkbenchStore((s) => s.setLastMacrosView);
+
+    const jsonEditor = (
+        <Suspense fallback={<div style={{ padding: 12, opacity: 0.7 }}>Loading JSON editor...</div>}>
+            <ScriptJsonEditor uiScale={uiScale} />
+        </Suspense>
+    );
 
     if (!activeTab) return <div style={{ padding: 16, opacity: 0.7 }}>Open a file from Explorer.</div>;
 
@@ -59,7 +67,7 @@ export function EditorSurface() {
         return (
             <div style={{ height: '100%', display: 'grid', gridTemplateRows: 'auto 1fr' }}>
                 {renderModeToggle('script')}
-                {lastScriptView === 'json' ? <ScriptJsonEditor uiScale={uiScale} /> : <Timeline />}
+                {lastScriptView === 'json' ? jsonEditor : <Timeline />}
             </div>
         );
     }
@@ -68,10 +76,10 @@ export function EditorSurface() {
         return (
             <div style={{ height: '100%', display: 'grid', gridTemplateRows: 'auto 1fr' }}>
                 {renderModeToggle('macros')}
-                {lastMacrosView === 'json' ? <ScriptJsonEditor uiScale={uiScale} /> : <Timeline />}
+                {lastMacrosView === 'json' ? jsonEditor : <Timeline />}
             </div>
         );
     }
 
-    return <ScriptJsonEditor uiScale={uiScale} />;
+    return jsonEditor;
 }

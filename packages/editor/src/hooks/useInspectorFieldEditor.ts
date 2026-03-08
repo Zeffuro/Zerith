@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
-import { useEditorStore } from '../../store/useEditorStore';
-import { useScriptStore } from '../../store/useScriptStore';
-import { useProjectStore } from '../../store/useProjectStore';
-import { getAtPath, setAtPath } from '../../utils/scriptPathUtils';
+import { useEditorStore } from '../store/useEditorStore';
+import { useScriptStore } from '../store/useScriptStore';
+import { useProjectStore } from '../store/useProjectStore';
+import { getAtPath, setAtPath } from '../utils/scriptPathUtils';
 
 export function useInspectorFieldEditor(index?: number | null) {
     const { uiScale, validationErrors } = useEditorStore();

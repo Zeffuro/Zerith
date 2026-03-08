@@ -1,4 +1,4 @@
-import { useInspectorFieldEditor } from './useInspectorFieldEditor';
+import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 import { AssetPickerField } from './fields/AssetPickerField';
 

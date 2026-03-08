@@ -1,4 +1,4 @@
-import { AddCommandMenu } from '../AddCommandMenu.tsx';
+import { AddCommandMenu } from '../menus/AddCommandMenu';
 
 type Item = { type: string; label: string; icon: React.ReactNode };
 

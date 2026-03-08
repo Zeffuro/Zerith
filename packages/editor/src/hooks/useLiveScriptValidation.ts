@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { ScriptSchema } from 'core';
+import { ScriptSchema } from 'core/schemas';
 import { zodIssuesToMap } from '../utils/validation';
 import { useEditorStore } from '../store/useEditorStore';
 import { useProjectStore } from '../store/useProjectStore';

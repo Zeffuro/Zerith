@@ -2,16 +2,16 @@ import { useState, useEffect } from 'react';
 import { FolderGit2, FolderOpen, FileJson, Image as ImageIcon, ChevronRight, ChevronDown } from 'lucide-react';
 import { readDir } from '@tauri-apps/plugin-fs';
 import { join } from '@tauri-apps/api/path';
-import { useProjectStore } from '../../store/useProjectStore';
-import { useEditorStore } from '../../store/useEditorStore';
+import { useProjectStore } from '../../../store/useProjectStore';
+import { useEditorStore } from '../../../store/useEditorStore';
 import type { DirEntry } from '@tauri-apps/plugin-fs';
-import { editorTheme as t } from '../../theme/editorTheme';
-import { ConfirmDialog } from '../common/ConfirmDialog';
+import { editorTheme as t } from '../../../theme/editorTheme';
+import { ConfirmDialog } from '../../ConfirmDialog';
 import {
     ExplorerContextMenu,
     type ExplorerContextMenuState,
-} from './explorer/ExplorerContextMenu';
-import { InlineNameInput } from './explorer/InlineNameInput';
+} from './ExplorerContextMenu';
+import { InlineNameInput } from './InlineNameInput';
 
 function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPath: string; level?: number }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -52,7 +52,7 @@ function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPat
 
     const openDefault = async () => {
         if (!fullPath) return;
-        const { openProjectEntry } = await import('../../services/openProjectEntry');
+        const { openProjectEntry } = await import('../../../services/openProjectEntry');
         await openProjectEntry(fullPath, entry.name);
     };
 
@@ -63,7 +63,7 @@ function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPat
             setRenameDraft(entry.name);
             return;
         }
-        const { renamePath } = await import('../../services/explorerFileActions');
+        const { renamePath } = await import('../../../services/explorerFileActions');
         await renamePath(fullPath, next);
         setIsRenaming(false);
     };
@@ -88,7 +88,7 @@ function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPat
         const {
             createFileInDirectory,
             createFolderInDirectory,
-        } = await import('../../services/explorerFileActions');
+        } = await import('../../../services/explorerFileActions');
 
         if (createMode === 'file') await createFileInDirectory(createTargetDir, name, '');
         else await createFolderInDirectory(createTargetDir, name);
@@ -130,12 +130,12 @@ function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPat
         setCtx({
             x: e.clientX,
             y: e.clientY,
-            isDirectory: !!entry.isDirectory,
+            isDirectory: entry.isDirectory,
             path: fullPath,
             name: entry.name,
             onClose: () => setCtx(null),
             onAction: async (action) => {
-                const { openProjectEntry } = await import('../../services/openProjectEntry');
+                const { openProjectEntry } = await import('../../../services/openProjectEntry');
 
                 switch (action) {
                     case 'open':
@@ -155,7 +155,7 @@ function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPat
                         setConfirmDeleteOpen(true);
                         break;
                     case 'reveal': {
-                        const { revealPathInSystem } = await import('../../services/explorerFileActions');
+                        const { revealPathInSystem } = await import('../../../services/explorerFileActions');
                         await revealPathInSystem(fullPath);
                         break;
                     }
@@ -256,7 +256,7 @@ function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPat
                 onCancel={() => setConfirmDeleteOpen(false)}
                 onConfirm={async () => {
                     setConfirmDeleteOpen(false);
-                    const { deletePath } = await import('../../services/explorerFileActions');
+                    const { deletePath } = await import('../../../services/explorerFileActions');
                     await deletePath(fullPath);
                 }}
             />

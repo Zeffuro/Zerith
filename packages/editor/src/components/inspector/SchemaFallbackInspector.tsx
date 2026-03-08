@@ -1,6 +1,6 @@
 import type { z } from 'zod';
-import { CommandSchemaRegistry } from 'core';
-import { useInspectorFieldEditor } from './useInspectorFieldEditor';
+import { CommandSchemaRegistry } from 'core/schemas';
+import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 
 type FieldInfo = {

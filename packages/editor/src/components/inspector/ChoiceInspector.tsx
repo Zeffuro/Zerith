@@ -1,5 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react';
-import { useInspectorFieldEditor } from './useInspectorFieldEditor';
+import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 
 export function ChoiceInspector({ node, index }: { node: any; index?: number | null }) {
     const { uiScale, labelStyle, inputStyle, applyNodePatch } = useInspectorFieldEditor(index);

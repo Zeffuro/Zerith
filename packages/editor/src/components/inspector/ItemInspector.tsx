@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useInspectorFieldEditor } from './useInspectorFieldEditor';
+import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 
 export function ItemInspector({ node, index }: { node: any; index?: number | null }) {

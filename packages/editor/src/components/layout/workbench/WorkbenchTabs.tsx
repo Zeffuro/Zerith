@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
-import { useWorkbenchStore } from '../../store/useWorkbenchStore';
-import { useEditorStore } from '../../store/useEditorStore';
-import { editorTheme as t } from '../../theme/editorTheme';
-import { activateWorkbenchTab } from '../../services/activateWorkbenchTab';
+import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
+import { useEditorStore } from '../../../store/useEditorStore';
+import { editorTheme as t } from '../../../theme/editorTheme';
+import { activateWorkbenchTab } from '../../../services/activateWorkbenchTab';
 
 type ContextMenuState = {
     x: number;

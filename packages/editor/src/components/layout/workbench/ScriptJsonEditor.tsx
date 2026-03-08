@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Editor, { type OnMount } from '@monaco-editor/react';
 import type * as Monaco from 'monaco-editor';
-import { useScriptStore } from '../../store/useScriptStore';
-import { useProjectStore } from '../../store/useProjectStore';
-import { useWorkbenchStore } from '../../store/useWorkbenchStore';
-import { editorTheme as t } from '../../theme/editorTheme';
+import { useScriptStore } from '../../../store/useScriptStore';
+import { useProjectStore } from '../../../store/useProjectStore';
+import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
+import { editorTheme as t } from '../../../theme/editorTheme';
 
 export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
     const rootScript = useScriptStore((s) => s.rootScript);

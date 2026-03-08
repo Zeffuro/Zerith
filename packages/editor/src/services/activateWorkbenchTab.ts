@@ -1,6 +1,6 @@
-import { readTextFile } from '@tauri-apps/plugin-fs';
 import { useWorkbenchStore } from '../store/useWorkbenchStore';
 import { applyAssetSelection, applyMacrosFile, applyScriptFile, looksLikeMacrosObject } from './projectOpeners';
+import { fsReadTextFile } from './fs';
 
 export async function activateWorkbenchTab(tabId: string) {
     const ws = useWorkbenchStore.getState();
@@ -15,7 +15,7 @@ export async function activateWorkbenchTab(tabId: string) {
     }
 
     if (tab.kind === 'script' || tab.kind === 'macros') {
-        const text = await readTextFile(tab.path);
+        const text = await fsReadTextFile(tab.path);
         const data = JSON.parse(text);
 
         if (Array.isArray(data)) {

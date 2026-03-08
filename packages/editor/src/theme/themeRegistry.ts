@@ -1,6 +1,6 @@
 import type { ThemeFile } from './themeTypes';
 
-const modules = import.meta.glob('../themes/*.json', { eager: true }) as Record<string, any>;
+const modules = import.meta.glob('./presets/*.json', { eager: true }) as Record<string, any>;
 
 function normalizeTheme(mod: any, _: string): ThemeFile | null {
     const data = mod?.default ?? mod;

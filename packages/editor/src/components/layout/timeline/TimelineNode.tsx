@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { AlertTriangle, Play, Trash2, ChevronRight, ChevronDown, FolderTree } from 'lucide-react';
 import type { ScriptPath } from '../../../utils/scriptPathUtils';
-import { getPlugin } from '../../../editor/commandPlugins';
+import { getPlugin } from '../../../plugins/commandPlugins';
 import { editorTheme as t } from '../../../theme/editorTheme';
 
 function escapeRegExp(input: string) {

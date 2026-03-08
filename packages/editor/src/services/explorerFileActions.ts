@@ -1,6 +1,13 @@
-import { remove, rename, mkdir, writeTextFile, readDir } from '@tauri-apps/plugin-fs';
-import { openPath } from '@tauri-apps/plugin-opener';
-import { dirname, join } from '@tauri-apps/api/path';
+import {
+    fsReadDir,
+    fsOpenPath,
+    fsDirname,
+    fsJoin,
+    fsRename,
+    fsRemove,
+    fsWriteTextFile,
+    fsMkdir,
+} from './fs';
 import { useProjectStore } from '../store/useProjectStore';
 import { useConsoleStore } from '../store/useConsoleStore';
 
@@ -16,7 +23,7 @@ export async function refreshProjectTree() {
     const projectPath = useProjectStore.getState().projectPath;
     if (!projectPath) return;
 
-    const entries = await readDir(projectPath);
+    const entries = await fsReadDir(projectPath);
     sortEntries(entries);
     useProjectStore.getState().setProject(projectPath, entries);
     useProjectStore.getState().bumpTreeRevision?.();
@@ -24,7 +31,7 @@ export async function refreshProjectTree() {
 
 export async function revealPathInSystem(path: string) {
     try {
-        await openPath(path);
+        await fsOpenPath(path);
     } catch (err) {
         console.error('Reveal failed:', err);
         useConsoleStore.getState().addMessage('editor', 'error', 'Reveal failed:', String(err));
@@ -33,9 +40,9 @@ export async function revealPathInSystem(path: string) {
 
 export async function renamePath(oldPath: string, nextName: string) {
     try {
-        const parent = await dirname(oldPath);
-        const newPath = await join(parent, nextName);
-        await rename(oldPath, newPath);
+        const parent = await fsDirname(oldPath);
+        const newPath = await fsJoin(parent, nextName);
+        await fsRename(oldPath, newPath);
         await refreshProjectTree();
     } catch (err) {
         console.error('Rename failed:', err);
@@ -45,7 +52,7 @@ export async function renamePath(oldPath: string, nextName: string) {
 
 export async function deletePath(path: string) {
     try {
-        await remove(path, { recursive: true });
+        await fsRemove(path, true);
         await refreshProjectTree();
     } catch (err) {
         console.error('Delete failed:', err);
@@ -55,8 +62,8 @@ export async function deletePath(path: string) {
 
 export async function createFileInDirectory(dirPath: string, name: string, initialContent = '') {
     try {
-        const full = await join(dirPath, name);
-        await writeTextFile(full, initialContent);
+        const full = await fsJoin(dirPath, name);
+        await fsWriteTextFile(full, initialContent);
         await refreshProjectTree();
         return full;
     } catch (err) {
@@ -68,8 +75,8 @@ export async function createFileInDirectory(dirPath: string, name: string, initi
 
 export async function createFolderInDirectory(dirPath: string, name: string) {
     try {
-        const full = await join(dirPath, name);
-        await mkdir(full, { recursive: true });
+        const full = await fsJoin(dirPath, name);
+        await fsMkdir(full, true);
         await refreshProjectTree();
         return full;
     } catch (err) {

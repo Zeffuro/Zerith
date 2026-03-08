@@ -1,8 +1,8 @@
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import { getAllPlugins } from '../../editor/commandPlugins';
+import { getAllPlugins } from '../../../plugins/commandPlugins';
 import { useMemo, useRef } from 'react';
-import { useDismissiblePopup } from '../../hooks/useDismissiblePopup';
-import { editorTheme as t } from '../../theme/editorTheme';
+import { useDismissiblePopup } from '../../../hooks/useDismissiblePopup';
+import { editorTheme as t } from '../../../theme/editorTheme';
 
 export function QuickCommandsMenu({
                                       uiScale,

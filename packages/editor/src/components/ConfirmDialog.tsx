@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
-import { editorTheme as t } from '../../theme/editorTheme';
-import { styles } from '../../theme/styleHelpers';
-import { useEditorStore } from '../../store/useEditorStore';
+import { editorTheme as t } from '../theme/editorTheme';
+import { styles } from '../theme/styleHelpers';
+import { useEditorStore } from '../store/useEditorStore';
 
 type Props = {
     open: boolean;

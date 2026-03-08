@@ -3,8 +3,8 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useState } from 'react';
-import { QuickCommandsMenu } from './QuickCommandsMenu';
-import { ThemeMenu } from './ThemeMenu';
+import { QuickCommandsMenu } from './menus/QuickCommandsMenu';
+import { ThemeMenu } from './menus/ThemeMenu';
 import { editorTheme as t } from '../../theme/editorTheme';
 
 export function Toolbar() {
@@ -26,7 +26,7 @@ export function Toolbar() {
                 title: 'Select game.json'
             });
 
-            if (selectedFile && typeof selectedFile === 'string') {
+            if (selectedFile) {
                 await openProjectFromManifest(selectedFile);
             }
         } catch (err) {

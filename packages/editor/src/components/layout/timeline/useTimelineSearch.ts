@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ScriptPath } from '../../../utils/scriptPathUtils';
-import { getPlugin } from '../../../editor/commandPlugins';
+import { getPlugin } from '../../../plugins/commandPlugins';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useScriptStore } from '../../../store/useScriptStore';
 

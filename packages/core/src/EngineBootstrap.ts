@@ -1,8 +1,11 @@
 import type {AssetResolver} from './Engine';
 import {Engine} from './Engine';
-import {BuiltInHandlers, ChoiceHandler, DialogueHandler} from './index';
+import { BuiltInHandlers } from './handlers/builtins';
+import { ChoiceHandler } from './handlers/ChoiceHandler';
+import { DialogueHandler } from './handlers/DialogueHandler';
 import type {EngineConfig} from './EngineConfig';
 import type {GameManifest} from './types';
+import { preloadCharacterAssets } from './utils/preloadCharacterAssets';
 
 export interface EngineBootstrapOptions {
     canvas: HTMLCanvasElement;
@@ -33,40 +36,18 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
         preloadAssets = false,
     } = options;
 
-    const engine = new Engine(config);
-
-    engine.isEditor = isEditor;
+    const engine = new Engine({
+        ...config,
+        onSceneNavigation: config.onSceneNavigation ?? (isEditor ? () => 'skip' : undefined),
+    });
     if (assetResolver) {
         engine.assetResolver = assetResolver;
     }
 
     engine.manifest = {...manifest, characters};
 
-    if (preloadAssets && Object.keys(characters).length > 0) {
-        const { Assets } = await import('pixi.js');
-        const { sound } = await import('@pixi/sound');
-
-        const promises: Promise<any>[] = [];
-        for (const [, char] of Object.entries(characters) as [string, any][]) {
-            if (char.portraitUrl) {
-                promises.push(Assets.load(char.portraitUrl).catch(() => {}));
-            }
-            if (char.blipUrl && !sound.exists(char.blipUrl)) {
-                promises.push(new Promise<void>(resolve => {
-                    sound.add(char.blipUrl, {
-                        url: char.blipUrl,
-                        preload: true,
-                        loaded: () => resolve()
-                    });
-                }));
-            }
-            if (char.spritesheet?.atlasUrl) {
-                promises.push(engine.spritesheets.load(char.spritesheet).catch((err) => {
-                    console.warn(`Failed to preload spritesheet: ${char.spritesheet.atlasUrl}`, err);
-                }));
-            }
-        }
-        await Promise.all(promises);
+    if (preloadAssets) {
+        await preloadCharacterAssets(engine, characters);
     }
 
     if (Object.keys(items).length > 0) {
@@ -96,6 +77,7 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
     }
 
     await engine.init(canvas);
+    engine.registerDefaultPanels();
 
     return engine;
 }

@@ -1,20 +1,21 @@
-import { useEffect, useRef } from 'react';
+import { Suspense, lazy, useEffect, useRef } from 'react';
 import { Layout, Model, TabNode, Actions } from 'flexlayout-react';
 import 'flexlayout-react/style/dark.css';
 
 import { useEditorStore } from '../../store/useEditorStore';
 import { useScriptStore } from '../../store/useScriptStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
-import { DOCK_PANELS } from '../../layout/dockPanelIds';
+import { DOCK_PANELS } from './dock/dockPanelIds';
 
 import { TopChrome } from './TopChrome';
-import { WorkbenchTabs } from './WorkbenchTabs';
+import { WorkbenchTabs } from './workbench/WorkbenchTabs';
 import { EditorSurface } from './EditorSurface';
 
-import { Explorer } from './Explorer';
+import { Explorer } from './explorer/Explorer';
 import { Inspector } from '../inspector/Inspector';
-import { GamePreview } from '../GamePreview';
 import { ConsolePanel } from '../tools/ConsolePanel';
+
+const GamePreview = lazy(() => import('../GamePreview').then((m) => ({ default: m.GamePreview })));
 
 export function DockLayoutHost() {
     const dockLayoutJson = useEditorStore((s) => s.dockLayoutJson);
@@ -77,7 +78,11 @@ export function DockLayoutHost() {
             case DOCK_PANELS.editor:
                 return <EditorSurface />;
             case DOCK_PANELS.preview:
-                return <GamePreview script={rootScript} />;
+                return (
+                    <Suspense fallback={<div style={{ padding: 12, opacity: 0.7 }}>Loading preview...</div>}>
+                        <GamePreview script={rootScript} />
+                    </Suspense>
+                );
             case DOCK_PANELS.inspector:
                 return <Inspector />;
             case DOCK_PANELS.console:

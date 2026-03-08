@@ -1,8 +1,8 @@
-import { readTextFile } from '@tauri-apps/plugin-fs';
 import { useProjectStore } from '../store/useProjectStore';
 import { useConsoleStore } from '../store/useConsoleStore';
 import { useWorkbenchStore, makeTabId } from '../store/useWorkbenchStore';
 import { applyAssetSelection, applyMacrosFile, applyScriptFile, looksLikeMacrosObject } from './projectOpeners';
+import { fsReadTextFile } from './fs';
 
 const IMG_EXT = new Set(['.png', '.jpg', '.jpeg', '.webp', '.avif']);
 const AUDIO_EXT = new Set(['.mp3', '.ogg', '.wav', '.m4a']);
@@ -54,7 +54,7 @@ export async function openProjectEntry(fullPath: string, entryName: string, opts
         }
 
         if (ext === '.json') {
-            const contents = await readTextFile(fullPath);
+            const contents = await fsReadTextFile(fullPath);
             const data = JSON.parse(contents);
 
             const base = basename(fullPath).toLowerCase();
@@ -114,7 +114,7 @@ export async function openProjectEntry(fullPath: string, entryName: string, opts
         }
 
         if (TEXT_EXT.has(ext)) {
-            const contents = await readTextFile(fullPath);
+            const contents = await fsReadTextFile(fullPath);
             useWorkbenchStore.getState().openOrFocusTab({
                 id: makeTabId('text', fullPath),
                 kind: 'text',

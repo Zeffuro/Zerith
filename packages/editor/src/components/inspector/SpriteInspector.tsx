@@ -1,5 +1,5 @@
 import { useProjectStore } from '../../store/useProjectStore';
-import { useInspectorFieldEditor } from './useInspectorFieldEditor';
+import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 
 export function SpriteInspector({ node, index }: { node: any, index?: number | null }) {

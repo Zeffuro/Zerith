@@ -22,6 +22,21 @@ import { ItemBrowserPanel } from './ui/ItemBrowserPanel';
 
 export type AssetResolver = (url: string) => string;
 
+export interface EngineDeps {
+    audio?: AudioManager;
+    display?: DisplayManager;
+    input?: InputManager;
+    scenes?: SceneManager;
+    saves?: SaveManager;
+    events?: EventBus;
+    notifications?: NotificationManager;
+    startScreen?: StartScreenManager;
+    overlay?: OverlayManager;
+    history?: HistoryManager;
+    items?: EvidenceManager;
+    spritesheets?: SpritesheetManager;
+}
+
 export class Engine {
     public app: Application;
     public layers: {
@@ -40,15 +55,18 @@ export class Engine {
     public notifications: NotificationManager;
     public startScreen: StartScreenManager;
     public overlay: OverlayManager;
-    public history: HistoryManager = new HistoryManager();
-    public items: EvidenceManager = new EvidenceManager();
-    public spritesheets: SpritesheetManager = new SpritesheetManager();
+    public history: HistoryManager;
+    public items: EvidenceManager;
+    public spritesheets: SpritesheetManager;
     public logger: Logger = new Logger('[Engine]');
     public theme: Theme = DefaultTheme;
     public state: Record<string, any> = {};
     public persistentState: Record<string, any> = {};
     public manifest: GameManifest = {};
 
+    /**
+     * @deprecated Use `EngineConfig.onSceneNavigation` to control scene navigation behavior.
+     */
     public isEditor: boolean = false;
 
     private handlers: Map<string, CommandHandler<any>> = new Map();
@@ -60,7 +78,9 @@ export class Engine {
 
     private _assetResolver: AssetResolver = (url) => url;
 
-    constructor(config: EngineConfig = {}) {
+    private readonly onSceneNavigation?: EngineConfig['onSceneNavigation'];
+
+    constructor(config: EngineConfig = {}, deps: Partial<EngineDeps> = {}) {
         this.app = new Application();
         this.layers = {
             background: new Container(),
@@ -73,16 +93,22 @@ export class Engine {
             this.theme = { ...DefaultTheme, ...config.theme };
         }
 
-        this.events = new EventBus();
-        this.audio = new AudioManager(config.audio);
-        this.display = new DisplayManager(this.app, config.display);
-        this.input = new InputManager(this, config.input);
-        this.scenes = new SceneManager(this);
-        this.saves = new SaveManager(this);
-        this.notifications = new NotificationManager(this, config.notifications);
-        this.startScreen = new StartScreenManager(this, config.startScreen);
-        this.overlay = new OverlayManager(this, config.overlay);
+        this.events = deps.events ?? new EventBus();
+        this.audio = deps.audio ?? new AudioManager(config.audio);
+        this.display = deps.display ?? new DisplayManager(this.app, config.display);
+        this.input = deps.input ?? new InputManager(this, config.input);
+        this.scenes = deps.scenes ?? new SceneManager(this);
+        this.saves = deps.saves ?? new SaveManager(this);
+        this.notifications = deps.notifications ?? new NotificationManager(this, config.notifications);
+        this.startScreen = deps.startScreen ?? new StartScreenManager(this, config.startScreen);
+        this.overlay = deps.overlay ?? new OverlayManager(this, config.overlay);
+        this.history = deps.history ?? new HistoryManager();
+        this.items = deps.items ?? new EvidenceManager();
+        this.spritesheets = deps.spritesheets ?? new SpritesheetManager();
+        this.onSceneNavigation = config.onSceneNavigation;
+    }
 
+    public registerDefaultPanels() {
         this.overlay.registerPanel(new HistoryPanel());
         this.overlay.registerPanel(new ItemBrowserPanel());
         this.overlay.registerPanel(new SettingsPanel());
@@ -218,8 +244,7 @@ export class Engine {
                 const command = this.scenes.script[this.scenes.currentIndex++];
                 await this.runCommand(command);
 
-                if (this.isEditor && (command.type === 'jump' || command.type === 'scene_change')) {
-                    this.logger.info(`[Editor] Skipping scene jump to '${(command as any).scene}'`);
+                if (this.shouldSkipSceneNavigation(command)) {
                     return;
                 }
 
@@ -239,6 +264,26 @@ export class Engine {
         } finally {
             this.isExecuting = false;
         }
+    }
+
+    private shouldSkipSceneNavigation(command: BaseCommand): boolean {
+        if (command.type !== 'jump' && command.type !== 'scene_change') {
+            return false;
+        }
+
+        const sceneName = String((command as any).to ?? (command as any).scene ?? '');
+        const action = this.onSceneNavigation?.(sceneName, command.type);
+        if (action === 'skip') {
+            this.logger.info(`[Engine] Skipping scene navigation to '${sceneName}'`);
+            return true;
+        }
+
+        if (this.isEditor) {
+            this.logger.info(`[Editor] Skipping scene navigation to '${sceneName}'`);
+            return true;
+        }
+
+        return false;
     }
 
     /* Scene Delegation */
