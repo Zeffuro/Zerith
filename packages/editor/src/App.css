@@ -30,6 +30,12 @@
   --editor-accent-red: #f87171;
   --editor-accent-green: #22c55e;
 
+  --editor-syntax-logic: #4ec9b0;
+  --editor-syntax-flow: #f59e0b;
+  --editor-syntax-media: #f472b6;
+  --editor-syntax-highlight-bg: rgba(250, 204, 21, 0.25);
+  --editor-syntax-highlight-text: #fde68a;
+
   --editor-shadow-popup: 0 8px 20px rgba(0, 0, 0, 0.35);
   --editor-shadow-popup-strong: 0 10px 24px rgba(0, 0, 0, 0.4);
 

@@ -28,6 +28,13 @@ export const editorTheme = {
         red: 'var(--editor-accent-red)',
         green: 'var(--editor-accent-green)',
     },
+    syntax: {
+        logic: 'var(--editor-syntax-logic)',
+        flow: 'var(--editor-syntax-flow)',
+        media: 'var(--editor-syntax-media)',
+        highlightBg: 'var(--editor-syntax-highlight-bg)',
+        highlightText: 'var(--editor-syntax-highlight-text)',
+    },
     shadow: {
         popup: 'var(--editor-shadow-popup)',
         popupStrong: 'var(--editor-shadow-popup-strong)',

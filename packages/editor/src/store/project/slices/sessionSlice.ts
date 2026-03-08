@@ -1,4 +1,5 @@
-import type { DirEntry } from '@tauri-apps/plugin-fs';
+import type { FsDirEntry } from '../../../services/fs';
+import type { EditorNode } from '../../../types/EditorNode';
 import { useScriptStore } from '../../useScriptStore';
 import type { ProjectSessionSlice, ProjectSet } from '../types';
 
@@ -9,7 +10,7 @@ export function createProjectSessionSlice(set: ProjectSet): ProjectSessionSlice 
         activeFile: null,
         treeRevision: 0,
 
-        setProject: (path: string, files: DirEntry[]) =>
+        setProject: (path: string, files: FsDirEntry[]) =>
             set({
                 projectPath: path,
                 files,
@@ -24,7 +25,7 @@ export function createProjectSessionSlice(set: ProjectSet): ProjectSessionSlice 
                 macroEntries: [],
             }),
 
-        setActiveFile: (file: string, content: any[]) => {
+        setActiveFile: (file: string, content: EditorNode[]) => {
             set({ activeFile: file });
             useScriptStore.getState().setScript(content);
         },

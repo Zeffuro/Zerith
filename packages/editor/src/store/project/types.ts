@@ -1,18 +1,20 @@
-import type { DirEntry } from '@tauri-apps/plugin-fs';
+import type { Command } from 'core';
+import type { FsDirEntry } from '../../services/fs';
+import type { EditorNode } from '../../types/EditorNode';
 
 export type ProjectSet = (
     partial: Record<string, any> | ((state: Record<string, any>) => Record<string, any>)
 ) => void;
 
-export type MacroEntry = { name: string; commands: any[] };
+export type MacroEntry = { name: string; commands: Command[] };
 
 export interface ProjectSessionSlice {
     projectPath: string | null;
-    files: DirEntry[];
+    files: FsDirEntry[];
     activeFile: string | null;
     treeRevision: number;
-    setProject: (path: string, files: DirEntry[]) => void;
-    setActiveFile: (file: string, content: any[]) => void;
+    setProject: (path: string, files: FsDirEntry[]) => void;
+    setActiveFile: (file: string, content: EditorNode[]) => void;
     bumpTreeRevision: () => void;
 }
 
@@ -26,19 +28,19 @@ export interface ProjectMacrosSlice {
     addMacroEntry: (name?: string) => void;
     renameMacroEntry: (index: number, nextName: string) => void;
     removeMacroEntry: (index: number) => void;
-    updateMacroCommands: (index: number, commands: any[]) => void;
+    updateMacroCommands: (index: number, commands: Command[]) => void;
     moveMacroEntries: (fromIndices: number[], targetIndex: number) => void;
     duplicateMacroEntries: (indices: number[]) => void;
     deleteMacroEntries: (indices: number[]) => void;
-    saveActiveMacroFromScript: (script: any[]) => void;
+    saveActiveMacroFromScript: (script: Command[]) => void;
 }
 
 export interface ProjectManifestSlice {
     manifest: any | null;
     characters: Record<string, any>;
     items: Record<string, any>;
-    macros: Record<string, any[]>;
-    scenes: Record<string, any[]>;
+    macros: Record<string, Command[]>;
+    scenes: Record<string, Command[]>;
     loadManifest: () => Promise<void>;
 }
 

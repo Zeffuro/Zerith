@@ -216,9 +216,9 @@ export const ItemCommandSchema = z.object({
     changes: z.record(z.string(), z.any()).optional(),
 });
 
-/* Discriminated Union */
+/* Built-in schema set */
 
-export const CommandSchema = z.discriminatedUnion('type', [
+const BuiltInCommandSchemas = [
     DialogueCommandSchema,
     ChoiceCommandSchema,
     BackgroundCommandSchema,
@@ -240,13 +240,11 @@ export const CommandSchema = z.discriminatedUnion('type', [
     SpriteCommandSchema,
     FlashCommandSchema,
     ItemCommandSchema,
-]);
+] as const;
 
-export const ScriptSchema = z.array(CommandSchema);
+export const CommandSchema = z.discriminatedUnion('type', BuiltInCommandSchemas);
 
-/* Registry for editor introspection */
-
-export const CommandSchemaRegistry: Record<string, z.ZodType> = {
+const BuiltInCommandSchemaRegistry: Record<string, z.ZodType> = {
     dialogue: DialogueCommandSchema,
     choice: ChoiceCommandSchema,
     background: BackgroundCommandSchema,
@@ -270,12 +268,60 @@ export const CommandSchemaRegistry: Record<string, z.ZodType> = {
     item: ItemCommandSchema,
 };
 
+type DiscriminatedOption = z.ZodTypeAny;
+
+class SchemaRegistrySingleton {
+    public readonly schemas: Record<string, z.ZodType>;
+
+    constructor(initialSchemas: Record<string, z.ZodType>) {
+        this.schemas = { ...initialSchemas };
+    }
+
+    register(type: string, schema: z.ZodType): void {
+        this.schemas[type] = schema;
+    }
+
+    get(type: string): z.ZodType | undefined {
+        return this.schemas[type];
+    }
+
+    getRegistry(): Record<string, z.ZodType> {
+        return this.schemas;
+    }
+
+    getCommandSchema(): z.ZodType {
+        const options = Object.values(this.schemas) as DiscriminatedOption[];
+        const knownTypes = new Set(Object.keys(this.schemas));
+
+        const UnknownCommandSchema = BaseCommandSchema.refine((cmd) => !knownTypes.has(cmd.type));
+
+        if (options.length === 0) {
+            return UnknownCommandSchema;
+        }
+
+        if (options.length === 1) {
+            return z.union([options[0], UnknownCommandSchema]);
+        }
+
+        const KnownCommandSchema = z.discriminatedUnion('type', options as any);
+        return z.union([KnownCommandSchema, UnknownCommandSchema]);
+    }
+}
+
+export const SchemaRegistry = new SchemaRegistrySingleton(BuiltInCommandSchemaRegistry);
+
+/* Backward-compatible alias used by editor introspection */
+export const CommandSchemaRegistry = SchemaRegistry.getRegistry();
+
+export const ScriptSchema = z.array(z.lazy(() => SchemaRegistry.getCommandSchema()));
+
 /**
  * Validates an entire script array. Returns parsed commands or throws.
  */
 export function validateScript(script: unknown[]): z.infer<typeof CommandSchema>[] {
+    const commandSchema = SchemaRegistry.getCommandSchema();
     return script.map((cmd, i) => {
-        const result = CommandSchema.safeParse(cmd);
+        const result = commandSchema.safeParse(cmd);
         if (!result.success) {
             console.warn(`[Schema] Invalid command at index ${i}:`, result.error.issues);
             return cmd;

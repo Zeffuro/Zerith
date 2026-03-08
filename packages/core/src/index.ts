@@ -44,6 +44,7 @@ export * from './managers/OverlayManager';
 export * from './managers/ItemManager';
 export * from './managers/EvidenceManager';
 export * from './managers/SpritesheetManager';
+export * from './managers/AssetManager';
 
 /* UI */
 export * from './ui/UIComponents';
@@ -56,6 +57,5 @@ export * from './ui/PanelFocusManager';
 /* Utils */
 export * from './utils/TextParser';
 export * from './utils/Theme';
-export * from './utils/AssetPreloader';
 export * from './utils/ManifestResolver';
 export * from './utils/ChromaKey';

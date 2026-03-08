@@ -14,6 +14,7 @@ import { HistoryManager } from './managers/HistoryManager';
 import { OverlayManager } from './managers/OverlayManager';
 import { EvidenceManager } from './managers/EvidenceManager';
 import { SpritesheetManager } from './managers/SpritesheetManager';
+import { AssetManager } from './managers/AssetManager';
 import { DefaultTheme, type Theme } from './utils/Theme';
 import { SettingsPanel } from './ui/SettingsPanel';
 import { HistoryPanel } from './ui/HistoryPanel';
@@ -35,6 +36,7 @@ export interface EngineDeps {
     history?: HistoryManager;
     items?: EvidenceManager;
     spritesheets?: SpritesheetManager;
+    assets?: AssetManager;
 }
 
 export class Engine {
@@ -58,6 +60,7 @@ export class Engine {
     public history: HistoryManager;
     public items: EvidenceManager;
     public spritesheets: SpritesheetManager;
+    public assets: AssetManager;
     public logger: Logger = new Logger('[Engine]');
     public theme: Theme = DefaultTheme;
     public state: Record<string, any> = {};
@@ -105,6 +108,7 @@ export class Engine {
         this.history = deps.history ?? new HistoryManager();
         this.items = deps.items ?? new EvidenceManager();
         this.spritesheets = deps.spritesheets ?? new SpritesheetManager();
+        this.assets = deps.assets ?? new AssetManager(this.spritesheets);
         this.onSceneNavigation = config.onSceneNavigation;
     }
 
@@ -239,9 +243,10 @@ export class Engine {
         this.isExecuting = true;
 
         try {
-            while (this.scenes.currentIndex < this.scenes.script.length) {
+            while (this.scenes.currentIndex < this.scenes.scriptLength) {
                 const idx = this.scenes.currentIndex;
-                const command = this.scenes.script[this.scenes.currentIndex++];
+                const command = this.scenes.getCommandAt(this.scenes.currentIndex++);
+                if (!command) break;
                 await this.runCommand(command);
 
                 if (this.shouldSkipSceneNavigation(command)) {
@@ -257,7 +262,7 @@ export class Engine {
             }
         } catch (err) {
             const index = this.scenes.currentIndex - 1;
-            const command = this.scenes.script[index];
+            const command = this.scenes.getCommandAt(index);
             this.logger.error(
                 `Error executing command at index ${index} (type: '${command?.type}'): ${err}`
             );
@@ -367,5 +372,6 @@ export class Engine {
     public set assetResolver(resolver: AssetResolver) {
         this._assetResolver = resolver;
         this.spritesheets.setResolver(resolver);
+        this.assets.setResolver(resolver);
     }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { readDir, type DirEntry } from '@tauri-apps/plugin-fs';
+import { fsReadDir, type FsDirEntry } from '../services/fs';
 import { useProjectStore } from '../store/useProjectStore';
 
 type AssetKind = 'bg' | 'sprite' | 'audio' | 'all';
@@ -26,7 +26,7 @@ function joinPath(a: string, b: string) {
 
 async function walk(dir: string): Promise<string[]> {
     const out: string[] = [];
-    const entries: DirEntry[] = await readDir(dir);
+    const entries: FsDirEntry[] = await fsReadDir(dir);
 
     for (const entry of entries) {
         const full = joinPath(dir, entry.name);

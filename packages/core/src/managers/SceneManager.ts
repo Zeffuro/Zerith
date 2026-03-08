@@ -1,18 +1,27 @@
 import { Text } from 'pixi.js';
 import type { BaseCommand, Script, SceneMap } from '../types';
 import type { Engine } from '../Engine';
-import { preloadSceneAssets } from '../utils/AssetPreloader';
 
 export class SceneManager {
     private engine: Engine;
     private scenes: SceneMap = {};
     private templates: Map<string, Script> = new Map();
+    private runtimeScript: Array<{ command: BaseCommand; originalIndex: number }> = [];
 
-    public script: Script = [];
     public currentIndex: number = 0;
     public currentSceneName: string = "";
 
-    private originMap: number[] = [];
+    public get script(): Script {
+        return this.runtimeScript.map((entry) => entry.command);
+    }
+
+    public get scriptLength(): number {
+        return this.runtimeScript.length;
+    }
+
+    public getCommandAt(index: number): BaseCommand | undefined {
+        return this.runtimeScript[index]?.command;
+    }
 
     constructor(engine: Engine) {
         this.engine = engine;
@@ -39,18 +48,17 @@ export class SceneManager {
     }
 
     public injectCommands(commands: BaseCommand[]) {
-        const injectedOrigins = commands.map(() => -1);
-        this.script.splice(this.currentIndex, 0, ...commands);
-        this.originMap.splice(this.currentIndex, 0, ...injectedOrigins);
+        const injectedEntries = commands.map((command) => ({ command, originalIndex: -1 }));
+        this.runtimeScript.splice(this.currentIndex, 0, ...injectedEntries);
     }
 
     public getOriginalIndex(runtimeIndex: number): number {
-        return this.originMap[runtimeIndex] ?? -1;
+        return this.runtimeScript[runtimeIndex]?.originalIndex ?? -1;
     }
 
     public getLastOriginalIndex(runtimeIndex: number): number {
         for (let i = runtimeIndex; i >= 0; i--) {
-            const orig = this.originMap[i];
+            const orig = this.runtimeScript[i]?.originalIndex ?? -1;
             if (orig !== -1) return orig;
         }
         return 0;
@@ -70,13 +78,12 @@ export class SceneManager {
         loadingText.position.set(this.engine.display.width - 20, this.engine.display.height - 20);
         this.engine.layers.overlay.addChild(loadingText);
 
-        await preloadSceneAssets(this.engine, this.scenes[sceneName]);
+        await this.engine.assets.preloadSceneAssets(this.scenes[sceneName]);
 
         loadingText.destroy();
 
         this.currentSceneName = sceneName;
-        this.script = [...this.scenes[sceneName]];
-        this.originMap = this.script.map((_, i) => i);
+        this.runtimeScript = this.scenes[sceneName].map((command, originalIndex) => ({ command, originalIndex }));
         this.currentIndex = startIndex;
     }
 }

@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
 import { FolderGit2, FolderOpen, FileJson, Image as ImageIcon, ChevronRight, ChevronDown } from 'lucide-react';
-import { readDir } from '@tauri-apps/plugin-fs';
-import { join } from '@tauri-apps/api/path';
 import { useProjectStore } from '../../../store/useProjectStore';
 import { useEditorStore } from '../../../store/useEditorStore';
-import type { DirEntry } from '@tauri-apps/plugin-fs';
+import { fsReadDir, fsJoin, fsDirname, type FsDirEntry } from '../../../services/fs';
 import { editorTheme as t } from '../../../theme/editorTheme';
 import { ConfirmDialog } from '../../ConfirmDialog';
 import {
@@ -13,9 +11,9 @@ import {
 } from './ExplorerContextMenu';
 import { InlineNameInput } from './InlineNameInput';
 
-function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPath: string; level?: number }) {
+function FileNode({ entry, parentPath, level = 0 }: { entry: FsDirEntry; parentPath: string; level?: number }) {
     const [isOpen, setIsOpen] = useState(false);
-    const [children, setChildren] = useState<DirEntry[]>([]);
+    const [children, setChildren] = useState<FsDirEntry[]>([]);
     const [fullPath, setFullPath] = useState<string>('');
     const [ctx, setCtx] = useState<ExplorerContextMenuState>(null);
 
@@ -31,7 +29,7 @@ function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPat
     const { uiScale } = useEditorStore();
 
     useEffect(() => {
-        join(parentPath, entry.name).then(setFullPath);
+        fsJoin(parentPath, entry.name).then(setFullPath);
     }, [parentPath, entry.name]);
 
     useEffect(() => {
@@ -69,8 +67,7 @@ function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPat
     };
 
     const startCreate = async (mode: 'file' | 'folder') => {
-        const { dirname } = await import('@tauri-apps/api/path');
-        const baseDir = entry.isDirectory ? fullPath : await dirname(fullPath);
+        const baseDir = entry.isDirectory ? fullPath : await fsDirname(fullPath);
         setCreateTargetDir(baseDir);
         setCreateMode(mode);
         setCreateDraft(mode === 'file' ? 'new-file.json' : 'new-folder');
@@ -104,7 +101,7 @@ function FileNode({ entry, parentPath, level = 0 }: { entry: DirEntry; parentPat
         if (entry.isDirectory) {
             if (!isOpen && children.length === 0 && fullPath) {
                 try {
-                    const entries = await readDir(fullPath);
+                    const entries = await fsReadDir(fullPath);
                     entries.sort((a, b) => {
                         if (a.isDirectory && !b.isDirectory) return -1;
                         if (!a.isDirectory && b.isDirectory) return 1;

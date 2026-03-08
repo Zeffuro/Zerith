@@ -5,7 +5,6 @@ import { ChoiceHandler } from './handlers/ChoiceHandler';
 import { DialogueHandler } from './handlers/DialogueHandler';
 import type {EngineConfig} from './EngineConfig';
 import type {GameManifest} from './types';
-import { preloadCharacterAssets } from './utils/preloadCharacterAssets';
 
 export interface EngineBootstrapOptions {
     canvas: HTMLCanvasElement;
@@ -47,7 +46,7 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
     engine.manifest = {...manifest, characters};
 
     if (preloadAssets) {
-        await preloadCharacterAssets(engine, characters);
+        await engine.assets.preloadCharacterAssets(characters);
     }
 
     if (Object.keys(items).length > 0) {

@@ -1,4 +1,5 @@
-import { readDir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { fsReadDir, fsReadTextFile, fsWriteTextFile } from '../../../services/fs';
+import type { Command } from 'core';
 import { useScriptStore } from '../../useScriptStore';
 import type { ProjectGet, ProjectIoSlice } from '../types';
 
@@ -12,19 +13,19 @@ export function createProjectIoSlice(get: ProjectGet): ProjectIoSlice {
 
             try {
                 if (editingAllMacrosFile) {
-                    const out: Record<string, any[]> = {};
+                    const out: Record<string, Command[]> = {};
                     for (const m of macroEntries) out[m.name] = Array.isArray(m.commands) ? m.commands : [];
-                    await writeTextFile(activeFile, JSON.stringify(out, null, 4));
+                    await fsWriteTextFile(activeFile, JSON.stringify(out, null, 4));
                     return;
                 }
 
                 if (activeMacroName) {
-                    const raw = await readTextFile(activeFile);
+                    const raw = await fsReadTextFile(activeFile);
                     const obj = JSON.parse(raw);
                     obj[activeMacroName] = rootScript;
-                    await writeTextFile(activeFile, JSON.stringify(obj, null, 4));
+                    await fsWriteTextFile(activeFile, JSON.stringify(obj, null, 4));
                 } else {
-                    await writeTextFile(activeFile, JSON.stringify(rootScript, null, 4));
+                    await fsWriteTextFile(activeFile, JSON.stringify(rootScript, null, 4));
                 }
             } catch (err) {
                 console.error('Failed to save active file:', err);
@@ -38,7 +39,7 @@ export function createProjectIoSlice(get: ProjectGet): ProjectIoSlice {
             const projectRoot = pathParts.join(separator);
 
             try {
-                const entries = await readDir(projectRoot);
+                const entries = await fsReadDir(projectRoot);
                 entries.sort((a, b) => {
                     if (a.isDirectory && !b.isDirectory) return -1;
                     if (!a.isDirectory && b.isDirectory) return 1;

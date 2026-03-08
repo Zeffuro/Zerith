@@ -1,20 +1,21 @@
 import type { ScriptPath } from '../../utils/scriptPathUtils';
+import type { EditorNode } from '../../types/EditorNode';
 
 export interface ScriptState {
-    rootScript: any[];
+    rootScript: EditorNode[];
     scopePath: (string | number)[];
     selectedNodeIndex: number | null;
     selectedNodePath: ScriptPath | null;
 
-    past: any[][];
-    future: any[][];
+    past: EditorNode[][];
+    future: EditorNode[][];
     canUndo: () => boolean;
     canRedo: () => boolean;
     undo: () => void;
     redo: () => void;
 
-    setScript: (script: any[]) => void;
-    getActiveScript: () => any[];
+    setScript: (script: EditorNode[]) => void;
+    getActiveScript: () => EditorNode[];
 
     pushScope: (index: number, branch: string) => void;
     popScope: () => void;
@@ -23,21 +24,23 @@ export interface ScriptState {
     setSelectedNode: (index: number | null) => void;
     setSelectedNodePath: (path: ScriptPath | null) => void;
 
-    getNodeAtPath: (path: ScriptPath) => any | undefined;
+    getNodeAtPath: (path: ScriptPath) => EditorNode | EditorNode[] | undefined;
     updateNodeAtPath: (path: ScriptPath, patch: Record<string, any>) => void;
     moveNodeByPath: (sourceNodePath: ScriptPath, targetArrayPath: ScriptPath, targetIndex: number) => void;
     deleteNodeByPath: (nodePath: ScriptPath) => void;
-    addNodeAtPath: (arrayPath: ScriptPath, node: any, index?: number) => void;
+    addNodeAtPath: (arrayPath: ScriptPath, node: EditorNode, index?: number) => void;
     duplicateNodeByPath: (nodePath: ScriptPath) => void;
-    pasteNodeAtPath: (targetNodePath: ScriptPath, node: any) => void;
+    pasteNodeAtPath: (targetNodePath: ScriptPath, node: EditorNode) => void;
     deleteNodesByPaths: (paths: ScriptPath[]) => void;
     duplicateNodesByPaths: (paths: ScriptPath[]) => void;
     moveNodesByPathsToArray: (paths: ScriptPath[], targetArrayPath: ScriptPath, targetIndex: number) => void;
+    moveTimelineNode: (sourceNodePath: ScriptPath, targetArrayPath: ScriptPath, targetIndex: number) => void;
+    moveTimelineNodesToArray: (paths: ScriptPath[], targetArrayPath: ScriptPath, targetIndex: number) => void;
 
-    updateActiveScript: (newSubArray: any[]) => void;
+    updateActiveScript: (newSubArray: EditorNode[]) => void;
     moveNode: (index: number, direction: 'up' | 'down') => void;
     deleteNode: (index: number) => void;
-    addNode: (node: any) => void;
+    addNode: (node: EditorNode) => void;
 }
 
 export type ScriptSet = (

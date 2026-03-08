@@ -24,8 +24,8 @@ function highlightText(text: string, query: string, uiScale: number) {
                     <mark
                         key={i}
                         style={{
-                            background: 'rgba(250, 204, 21, 0.25)',
-                            color: '#fde68a',
+                            background: t.syntax.highlightBg,
+                            color: t.syntax.highlightText,
                             padding: `0 ${2 * uiScale}px`,
                             borderRadius: 3,
                         }}
@@ -188,9 +188,9 @@ export function TimelineNode({
                         <span style={{ width: `${12 * uiScale}px` }} />
                     )}
 
-                    <div style={{ color: '#555', fontSize: '0.8em' }}>:::</div>
+                    <div style={{ color: t.text.faint, fontSize: '0.8em' }}>:::</div>
 
-                    {isMacroHeader ? <FolderTree size={14 * uiScale} color="#f59e0b" /> : plugin.icon(14 * uiScale)}
+                    {isMacroHeader ? <FolderTree size={14 * uiScale} color={t.syntax.flow} /> : plugin.icon(14 * uiScale)}
 
                     <span style={{ fontWeight: 'bold', color: t.text.primary }}>
                         {highlightText(String(isMacroHeader ? 'macro' : node.type ?? ''), searchQuery, uiScale)}
@@ -198,7 +198,7 @@ export function TimelineNode({
 
                     <span
                         style={{
-                            color: isMacroHeader ? '#fbbf24' : t.text.muted,
+                            color: isMacroHeader ? t.syntax.flow : t.text.muted,
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -213,7 +213,7 @@ export function TimelineNode({
                         title={hasValidationError ? 'Schema validation errors found' : 'This node looks incomplete/invalid'}
                         style={{ display: 'flex', alignItems: 'center' }}
                     >
-                        <AlertTriangle size={12 * uiScale} color={hasValidationError ? '#ef4444' : '#f59e0b'} />
+                        <AlertTriangle size={12 * uiScale} color={hasValidationError ? t.accent.red : t.syntax.flow} />
                     </span>
                 )}
 
@@ -227,7 +227,7 @@ export function TimelineNode({
                         style={{
                             background: 'transparent',
                             border: 'none',
-                            color: '#4ade80',
+                            color: t.accent.green,
                             cursor: 'pointer',
                         }}
                     >
@@ -255,7 +255,7 @@ export function TimelineNode({
                 !isCollapsed &&
                 branches.map((branch, bIdx) => {
                     const branchArrayPath = [...nodePath, ...branch.path];
-                    const labelColor = bIdx % 2 === 0 ? '#4ec9b0' : '#f59e0b';
+                    const labelColor = bIdx % 2 === 0 ? t.syntax.logic : t.syntax.flow;
 
                     return (
                         <React.Fragment key={`${nodePath.join('.')}-branch-${bIdx}`}>

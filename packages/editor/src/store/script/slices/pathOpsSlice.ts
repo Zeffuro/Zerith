@@ -11,6 +11,8 @@ import {
 import { MAX_HISTORY } from '../constants';
 import { deepClone, isRootIndexPath } from '../helpers';
 import type { ScriptSlice, ScriptState } from '../types';
+import type { EditorNode } from '../../../types/EditorNode';
+import { useProjectStore } from '../../useProjectStore';
 
 type PathOpsSlice = Pick<
     ScriptState,
@@ -24,7 +26,11 @@ type PathOpsSlice = Pick<
     | 'deleteNodesByPaths'
     | 'duplicateNodesByPaths'
     | 'moveNodesByPathsToArray'
+    | 'moveTimelineNode'
+    | 'moveTimelineNodesToArray'
 >;
+
+const isRootNodePath = (p: ScriptPath) => p.length === 1 && typeof p[0] === 'number';
 
 export const createPathOpsSlice: ScriptSlice<PathOpsSlice> = (set, get) => ({
     getNodeAtPath: (path) => {
@@ -34,7 +40,7 @@ export const createPathOpsSlice: ScriptSlice<PathOpsSlice> = (set, get) => ({
 
     updateNodeAtPath: (path, patch) =>
         set((state) => {
-            const current = getAtPath<any>(state.rootScript, path);
+            const current = getAtPath<EditorNode>(state.rootScript, path);
             if (!current || typeof current !== 'object') return {};
             const updated = { ...current, ...patch };
             const nextRoot = setAtPath(state.rootScript, path, updated);
@@ -93,7 +99,7 @@ export const createPathOpsSlice: ScriptSlice<PathOpsSlice> = (set, get) => ({
 
     addNodeAtPath: (arrayPath, node, index) =>
         set((state) => {
-            const arr = getAtPath<any[]>(state.rootScript, arrayPath);
+            const arr = getAtPath<EditorNode[]>(state.rootScript, arrayPath);
             if (!Array.isArray(arr)) return {};
             const at = index === undefined ? arr.length : index;
             const nextRoot = insertNodeAtPath(state.rootScript, arrayPath, at, node);
@@ -107,12 +113,12 @@ export const createPathOpsSlice: ScriptSlice<PathOpsSlice> = (set, get) => ({
 
     duplicateNodeByPath: (nodePath) =>
         set((state) => {
-            const node = getAtPath<any>(state.rootScript, nodePath);
+            const node = getAtPath<EditorNode>(state.rootScript, nodePath);
             if (node === undefined) return {};
 
             const parentArrayPath = getParentArrayPath(nodePath);
             const index = getNodeIndex(nodePath);
-            const parentArray = getAtPath<any[]>(state.rootScript, parentArrayPath);
+            const parentArray = getAtPath<EditorNode[]>(state.rootScript, parentArrayPath);
             if (!Array.isArray(parentArray)) return {};
 
             const duplicated = deepClone(node);
@@ -136,7 +142,7 @@ export const createPathOpsSlice: ScriptSlice<PathOpsSlice> = (set, get) => ({
         set((state) => {
             const parentArrayPath = getParentArrayPath(targetNodePath);
             const idx = getNodeIndex(targetNodePath);
-            const parentArray = getAtPath<any[]>(state.rootScript, parentArrayPath);
+            const parentArray = getAtPath<EditorNode[]>(state.rootScript, parentArrayPath);
             if (!Array.isArray(parentArray)) return {};
 
             const pasted = deepClone(node);
@@ -258,4 +264,63 @@ export const createPathOpsSlice: ScriptSlice<PathOpsSlice> = (set, get) => ({
                 future: [],
             };
         }),
+
+    moveTimelineNode: (sourceNodePath, targetArrayPath, targetIndex) => {
+        const project = useProjectStore.getState();
+
+        if (!project.editingAllMacrosFile) {
+            get().moveNodeByPath(sourceNodePath, targetArrayPath, targetIndex);
+            return;
+        }
+
+        if (isRootNodePath(sourceNodePath) && targetArrayPath.length === 0) {
+            project.moveMacroEntries([sourceNodePath[0] as number], targetIndex);
+            return;
+        }
+
+        if (sourceNodePath.length <= 1) return;
+
+        const sourceMacroIndex = sourceNodePath[0];
+        const targetMacroIndex = targetArrayPath[0];
+        if (typeof sourceMacroIndex !== 'number' || typeof targetMacroIndex !== 'number') return;
+        if (sourceMacroIndex !== targetMacroIndex) return;
+
+        const macro = project.macroEntries[sourceMacroIndex];
+        if (!macro) return;
+
+        const sourceRest = sourceNodePath.slice(1);
+        const targetRest = targetArrayPath.slice(1);
+        if (sourceRest[0] !== 'body' || targetRest[0] !== 'body') return;
+
+        const sourcePathInCommands = sourceRest.slice(1);
+        const targetArrayPathInCommands = targetRest.slice(1);
+        if (sourcePathInCommands.length === 0) return;
+
+        const movedCommands = moveNodeByPathUtil(
+            macro.commands,
+            sourcePathInCommands,
+            targetArrayPathInCommands,
+            targetIndex
+        );
+
+        project.updateMacroCommands(sourceMacroIndex, movedCommands);
+    },
+
+    moveTimelineNodesToArray: (paths, targetArrayPath, targetIndex) => {
+        const project = useProjectStore.getState();
+
+        if (!project.editingAllMacrosFile) {
+            get().moveNodesByPathsToArray(paths, targetArrayPath, targetIndex);
+            return;
+        }
+
+        if (targetArrayPath.length !== 0) return;
+
+        const from = paths
+            .filter(isRootNodePath)
+            .map((p) => p[0] as number);
+
+        if (from.length <= 1) return;
+        project.moveMacroEntries(from, targetIndex);
+    },
 });

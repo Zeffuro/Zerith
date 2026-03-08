@@ -3,8 +3,9 @@ import { ScriptSchema } from 'core/schemas';
 import { zodIssuesToMap } from '../utils/validation';
 import { useEditorStore } from '../store/useEditorStore';
 import { useProjectStore } from '../store/useProjectStore';
+import type { EditorNode } from '../types/EditorNode';
 
-export function useLiveScriptValidation(rootScript: any[]) {
+export function useLiveScriptValidation(rootScript: EditorNode[]) {
     const editingAllMacrosFile = useProjectStore((s) => s.editingAllMacrosFile);
     const macroEntries = useProjectStore((s) => s.macroEntries);
 

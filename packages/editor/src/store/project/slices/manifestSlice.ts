@@ -1,10 +1,10 @@
-import { readTextFile } from '@tauri-apps/plugin-fs';
+import { fsReadTextFile } from '../../../services/fs';
 import type { ProjectGet, ProjectManifestSlice, ProjectSet } from '../types';
 
 async function resolveManifestValueFromDisk<T>(value: T | string, projectPath: string): Promise<T> {
     if (typeof value === 'string') {
         const filePath = projectPath + value;
-        const text = await readTextFile(filePath);
+        const text = await fsReadTextFile(filePath);
         return JSON.parse(text);
     }
     return value as T;
@@ -36,7 +36,7 @@ export function createProjectManifestSlice(set: ProjectSet, get: ProjectGet): Pr
             if (!projectPath) return;
 
             try {
-                const manifestText = await readTextFile(projectPath + '/game.json');
+                const manifestText = await fsReadTextFile(projectPath + '/game.json');
                 const manifest = JSON.parse(manifestText);
 
                 const [characters, items, macros, scenes] = await Promise.all([

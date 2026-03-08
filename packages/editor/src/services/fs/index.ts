@@ -10,3 +10,5 @@ export {
     fsMkdir,
 } from './explorerFs';
 
+export type { FsDirEntry } from './explorerFs';
+

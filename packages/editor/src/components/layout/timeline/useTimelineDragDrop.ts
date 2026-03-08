@@ -1,10 +1,8 @@
 import { useRef, useState } from 'react';
 import type { DragEvent } from 'react';
 import type { ScriptPath } from '../../../utils/scriptPathUtils';
-import { moveNodeByPath as moveNodeByPathUtil } from '../../../utils/scriptPathUtils';
 import { useScriptStore } from '../../../store/useScriptStore';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { useProjectStore } from '../../../store/useProjectStore';
 import type { DropIndicator } from './types';
 import { syncRootSelectionAfterMultiMove } from './selectionSync';
 
@@ -14,13 +12,9 @@ const isDescendantPath = (possibleDescendant: ScriptPath, ancestor: ScriptPath) 
 const isRootPath = (p: ScriptPath) => p.length === 1 && typeof p[0] === 'number';
 
 export function useTimelineDragDrop() {
-    const moveNodeByPath = useScriptStore((state) => state.moveNodeByPath);
-    const moveNodesByPathsToArray = useScriptStore((state) => state.moveNodesByPathsToArray);
+    const moveTimelineNode = useScriptStore((state) => state.moveTimelineNode);
+    const moveTimelineNodesToArray = useScriptStore((state) => state.moveTimelineNodesToArray);
 
-    const editingAllMacrosFile = useProjectStore((s) => s.editingAllMacrosFile);
-    const macroEntries = useProjectStore((s) => s.macroEntries);
-    const setMacroEntries = useProjectStore((s) => s.setMacroEntries);
-    const moveMacroEntries = useProjectStore((s) => s.moveMacroEntries);
 
     const dragSourceRef = useRef<ScriptPath | null>(null);
     const dragSourcesRef = useRef<ScriptPath[] | null>(null);
@@ -54,41 +48,6 @@ export function useTimelineDragDrop() {
         setDropIndicator({ arrayPath, index });
     };
 
-    const moveInsideMacroCommands = (source: ScriptPath, targetArrayPath: ScriptPath, targetIndex: number) => {
-        const sourceMacroIndex = source[0];
-        const targetMacroIndex = targetArrayPath[0];
-
-        if (typeof sourceMacroIndex !== 'number' || typeof targetMacroIndex !== 'number') return;
-        if (sourceMacroIndex !== targetMacroIndex) return;
-
-        const macro = macroEntries[sourceMacroIndex];
-        if (!macro) return;
-
-        const sourceRest = source.slice(1);
-        const targetRest = targetArrayPath.slice(1);
-
-        if (sourceRest[0] !== 'body' || targetRest[0] !== 'body') return;
-
-        const sourcePathInCommands = sourceRest.slice(1);
-        const targetArrayPathInCommands = targetRest.slice(1);
-
-        if (sourcePathInCommands.length === 0) return;
-
-        const movedCommands = moveNodeByPathUtil(
-            macro.commands,
-            sourcePathInCommands,
-            targetArrayPathInCommands,
-            targetIndex
-        );
-
-        const next = [...macroEntries];
-        next[sourceMacroIndex] = {
-            ...macro,
-            commands: movedCommands,
-        };
-        setMacroEntries(next);
-    };
-
     const handleNodeDrop = (e: DragEvent, arrayPath: ScriptPath, index: number) => {
         e.preventDefault();
         e.stopPropagation();
@@ -101,14 +60,8 @@ export function useTimelineDragDrop() {
 
         if (sources && sources.length > 1) {
             if (arrayPath.length === 0) {
-                if (editingAllMacrosFile) {
-                    const from = sources.map((p) => p[0] as number);
-                    moveMacroEntries(from, index);
-                    syncRootSelectionAfterMultiMove(sources.length);
-                } else {
-                    moveNodesByPathsToArray(sources, arrayPath, index);
-                    syncRootSelectionAfterMultiMove(sources.length);
-                }
+                moveTimelineNodesToArray(sources, arrayPath, index);
+                syncRootSelectionAfterMultiMove(sources.length);
             }
             setDropIndicator(null);
             return;
@@ -124,21 +77,7 @@ export function useTimelineDragDrop() {
             return;
         }
 
-        if (editingAllMacrosFile) {
-            if (source.length === 1 && arrayPath.length === 0) {
-                moveMacroEntries([source[0] as number], index);
-                setDropIndicator(null);
-                return;
-            }
-
-            if (source.length > 1) {
-                moveInsideMacroCommands(source, arrayPath, index);
-                setDropIndicator(null);
-                return;
-            }
-        }
-
-        moveNodeByPath(source, arrayPath, index);
+        moveTimelineNode(source, arrayPath, index);
         setDropIndicator(null);
     };
 

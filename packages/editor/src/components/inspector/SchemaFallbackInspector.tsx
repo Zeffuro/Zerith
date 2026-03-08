@@ -1,60 +1,13 @@
-import type { z } from 'zod';
-import { CommandSchemaRegistry } from 'core/schemas';
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
+import { inferCommandFields } from '../../utils/zodInference';
 
-type FieldInfo = {
-    key: string;
-    optional: boolean;
-    kind: 'string' | 'number' | 'boolean' | 'enum' | 'unknown';
-    enumValues?: string[];
-};
-
-function unwrapSchema(schema: any): any {
-    let current = schema;
-    while (current?._def?.innerType || current?._def?.schema) {
-        current = current._def.innerType ?? current._def.schema;
-    }
-    return current;
-}
-
-function inferFields(type: string): FieldInfo[] {
-    const schema = CommandSchemaRegistry[type] as z.ZodTypeAny | undefined;
-    if (!schema) return [];
-
-    const s: any = unwrapSchema(schema);
-    const shape = typeof s?._def?.shape === 'function' ? s._def.shape() : s?._def?.shape;
-    if (!shape || typeof shape !== 'object') return [];
-
-    return Object.entries(shape)
-        .filter(([k]) => k !== 'type')
-        .map(([key, raw]: [string, any]) => {
-            const def = raw?._def;
-            const tName = def?.typeName as string | undefined;
-            const inner = unwrapSchema(raw);
-            const innerName = inner?._def?.typeName as string | undefined;
-
-            if (innerName === 'ZodString') return { key, optional: tName === 'ZodOptional', kind: 'string' };
-            if (innerName === 'ZodNumber') return { key, optional: tName === 'ZodOptional', kind: 'number' };
-            if (innerName === 'ZodBoolean') return { key, optional: tName === 'ZodOptional', kind: 'boolean' };
-            if (innerName === 'ZodEnum') {
-                return {
-                    key,
-                    optional: tName === 'ZodOptional',
-                    kind: 'enum',
-                    enumValues: inner?._def?.values ?? [],
-                };
-            }
-
-            return { key, optional: tName === 'ZodOptional', kind: 'unknown' };
-        });
-}
 
 const HIDDEN_COMPLEX_KEYS = new Set(['then', 'else', 'body', 'commands', 'options']);
 
 export function SchemaFallbackInspector({ node, index }: { node: any; index?: number | null }) {
     const { labelStyle, handleChange, getFieldErrors, getFieldInputStyle } = useInspectorFieldEditor(index);
-    const fields = inferFields(node?.type).filter((f) => !HIDDEN_COMPLEX_KEYS.has(f.key));
+    const fields = inferCommandFields(node?.type).filter((f) => !HIDDEN_COMPLEX_KEYS.has(f.key));
 
     if (!node?.type) {
         return <div style={{ color: '#777', fontStyle: 'italic' }}>Invalid node.</div>;
