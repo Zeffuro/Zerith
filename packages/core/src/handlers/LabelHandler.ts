@@ -7,7 +7,7 @@ export interface LabelCommand extends BaseCommand {
 }
 
 export class LabelHandler implements CommandHandler<LabelCommand> {
-    public type = 'label';
+    public type: 'label' = 'label';
     public autoNext = true;
 
     execute = async (_command: LabelCommand, _engine: Engine) => {

@@ -10,7 +10,7 @@ export interface TransitionCommand extends BaseCommand {
 }
 
 export class TransitionHandler implements CommandHandler<TransitionCommand> {
-    public type = 'transition';
+    public type: 'transition' = 'transition';
     public autoNext = true;
     private fadeRect: Graphics | null = null;
 

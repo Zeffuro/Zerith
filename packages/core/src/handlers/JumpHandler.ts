@@ -7,10 +7,10 @@ export interface JumpCommand extends BaseCommand {
 }
 
 export class JumpHandler implements CommandHandler<JumpCommand> {
-    public type = 'jump';
+    public type: 'jump' = 'jump';
     public autoNext = true;
 
     execute = async (command: JumpCommand, engine: Engine) => {
-        await engine.jumpToScene(command.to);
+        await engine.scenes.jumpToScene(command.to);
     };
 }

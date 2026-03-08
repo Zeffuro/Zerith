@@ -9,7 +9,7 @@ export interface SetCommand extends BaseCommand {
 }
 
 export class SetHandler implements CommandHandler<SetCommand> {
-    public type = 'set';
+    public type: 'set' = 'set';
     public autoNext = true;
 
     execute = async (command: SetCommand, engine: Engine) => {

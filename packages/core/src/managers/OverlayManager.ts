@@ -31,6 +31,7 @@ export class OverlayManager {
     private _onNavigate: ((dir: string) => void) | null = null;
     private _onConfirm: (() => void) | null = null;
     private _onBack: (() => void) | null = null;
+    private sceneLoadingText: Text | null = null;
 
     constructor(engine: Engine, config: OverlayConfig = {}) {
         this.engine = engine;
@@ -50,7 +51,9 @@ export class OverlayManager {
             ...config
         };
 
-        this.engine.on('menu:toggle', () => this.toggle());
+        this.engine.events.on('menu:toggle', () => this.toggle());
+        this.engine.events.on('scene:loading', (sceneName: string) => this.showSceneLoading(sceneName));
+        this.engine.events.on('scene:loaded', () => this.hideSceneLoading());
     }
 
     public getUIContext(): UIContext {
@@ -120,22 +123,22 @@ export class OverlayManager {
         this._onBack = () => {
             this._focus?.back();
         };
-        this.engine.on('input:navigate', this._onNavigate);
-        this.engine.on('input:confirm', this._onConfirm);
-        this.engine.on('input:back', this._onBack);
+        this.engine.events.on('input:navigate', this._onNavigate);
+        this.engine.events.on('input:confirm', this._onConfirm);
+        this.engine.events.on('input:back', this._onBack);
     }
 
     private unsubscribeInput() {
         if (this._onNavigate) {
-            this.engine.off('input:navigate', this._onNavigate);
+            this.engine.events.off('input:navigate', this._onNavigate);
             this._onNavigate = null;
         }
         if (this._onConfirm) {
-            this.engine.off('input:confirm', this._onConfirm);
+            this.engine.events.off('input:confirm', this._onConfirm);
             this._onConfirm = null;
         }
         if (this._onBack) {
-            this.engine.off('input:back', this._onBack);
+            this.engine.events.off('input:back', this._onBack);
             this._onBack = null;
         }
         this._focus = null;
@@ -147,6 +150,7 @@ export class OverlayManager {
             this.container.destroy({ children: true });
             this.container = null;
         }
+        this.hideSceneLoading();
     }
 
     public closePanel() {
@@ -259,5 +263,29 @@ export class OverlayManager {
 
     public createButton(label: string, x: number, y: number, action: () => void): Container {
         return createButton(this.getUIContext(), { label, x, y }, action);
+    }
+
+    private showSceneLoading(sceneName: string) {
+        this.hideSceneLoading();
+
+        const label = sceneName ? `Loading ${sceneName}...` : 'Loading...';
+        const loadingText = new Text({
+            text: label,
+            style: {
+                fill: this.config.textColor,
+                fontFamily: this.config.fontFamily,
+                fontSize: this.scale(16)
+            }
+        });
+        loadingText.anchor.set(1, 1);
+        loadingText.position.set(this.engine.display.width - this.scale(20), this.engine.display.height - this.scale(20));
+        this.sceneLoadingText = loadingText;
+        this.engine.layers.overlay.addChild(loadingText);
+    }
+
+    private hideSceneLoading() {
+        if (!this.sceneLoadingText) return;
+        this.sceneLoadingText.destroy();
+        this.sceneLoadingText = null;
     }
 }

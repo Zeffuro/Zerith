@@ -11,7 +11,7 @@ export interface ForCommand extends BaseCommand {
 }
 
 export class ForHandler implements CommandHandler<ForCommand> {
-    public type = 'for';
+    public type: 'for' = 'for';
     public autoNext = true;
 
     execute = async (command: ForCommand, engine: Engine) => {

@@ -7,7 +7,7 @@ export interface WaitCommand extends BaseCommand {
 }
 
 export class WaitHandler implements CommandHandler<WaitCommand> {
-    public type = 'wait';
+    public type: 'wait' = 'wait';
     public autoNext = true;
 
     execute = async (command: WaitCommand, _engine: Engine) => {

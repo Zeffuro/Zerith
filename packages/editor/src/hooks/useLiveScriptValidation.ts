@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { ScriptSchema } from 'core/schemas';
 import { zodIssuesToMap } from '../utils/validation';
-import { useEditorStore } from '../store/useEditorStore';
 import { useProjectStore } from '../store/useProjectStore';
 import type { EditorNode } from '../types/EditorNode';
+import { executeValidationResultAction } from '../store/actions/validationActions';
 
 export function useLiveScriptValidation(rootScript: EditorNode[]) {
     const editingAllMacrosFile = useProjectStore((s) => s.editingAllMacrosFile);
@@ -24,14 +24,12 @@ export function useLiveScriptValidation(rootScript: EditorNode[]) {
                     }
                 }
 
-                if (Object.keys(merged).length === 0) useEditorStore.getState().clearValidationErrors();
-                else useEditorStore.getState().setValidationErrors(merged);
+                executeValidationResultAction(merged);
                 return;
             }
 
             const result = ScriptSchema.safeParse(rootScript);
-            if (result.success) useEditorStore.getState().clearValidationErrors();
-            else useEditorStore.getState().setValidationErrors(zodIssuesToMap(result.error));
+            executeValidationResultAction(result.success ? {} : zodIssuesToMap(result.error));
         }, 180);
 
         return () => clearTimeout(t);

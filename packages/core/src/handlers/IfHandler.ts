@@ -23,7 +23,7 @@ export interface IfCommand extends BaseCommand {
 }
 
 export class IfHandler implements CommandHandler<IfCommand> {
-    public type = 'if';
+    public type: 'if' = 'if';
     public autoNext = true;
 
     execute = async (command: IfCommand, engine: Engine) => {
@@ -41,9 +41,9 @@ export class IfHandler implements CommandHandler<IfCommand> {
         }
 
         if (conditionMet && command.then) {
-            engine.injectCommands(command.then);
+            engine.scenes.injectCommands(command.then);
         } else if (!conditionMet && command.else) {
-            engine.injectCommands(command.else);
+            engine.scenes.injectCommands(command.else);
         }
     };
 

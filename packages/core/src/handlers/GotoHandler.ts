@@ -7,7 +7,7 @@ export interface GotoCommand extends BaseCommand {
 }
 
 export class GotoHandler implements CommandHandler<GotoCommand> {
-    public type = 'goto';
+    public type: 'goto' = 'goto';
     public autoNext = true;
 
     execute = async (command: GotoCommand, engine: Engine) => {

@@ -1,0 +1,51 @@
+import { useWorkbenchStore } from '../useWorkbenchStore';
+
+export type WorkbenchTabAction = 'activate' | 'close' | 'closeOthers' | 'closeToRight' | 'reorder';
+
+export type ExecuteWorkbenchTabActionOptions =
+    | { action: 'activate' | 'close' | 'closeOthers' | 'closeToRight'; tabId: string }
+    | { action: 'reorder'; fromId: string; toIndex: number };
+
+export function executeWorkbenchTabAction(options: ExecuteWorkbenchTabActionOptions): void {
+    const state = useWorkbenchStore.getState();
+
+    switch (options.action) {
+        case 'activate':
+            state.setActiveTab(options.tabId);
+            return;
+        case 'close':
+            state.closeTab(options.tabId);
+            return;
+        case 'closeOthers':
+            state.closeOthers(options.tabId);
+            return;
+        case 'closeToRight':
+            state.closeToRight(options.tabId);
+            return;
+        case 'reorder':
+            reorderTabs(options.fromId, options.toIndex);
+            return;
+    }
+}
+
+function reorderTabs(fromId: string, toIndexRaw: number): void {
+    useWorkbenchStore.setState((state) => {
+        const fromIndex = state.tabs.findIndex((tab) => tab.id === fromId);
+        if (fromIndex < 0) return {};
+
+        const list = [...state.tabs];
+        const [moved] = list.splice(fromIndex, 1);
+
+        let toIndex = toIndexRaw;
+        if (fromIndex < toIndex) toIndex -= 1;
+        toIndex = Math.max(0, Math.min(toIndex, list.length));
+
+        list.splice(toIndex, 0, moved);
+
+        return {
+            tabs: list,
+            activeTabId: state.activeTabId ?? moved.id,
+        };
+    });
+}
+

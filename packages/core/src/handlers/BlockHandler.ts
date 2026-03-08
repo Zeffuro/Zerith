@@ -7,10 +7,10 @@ export interface BlockCommand extends BaseCommand {
 }
 
 export class BlockHandler implements CommandHandler<BlockCommand> {
-    public type = 'block';
+    public type: 'block' = 'block';
     public autoNext = true;
 
     execute = async (command: BlockCommand, engine: Engine) => {
-        engine.injectCommands(command.commands);
+        engine.scenes.injectCommands(command.commands);
     };
 }

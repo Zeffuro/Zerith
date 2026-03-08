@@ -10,7 +10,7 @@ export interface SfxCommand extends BaseCommand {
 }
 
 export class SfxHandler implements CommandHandler<SfxCommand> {
-    public type = 'sfx';
+    public type: 'sfx' = 'sfx';
     public autoNext = true;
 
     execute = async (command: SfxCommand, engine: Engine) => {

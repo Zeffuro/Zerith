@@ -10,9 +10,9 @@ import {
 } from '../../../utils/scriptPathUtils';
 import { MAX_HISTORY } from '../constants';
 import { deepClone, isRootIndexPath } from '../helpers';
-import type { ScriptSlice, ScriptState } from '../types';
+import type { ScriptGet, ScriptSet, ScriptState } from '../types';
 import type { EditorNode } from '../../../types/EditorNode';
-import { useProjectStore } from '../../useProjectStore';
+import type { PathOpsProjectBridge } from '../bridges/pathOpsProjectBridge';
 
 type PathOpsSlice = Pick<
     ScriptState,
@@ -32,7 +32,11 @@ type PathOpsSlice = Pick<
 
 const isRootNodePath = (p: ScriptPath) => p.length === 1 && typeof p[0] === 'number';
 
-export const createPathOpsSlice: ScriptSlice<PathOpsSlice> = (set, get) => ({
+export const createPathOpsSlice = (
+    set: ScriptSet,
+    get: ScriptGet,
+    getProjectBridge: () => PathOpsProjectBridge | null,
+): PathOpsSlice => ({
     getNodeAtPath: (path) => {
         const { rootScript } = get();
         return getAtPath(rootScript, path);
@@ -266,9 +270,9 @@ export const createPathOpsSlice: ScriptSlice<PathOpsSlice> = (set, get) => ({
         }),
 
     moveTimelineNode: (sourceNodePath, targetArrayPath, targetIndex) => {
-        const project = useProjectStore.getState();
+        const project = getProjectBridge();
 
-        if (!project.editingAllMacrosFile) {
+        if (!project || !project.editingAllMacrosFile) {
             get().moveNodeByPath(sourceNodePath, targetArrayPath, targetIndex);
             return;
         }
@@ -307,9 +311,9 @@ export const createPathOpsSlice: ScriptSlice<PathOpsSlice> = (set, get) => ({
     },
 
     moveTimelineNodesToArray: (paths, targetArrayPath, targetIndex) => {
-        const project = useProjectStore.getState();
+        const project = getProjectBridge();
 
-        if (!project.editingAllMacrosFile) {
+        if (!project || !project.editingAllMacrosFile) {
             get().moveNodesByPathsToArray(paths, targetArrayPath, targetIndex);
             return;
         }

@@ -94,7 +94,10 @@ export class SaveManager {
             }
         }
 
-        await this.engine.jumpToScene(saveData.sceneName, saveData.index);
+        await this.engine.scenes.jumpToScene(saveData.sceneName, saveData.index);
+        if (this.engine.isStarted) {
+            await this.engine.playNext();
+        }
     }
 
     public getMeta(slot: number): SaveMeta | null {

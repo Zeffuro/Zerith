@@ -49,6 +49,7 @@ export type ScriptSet = (
 
 export type ScriptGet = () => ScriptState;
 
+
 export type ScriptSlice<T> = (set: ScriptSet, get: ScriptGet) => T;
 
 // Backward-compatible alias used by older slice modules.

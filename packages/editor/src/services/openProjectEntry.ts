@@ -1,8 +1,13 @@
-import { useProjectStore } from '../store/useProjectStore';
-import { useConsoleStore } from '../store/useConsoleStore';
-import { useWorkbenchStore, makeTabId } from '../store/useWorkbenchStore';
+import { makeTabId } from '../store/useWorkbenchStore';
 import { applyAssetSelection, applyMacrosFile, applyScriptFile, looksLikeMacrosObject } from './projectOpeners';
 import { fsReadTextFile } from './fs';
+import { executeConsoleMessageAction } from '../store/actions/consoleMessageActions';
+import {
+    executeWorkbenchOpenAction,
+    getPreferredMacrosView,
+    getPreferredScriptView,
+} from '../store/actions/workbenchOpenActions';
+import { getCurrentProjectPath } from '../store/actions/projectTreeActions';
 
 const IMG_EXT = new Set(['.png', '.jpg', '.jpeg', '.webp', '.avif']);
 const AUDIO_EXT = new Set(['.mp3', '.ogg', '.wav', '.m4a']);
@@ -39,17 +44,17 @@ export async function openProjectEntry(fullPath: string, entryName: string, opts
 
     try {
         if (IMG_EXT.has(ext) || AUDIO_EXT.has(ext)) {
-            const projectPath = useProjectStore.getState().projectPath;
+            const projectPath = getCurrentProjectPath();
             const rel = toProjectRelativePath(fullPath, projectPath);
             applyAssetSelection(rel);
 
-            useWorkbenchStore.getState().openOrFocusTab({
+            executeWorkbenchOpenAction({ action: 'openTab', tab: {
                 id: makeTabId('asset', fullPath),
                 kind: 'asset',
                 path: fullPath,
                 title: basename(fullPath),
                 assetPath: rel,
-            });
+            }});
             return;
         }
 
@@ -60,79 +65,79 @@ export async function openProjectEntry(fullPath: string, entryName: string, opts
             const base = basename(fullPath).toLowerCase();
 
             if (base === 'game.json') {
-                useWorkbenchStore.getState().openOrFocusTab({
+                executeWorkbenchOpenAction({ action: 'openTab', tab: {
                     id: makeTabId('manifest', fullPath),
                     kind: 'manifest',
                     path: fullPath,
                     title: basename(fullPath),
                     textContent: contents,
-                });
+                }});
                 return;
             }
 
             if (Array.isArray(data)) {
                 applyScriptFile(fullPath, data);
 
-                const preferred = opts?.forceView ?? useWorkbenchStore.getState().lastScriptView;
-                if (opts?.forceView) useWorkbenchStore.getState().setLastScriptView(opts.forceView);
+                const preferred = getPreferredScriptView(opts?.forceView);
+                if (opts?.forceView) executeWorkbenchOpenAction({ action: 'setScriptView', view: opts.forceView });
 
-                useWorkbenchStore.getState().openOrFocusTab({
+                executeWorkbenchOpenAction({ action: 'openTab', tab: {
                     id: makeTabId('script', fullPath),
                     kind: 'script',
                     path: fullPath,
                     title: basename(fullPath),
                     preferredView: preferred,
-                });
+                }});
                 return;
             }
 
             if (looksLikeMacrosObject(data)) {
                 applyMacrosFile(fullPath, data);
 
-                const preferred = opts?.forceView ?? useWorkbenchStore.getState().lastMacrosView;
-                if (opts?.forceView) useWorkbenchStore.getState().setLastMacrosView(opts.forceView);
+                const preferred = getPreferredMacrosView(opts?.forceView);
+                if (opts?.forceView) executeWorkbenchOpenAction({ action: 'setMacrosView', view: opts.forceView });
 
-                useWorkbenchStore.getState().openOrFocusTab({
+                executeWorkbenchOpenAction({ action: 'openTab', tab: {
                     id: makeTabId('macros', fullPath),
                     kind: 'macros',
                     path: fullPath,
                     title: basename(fullPath),
                     preferredView: preferred,
-                });
+                }});
                 return;
             }
 
             const kind = basename(fullPath).toLowerCase() === 'game.json' ? 'manifest' : 'json';
-            useWorkbenchStore.getState().openOrFocusTab({
+            executeWorkbenchOpenAction({ action: 'openTab', tab: {
                 id: makeTabId(kind, fullPath),
                 kind,
                 path: fullPath,
                 title: basename(fullPath),
                 textContent: contents,
-            });
+            }});
             return;
         }
 
         if (TEXT_EXT.has(ext)) {
             const contents = await fsReadTextFile(fullPath);
-            useWorkbenchStore.getState().openOrFocusTab({
+            executeWorkbenchOpenAction({ action: 'openTab', tab: {
                 id: makeTabId('text', fullPath),
                 kind: 'text',
                 path: fullPath,
                 title: basename(fullPath),
                 textContent: contents,
-            });
+            }});
             focusMainEditorFor('text');
             return;
         }
 
-        useWorkbenchStore.getState().openOrFocusTab({
+        executeWorkbenchOpenAction({ action: 'openTab', tab: {
             id: makeTabId('unknown', fullPath),
             kind: 'unknown',
             path: fullPath,
             title: basename(fullPath),
-        });
-        useConsoleStore.getState().addMessage('editor', 'warn', 'No handler for file type yet:', fullPath);
+        }});
+        executeConsoleMessageAction('editor', 'warn', 'No handler for file type yet:', fullPath);
     } catch (err) {
         console.error('Failed to open entry:', err);
     }

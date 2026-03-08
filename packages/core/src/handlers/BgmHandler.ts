@@ -11,7 +11,7 @@ export interface BgmCommand extends BaseCommand {
 }
 
 export class BgmHandler implements CommandHandler<BgmCommand> {
-    public type = 'bgm';
+    public type: 'bgm' = 'bgm';
     public autoNext = true;
     private currentBgmUrl: string | null = null;
     private isPaused = false;

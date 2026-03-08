@@ -4,6 +4,7 @@ import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
 import { activateWorkbenchTab } from '../../../services/activateWorkbenchTab';
+import { executeWorkbenchTabAction } from '../../../store/actions/workbenchTabActions';
 
 type ContextMenuState = {
     x: number;
@@ -14,14 +15,7 @@ type ContextMenuState = {
 export function WorkbenchTabs() {
     const uiScale = useEditorStore((s) => s.uiScale);
 
-    const {
-        tabs,
-        activeTabId,
-        closeTab,
-        closeOthers,
-        closeToRight,
-        setActiveTab,
-    } = useWorkbenchStore();
+    const { tabs, activeTabId } = useWorkbenchStore();
 
     const [ctx, setCtx] = useState<ContextMenuState>(null);
 
@@ -63,27 +57,6 @@ export function WorkbenchTabs() {
         fontSize: `${12 * uiScale}px`,
     };
 
-    const reorderTabs = (fromId: string, toIndexRaw: number) => {
-        const fromIndex = tabIndexById.get(fromId);
-        if (fromIndex === undefined) return;
-
-        const list = [...tabs];
-        const [moved] = list.splice(fromIndex, 1);
-
-        let toIndex = toIndexRaw;
-        if (fromIndex < toIndex) toIndex -= 1;
-        toIndex = Math.max(0, Math.min(toIndex, list.length));
-
-        list.splice(toIndex, 0, moved);
-
-        // write back by replacing store tabs (small extension point)
-        useWorkbenchStore.setState((state) => ({
-            ...state,
-            tabs: list,
-            activeTabId: state.activeTabId ?? moved.id,
-        }));
-    };
-
     return (
         <div
             ref={stripRef}
@@ -119,7 +92,7 @@ export function WorkbenchTabs() {
             onDrop={(e) => {
                 if (!dragTabId || dropIndex === null) return;
                 e.preventDefault();
-                reorderTabs(dragTabId, dropIndex);
+                executeWorkbenchTabAction({ action: 'reorder', fromId: dragTabId, toIndex: dropIndex });
                 setDragTabId(null);
                 setDropIndex(null);
             }}
@@ -158,7 +131,7 @@ export function WorkbenchTabs() {
                             onContextMenu={(e) => {
                                 e.preventDefault();
                                 setCtx({ x: e.clientX, y: e.clientY, tabId: tab.id });
-                                setActiveTab(tab.id);
+                                executeWorkbenchTabAction({ action: 'activate', tabId: tab.id });
                             }}
                             style={{
                                 display: 'inline-flex',
@@ -180,7 +153,7 @@ export function WorkbenchTabs() {
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    closeTab(tab.id);
+                                    executeWorkbenchTabAction({ action: 'close', tabId: tab.id });
                                 }}
                                 style={{
                                     border: 'none',
@@ -230,7 +203,7 @@ export function WorkbenchTabs() {
                     <button
                         style={menuBtnStyle}
                         onClick={() => {
-                            closeTab(ctx.tabId);
+                            executeWorkbenchTabAction({ action: 'close', tabId: ctx.tabId });
                             setCtx(null);
                         }}
                     >
@@ -240,7 +213,7 @@ export function WorkbenchTabs() {
                     <button
                         style={menuBtnStyle}
                         onClick={() => {
-                            closeOthers(ctx.tabId);
+                            executeWorkbenchTabAction({ action: 'closeOthers', tabId: ctx.tabId });
                             setCtx(null);
                         }}
                     >
@@ -250,7 +223,7 @@ export function WorkbenchTabs() {
                     <button
                         style={menuBtnStyle}
                         onClick={() => {
-                            closeToRight(ctx.tabId);
+                            executeWorkbenchTabAction({ action: 'closeToRight', tabId: ctx.tabId });
                             setCtx(null);
                         }}
                     >

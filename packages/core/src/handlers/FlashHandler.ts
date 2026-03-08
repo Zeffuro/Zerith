@@ -11,7 +11,7 @@ export interface FlashCommand extends BaseCommand {
 }
 
 export class FlashHandler implements CommandHandler<FlashCommand> {
-    public type = 'flash';
+    public type: 'flash' = 'flash';
     public autoNext = true;
 
     execute = async (command: FlashCommand, engine: Engine) => {

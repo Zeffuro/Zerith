@@ -1,4 +1,3 @@
-import { Text } from 'pixi.js';
 import type { BaseCommand, Script, SceneMap } from '../types';
 import type { Engine } from '../Engine';
 
@@ -69,21 +68,15 @@ export class SceneManager {
             this.engine.logger.error(`Scene '${sceneName}' missing.`);
             return;
         }
+        this.engine.events.emit('scene:loading', sceneName);
+        try {
+            await this.engine.assets.preloadSceneAssets(this.scenes[sceneName]);
 
-        const loadingText = new Text({
-            text: "Loading...",
-            style: { fill: 0xffffff, fontFamily: this.engine.theme.fontFamily }
-        });
-        loadingText.anchor.set(1, 1);
-        loadingText.position.set(this.engine.display.width - 20, this.engine.display.height - 20);
-        this.engine.layers.overlay.addChild(loadingText);
-
-        await this.engine.assets.preloadSceneAssets(this.scenes[sceneName]);
-
-        loadingText.destroy();
-
-        this.currentSceneName = sceneName;
-        this.runtimeScript = this.scenes[sceneName].map((command, originalIndex) => ({ command, originalIndex }));
-        this.currentIndex = startIndex;
+            this.currentSceneName = sceneName;
+            this.runtimeScript = this.scenes[sceneName].map((command, originalIndex) => ({ command, originalIndex }));
+            this.currentIndex = startIndex;
+        } finally {
+            this.engine.events.emit('scene:loaded', sceneName);
+        }
     }
 }

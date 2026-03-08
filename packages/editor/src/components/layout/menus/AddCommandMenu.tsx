@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useDismissiblePopup } from '../../../hooks/useDismissiblePopup';
 import { editorTheme as t } from '../../../theme/editorTheme';
 import { styles } from '../../../theme/styleHelpers';
+import type { NonMacroEditorCommandType } from '../../../plugins/types';
 
-type CommandItem = { type: string; label: string; icon?: ReactNode };
+type CommandItem = { type: NonMacroEditorCommandType; label: string; icon?: ReactNode };
 
 export function AddCommandMenu({
                                    uiScale,
@@ -11,7 +12,7 @@ export function AddCommandMenu({
                                    items,
                                }: {
     uiScale: number;
-    onAdd: (type: string) => void;
+    onAdd: (type: NonMacroEditorCommandType) => void;
     items: CommandItem[];
 }) {
     const [open, setOpen] = useState(false);

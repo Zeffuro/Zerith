@@ -1,10 +1,11 @@
-import { Container, Graphics, HTMLText, Sprite, Text, type TextStyleOptions } from 'pixi.js';
+import type { TextStyleOptions } from 'pixi.js';
 import {sound} from '@pixi/sound';
-import gsap from 'gsap';
 import type {CommandHandler} from '../types';
 import type {CharacterDefinition} from '../types';
 import type {Engine} from '../Engine';
 import { parseTextTags, transformShorthands } from '../utils/TextParser';
+import { DialogueRenderer } from './dialogue/DialogueRenderer';
+import { TypewriterController } from './dialogue/TypewriterController';
 
 export interface DialogueCommand {
     type: 'dialogue';
@@ -31,25 +32,33 @@ export interface DialogueConfig {
 }
 
 export class DialogueHandler implements CommandHandler<DialogueCommand> {
-    public type = 'dialogue';
+    public type: 'dialogue' = 'dialogue';
     public autoNext = false;
     private config: DialogueConfig;
-    private container: Container | null = null;
-    private nameText!: Text;
-    private messageText!: HTMLText;
-    private portraitSprite!: Sprite;
-    private currentSession = 0;
+    private readonly renderer: DialogueRenderer;
+    private readonly typewriter: TypewriterController;
+    private activeAbortController: AbortController | null = null;
 
     constructor(config: DialogueConfig) {
         this.config = { typewriterSpeed: 30, characters: {}, ...config };
+        this.renderer = new DialogueRenderer(this.config);
+        this.typewriter = new TypewriterController();
     }
 
-    reset = () => { this.currentSession++; this.container = null; };
+    reset = () => {
+        this.activeAbortController?.abort();
+        this.activeAbortController = null;
+        this.renderer.reset();
+    };
 
     execute = async (command: DialogueCommand, engine: Engine) => {
-        const session = ++this.currentSession;
+        this.activeAbortController?.abort();
+        const abortController = new AbortController();
+        this.activeAbortController = abortController;
+        const { signal } = abortController;
+
         engine.consumeSkip();
-        if (!this.container) this.buildUI(engine);
+        this.renderer.ensureUI(engine);
 
         const resolvedText = engine.resolveText(command.text);
 
@@ -62,25 +71,11 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
 
         engine.history.push(displayName, command.text);
 
-        this.nameText.text = displayName;
-        this.nameText.style.fill = charData?.nameColor || engine.theme.accentColor;
+        this.renderer.setSpeaker(displayName, charData?.nameColor || engine.theme.accentColor);
 
         if (charData?.portraitUrl) {
-            this.portraitSprite.texture = await engine.loadAsset(charData.portraitUrl);
-            this.portraitSprite.visible = true;
-            this.portraitSprite.anchor.set(0.5, 1);
-
-            const w = engine.display.width;
-            const boxY = this.config.boxY ?? (engine.display.height * 2 / 3);
-            this.portraitSprite.position.set(
-                command.portraitSide === 'right' ? w * 0.8 : w * 0.2,
-                boxY
-            );
-            const scale = (boxY * 0.9) / this.portraitSprite.texture.height;
-            this.portraitSprite.scale.set(
-                command.portraitSide === 'right' ? -scale : scale,
-                scale
-            );
+            await this.renderer.showPortrait(engine, charData.portraitUrl, command.portraitSide ?? 'left');
+            if (signal.aborted) return;
 
             engine.setState('__sys_dialogue', {
                 speaker: command.speaker,
@@ -89,7 +84,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
                 portraitSide: command.portraitSide ?? 'left',
             });
         } else {
-            this.portraitSprite.visible = false;
+            this.renderer.hidePortrait();
             engine.setState('__sys_dialogue', {
                 speaker: command.speaker,
                 text: command.text,
@@ -109,6 +104,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
                     action: 'animate',
                     animation: fullCharData.talkAnimation,
                 });
+                if (signal.aborted) return;
             }
         }
 
@@ -128,153 +124,86 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
             } catch (e) {
                 engine.logger.warn(`Blip failed to load: ${blipUrl}`);
             }
+            if (signal.aborted) return;
         }
 
-        this.messageText.text = "";
+        this.renderer.clearMessage();
 
         const transformed = transformShorthands(resolvedText);
         const tokens = parseTextTags(transformed);
-        let currentSpeed = this.config.typewriterSpeed!;
 
         if (command.instant) {
-            this.messageText.text = tokens
+            this.renderer.setMessageText(tokens
                 .filter((t): t is { type: 'text'; val: string } => t.type === 'text')
                 .map(t => t.val)
-                .join('');
+                .join(''));
             return;
         }
 
-        for (const token of tokens) {
-            if (session !== this.currentSession) return;
+        await this.typewriter.run({
+            tokens,
+            initialSpeed: this.config.typewriterSpeed!,
+            blipUrl: resolvedBlipUrl,
+            signal,
+            consumeSkip: () => engine.consumeSkip(),
+            getMessageText: () => this.renderer.getMessageText(),
+            setMessageText: (text) => this.renderer.setMessageText(text),
+            getVoiceVolume: () => engine.audio.voiceVolume,
+            createPromptBlinker: () => this.renderer.createPromptBlinker(),
+            waitForPromptInput: (abortSignal) => this.waitForPromptInput(engine, abortSignal),
+        });
 
-            if (token.type === 'prompt') {
-                const blinker = this.createBlinker();
-
-                await new Promise<void>((resolve) => {
-                    const onInput = () => {
-                        engine.off('input:confirm', onInput);
-                        engine.off('input:next', onInput);
-                        blinker.destroy();
-                        resolve();
-                    };
-                    engine.once('input:confirm', onInput);
-                    engine.app.canvas.addEventListener('pointerdown', onInput, { once: true });
-                });
-            }
-
-            if (engine.consumeSkip()) {
-                const remaining = tokens
-                    .slice(tokens.indexOf(token))
-                    .filter((t): t is { type: 'text'; val: string } => t.type === 'text')
-                    .map(t => t.val)
-                    .join('');
-                this.messageText.text = this.messageText.text + remaining;
-                break;
-            }
-
-            if (token.type === 'wait') await new Promise(r => setTimeout(r, token.ms));
-            else if (token.type === 'speed') currentSpeed = token.speed;
-            else if (token.type === 'text') {
-                await this.typewrite(token.val, currentSpeed, resolvedBlipUrl, engine, session);
-            }
-        }
-
-        if (session === this.currentSession && engine.autoAdvanceDelay !== null) {
-            await new Promise(r => setTimeout(r, engine.autoAdvanceDelay!));
-            if (session === this.currentSession) {
+        if (!signal.aborted && engine.autoAdvanceDelay !== null) {
+            await this.waitForDelay(engine.autoAdvanceDelay, signal);
+            if (!signal.aborted) {
                 engine.playNext();
             }
         }
     };
 
-    private async typewrite(t: string, speed: number, blip: string | undefined, engine: Engine, session: number) {
-        let current = this.messageText.text;
-        let i = 0;
-        while (i < t.length) {
-            if (session !== this.currentSession) return;
+    private async waitForPromptInput(engine: Engine, signal: AbortSignal): Promise<void> {
+        if (signal.aborted) return;
 
-            if (engine.consumeSkip()) {
-                current += t.slice(i);
-                this.messageText.text = current;
-                return;
-            }
+        await new Promise<void>((resolve) => {
+            let resolved = false;
 
-            if (t[i] === '<') {
-                const end = t.indexOf('>', i);
-                current += t.slice(i, end + 1);
-                i = end + 1;
-            } else {
-                current += t[i];
+            const cleanup = () => {
+                engine.events.off('input:confirm', onInput);
+                engine.events.off('input:next', onInput);
+                signal.removeEventListener('abort', onAbort);
+            };
 
-                if (blip && t[i] !== ' ' && t[i] !== '\n' && sound.exists(blip)) {
-                    sound.play(blip, { volume: 0.1 * engine.audio.voiceVolume });
-                }
-                i++;
-            }
+            const finish = () => {
+                if (resolved) return;
+                resolved = true;
+                cleanup();
+                resolve();
+            };
 
-            this.messageText.text = current;
-            if (speed > 0) await new Promise(r => setTimeout(r, speed));
-        }
+            const onInput = () => finish();
+            const onAbort = () => finish();
+
+            engine.events.on('input:confirm', onInput);
+            engine.events.on('input:next', onInput);
+            signal.addEventListener('abort', onAbort, { once: true });
+        });
     }
 
-    private createBlinker(): Graphics {
-        const g = new Graphics().poly([0,0, 15,0, 7.5,10]).fill(0xffffff);
-        g.position.set(this.messageText.x + this.messageText.width, this.messageText.y + this.messageText.height);
-        this.container?.addChild(g);
-        gsap.to(g, { alpha: 0, duration: 0.5, repeat: -1, yoyo: true });
-        return g;
-    }
+    private async waitForDelay(ms: number, signal: AbortSignal): Promise<void> {
+        if (signal.aborted || ms <= 0) return;
 
-    private buildUI(engine: Engine) {
-        const t = engine.theme;
-        const w = engine.display.width;
-        const h = engine.display.height;
+        await new Promise<void>((resolve) => {
+            const timeout = setTimeout(() => {
+                signal.removeEventListener('abort', onAbort);
+                resolve();
+            }, ms);
 
-        const margin = 20;
-        const boxWidth = this.config.boxWidth ?? (w - margin * 2);
-        const boxHeight = this.config.boxHeight ?? (h * 0.3);
-        const boxX = this.config.boxX ?? margin;
-        const boxY = this.config.boxY ?? (h - boxHeight - margin);
-        const padding = 20;
+            const onAbort = () => {
+                clearTimeout(timeout);
+                resolve();
+            };
 
-        this.container = new Container();
-        this.portraitSprite = new Sprite();
-        engine.layers.sprites.addChild(this.portraitSprite);
-
-        const bg = new Graphics()
-            .roundRect(boxX, boxY, boxWidth, boxHeight, 10)
-            .fill({
-                color: this.config.backgroundColor ?? t.boxColor,
-                alpha: this.config.backgroundAlpha ?? t.boxAlpha
-            })
-            .stroke({
-                color: this.config.borderColor ?? t.borderColor,
-                width: this.config.borderWidth ?? t.borderWidth
-            });
-
-        this.nameText = new Text({
-            text: '',
-            style: {
-                fontFamily: t.fontFamily,
-                fontSize: t.fontSize + 4,
-                fontWeight: 'bold'
-            }
+            signal.addEventListener('abort', onAbort, { once: true });
         });
-        this.nameText.position.set(boxX + padding, boxY + 15);
-
-        this.messageText = new HTMLText({
-            text: '',
-            style: {
-                fontFamily: t.fontFamily,
-                fontSize: t.fontSize,
-                fill: '#ffffff',
-                wordWrap: true,
-                wordWrapWidth: boxWidth - (padding * 2)
-            }
-        });
-        this.messageText.position.set(boxX + padding, boxY + 55);
-
-        this.container.addChild(bg, this.nameText, this.messageText);
-        engine.layers.ui.addChild(this.container);
     }
 }

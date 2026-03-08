@@ -80,7 +80,7 @@ export class StartScreenManager {
         return new Promise<void>((resolve) => {
             const onStart = () => {
                 startLayer.destroy({ children: true });
-                this.engine.jumpToScene(startScene);
+                this.engine.scenes.jumpToScene(startScene);
                 this.engine.start();
                 resolve();
             };
@@ -88,10 +88,10 @@ export class StartScreenManager {
             startLayer.on('pointerdown', onStart);
 
             const onKeyStart = () => {
-                this.engine.off('input:start', onKeyStart);
+                this.engine.events.off('input:start', onKeyStart);
                 onStart();
             };
-            this.engine.on('input:start', onKeyStart);
+            this.engine.events.on('input:start', onKeyStart);
         });
     }
 }

@@ -1,4 +1,5 @@
 import type { ScriptPath } from '../../utils/scriptPathUtils';
+import type { NonMacroEditorCommandType } from '../../plugins/types';
 
 export type EditorSet = (
     partial: Record<string, any> | ((state: Record<string, any>) => Record<string, any>)
@@ -56,10 +57,10 @@ export interface PlaybackQuickCommandsSlice {
     triggerPlayFrom: (index: number) => void;
     triggerPlay: () => void;
     triggerStop: () => void;
-    quickCommandTypes: string[];
-    setQuickCommandTypes: (types: string[]) => void;
-    toggleQuickCommandType: (type: string) => void;
-    moveQuickCommandType: (type: string, direction: 'left' | 'right') => void;
+    quickCommandTypes: NonMacroEditorCommandType[];
+    setQuickCommandTypes: (types: NonMacroEditorCommandType[]) => void;
+    toggleQuickCommandType: (type: NonMacroEditorCommandType) => void;
+    moveQuickCommandType: (type: NonMacroEditorCommandType, direction: 'left' | 'right') => void;
 }
 
 export interface ClipboardValidationAssetSlice {

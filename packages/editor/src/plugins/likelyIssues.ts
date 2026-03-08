@@ -1,27 +1,32 @@
-export function hasLikelyIssue(node: any): boolean {
-    if (!node || typeof node !== 'object' || typeof node.type !== 'string') return true;
+function asObject(value: unknown): Record<string, unknown> | null {
+    return value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+}
 
-    switch (node.type) {
+export function hasLikelyIssue(node: unknown): boolean {
+    const obj = asObject(node);
+    if (!obj || typeof obj.type !== 'string') return true;
+
+    switch (obj.type) {
         case 'dialogue':
-            return typeof node.text !== 'string';
+            return typeof obj.text !== 'string';
         case 'jump':
-            return typeof node.to !== 'string' || node.to.trim() === '';
+            return typeof obj.to !== 'string' || obj.to.trim() === '';
         case 'call':
-            return typeof node.name !== 'string' || node.name.trim() === '';
+            return typeof obj.name !== 'string' || obj.name.trim() === '';
         case 'background':
-            return typeof node.assetUrl !== 'string' || node.assetUrl.trim() === '';
+            return typeof obj.assetUrl !== 'string' || obj.assetUrl.trim() === '';
         case 'sfx':
-            return typeof node.assetUrl !== 'string' || node.assetUrl.trim() === '';
+            return typeof obj.assetUrl !== 'string' || obj.assetUrl.trim() === '';
         case 'label':
-            return typeof node.name !== 'string' || node.name.trim() === '';
+            return typeof obj.name !== 'string' || obj.name.trim() === '';
         case 'goto':
-            return typeof node.label !== 'string' || node.label.trim() === '';
+            return typeof obj.label !== 'string' || obj.label.trim() === '';
         case 'if':
-            return !Array.isArray(node.then) || !Array.isArray(node.else);
+            return !Array.isArray(obj.then) || !Array.isArray(obj.else);
         case 'while':
-            return !Array.isArray(node.body);
+            return !Array.isArray(obj.body);
         case 'for':
-            return !Array.isArray(node.body);
+            return !Array.isArray(obj.body);
         default:
             return false;
     }

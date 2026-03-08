@@ -1,5 +1,18 @@
-import type {AssetResolver} from './Engine';
-import {Engine} from './Engine';
+import { AudioManager } from './managers/AudioManager';
+import { DisplayManager } from './managers/DisplayManager';
+import { EventBus } from './managers/EventBus';
+import { InputManager } from './managers/InputManager';
+import { NotificationManager } from './managers/NotificationManager';
+import { StartScreenManager } from './managers/StartScreenManager';
+import { SceneManager } from './managers/SceneManager';
+import { SaveManager } from './managers/SaveManager';
+import { OverlayManager } from './managers/OverlayManager';
+import { HistoryManager } from './managers/HistoryManager';
+import { EvidenceManager } from './managers/EvidenceManager';
+import { SpritesheetManager } from './managers/SpritesheetManager';
+import { AssetManager } from './managers/AssetManager';
+import type { AssetResolver, EngineDeps } from './Engine';
+import { Engine } from './Engine';
 import { BuiltInHandlers } from './handlers/builtins';
 import { ChoiceHandler } from './handlers/ChoiceHandler';
 import { DialogueHandler } from './handlers/DialogueHandler';
@@ -11,7 +24,6 @@ export interface EngineBootstrapOptions {
     config?: EngineConfig;
     manifest?: GameManifest;
     assetResolver?: AssetResolver;
-    isEditor?: boolean;
     characters?: Record<string, any>;
     defaultBlipUrl?: string;
     items?: Record<string, any>;
@@ -20,13 +32,47 @@ export interface EngineBootstrapOptions {
     preloadAssets?: boolean;
 }
 
+function createDefaultEngineDeps(engine: Engine, config: EngineConfig): EngineDeps {
+    const events = new EventBus();
+    // Ensure managers that subscribe in constructor see the final bus instance.
+    engine.events = events;
+
+    const audio = new AudioManager(config.audio);
+    const display = new DisplayManager(engine.app, config.display);
+    const input = new InputManager(engine, config.input);
+    const scenes = new SceneManager(engine);
+    const saves = new SaveManager(engine);
+    const notifications = new NotificationManager(engine, config.notifications);
+    const startScreen = new StartScreenManager(engine, config.startScreen);
+    const history = new HistoryManager();
+    const items = new EvidenceManager();
+    const spritesheets = new SpritesheetManager();
+    const assets = new AssetManager(spritesheets);
+    const overlay = new OverlayManager(engine, config.overlay);
+
+    return {
+        events,
+        audio,
+        display,
+        input,
+        scenes,
+        saves,
+        notifications,
+        startScreen,
+        overlay,
+        history,
+        items,
+        spritesheets,
+        assets,
+    };
+}
+
 export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<Engine> {
     const {
         canvas,
         config = {},
         manifest = {},
         assetResolver,
-        isEditor = false,
         characters = {},
         defaultBlipUrl = '/assets/sfx/blip.wav',
         items = {},
@@ -35,10 +81,7 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
         preloadAssets = false,
     } = options;
 
-    const engine = new Engine({
-        ...config,
-        onSceneNavigation: config.onSceneNavigation ?? (isEditor ? () => 'skip' : undefined),
-    });
+    const engine = new Engine(config, createDefaultEngineDeps);
     if (assetResolver) {
         engine.assetResolver = assetResolver;
     }
@@ -67,12 +110,12 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
 
     if (Object.keys(macros).length > 0) {
         Object.entries(macros).forEach(([name, script]) =>
-            engine.registerTemplate(name, script as any)
+            engine.scenes.registerTemplate(name, script as any)
         );
     }
 
     if (Object.keys(scenes).length > 0) {
-        engine.loadScenes(scenes);
+        engine.scenes.loadScenes(scenes);
     }
 
     await engine.init(canvas);

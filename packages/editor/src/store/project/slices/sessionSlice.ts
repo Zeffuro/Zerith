@@ -1,9 +1,8 @@
 import type { FsDirEntry } from '../../../services/fs';
 import type { EditorNode } from '../../../types/EditorNode';
-import { useScriptStore } from '../../useScriptStore';
-import type { ProjectSessionSlice, ProjectSet } from '../types';
+import type { ProjectScriptBridge, ProjectSessionSlice, ProjectSet } from '../types';
 
-export function createProjectSessionSlice(set: ProjectSet): ProjectSessionSlice {
+export function createProjectSessionSlice(set: ProjectSet, scriptBridge: ProjectScriptBridge): ProjectSessionSlice {
     return {
         projectPath: null,
         files: [],
@@ -27,7 +26,7 @@ export function createProjectSessionSlice(set: ProjectSet): ProjectSessionSlice 
 
         setActiveFile: (file: string, content: EditorNode[]) => {
             set({ activeFile: file });
-            useScriptStore.getState().setScript(content);
+            scriptBridge.setScript(content);
         },
 
         bumpTreeRevision: () => set((s) => ({ treeRevision: s.treeRevision + 1 })),

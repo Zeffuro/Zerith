@@ -1,14 +1,9 @@
 import { validateScript } from 'core/schemas';
-import { useProjectStore } from '../store/useProjectStore';
-import { useEditorStore } from '../store/useEditorStore';
+import { executeProjectOpenAction } from '../store/actions/projectOpenActions';
 
 export function applyScriptFile(path: string, data: any[]) {
     const validScript = validateScript(data);
-    const p = useProjectStore.getState();
-    p.setActiveFile(path, validScript);
-    p.setActiveMacroName(null);
-    p.setEditingAllMacrosFile(false);
-    p.setMacroEntries([]);
+    executeProjectOpenAction({ action: 'applyScriptFile', path, script: validScript });
 }
 
 export function applyMacrosFile(path: string, obj: Record<string, any>) {
@@ -17,15 +12,11 @@ export function applyMacrosFile(path: string, obj: Record<string, any>) {
         .map((name) => ({ name, commands: validateScript(obj[name]) }))
         .sort((a, b) => a.name.localeCompare(b.name));
 
-    const p = useProjectStore.getState();
-    p.setActiveMacroName(null);
-    p.setEditingAllMacrosFile(true);
-    p.setMacroEntries(entries);
-    p.setActiveFile(path, []);
+    executeProjectOpenAction({ action: 'applyMacrosFile', path, entries });
 }
 
 export function applyAssetSelection(assetPath: string) {
-    useEditorStore.getState().setSelectedAssetPath(assetPath);
+    executeProjectOpenAction({ action: 'applyAssetSelection', assetPath });
 }
 
 export function looksLikeMacrosObject(data: any): data is Record<string, any> {

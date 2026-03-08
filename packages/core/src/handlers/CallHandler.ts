@@ -7,13 +7,13 @@ export interface CallCommand extends BaseCommand {
 }
 
 export class CallHandler implements CommandHandler<CallCommand> {
-    public type = 'call';
+    public type: 'call' = 'call';
     public autoNext = true;
 
     execute = async (command: CallCommand, engine: Engine) => {
-        const template = engine.getTemplate(command.name);
+        const template = engine.scenes.getTemplate(command.name);
         if (template) {
-            engine.injectCommands(template);
+            engine.scenes.injectCommands(template);
         } else {
             engine.logger.warn(`Template '${command.name}' not found!`);
         }

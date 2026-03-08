@@ -1,15 +1,14 @@
 import { fsReadDir, fsReadTextFile, fsWriteTextFile } from '../../../services/fs';
 import type { Command } from 'core';
-import { useScriptStore } from '../../useScriptStore';
-import type { ProjectGet, ProjectIoSlice } from '../types';
+import type { ProjectGet, ProjectIoSlice, ProjectScriptBridge } from '../types';
 
-export function createProjectIoSlice(get: ProjectGet): ProjectIoSlice {
+export function createProjectIoSlice(get: ProjectGet, scriptBridge: ProjectScriptBridge): ProjectIoSlice {
     return {
         saveActiveFileFromCurrentScript: async () => {
             const { activeFile, activeMacroName, editingAllMacrosFile, macroEntries } = get();
             if (!activeFile) return;
 
-            const rootScript = useScriptStore.getState().rootScript;
+            const rootScript = scriptBridge.getRootScript();
 
             try {
                 if (editingAllMacrosFile) {

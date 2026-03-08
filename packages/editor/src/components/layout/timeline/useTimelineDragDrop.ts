@@ -1,21 +1,14 @@
 import { useRef, useState } from 'react';
 import type { DragEvent } from 'react';
 import type { ScriptPath } from '../../../utils/scriptPathUtils';
-import { useScriptStore } from '../../../store/useScriptStore';
 import { useEditorStore } from '../../../store/useEditorStore';
 import type { DropIndicator } from './types';
-import { syncRootSelectionAfterMultiMove } from './selectionSync';
+import { executeTimelineDropAction } from '../../../store/actions/timelineDragDropActions';
 
 const sameArrayPath = (a: ScriptPath, b: ScriptPath) => a.length === b.length && a.every((v, i) => v === b[i]);
-const isDescendantPath = (possibleDescendant: ScriptPath, ancestor: ScriptPath) =>
-    possibleDescendant.length > ancestor.length && ancestor.every((v, i) => possibleDescendant[i] === v);
 const isRootPath = (p: ScriptPath) => p.length === 1 && typeof p[0] === 'number';
 
 export function useTimelineDragDrop() {
-    const moveTimelineNode = useScriptStore((state) => state.moveTimelineNode);
-    const moveTimelineNodesToArray = useScriptStore((state) => state.moveTimelineNodesToArray);
-
-
     const dragSourceRef = useRef<ScriptPath | null>(null);
     const dragSourcesRef = useRef<ScriptPath[] | null>(null);
     const [dropIndicator, setDropIndicator] = useState<DropIndicator>(null);
@@ -58,26 +51,7 @@ export function useTimelineDragDrop() {
         dragSourceRef.current = null;
         dragSourcesRef.current = null;
 
-        if (sources && sources.length > 1) {
-            if (arrayPath.length === 0) {
-                moveTimelineNodesToArray(sources, arrayPath, index);
-                syncRootSelectionAfterMultiMove(sources.length);
-            }
-            setDropIndicator(null);
-            return;
-        }
-
-        if (!source) {
-            setDropIndicator(null);
-            return;
-        }
-
-        if (isDescendantPath(arrayPath, source)) {
-            setDropIndicator(null);
-            return;
-        }
-
-        moveTimelineNode(source, arrayPath, index);
+        executeTimelineDropAction({ source, sources, arrayPath, index });
         setDropIndicator(null);
     };
 

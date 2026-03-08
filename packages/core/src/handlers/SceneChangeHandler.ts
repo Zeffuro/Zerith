@@ -8,7 +8,7 @@ export interface SceneChangeCommand extends BaseCommand {
 }
 
 export class SceneChangeHandler implements CommandHandler<SceneChangeCommand> {
-    public type = 'scene_change';
+    public type: 'scene_change' = 'scene_change';
     public autoNext = true;
 
     execute = async (command: SceneChangeCommand, engine: Engine) => {

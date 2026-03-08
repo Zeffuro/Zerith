@@ -53,3 +53,8 @@ export interface ProjectState extends ProjectSessionSlice, ProjectMacrosSlice, P
 
 export type ProjectGet = () => ProjectState;
 
+export interface ProjectScriptBridge {
+    setScript: (content: EditorNode[]) => void;
+    getRootScript: () => EditorNode[];
+}
+

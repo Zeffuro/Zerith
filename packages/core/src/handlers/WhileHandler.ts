@@ -14,7 +14,7 @@ export interface WhileCommand extends BaseCommand {
 }
 
 export class WhileHandler implements CommandHandler<WhileCommand> {
-    public type = 'while';
+    public type: 'while' = 'while';
     public autoNext = true;
 
     execute = async (command: WhileCommand, engine: Engine) => {

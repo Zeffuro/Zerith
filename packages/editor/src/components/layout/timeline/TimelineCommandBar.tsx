@@ -1,13 +1,14 @@
 import { AddCommandMenu } from '../menus/AddCommandMenu';
+import type { NonMacroEditorCommandType } from '../../../plugins/types';
 
-type Item = { type: string; label: string; icon: React.ReactNode };
+type Item = { type: NonMacroEditorCommandType; label: string; icon: React.ReactNode };
 
 type Props = {
     uiScale: number;
     commandMenuItems: Item[];
-    quickTypes: string[];
-    onAdd: (type: string) => void;
-    getQuickMeta: (type: string) => { icon: React.ReactNode; title: string; bg: string; border: string };
+    quickTypes: NonMacroEditorCommandType[];
+    onAdd: (type: NonMacroEditorCommandType) => void;
+    getQuickMeta: (type: NonMacroEditorCommandType) => { icon: React.ReactNode; title: string; bg: string; border: string };
 };
 
 export function TimelineCommandBar({

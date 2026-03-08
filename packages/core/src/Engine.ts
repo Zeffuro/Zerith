@@ -1,20 +1,20 @@
 import { Application, Assets, Container } from 'pixi.js';
-import type { BaseCommand, CommandHandler, Script, SceneMap, GameManifest } from './types';
+import type { BaseCommand, CommandHandler, CommandType, GameManifest } from './types';
 import type { EngineConfig } from './EngineConfig';
 import { Logger } from './utils/Logger';
-import { SaveManager } from './managers/SaveManager';
-import { AudioManager } from './managers/AudioManager';
-import { DisplayManager } from './managers/DisplayManager';
-import { InputManager } from './managers/InputManager';
-import { SceneManager } from './managers/SceneManager';
-import { EventBus } from './managers/EventBus';
-import { NotificationManager } from './managers/NotificationManager';
-import { StartScreenManager } from './managers/StartScreenManager';
-import { HistoryManager } from './managers/HistoryManager';
-import { OverlayManager } from './managers/OverlayManager';
-import { EvidenceManager } from './managers/EvidenceManager';
-import { SpritesheetManager } from './managers/SpritesheetManager';
-import { AssetManager } from './managers/AssetManager';
+import type { SaveManager } from './managers/SaveManager';
+import type { AudioManager } from './managers/AudioManager';
+import type { DisplayManager } from './managers/DisplayManager';
+import type { InputManager } from './managers/InputManager';
+import type { SceneManager } from './managers/SceneManager';
+import type { EventBus } from './managers/EventBus';
+import type { NotificationManager } from './managers/NotificationManager';
+import type { StartScreenManager } from './managers/StartScreenManager';
+import type { HistoryManager } from './managers/HistoryManager';
+import type { OverlayManager } from './managers/OverlayManager';
+import type { EvidenceManager } from './managers/EvidenceManager';
+import type { SpritesheetManager } from './managers/SpritesheetManager';
+import type { AssetManager } from './managers/AssetManager';
 import { DefaultTheme, type Theme } from './utils/Theme';
 import { SettingsPanel } from './ui/SettingsPanel';
 import { HistoryPanel } from './ui/HistoryPanel';
@@ -24,20 +24,22 @@ import { ItemBrowserPanel } from './ui/ItemBrowserPanel';
 export type AssetResolver = (url: string) => string;
 
 export interface EngineDeps {
-    audio?: AudioManager;
-    display?: DisplayManager;
-    input?: InputManager;
-    scenes?: SceneManager;
-    saves?: SaveManager;
-    events?: EventBus;
-    notifications?: NotificationManager;
-    startScreen?: StartScreenManager;
-    overlay?: OverlayManager;
-    history?: HistoryManager;
-    items?: EvidenceManager;
-    spritesheets?: SpritesheetManager;
-    assets?: AssetManager;
+    audio: AudioManager;
+    display: DisplayManager;
+    input: InputManager;
+    scenes: SceneManager;
+    saves: SaveManager;
+    events: EventBus;
+    notifications: NotificationManager;
+    startScreen: StartScreenManager;
+    overlay: OverlayManager;
+    history: HistoryManager;
+    items: EvidenceManager;
+    spritesheets: SpritesheetManager;
+    assets: AssetManager;
 }
+
+export type EngineDepsFactory = (engine: Engine, config: EngineConfig) => EngineDeps;
 
 export class Engine {
     public app: Application;
@@ -67,12 +69,7 @@ export class Engine {
     public persistentState: Record<string, any> = {};
     public manifest: GameManifest = {};
 
-    /**
-     * @deprecated Use `EngineConfig.onSceneNavigation` to control scene navigation behavior.
-     */
-    public isEditor: boolean = false;
-
-    private handlers: Map<string, CommandHandler<any>> = new Map();
+    private handlers: Map<CommandType, CommandHandler<any>> = new Map();
     private isExecuting = false;
     private _isStarted = false;
     private _skipRequested = false;
@@ -83,7 +80,7 @@ export class Engine {
 
     private readonly onSceneNavigation?: EngineConfig['onSceneNavigation'];
 
-    constructor(config: EngineConfig = {}, deps: Partial<EngineDeps> = {}) {
+    constructor(config: EngineConfig = {}, depsFactory: EngineDepsFactory) {
         this.app = new Application();
         this.layers = {
             background: new Container(),
@@ -96,19 +93,21 @@ export class Engine {
             this.theme = { ...DefaultTheme, ...config.theme };
         }
 
-        this.events = deps.events ?? new EventBus();
-        this.audio = deps.audio ?? new AudioManager(config.audio);
-        this.display = deps.display ?? new DisplayManager(this.app, config.display);
-        this.input = deps.input ?? new InputManager(this, config.input);
-        this.scenes = deps.scenes ?? new SceneManager(this);
-        this.saves = deps.saves ?? new SaveManager(this);
-        this.notifications = deps.notifications ?? new NotificationManager(this, config.notifications);
-        this.startScreen = deps.startScreen ?? new StartScreenManager(this, config.startScreen);
-        this.overlay = deps.overlay ?? new OverlayManager(this, config.overlay);
-        this.history = deps.history ?? new HistoryManager();
-        this.items = deps.items ?? new EvidenceManager();
-        this.spritesheets = deps.spritesheets ?? new SpritesheetManager();
-        this.assets = deps.assets ?? new AssetManager(this.spritesheets);
+        const deps = depsFactory(this, config);
+
+        this.events = deps.events;
+        this.audio = deps.audio;
+        this.display = deps.display;
+        this.input = deps.input;
+        this.scenes = deps.scenes;
+        this.saves = deps.saves;
+        this.notifications = deps.notifications;
+        this.startScreen = deps.startScreen;
+        this.overlay = deps.overlay;
+        this.history = deps.history;
+        this.items = deps.items;
+        this.spritesheets = deps.spritesheets;
+        this.assets = deps.assets;
         this.onSceneNavigation = config.onSceneNavigation;
     }
 
@@ -174,7 +173,7 @@ export class Engine {
         hs.forEach(h => this.registerHandler(typeof h === 'function' ? new h() : h));
     }
 
-    public getHandler(type: string): CommandHandler<any> | undefined {
+    public getHandler(type: CommandType): CommandHandler<any> | undefined {
         return this.handlers.get(type);
     }
 
@@ -283,36 +282,11 @@ export class Engine {
             return true;
         }
 
-        if (this.isEditor) {
-            this.logger.info(`[Editor] Skipping scene navigation to '${sceneName}'`);
-            return true;
-        }
-
         return false;
     }
 
     /* Scene Delegation */
 
-    public loadScenes(scenes: SceneMap) {
-        this.scenes.loadScenes(scenes);
-    }
-
-    public registerTemplate(name: string, script: Script) {
-        this.scenes.registerTemplate(name, script);
-    }
-
-    public getTemplate(name: string): Script | undefined {
-        return this.scenes.getTemplate(name);
-    }
-
-    public injectCommands(commands: BaseCommand[]) {
-        this.scenes.injectCommands(commands);
-    }
-
-    public async jumpToScene(sceneName: string, startIndex: number = 0) {
-        await this.scenes.jumpToScene(sceneName, startIndex);
-        if (this._isStarted) await this.playNext();
-    }
 
     /* Convenience Getters */
 
@@ -328,23 +302,6 @@ export class Engine {
         return this._lastSavePoint;
     }
 
-    /* Events */
-
-    public once(event: string, listener: (...args: any[]) => void) {
-        this.events.once(event, listener);
-    }
-
-    public on(event: string, listener: (...args: any[]) => void) {
-        this.events.on(event, listener);
-    }
-
-    public off(event: string, listener: (...args: any[]) => void) {
-        this.events.off(event, listener);
-    }
-
-    public emit(event: string, ...args: any[]) {
-        this.events.emit(event, ...args);
-    }
 
     /* Input */
 

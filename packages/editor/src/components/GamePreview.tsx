@@ -35,11 +35,11 @@ export function GamePreview({ script }: { script: any[] }) {
             config: {
                 display: { width: 1280, height: 720, scaleMode: 'fit' },
                 theme: { fontFamily: 'Courier New', fontSize: 24, boxColor: 0x000033 },
-                audio: { muted: isMuted }
+                audio: { muted: isMuted },
+                onSceneNavigation: () => 'skip',
             },
             manifest, characters, items, macros, scenes,
             defaultBlipUrl: '/assets/sfx/blip.wav',
-            isEditor: true,
             assetResolver: (url: string) => {
                 if (projectPath && !url.startsWith('http')) return convertFileSrc(projectPath + url);
                 return url;
@@ -50,7 +50,7 @@ export function GamePreview({ script }: { script: any[] }) {
             engineRef.current = engine;
             engine.setInputEnabled(false);
             engine.scenes.addScene('preview', script);
-            engine.jumpToScene('preview');
+            engine.scenes.jumpToScene('preview');
         });
         return () => { destroyed = true; engineRef.current?.destroy(); engineRef.current = null; };
     }, [projectPath, manifest]);
@@ -66,7 +66,7 @@ export function GamePreview({ script }: { script: any[] }) {
             const startIndex = typeof playFromIndex === 'number' ? playFromIndex : 0;
             engineRef.current.clear();
             engineRef.current.scenes.addScene('preview', script);
-            engineRef.current.jumpToScene('preview', startIndex);
+            engineRef.current.scenes.jumpToScene('preview', startIndex);
             engineRef.current.start();
             containerRef.current?.focus();
         }
@@ -76,7 +76,7 @@ export function GamePreview({ script }: { script: any[] }) {
         if (engineRef.current && stopTrigger > 0) {
             engineRef.current.clear();
             engineRef.current.scenes.addScene('preview', script);
-            engineRef.current.jumpToScene('preview', 0);
+            engineRef.current.scenes.jumpToScene('preview', 0);
             containerRef.current?.blur();
         }
     }, [stopTrigger]);

@@ -3,16 +3,13 @@ import { useMemo, useState } from 'react';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useProjectStore } from '../../../store/useProjectStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
+import { executeMacroTimelineAction } from '../../../store/actions/macroTimelineActions';
 
 export function MacroManagerBar({ uiScale }: { uiScale: number }) {
     const selectedNodePaths = useEditorStore((s) => s.selectedNodePaths);
-    const setSelectedNodePaths = useEditorStore((s) => s.setSelectedNodePaths);
-    const setSelectionAnchorPath = useEditorStore((s) => s.setSelectionAnchorPath);
 
     const macroEntries = useProjectStore((s) => s.macroEntries);
     const renameMacroEntry = useProjectStore((s) => s.renameMacroEntry);
-    const removeMacroEntry = useProjectStore((s) => s.removeMacroEntry);
-    const setMacroEntries = useProjectStore((s) => s.setMacroEntries);
 
     const selectedMacroIndex = useMemo(() => {
         const first = selectedNodePaths[0];
@@ -34,38 +31,11 @@ export function MacroManagerBar({ uiScale }: { uiScale: number }) {
     };
 
     const duplicateSelected = () => {
-        if (selectedMacroIndex === null || !selectedMacro) return;
-
-        const taken = new Set(macroEntries.map((m) => m.name));
-        let base = `${selectedMacro.name}_copy`;
-        let nextName = base;
-        let i = 2;
-        while (taken.has(nextName)) {
-            nextName = `${base}_${i}`;
-            i++;
-        }
-
-        const next = [...macroEntries];
-        next.splice(selectedMacroIndex + 1, 0, {
-            name: nextName,
-            commands: typeof structuredClone === 'function'
-                ? structuredClone(selectedMacro.commands)
-                : JSON.parse(JSON.stringify(selectedMacro.commands)),
-        });
-
-        setMacroEntries(next);
-        setSelectedNodePaths([[selectedMacroIndex + 1]]);
-        setSelectionAnchorPath([selectedMacroIndex + 1]);
+        executeMacroTimelineAction('duplicateSelected');
     };
 
     const deleteSelected = () => {
-        if (selectedMacroIndex === null) return;
-        removeMacroEntry(selectedMacroIndex);
-
-        const nextIdx = Math.max(0, selectedMacroIndex - 1);
-        const hasAnyLeft = macroEntries.length - 1 > 0;
-        setSelectedNodePaths(hasAnyLeft ? [[nextIdx]] : []);
-        setSelectionAnchorPath(hasAnyLeft ? [nextIdx] : null);
+        executeMacroTimelineAction('deleteSelected');
     };
 
     const btnStyle = {

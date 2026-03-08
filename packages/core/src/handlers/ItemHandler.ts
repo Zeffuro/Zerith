@@ -9,7 +9,7 @@ export interface ItemCommand extends BaseCommand {
 }
 
 export class ItemHandler implements CommandHandler<ItemCommand> {
-    public type = 'item';
+    public type: 'item' = 'item';
     public autoNext = true;
 
     execute = async (command: ItemCommand, engine: Engine) => {

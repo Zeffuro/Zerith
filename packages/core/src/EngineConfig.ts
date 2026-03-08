@@ -4,9 +4,10 @@ import type { InputConfig } from './managers/InputManager';
 import type { NotificationConfig } from './managers/NotificationManager';
 import type { StartScreenConfig } from './managers/StartScreenManager';
 import type { OverlayConfig } from './managers/OverlayManager.ts';
+import type { SceneNavigationCommandType } from './types';
 import type { Theme } from './utils/Theme';
 
-export type SceneNavigationCommandType = 'jump' | 'scene_change';
+export type { SceneNavigationCommandType } from './types';
 export type SceneNavigationAction = 'execute' | 'skip';
 
 export interface EngineConfig {

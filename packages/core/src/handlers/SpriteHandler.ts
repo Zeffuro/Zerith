@@ -27,7 +27,7 @@ interface ActiveAnimation {
 }
 
 export class SpriteHandler implements CommandHandler<SpriteCommand> {
-    public type = 'sprite';
+    public type: 'sprite' = 'sprite';
     public autoNext = true;
     private sprites: Map<string, Sprite> = new Map();
     private activeAnimations: Map<string, ActiveAnimation> = new Map();

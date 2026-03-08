@@ -1,6 +1,18 @@
 import type { EditorSet, PlaybackQuickCommandsSlice } from '../types';
+import type { NonMacroEditorCommandType } from '../../../plugins/types';
 
-const DEFAULT_QUICK = ['dialogue', 'background', 'sprite', 'choice', 'if', 'while', 'for', 'jump', 'call', 'bgm'];
+const DEFAULT_QUICK: NonMacroEditorCommandType[] = [
+    'dialogue',
+    'background',
+    'sprite',
+    'choice',
+    'if',
+    'while',
+    'for',
+    'jump',
+    'call',
+    'bgm',
+];
 
 export function createPlaybackQuickCommandsSlice(set: EditorSet): PlaybackQuickCommandsSlice {
     return {
@@ -19,7 +31,7 @@ export function createPlaybackQuickCommandsSlice(set: EditorSet): PlaybackQuickC
                     && state.quickCommandTypes.includes(type);
                 return {
                     quickCommandTypes: has
-                        ? state.quickCommandTypes.filter((t: string) => t !== type)
+                        ? state.quickCommandTypes.filter((t: NonMacroEditorCommandType) => t !== type)
                         : [...state.quickCommandTypes, type],
                 };
             }),

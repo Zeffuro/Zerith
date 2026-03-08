@@ -6,6 +6,7 @@ import { useEditorStore } from '../../../store/useEditorStore';
 import { useProjectStore } from '../../../store/useProjectStore';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { createDefaultCommand, getPlugin, getAllPlugins } from '../../../plugins/commandPlugins';
+import type { NonMacroEditorCommandType, PluginNode } from '../../../plugins/types';
 import { hasLikelyIssue } from '../../../plugins/likelyIssues';
 import { editorTheme as t } from '../../../theme/editorTheme';
 
@@ -20,13 +21,14 @@ import { TimelineSearchBar } from './TimelineSearchBar';
 import { TimelineTypeFilterChips } from './TimelineTypeFilterChips';
 import { type CommandContextMenuState, TimelineCommandContextMenu } from './TimelineCommandContextMenu';
 import { ConfirmDialog } from '../../ConfirmDialog';
+import { executeTimelineContextAction } from '../../../store/actions/timelineContextActions';
 
 
 function pathKey(path: ScriptPath) {
     return path.join('.');
 }
 
-function macroNode(name: string, commands: any[]) {
+function macroNode(name: string, commands: PluginNode[]) {
     return { type: 'macro_header', name, body: commands };
 }
 
@@ -72,10 +74,10 @@ export function Timeline() {
 
     const allPlugins = useMemo(() => getAllPlugins(), []);
     const commandMenuItems = useMemo(
-        () => allPlugins.map((p) => ({ type: p.type, label: p.label, icon: p.icon(14 * uiScale) })),
+        () => allPlugins.map((p) => ({ type: p.type as NonMacroEditorCommandType, label: p.label, icon: p.icon(14 * uiScale) })),
         [allPlugins, uiScale]
     );
-    const quickTypes = useMemo(() => quickCommandTypes.filter((tt) => !!getPlugin(tt)), [quickCommandTypes]);
+    const quickTypes = useMemo(() => [...quickCommandTypes], [quickCommandTypes]);
 
     const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
     const [typeFilter, setTypeFilter] = useState('all');
@@ -207,56 +209,12 @@ export function Timeline() {
             onAction: (action) => {
                 const p = contextPathRef.current;
                 if (!p) return;
-
-                const scriptState = useScriptStore.getState();
-                const editorState = useEditorStore.getState();
-
-                switch (action) {
-                    case 'copy': {
-                        const node = scriptState.getNodeAtPath(p);
-                        if (node !== undefined) {
-                            editorState.setClipboardNode(
-                                typeof structuredClone === 'function'
-                                    ? structuredClone(node)
-                                    : JSON.parse(JSON.stringify(node))
-                            );
-                        }
-                        break;
-                    }
-
-                    case 'paste': {
-                        const clip = editorState.clipboardNode;
-                        if (!clip) break;
-                        scriptState.pasteNodeAtPath(p, clip);
-                        break;
-                    }
-
-                    case 'duplicate': {
-                        scriptState.duplicateNodeByPath(p);
-                        break;
-                    }
-
-                    case 'delete': {
-                        requestDelete([p], 'click');
-                        break;
-                    }
-
-                    case 'playFrom': {
-                        if (p.length === 1 && typeof p[0] === 'number') {
-                            triggerPlayFrom(p[0] as number);
-                        }
-                        break;
-                    }
-
-                    case 'addAfter': {
-                        const parent = p.slice(0, -1);
-                        const idx = p[p.length - 1];
-                        if (typeof idx !== 'number') break;
-                        const newNode = createDefaultCommand('dialogue');
-                        scriptState.addNodeAtPath(parent, newNode, idx + 1);
-                        break;
-                    }
-                }
+                executeTimelineContextAction({
+                    action,
+                    path: p,
+                    requestDelete,
+                    triggerPlayFrom,
+                });
             },
         });
     };
@@ -282,7 +240,7 @@ export function Timeline() {
         clearDeleteRequest();
     };
 
-    const getQuickMeta = (type: string) => {
+    const getQuickMeta = (type: NonMacroEditorCommandType) => {
         const p = getPlugin(type);
         return {
             icon: p.icon(14 * uiScale),
@@ -292,7 +250,7 @@ export function Timeline() {
         };
     };
 
-    const handleAddCommand = (type: string) => {
+    const handleAddCommand = (type: NonMacroEditorCommandType) => {
         const cmd = createDefaultCommand(type);
 
         if (!editingAllMacrosFile) {

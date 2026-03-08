@@ -3,6 +3,7 @@ import { getAllPlugins } from '../../../plugins/commandPlugins';
 import { useMemo, useRef } from 'react';
 import { useDismissiblePopup } from '../../../hooks/useDismissiblePopup';
 import { editorTheme as t } from '../../../theme/editorTheme';
+import type { NonMacroEditorCommandType } from '../../../plugins/types';
 
 export function QuickCommandsMenu({
                                       uiScale,
@@ -15,9 +16,9 @@ export function QuickCommandsMenu({
     uiScale: number;
     open: boolean;
     onClose: () => void;
-    quickCommandTypes: string[];
-    toggleQuickCommandType: (type: string) => void;
-    moveQuickCommandType: (type: string, direction: 'left' | 'right') => void;
+    quickCommandTypes: NonMacroEditorCommandType[];
+    toggleQuickCommandType: (type: NonMacroEditorCommandType) => void;
+    moveQuickCommandType: (type: NonMacroEditorCommandType, direction: 'left' | 'right') => void;
 }) {
     const allPlugins = useMemo(() => getAllPlugins(), []);
     const rootRef = useRef<HTMLDivElement>(null);

@@ -24,7 +24,7 @@ export interface ChoiceConfig {
 }
 
 export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
-    public type = 'choice';
+    public type: 'choice' = 'choice';
     public autoNext = true;
     private config: Required<ChoiceConfig>;
 
@@ -77,7 +77,7 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
 
                 const option = command.options[selectedIndex];
                 if (option.commands) {
-                    engine.injectCommands(option.commands);
+                    engine.scenes.injectCommands(option.commands);
                 }
                 requestAnimationFrame(() => {
                     engine.consumeSkip();
@@ -135,12 +135,12 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
                 confirmSelection();
             };
 
-            engine.on('input:navigate', onNavigate);
-            engine.on('input:confirm', onConfirm);
+            engine.events.on('input:navigate', onNavigate);
+            engine.events.on('input:confirm', onConfirm);
 
             const cleanup = () => {
-                engine.off('input:navigate', onNavigate);
-                engine.off('input:confirm', onConfirm);
+                engine.events.off('input:navigate', onNavigate);
+                engine.events.off('input:confirm', onConfirm);
             };
 
             engine.layers.ui.addChild(choiceContainer);

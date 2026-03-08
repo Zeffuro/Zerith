@@ -8,7 +8,7 @@ export interface BackgroundCommand extends BaseCommand {
 }
 
 export class BackgroundHandler implements CommandHandler<BackgroundCommand> {
-    public type = 'background';
+    public type: 'background' = 'background';
     public autoNext = true;
     private sprite: Sprite | null = null;
 
