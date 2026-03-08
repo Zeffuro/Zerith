@@ -1,4 +1,5 @@
 import type { IfCommand } from 'core';
+
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 

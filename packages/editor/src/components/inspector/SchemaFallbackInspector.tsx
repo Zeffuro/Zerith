@@ -1,4 +1,5 @@
 import type { BaseCommand } from 'core';
+
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { inferCommandFields } from '../../utils/zodInference';
 import { FieldError } from './FieldError';

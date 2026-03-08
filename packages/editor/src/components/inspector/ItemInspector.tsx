@@ -1,4 +1,5 @@
 import type { ItemCommand } from 'core';
+
 import { useEffect, useMemo, useState } from 'react';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
@@ -13,11 +14,11 @@ export function ItemInspector({ index, node }: { index?: null | number; node: It
     );
 
     const [changesJson, setChangesJson] = useState(initialJson);
-    const [jsonError, setJsonError] = useState<string | undefined>(undefined);
-    const [prevInitialJson, setPrevInitialJson] = useState(initialJson);
+    const [jsonError, setJsonError] = useState<string | undefined>();
+    const [previousInitialJson, setPreviousInitialJson] = useState(initialJson);
 
-    if (initialJson !== prevInitialJson) {
-        setPrevInitialJson(initialJson);
+    if (initialJson !== previousInitialJson) {
+        setPreviousInitialJson(initialJson);
         setChangesJson(initialJson);
         setJsonError(undefined);
     }

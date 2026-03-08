@@ -1,5 +1,6 @@
-import { Bold, Clock, FastForward, Italic, Palette, Underline } from 'lucide-react';
 import type { DialogueCommand } from 'core';
+
+import { Bold, Clock, FastForward, Italic, Palette, Underline } from 'lucide-react';
 import { useRef } from 'react';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';

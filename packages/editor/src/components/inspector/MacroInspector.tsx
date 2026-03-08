@@ -1,4 +1,5 @@
 import type { MacroCommand } from 'core';
+
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 

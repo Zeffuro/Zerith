@@ -40,12 +40,12 @@ export function useTimelineSearch(rootNodes: any[], typeFilter: string) {
     const activeMatchPath = matchCount === 0 ? null : matchPaths[clampedMatchIndex];
     const activeMatchDisplayIndex = matchCount === 0 ? 0 : clampedMatchIndex + 1;
 
-    const [prevQuery, setPrevQuery] = useState(query);
-    const [prevTypeFilter, setPrevTypeFilter] = useState(typeFilter);
+    const [previousQuery, setPreviousQuery] = useState(query);
+    const [previousTypeFilter, setPreviousTypeFilter] = useState(typeFilter);
 
-    if (query !== prevQuery || typeFilter !== prevTypeFilter) {
-        setPrevQuery(query);
-        setPrevTypeFilter(typeFilter);
+    if (query !== previousQuery || typeFilter !== previousTypeFilter) {
+        setPreviousQuery(query);
+        setPreviousTypeFilter(typeFilter);
         setActiveMatchIndex(0);
     }
 

@@ -1,4 +1,5 @@
 import type { WhileCommand } from 'core';
+
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
 

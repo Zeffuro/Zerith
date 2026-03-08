@@ -28,7 +28,7 @@ export function ConfirmDialog({ cancelText = 'Cancel', confirmText = 'Confirm', 
         return () => globalThis.removeEventListener('keydown', onKey);
     },[open, onCancel, onConfirm]);
 
-    if (!open) return undefined;
+    if (!open) return;
 
     return (
         <div onClick={onCancel} style={{ background: 'rgba(0,0,0,.45)', display: 'grid', inset: 0, placeItems: 'center', position: 'fixed', zIndex: 2000 }}>

@@ -1,4 +1,5 @@
 import type { SpriteCommand } from 'core';
+
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { useProjectStore } from '../../store/useProjectStore';
 import { FieldError } from './FieldError';

@@ -58,23 +58,23 @@ export function GamePreview({ script }: { script: Script }) {
     }, [projectPath, manifest]);
 
     // Sync
-    const scriptRef = useRef(script);
+    const scriptReference = useRef(script);
     useEffect(() => {
-        scriptRef.current = script;
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        scriptReference.current = script;
+         
         if (engineReference.current) engineReference.current.scenes.addScene('preview', script);
     }, [script]);
 
-    const playFromIndexRef = useRef(playFromIndex);
-    useEffect(() => { playFromIndexRef.current = playFromIndex; }, [playFromIndex]);
+    const playFromIndexReference = useRef(playFromIndex);
+    useEffect(() => { playFromIndexReference.current = playFromIndex; }, [playFromIndex]);
 
     // Play
     useEffect(() => {
         if (engineReference.current && playTrigger > 0) {
-            const startIndex = typeof playFromIndexRef.current === 'number' ? playFromIndexRef.current : 0;
+            const startIndex = typeof playFromIndexReference.current === 'number' ? playFromIndexReference.current : 0;
             engineReference.current.clear();
-            // eslint-disable-next-line @typescript-eslint/no-floating-promises
-            engineReference.current.scenes.addScene('preview', scriptRef.current);
+             
+            engineReference.current.scenes.addScene('preview', scriptReference.current);
             void engineReference.current.scenes.jumpToScene('preview', startIndex);
             void engineReference.current.start();
             setIsStarted(true);
@@ -85,8 +85,8 @@ export function GamePreview({ script }: { script: Script }) {
     useEffect(() => {
         if (engineReference.current && stopTrigger > 0) {
             engineReference.current.clear();
-            // eslint-disable-next-line @typescript-eslint/no-floating-promises
-            engineReference.current.scenes.addScene('preview', scriptRef.current);
+             
+            engineReference.current.scenes.addScene('preview', scriptReference.current);
             void engineReference.current.scenes.jumpToScene('preview', 0);
             setIsStarted(false);
             containerReference.current?.blur();

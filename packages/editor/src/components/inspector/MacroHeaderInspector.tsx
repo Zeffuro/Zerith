@@ -5,7 +5,7 @@ import { useProjectStore } from '../../store/useProjectStore';
 import { useScriptStore } from '../../store/useScriptStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 
-export function MacroHeaderInspector(_props: { index?: null | number; node: unknown; }) {
+export function MacroHeaderInspector(_properties: { index?: null | number; node: unknown; }) {
     const uiScale = useEditorStore((s) => s.uiScale);
     const selectedNodePath = useScriptStore((s) => s.selectedNodePath);
 
@@ -19,10 +19,10 @@ export function MacroHeaderInspector(_props: { index?: null | number; node: unkn
 
     const currentName = macro?.name ?? '';
     const [name, setName] = useState(currentName);
-    const [prevName, setPrevName] = useState(currentName);
+    const [previousName, setPreviousName] = useState(currentName);
 
-    if (currentName !== prevName) {
-        setPrevName(currentName);
+    if (currentName !== previousName) {
+        setPreviousName(currentName);
         setName(currentName);
     }
 

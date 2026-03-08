@@ -20,10 +20,10 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
     const selectedAssetPath = useEditorStore((s) => s.selectedAssetPath);
 
     const [value, setValue] = useState('');
-    const [prevSelected, setPrevSelected] = useState(selectedAssetPath);
+    const [previousSelected, setPreviousSelected] = useState(selectedAssetPath);
 
-    if (selectedAssetPath !== prevSelected) {
-        setPrevSelected(selectedAssetPath);
+    if (selectedAssetPath !== previousSelected) {
+        setPreviousSelected(selectedAssetPath);
         if (selectedAssetPath) {
             setValue(selectedAssetPath);
         }

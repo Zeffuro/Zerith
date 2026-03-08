@@ -42,7 +42,7 @@ export function moveNode(
     root: unknown[],
     nodePath: ScriptPath,
     destinationArrayPath: ScriptPath,
-    destinationIndex: number | 'end'
+    destinationIndex: 'end' | number
 ): unknown[] {
     // 1. Remove node
     const [intermediateRoot, node] = removeNodeAtPath(root, nodePath);
@@ -55,21 +55,19 @@ export function moveNode(
 
     if (isNodePath(nodePath) && isNodePath(destinationArrayPath)) {
         const sourceIndex = getNodeIndex(nodePath);
-        const destIndex = destinationIndex === 'end' ? 'end' : Math.max(0, Math.min(getNodeIndex(destinationArrayPath), Number.MAX_SAFE_INTEGER));
+        const destinationIndex_ = destinationIndex === 'end' ? 'end' : Math.max(0, Math.min(getNodeIndex(destinationArrayPath), Number.MAX_SAFE_INTEGER));
 
         // If we're moving within the same array and the destination index is greater than the source index,
         // explicitly adjust because removal shifted indices.
         // However, removeNodeAtPath creates a new root clone, so indices in other arrays are unaffected.
         // BUT if destination is in the SAME array, we need to be careful.
-        if (JSON.stringify(getParentArrayPath(nodePath)) === JSON.stringify(getParentArrayPath(destinationArrayPath))) {
-            if (sourceIndex < destIndex) {
-                return insertNodeAtPath(intermediateRoot, destinationArrayPath, destIndex - 1, node);
+        if (JSON.stringify(getParentArrayPath(nodePath)) === JSON.stringify(getParentArrayPath(destinationArrayPath)) && sourceIndex < destinationIndex_) {
+                return insertNodeAtPath(intermediateRoot, destinationArrayPath, destinationIndex_ - 1, node);
             }
-        }
 
         if (destinationIndex === 'end') {
-            const destArray = getAtPath<unknown[]>(intermediateRoot, destinationArrayPath);
-            return insertNodeAtPath(intermediateRoot, destinationArrayPath, destArray.length, node);
+            const destinationArray = getAtPath<unknown[]>(intermediateRoot, destinationArrayPath);
+            return insertNodeAtPath(intermediateRoot, destinationArrayPath, destinationArray.length, node);
         } else {
             return insertNodeAtPath(intermediateRoot, destinationArrayPath, destinationIndex, node);
         }

@@ -1,5 +1,6 @@
-import { editorTheme as t } from '../../../theme/editorTheme';
 import { type CSSProperties, type MouseEvent } from 'react';
+
+import { editorTheme as t } from '../../../theme/editorTheme';
 
 export type CommandContextMenuState = {
     canPaste: boolean;
@@ -21,17 +22,17 @@ type Action =
 const ContextRow = ({
     action,
     disabled = false,
+    disabledStyle,
+    itemStyle,
     label,
     menu,
-    itemStyle,
-    disabledStyle,
 }: {
     action: Action;
     disabled?: boolean;
+    disabledStyle: CSSProperties;
+    itemStyle: CSSProperties;
     label: string;
     menu: NonNullable<CommandContextMenuState>;
-    itemStyle: CSSProperties;
-    disabledStyle: CSSProperties;
 }) => (
     <button
         disabled={disabled}

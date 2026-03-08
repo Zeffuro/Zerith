@@ -1,5 +1,6 @@
-import { Plus, Trash2 } from 'lucide-react';
 import type { ChoiceCommand, ChoiceOption } from 'core';
+
+import { Plus, Trash2 } from 'lucide-react';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { editorTheme as t } from '../../theme/editorTheme';

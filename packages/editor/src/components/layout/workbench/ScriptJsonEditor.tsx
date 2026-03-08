@@ -31,10 +31,10 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
 
     const [value, setValue] = useState(initial);
     const [error, setError] = useState<null | string>(null);
-    const [prevInitial, setPrevInitial] = useState(initial);
+    const [previousInitial, setPreviousInitial] = useState(initial);
 
-    if (initial !== prevInitial) {
-        setPrevInitial(initial);
+    if (initial !== previousInitial) {
+        setPreviousInitial(initial);
         setValue(initial);
         setError(null);
     }
