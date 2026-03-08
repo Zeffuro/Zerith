@@ -1,14 +1,18 @@
 import { executeConsoleMessageAction } from '../store/actions/consoleMessageActions';
 import { executeProjectTreeRefreshAction, getCurrentProjectPath } from '../store/actions/projectTreeActions';
+import { useProjectStore } from '../store/useProjectStore';
+import { useWorkbenchStore } from '../store/useWorkbenchStore';
 import {
     type FsDirectoryEntry,
     fsDirname,
     fsJoin,
     fsMkdir,
     fsOpenPath,
+    fsReadBinaryFile,
     fsReadDirectory,
     fsRemove,
     fsRename,
+    fsWriteBinaryFile,
     fsWriteTextFile,
 } from './fs';
 
@@ -48,6 +52,27 @@ export async function deletePath(path: string) {
     }
 }
 
+export async function duplicatePath(path: string) {
+    try {
+        const parent = await fsDirname(path);
+        const sourceName = basename(path);
+        const siblingEntries = await fsReadDirectory(parent);
+        const siblingNames = new Set(siblingEntries.map((entry) => entry.name));
+
+        const duplicateName = makeDuplicateName(sourceName, siblingNames);
+        const targetPath = await fsJoin(parent, duplicateName);
+
+        const bytes = await fsReadBinaryFile(path);
+        await fsWriteBinaryFile(targetPath, bytes);
+        await refreshProjectTree();
+        return targetPath;
+    } catch (error) {
+        console.error('Duplicate failed:', error);
+        executeConsoleMessageAction('editor', 'error', 'Duplicate failed:', String(error));
+        return;
+    }
+}
+
 export async function refreshProjectTree() {
     const projectPath = getCurrentProjectPath();
     if (!projectPath) return;
@@ -62,6 +87,10 @@ export async function renamePath(oldPath: string, nextName: string) {
         const parent = await fsDirname(oldPath);
         const newPath = await fsJoin(parent, nextName);
         await fsRename(oldPath, newPath);
+        useWorkbenchStore.getState().renameTabPath(newPath, oldPath);
+        useProjectStore.setState((state) => ({
+            activeFile: state.activeFile === oldPath ? newPath : state.activeFile,
+        }));
         await refreshProjectTree();
     } catch (error) {
         console.error('Rename failed:', error);
@@ -78,6 +107,26 @@ export async function revealPathInSystem(path: string) {
     }
 }
 
+function basename(path: string) {
+    return path.split(/[\\/]/).pop() || path;
+}
+
+function makeDuplicateName(sourceName: string, existing: Set<string>): string {
+    const extensionIndex = sourceName.lastIndexOf('.');
+    const hasExtension = extensionIndex > 0;
+    const root = hasExtension ? sourceName.slice(0, extensionIndex) : sourceName;
+    const extension = hasExtension ? sourceName.slice(extensionIndex) : '';
+
+    const first = `${root} copy${extension}`;
+    if (!existing.has(first)) return first;
+
+    let n = 2;
+    while (existing.has(`${root} copy ${n}${extension}`)) {
+        n += 1;
+    }
+    return `${root} copy ${n}${extension}`;
+}
+
 function sortEntries(entries: FsDirectoryEntry[]) {
     entries.sort((a, b) => {
         if (a.isDirectory && !b.isDirectory) return -1;
@@ -85,3 +134,4 @@ function sortEntries(entries: FsDirectoryEntry[]) {
         return a.name.localeCompare(b.name);
     });
 }
+

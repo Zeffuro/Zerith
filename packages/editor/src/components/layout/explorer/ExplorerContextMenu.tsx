@@ -12,6 +12,7 @@ export type ExplorerContextMenuState = {
 
 export type ExplorerMenuAction =
     | 'delete'
+    | 'duplicate'
     | 'newFile'
     | 'newFolder'
     | 'open'
@@ -64,6 +65,7 @@ export function ExplorerContextMenu({ menu, uiScale }: { menu: ExplorerContextMe
                 <>
                     <ActionRow action="openJson" itemStyle={itemStyle} label="Open in JSON View" menu={menu} />
                     <ActionRow action="openTimeline" itemStyle={itemStyle} label="Open in Timeline View" menu={menu} />
+                    <ActionRow action="duplicate" itemStyle={itemStyle} label="Duplicate" menu={menu} />
                 </>
             )}
 

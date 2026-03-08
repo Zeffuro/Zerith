@@ -1,7 +1,16 @@
 import { ChevronDown, ChevronRight, FileJson, FolderGit2, FolderOpen, Image as ImageIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
+import {
+    createFileInDirectory,
+    createFolderInDirectory,
+    deletePath,
+    duplicatePath,
+    renamePath,
+    revealPathInSystem,
+} from '../../../services/explorerFileActions';
 import { type FsDirectoryEntry, fsDirname, fsJoin, fsReadDirectory } from '../../../services/fs';
+import { openProjectEntry } from '../../../services/openProjectEntry';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useProjectStore } from '../../../store/useProjectStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
@@ -13,7 +22,7 @@ import {
 import { InlineNameInput } from './InlineNameInput';
 
 export function Explorer() {
-    const { files, projectPath } = useProjectStore();
+    const { files, projectPath, treeRevision } = useProjectStore();
     const { uiScale } = useEditorStore();
 
     return (
@@ -53,7 +62,7 @@ export function Explorer() {
                     </div>
 
                     {files.map((file) => (
-                        <FileNode entry={file} key={`${projectPath}:${file.name}`} parentPath={projectPath} />
+                        <FileNode entry={file} key={`${projectPath}:${file.name}:${treeRevision}`} parentPath={projectPath} />
                     ))}
                 </div>
             ) : (
@@ -86,16 +95,12 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
     const [createDraft, setCreateDraft] = useState('');
     const [createTargetDirectory, setCreateTargetDirectory] = useState<string>();
 
-    const { activeFile } = useProjectStore();
+    const { activeFile, treeRevision } = useProjectStore();
     const { uiScale } = useEditorStore();
 
     useEffect(() => {
         void fsJoin(parentPath, entry.name).then(setFullPath);
     }, [parentPath, entry.name]);
-
-    useEffect(() => {
-        setRenameDraft(entry.name);
-    }, [entry.name]);
 
     useEffect(() => {
         if (!context) return;
@@ -109,9 +114,23 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
         };
     }, [context]);
 
+    const loadChildren = useCallback(async () => {
+        if (!fullPath || !entry.isDirectory) return;
+        try {
+            const entries = await fsReadDirectory(fullPath);
+            const sortedEntries = entries.toSorted((a, b) => {
+                if (a.isDirectory && !b.isDirectory) return -1;
+                if (!a.isDirectory && b.isDirectory) return 1;
+                return a.name.localeCompare(b.name);
+            });
+            setChildren(sortedEntries);
+        } catch (error) {
+            console.error('Failed to read directory:', error);
+        }
+    }, [entry.isDirectory, fullPath]);
+
     const openDefault = async () => {
         if (!fullPath) return;
-        const { openProjectEntry } = await import('../../../services/openProjectEntry');
         await openProjectEntry(fullPath, entry.name);
     };
 
@@ -122,7 +141,6 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
             setRenameDraft(entry.name);
             return;
         }
-        const { renamePath } = await import('../../../services/explorerFileActions');
         await renamePath(fullPath, next);
         setIsRenaming(false);
     };
@@ -143,11 +161,6 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
             return;
         }
 
-        const {
-            createFileInDirectory,
-            createFolderInDirectory,
-        } = await import('../../../services/explorerFileActions');
-
         await (createMode === 'file'
             ? createFileInDirectory(createTargetDirectory, name, '')
             : createFolderInDirectory(createTargetDirectory, name));
@@ -161,18 +174,8 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
         if (isRenaming) return;
 
         if (entry.isDirectory) {
-            if (!isOpen && children.length === 0 && fullPath) {
-                try {
-                    const entries = await fsReadDirectory(fullPath);
-                    const sortedEntries = entries.toSorted((a, b) => {
-                        if (a.isDirectory && !b.isDirectory) return -1;
-                        if (!a.isDirectory && b.isDirectory) return 1;
-                        return a.name.localeCompare(b.name);
-                    });
-                    setChildren(sortedEntries);
-                } catch (error) {
-                    console.error('Failed to read directory:', error);
-                }
+            if (!isOpen && children.length === 0) {
+                await loadChildren();
             }
             setIsOpen((v) => !v);
             return;
@@ -191,11 +194,13 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
             name: entry.name,
             onAction: (action) => {
                 void (async () => {
-                    const { openProjectEntry } = await import('../../../services/openProjectEntry');
-
                     switch (action) {
                         case 'delete': {
                             setConfirmDeleteOpen(true);
+                            break;
+                        }
+                        case 'duplicate': {
+                            await duplicatePath(fullPath);
                             break;
                         }
                         case 'newFile': {
@@ -224,7 +229,6 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
                             break;
                         }
                         case 'reveal': {
-                            const { revealPathInSystem } = await import('../../../services/explorerFileActions');
                             await revealPathInSystem(fullPath);
                             break;
                         }
@@ -325,7 +329,6 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
                 onConfirm={() => {
                     setConfirmDeleteOpen(false);
                     void (async () => {
-                        const { deletePath } = await import('../../../services/explorerFileActions');
                         await deletePath(fullPath);
                     })();
                 }}
@@ -360,7 +363,12 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
 
             {isOpen &&
                 children.map((child) => (
-                    <FileNode entry={child} key={`${fullPath}:${child.name}:${child.isDirectory ? 'dir' : 'file'}`} level={level + 1} parentPath={fullPath} />
+                    <FileNode
+                        entry={child}
+                        key={`${fullPath}:${child.name}:${child.isDirectory ? 'dir' : 'file'}:${treeRevision}`}
+                        level={level + 1}
+                        parentPath={fullPath}
+                    />
                 ))}
         </div>
     );

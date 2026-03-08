@@ -26,5 +26,12 @@ export async function activateWorkbenchTab(tabId: string) {
             applyMacrosFile(tab.path, data);
             return;
         }
+
+        return;
+    }
+
+    if (tab.kind === 'manifest' || tab.kind === 'json' || tab.kind === 'text') {
+        const text = await fsReadTextFile(tab.path);
+        ws.updateTabContent(tab.id, text);
     }
 }

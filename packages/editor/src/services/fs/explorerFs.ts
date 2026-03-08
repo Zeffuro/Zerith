@@ -1,5 +1,5 @@
 import { dirname, join } from '@tauri-apps/api/path';
-import { type DirEntry, mkdir, readDir, readTextFile, remove, rename, writeTextFile } from '@tauri-apps/plugin-fs';
+import { type DirEntry, mkdir, readDir, readFile, readTextFile, remove, rename, writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { openPath } from '@tauri-apps/plugin-opener';
 
 export type FsDirectoryEntry = {
@@ -25,6 +25,10 @@ export async function fsOpenPath(path: string): Promise<void> {
     await openPath(path);
 }
 
+export async function fsReadBinaryFile(path: string): Promise<Uint8Array> {
+    return readFile(path);
+}
+
 export async function fsReadDirectory(path: string): Promise<FsDirectoryEntry[]> {
     const entries = await readDir(path);
     return entries.map((entry) => mapDirectoryEntry(entry));
@@ -40,6 +44,10 @@ export async function fsRemove(path: string, recursive = true): Promise<void> {
 
 export async function fsRename(oldPath: string, newPath: string): Promise<void> {
     await rename(oldPath, newPath);
+}
+
+export async function fsWriteBinaryFile(path: string, content: Uint8Array): Promise<void> {
+    await writeFile(path, content);
 }
 
 export async function fsWriteTextFile(path: string, content: string): Promise<void> {

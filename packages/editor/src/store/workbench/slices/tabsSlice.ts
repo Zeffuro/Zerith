@@ -45,12 +45,55 @@ export function createWorkbenchTabsSlice(set: WorkbenchSet, get: WorkbenchGet): 
         openOrFocusTab: (tab) =>
             set((state) => {
                 const existing = state.tabs.find((t: WorkbenchTab) => t.id === tab.id);
-                if (existing) return { activeTabId: existing.id };
+                if (existing) {
+                    return {
+                        activeTabId: existing.id,
+                        tabs: state.tabs.map((candidate) => (candidate.id === tab.id ? { ...candidate, ...tab } : candidate)),
+                    };
+                }
                 return { activeTabId: tab.id, tabs: [...state.tabs, tab] };
+            }),
+
+        renameTabPath: (nextPath, oldPath) =>
+            set((state) => {
+                const previousActive = state.tabs.find((tab) => tab.id === state.activeTabId);
+                let changed = false;
+                const nextTabs = state.tabs.map((tab) => {
+                    if (tab.path !== oldPath) return tab;
+                    changed = true;
+                    return {
+                        ...tab,
+                        id: tabKey(tab.kind, nextPath),
+                        path: nextPath,
+                        title: basename(nextPath),
+                    };
+                });
+                if (!changed) return {};
+
+                const nextActive =
+                    previousActive?.path === oldPath
+                        ? tabKey(previousActive.kind, nextPath)
+                        : state.activeTabId;
+
+                return { activeTabId: nextActive, tabs: nextTabs };
             }),
 
         setActiveTab: (tabId) => set({ activeTabId: tabId }),
 
         tabs: [],
+
+        updateTabContent: (tabId, textContent) =>
+            set((state) => ({
+                tabs: state.tabs.map((tab) => (tab.id === tabId ? { ...tab, textContent } : tab)),
+            })),
     };
 }
+
+function basename(path: string) {
+    return path.split(/[\\/]/).pop() || path;
+}
+
+function tabKey(kind: WorkbenchTab['kind'], path: string) {
+    return `${kind}::${path}`;
+}
+

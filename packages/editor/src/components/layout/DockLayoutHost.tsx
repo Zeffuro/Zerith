@@ -1,7 +1,8 @@
 import type { IJsonModel } from 'flexlayout-react';
+import type { ReactNode } from 'react';
 
 import { Actions, Layout, Model, TabNode } from 'flexlayout-react';
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { Component, lazy, Suspense, useEffect, useRef, useState } from 'react';
 import 'flexlayout-react/style/dark.css';
 
 import { useEditorStore } from '../../store/useEditorStore';
@@ -24,6 +25,36 @@ type InitialModelState = {
     recoveryLayout: IJsonModel | undefined;
 };
 
+type LayoutErrorBoundaryProperties = {
+    children: ReactNode;
+    onRecover: () => void;
+};
+
+type LayoutErrorBoundaryState = {
+    hasError: boolean;
+};
+
+class LayoutErrorBoundary extends Component<LayoutErrorBoundaryProperties, LayoutErrorBoundaryState> {
+    public override state: LayoutErrorBoundaryState = { hasError: false };
+
+    public static getDerivedStateFromError(): LayoutErrorBoundaryState {
+        return { hasError: true };
+    }
+
+    public override componentDidCatch(error: unknown): void {
+        console.error('Dock layout crashed, resetting to defaults.', error);
+        this.props.onRecover();
+    }
+
+    public override render() {
+        if (this.state.hasError) {
+            return <div style={{ color: '#fca5a5', padding: 12 }}>Dock layout reset. Please reopen the panel.</div>;
+        }
+        return this.props.children;
+    }
+}
+
+
 export function DockLayoutHost() {
     const dockLayoutJson = useEditorStore((s) => s.dockLayoutJson);
     const setDockLayoutJson = useEditorStore((s) => s.setDockLayoutJson);
@@ -31,6 +62,7 @@ export function DockLayoutHost() {
     const activeWorkbenchTabId = useWorkbenchStore((s) => s.activeTabId);
 
     const [initialModelState] = useState(() => createInitialModelState(dockLayoutJson));
+    const [layoutRecoveryKey, setLayoutRecoveryKey] = useState(0);
     const model = initialModelState.model;
     const lastJsonReference = useRef<string>(initialModelState.jsonSig);
 
@@ -46,6 +78,13 @@ export function DockLayoutHost() {
     }, [dockLayoutJson]);
 
     const saveTimerReference = useRef<ReturnType<typeof globalThis.setTimeout> | undefined>(undefined);
+
+    const recoverLayout = () => {
+        const fallbackLayout = createDefaultDockLayout() as IJsonModel;
+        setDockLayoutJson(fallbackLayout);
+        lastJsonReference.current = JSON.stringify(fallbackLayout);
+        setLayoutRecoveryKey((value) => value + 1);
+    };
 
     const onModelChange = (m: Model) => {
         if (saveTimerReference.current) globalThis.clearTimeout(saveTimerReference.current);
@@ -118,7 +157,9 @@ export function DockLayoutHost() {
             <div style={{ display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0, position: 'relative' }}>
                 <WorkbenchTabs />
                 <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-                    <Layout factory={factory} model={model} onModelChange={onModelChange} />
+                    <LayoutErrorBoundary key={layoutRecoveryKey} onRecover={recoverLayout}>
+                        <Layout factory={factory} model={model} onModelChange={onModelChange} />
+                    </LayoutErrorBoundary>
                 </div>
             </div>
         </div>

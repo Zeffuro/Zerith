@@ -8,7 +8,6 @@
   "permissions": [
     "core:default",
     "opener:default",
-    "opener:allow-open-path",
     "dialog:default",
     "fs:default",
     "core:window:allow-set-size",
@@ -31,11 +30,19 @@
       "allow": [{ "path": "**" }]
     },
     {
+      "identifier": "fs:allow-write-text-file",
+      "allow": [{ "path": "**" }]
+    },
+    {
       "identifier": "fs:allow-rename",
       "allow": [{ "path": "**" }]
     },
     {
       "identifier": "fs:allow-remove",
+      "allow": [{ "path": "**" }]
+    },
+    {
+      "identifier": "opener:allow-open-path",
       "allow": [{ "path": "**" }]
     }
   ]

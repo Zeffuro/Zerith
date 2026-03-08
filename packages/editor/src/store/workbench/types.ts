@@ -38,8 +38,10 @@ export interface WorkbenchTabsSlice {
     closeTab: (tabId: string) => void;
     closeToRight: (tabId: string) => void;
     openOrFocusTab: (tab: WorkbenchTab) => void;
+    renameTabPath: (nextPath: string, oldPath: string) => void;
     setActiveTab: (tabId: string | undefined) => void;
     tabs: WorkbenchTab[];
+    updateTabContent: (tabId: string, textContent: string) => void;
 }
 
 export interface WorkbenchViewPrefsSlice {
