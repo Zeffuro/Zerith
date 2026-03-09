@@ -1,7 +1,7 @@
-import { Application, Assets, Container } from 'pixi.js';
+import { Assets } from 'pixi.js';
 
 import type { EngineConfig } from './EngineConfig';
-import type { ExecutionContext } from './execution/ExecutionContext';
+import type { HandlerRuntime } from './execution/ExecutionContext';
 import type {
     CommandHandlerProvider,
     CommandHandlerRegistry,
@@ -23,6 +23,7 @@ import type {
     IStartScreenManager,
     IStateManager,
 } from './interfaces/managers';
+import type { SaveState } from './managers/SaveManager';
 import type { BaseCommand, CommandType, GameManifest, Serializable } from './types';
 
 import { ScriptExecutor } from './execution/ScriptExecutor';
@@ -54,32 +55,30 @@ export interface EngineDeps {
 
 export type EngineDepsFactory = (engine: Engine, config: EngineConfig) => EngineDeps;
 
-export class Engine {
-    public app: Application;
-    public assets: IAssetManager;
-    public audio: IAudioManager;
-    public config: EngineConfig;
+export type EngineSystemKey = keyof EngineSystemMap;
 
-    public display: IDisplayManager;
-    public events: IEventBus;
-    public history: IHistoryManager;
-    public input: IInputManager;
-    public items: IEvidenceManager;
-    public layers: {
-        background: Container;
-        overlay: Container;
-        sprites: Container;
-        ui: Container;
-    };
+export interface EngineSystemMap {
+    assets: IAssetManager;
+    audio: IAudioManager;
+    display: IDisplayManager;
+    events: IEventBus;
+    history: IHistoryManager;
+    input: IInputManager;
+    items: IEvidenceManager;
+    notifications: INotificationManager;
+    overlay: IOverlayManager;
+    saves: ISaveManager;
+    scenes: ISceneManager;
+    spritesheets: ISpritesheetManager;
+    startScreen: IStartScreenManager;
+    state: IStateManager;
+}
+
+export class Engine {
+    public config: EngineConfig;
     public logger: Logger = new Logger('[Engine]');
     public manifest: GameManifest = {};
-    public notifications: INotificationManager;
-    public overlay: IOverlayManager;
-    public saves: ISaveManager;
-    public scenes: ISceneManager;
-    public spritesheets: ISpritesheetManager;
-    public startScreen: IStartScreenManager;
-    public stateManager: IStateManager;
+    public readonly systems = new Map<EngineSystemKey, EngineSystemMap[EngineSystemKey]>();
     public theme: Theme = DefaultTheme;
 
     public get assetResolver(): AssetResolver {
@@ -88,8 +87,8 @@ export class Engine {
 
     public set assetResolver(resolver: AssetResolver) {
         this._assetResolver = resolver;
-        this.spritesheets.setResolver(resolver);
-        this.assets.setResolver(resolver);
+        this.getSystem('spritesheets').setResolver(resolver);
+        this.getSystem('assets').setResolver(resolver);
     }
 
     public get autoAdvanceDelay(): number | undefined {
@@ -97,10 +96,10 @@ export class Engine {
     }
 
     public get currentIndex(): number {
-        return this.scenes.currentIndex;
+        return this.getSystem('scenes').currentIndex;
     }
     public get currentSceneName(): string {
-        return this.scenes.currentSceneName;
+        return this.getSystem('scenes').currentSceneName;
     }
     public get isStarted(): boolean {
         return this.executor.isStarted;
@@ -109,36 +108,33 @@ export class Engine {
         return this.executor.lastSavePoint;
     }
     public get persistentState(): Record<string, Serializable> {
-        return this.stateManager.persistentState;
+        return this.getSystem('state').persistentState;
     }
     public get state(): Record<string, Serializable> {
-        return this.stateManager.state;
+        return this.getSystem('state').state;
     }
 
     public set state(value: Record<string, Serializable>) {
-        this.stateManager.replaceState(value, this.stateManager.system);
+        const state = this.getSystem('state');
+        state.replaceState(value, state.system);
     }
 
     private _autoAdvanceDelay: number | undefined;
 
     /* Lifecycle */
 
-    private readonly executionContext: ExecutionContext;
     private readonly executor: ScriptExecutor;
 
     private handlers: CommandHandlerRegistry = new Map();
 
+    private onInputLoad: ((slot: number) => void) | undefined;
+    private onInputNext: (() => void) | undefined;
+    private onInputSave: ((slot: number) => void) | undefined;
+    private onInputSkip: (() => void) | undefined;
     private readonly onSceneNavigation?: EngineConfig['onSceneNavigation'];
 
     constructor(config: EngineConfig = {}, depsFactory: EngineDepsFactory) {
         this.config = config;
-        this.app = new Application();
-        this.layers = {
-            background: new Container(),
-            overlay: new Container(),
-            sprites: new Container(),
-            ui: new Container()
-        };
 
         if (config.theme) {
             this.theme = { ...DefaultTheme, ...config.theme };
@@ -146,77 +142,72 @@ export class Engine {
 
         const deps = depsFactory(this, config);
 
-        this.events = deps.events;
-        this.audio = deps.audio;
-        this.display = deps.display;
-        this.input = deps.input;
-        this.scenes = deps.scenes;
-        this.saves = deps.saves;
-        this.notifications = deps.notifications;
-        this.startScreen = deps.startScreen;
-        this.overlay = deps.overlay;
-        this.history = deps.history;
-        this.items = deps.items;
-        this.assets = deps.assets;
-        this.stateManager = deps.state;
-        this.spritesheets = deps.spritesheets;
+        for (const key of Object.keys(deps) as EngineSystemKey[]) {
+            this.registerSystem(key, deps[key]);
+        }
         this.onSceneNavigation = config.onSceneNavigation;
 
-        this.executionContext = {
+        const events = this.getSystem('events');
+        const scenes = this.getSystem('scenes');
+
+        const runtime: HandlerRuntime = {
             assetResolver: (url: string) => this.assetResolver(url),
-            assets: this.assets,
-            audio: this.audio,
-            autoAdvanceDelay: this.autoAdvanceDelay,
             consumeSkip: () => this.consumeSkip(),
-            display: this.display,
-            events: this.events,
+            getAutoAdvanceDelay: () => this.autoAdvanceDelay,
+            getManifest: () => this.manifest,
             getState: <T = unknown>(key: string) => this.getState<T>(key),
-            history: this.history,
+            getTheme: () => this.theme,
             injectCommands: () => {},
-            items: this.items,
-            layers: this.layers,
             loadAsset: <T = unknown>(url: string) => this.loadAsset<T>(url),
             logger: this.logger,
-            manifest: this.manifest,
-            notifications: this.notifications,
-            overlay: this.overlay,
             playNext: () => this.playNext(),
             resolveText: (text: string) => this.resolveText(text),
             runCommand: async (command: BaseCommand) => {
                 await this.runCommand(command);
             },
-            saves: this.saves,
-            scenes: this.scenes,
             setState: (key: string, value: unknown) => this.setState(key, value),
-            spritesheets: this.spritesheets,
-            startScreen: this.startScreen,
-            stateManager: this.stateManager,
-            theme: this.theme,
         };
 
         this.executor = new ScriptExecutor({
-            context: this.executionContext,
-            events: this.events,
+            events,
             handlers: this.handlers,
             logger: this.logger,
             onSceneNavigation: this.onSceneNavigation,
-            scenes: this.scenes,
+            runtime,
+            scenes,
+            systems: this,
         });
-        this.executionContext.injectCommands = (commands: BaseCommand[]) => {
+        runtime.injectCommands = (commands: BaseCommand[]) => {
             this.executor.injectCommands(commands);
         };
+
+        this.subscribeInputEvents();
     }
 
     /* Handler Registration */
 
+    public async applySaveState(saveData: SaveState) {
+        this.clear();
+
+        this.getSystem('state').replaceState(saveData.state, saveData.system);
+        if (saveData.system.items.length > 0) {
+            this.getSystem('items').deserialize(saveData.system.items);
+        }
+
+        this.getSystem('events').emit('state:loaded', saveData);
+
+        await this.getSystem('scenes').jumpToScene(saveData.sceneName, saveData.index);
+        if (this.isStarted) {
+            await this.playNext();
+        }
+    }
+
     public clear() {
-        for (const c of this.layers.ui.removeChildren()) c.destroy({ children: true });
-        for (const c of this.layers.sprites.removeChildren()) c.destroy({ children: true });
-        for (const c of this.layers.overlay.removeChildren()) c.destroy({ children: true });
+        this.getSystem('display').clearLayers?.();
         for (const h of this.handlers.values()) h.reset?.();
-        this.history.clear();
-        this.items.clear();
-        this.stateManager.clear();
+        this.getSystem('history').clear();
+        this.getSystem('items').clear();
+        this.getSystem('state').clear();
         this.executor.reset();
     }
 
@@ -224,38 +215,40 @@ export class Engine {
         return this.executor.consumeSkip();
     }
 
+    /* State */
+
     public destroy() {
         this.executor.stop();
-        this.input.detach();
-        void this.display.destroy?.();
-        void this.audio.destroy?.();
+        this.unsubscribeInputEvents();
+        this.getSystem('input').detach();
+        void this.getSystem('display').destroy?.();
+        void this.getSystem('audio').destroy?.();
         this.clear();
     }
-
-    /* State */
 
     public getHandler(type: CommandType): RegisteredCommandHandler | undefined {
         return this.handlers.get(type);
     }
 
     public getState<T = Serializable>(k: string): T | undefined {
-        return this.stateManager.get<T>(k);
+        return this.getSystem('state').get<T>(k);
+    }
+
+    public getSystem<K extends EngineSystemKey>(key: K): EngineSystemMap[K] {
+        const system = this.systems.get(key);
+        if (!system) {
+            throw new Error(`Engine system '${key}' is not registered`);
+        }
+        return system as EngineSystemMap[K];
     }
 
     /* Text Control */
 
     public async init(canvasElement: HTMLCanvasElement) {
-        await this.display.init(canvasElement);
-        await this.audio.init?.();
+        await this.getSystem('display').init(canvasElement);
+        await this.getSystem('audio').init?.();
 
-        this.app.stage.addChild(
-            this.layers.background,
-            this.layers.sprites,
-            this.layers.ui,
-            this.layers.overlay
-        );
-
-        this.input.attach(canvasElement);
+        this.getSystem('input').attach(canvasElement);
     }
 
     public async loadAsset<T = unknown>(url: string): Promise<T> {
@@ -268,17 +261,18 @@ export class Engine {
     }
 
     public registerDefaultPanels() {
-        this.overlay.registerPanel(new HistoryPanel());
-        this.overlay.registerPanel(new ItemBrowserPanel());
-        this.overlay.registerPanel(new SettingsPanel());
-        this.overlay.registerPanel(new SaveLoadPanel('save'));
-        this.overlay.registerPanel(new SaveLoadPanel('load'));
+        const overlay = this.getSystem('overlay');
+        overlay.registerPanel(new HistoryPanel());
+        overlay.registerPanel(new ItemBrowserPanel());
+        overlay.registerPanel(new SettingsPanel());
+        overlay.registerPanel(new SaveLoadPanel('save'));
+        overlay.registerPanel(new SaveLoadPanel('load'));
     }
 
     public registerHandler(h: RegisteredCommandHandler) {
         this.handlers.set(h.type, h);
         if (h.init) {
-            void Promise.resolve(h.init(this.executionContext)).catch((error: unknown) => {
+            void Promise.resolve(h.init(this.executor.getContext())).catch((error: unknown) => {
                 this.logger.error(`Handler '${h.type}' init failed: ${String(error)}`);
             });
         }
@@ -290,13 +284,18 @@ export class Engine {
         for (const h of hs) this.registerHandler(typeof h === 'function' ? new h() : h);
     }
 
+    public registerSystem<K extends EngineSystemKey>(key: K, system: EngineSystemMap[K]) {
+        this.systems.set(key, system);
+    }
+
     public requestSkip() {
         this.executor.requestSkip();
     }
 
     public resolveText(text: string): string {
+        const state = this.getSystem('state');
         return text.replaceAll(/\{(\w+)}/g, (match: string, key: string) => {
-            const value = this.stateManager.get(key) ?? this.stateManager.getPersistent(key);
+            const value = state.get(key) ?? state.getPersistent(key);
             if (value === undefined || value === null) return match;
             if (typeof value === 'object') return JSON.stringify(value);
             return String(value);
@@ -312,31 +311,31 @@ export class Engine {
         await this.executor.runCommand(command);
     }
 
-    public setManifest(manifest: GameManifest) {
-        this.manifest = manifest;
-        this.executionContext.manifest = manifest;
-    }
-
     public setAutoAdvance(delayMs: number | undefined) {
         this._autoAdvanceDelay = delayMs;
-        this.executionContext.autoAdvanceDelay = delayMs;
     }
 
     public setInputEnabled(enabled: boolean) {
-        if (this.display.canvas) {
+        const display = this.getSystem('display');
+        const input = this.getSystem('input');
+        if (display.canvas) {
             if (enabled) {
-                this.input.attach(this.display.canvas);
+                input.attach(display.canvas);
             } else {
-                this.input.detach();
+                input.detach();
             }
         }
+    }
+
+    public setManifest(manifest: GameManifest) {
+        this.manifest = manifest;
     }
 
 
     /* Input */
 
     public setState(k: string, v: unknown) {
-        this.stateManager.set(k, v);
+        this.getSystem('state').set(k, v);
     }
 
     /* Assets */
@@ -346,6 +345,56 @@ export class Engine {
     }
 
     private _assetResolver: AssetResolver = (url) => url;
+
+    private subscribeInputEvents() {
+        const events = this.getSystem('events');
+        this.onInputSkip = () => {
+            this.executor.requestSkip();
+        };
+        this.onInputNext = () => {
+            void this.executor.playNext();
+        };
+        this.onInputSave = (slot: number) => {
+            this.getSystem('saves').save(slot);
+            this.getSystem('notifications').show('Game Saved!');
+        };
+        this.onInputLoad = (slot: number) => {
+            void this.getSystem('saves').load(slot).then(async (saveData) => {
+                if (!saveData) {
+                    this.getSystem('notifications').show('Save not found');
+                    return;
+                }
+                await this.applySaveState(saveData);
+                this.getSystem('notifications').show('Game Loaded!');
+            });
+        };
+
+        events.on('input:skip', this.onInputSkip);
+        events.on('input:next', this.onInputNext);
+        events.on('input:save', this.onInputSave);
+        events.on('input:load', this.onInputLoad);
+    }
+
+    private unsubscribeInputEvents() {
+        const events = this.getSystem('events');
+        if (this.onInputSkip) {
+            events.off('input:skip', this.onInputSkip);
+            this.onInputSkip = undefined;
+        }
+        if (this.onInputNext) {
+            events.off('input:next', this.onInputNext);
+            this.onInputNext = undefined;
+        }
+        if (this.onInputSave) {
+            events.off('input:save', this.onInputSave);
+            this.onInputSave = undefined;
+        }
+        if (this.onInputLoad) {
+            events.off('input:load', this.onInputLoad);
+            this.onInputLoad = undefined;
+        }
+    }
+
 
 
 }

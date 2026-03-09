@@ -1,7 +1,7 @@
 import { Container, type FederatedPointerEvent, Graphics, Sprite, Text } from 'pixi.js';
 
-import type { Engine } from '../Engine';
 import type { MenuPanel as Panel } from '../types';
+import type { UIRenderContext } from './UIRenderContext';
 
 import { createButton, createPanelTitle, createSelectableList, registerFocusableButton } from './UIComponents';
 
@@ -9,18 +9,17 @@ export class ItemBrowserPanel implements Panel {
     public id = 'evidence';
     public label = 'Evidence';
 
-    build(engine: Engine, onClose: () => void) {
-        const overlay = engine.overlay;
-        const context = overlay.getUIContext();
+    build(renderContext: UIRenderContext, onClose: () => void) {
+        const context = renderContext.uiContext;
         const cfg = context.overlayConfig;
         const w = context.canvasWidth;
         const h = context.canvasHeight;
-        const focus = overlay.focus;
+        const focus = renderContext.focus;
 
-        const root = overlay.createPanelBase();
+        const root = renderContext.createPanelBase();
         root.addChild(createPanelTitle(context, 'COURT RECORD'));
 
-        const items = engine.items.getAll();
+        const items = renderContext.items.getAll();
         const backMargin = 20;
 
         if (items.length === 0) {
@@ -45,8 +44,8 @@ export class ItemBrowserPanel implements Panel {
         const detailX = listWidth + 20;
         const detailWidth = w - detailX - 20;
 
-        const evidence = engine.items.getEvidence();
-        const profiles = engine.items.getProfiles();
+        const evidence = renderContext.items.getEvidence();
+        const profiles = renderContext.items.getProfiles();
         const activeTab: 'evidence' | 'profiles' = evidence.length > 0 ? 'evidence' : 'profiles';
 
         // Detail panel
@@ -88,7 +87,7 @@ export class ItemBrowserPanel implements Panel {
 
             if (item.imageUrl) {
                 try {
-                    const texture = await engine.loadAsset<import('pixi.js').Texture>(item.imageUrl);
+                    const texture = await renderContext.loadAsset<import('pixi.js').Texture>(item.imageUrl);
                     detailSprite.texture = texture;
                     detailSprite.visible = true;
                     const maxImgW = detailWidth * 0.6;
@@ -180,7 +179,7 @@ export class ItemBrowserPanel implements Panel {
 
             tabButton.on('pointerdown', (event: FederatedPointerEvent) => {
                 event.stopPropagation();
-                engine.overlay.showPanel(this);
+                renderContext.showPanel(this);
             });
             return tabButton;
         };
@@ -206,7 +205,7 @@ export class ItemBrowserPanel implements Panel {
             scrollY = Math.max(0, Math.min(maxScroll, scrollY));
             listContainer.children[0].y = -scrollY;
         };
-        engine.app.canvas.addEventListener('wheel', onWheel, { passive: false });
+        renderContext.canvasElement.addEventListener('wheel', onWheel, { passive: false });
 
         // Back button
         const backButton = createButton(context, { label: 'Back', x: w / 2, y: h - cfg.buttonHeight - backMargin }, onClose);
@@ -215,7 +214,7 @@ export class ItemBrowserPanel implements Panel {
         registerFocusableButton(context, focus, backButton, onClose);
 
         return {
-            cleanup: () => engine.app.canvas.removeEventListener('wheel', onWheel),
+            cleanup: () => renderContext.canvasElement.removeEventListener('wheel', onWheel),
             container: root,
         };
     }

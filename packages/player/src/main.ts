@@ -53,7 +53,7 @@ async function bootstrap() {
     });
 
     const startScene = manifest.startScene ?? 'intro';
-    await engine.startScreen.show(startScene);
+    await engine.getSystem('startScreen').show(startScene);
 }
 
 await bootstrap();

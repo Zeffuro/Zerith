@@ -1,8 +1,22 @@
 import { Container, FederatedPointerEvent, Graphics, Text } from 'pixi.js';
 
-import type { Engine } from '../Engine';
+import type { RegisteredCommandHandler } from '../interfaces/ICommandHandler';
+import type {
+    IAudioManager,
+    IDisplayManager,
+    IEventBus,
+    IEvidenceManager,
+    IHistoryManager,
+    INotificationManager,
+    ISaveManager,
+    IStateManager,
+} from '../interfaces/managers';
 import type { NavigationDirection } from '../interfaces/managers';
+import type { CommandType } from '../types';
 import type { MenuPanel } from '../types';
+import type { UIRenderContext } from '../ui/UIRenderContext';
+import type { Theme } from '../utils/Theme';
+import type { SaveState } from './SaveManager';
 
 import { PanelFocusManager } from '../ui/PanelFocusManager';
 import { createButton, registerFocusableButton, type UIContext } from '../ui/UIComponents';
@@ -20,6 +34,25 @@ export interface OverlayConfig {
     fontSize?: number;
     textColor?: number;
     uiScale?: number;
+}
+
+export interface OverlayManagerDeps {
+    audio: IAudioManager;
+    display: Pick<IDisplayManager, 'height' | 'width'>;
+    events: Pick<IEventBus, 'off' | 'on'>;
+    getAutoAdvanceDelay: () => number | undefined;
+    getCanvasElement: () => HTMLCanvasElement | undefined;
+    getHandler: (type: CommandType) => RegisteredCommandHandler | undefined;
+    getTheme: () => Theme;
+    history: IHistoryManager;
+    items: IEvidenceManager;
+    loadAsset: <T = unknown>(url: string) => Promise<T>;
+    loadState: (saveState: SaveState) => Promise<void>;
+    notifications: INotificationManager;
+    overlayLayer: Container;
+    saves: ISaveManager;
+    setAutoAdvance: (delayMs: number | undefined) => void;
+    state: IStateManager;
 }
 
 export class OverlayManager {
@@ -40,15 +73,15 @@ export class OverlayManager {
     private _onConfirm: (() => void) | undefined;
     private _onNavigate: ((direction: NavigationDirection) => void) | undefined;
     private container: Container | undefined;
-    private readonly engine: Engine;
+    private readonly deps: OverlayManagerDeps;
     private panelContainer: Container | undefined;
 
     private panels: MenuPanel[] = [];
 
     private sceneLoadingText: Text | undefined;
 
-    constructor(engine: Engine, config: OverlayConfig = {}) {
-        this.engine = engine;
+    constructor(deps: OverlayManagerDeps, config: OverlayConfig = {}) {
+        this.deps = deps;
         this.config = {
             backgroundAlpha: 0.85,
             backgroundColor: 0x00_00_00,
@@ -65,9 +98,10 @@ export class OverlayManager {
             ...config
         };
 
-        this.engine.events.on('menu:toggle', () => this.toggle());
-        this.engine.events.on('scene:loading', (sceneName: string) => this.showSceneLoading(sceneName));
-        this.engine.events.on('scene:loaded', () => this.hideSceneLoading());
+        const events = this.deps.events;
+        events.on('menu:toggle', () => this.toggle());
+        events.on('scene:loading', (sceneName: string) => this.showSceneLoading(sceneName));
+        events.on('scene:loaded', () => this.hideSceneLoading());
     }
 
     public close() {
@@ -95,8 +129,9 @@ export class OverlayManager {
     */
 
     public createPanelBase(): Container {
-        const w = this.engine.display.width;
-        const h = this.engine.display.height;
+        const display = this.deps.display;
+        const w = display.width;
+        const h = display.height;
 
         const root = new Container();
         root.eventMode = 'static';
@@ -112,12 +147,13 @@ export class OverlayManager {
     }
 
     public getUIContext(): UIContext {
+        const display = this.deps.display;
         return {
-            canvasHeight: this.engine.display.height,
-            canvasWidth: this.engine.display.width,
-            getCanvasRect: () => this.engine.app.canvas.getBoundingClientRect(),
+            canvasHeight: display.height,
+            canvasWidth: display.width,
+            getCanvasRect: () => this.getCanvasElement()?.getBoundingClientRect() ?? new DOMRect(0, 0, display.width, display.height),
             overlayConfig: this.config,
-            theme: this.engine.theme,
+            theme: this.deps.getTheme(),
         };
     }
 
@@ -162,11 +198,11 @@ export class OverlayManager {
             this.rebuildMainMenuFocus();
         };
 
-        const { cleanup, container } = panel.build(this.engine, this._focus.onBack);
+        const { cleanup, container } = panel.build(this.createRenderContext(), this._focus.onBack);
 
         this.panelContainer = container;
         this._activeCleanup = cleanup;
-        this.engine.layers.overlay.addChild(this.panelContainer);
+        this.deps.overlayLayer.addChild(this.panelContainer);
 
         this._focus.focusInitial(0);
     }
@@ -185,6 +221,45 @@ export class OverlayManager {
         this.hideSceneLoading();
     }
 
+    private createRenderContext(): UIRenderContext {
+        const {
+            audio,
+            display,
+            history,
+            items,
+            notifications,
+            saves,
+            state,
+        } = this.deps;
+        return {
+            applySaveState: (saveState) => this.deps.loadState(saveState),
+            audio,
+            autoAdvanceDelay: this.deps.getAutoAdvanceDelay(),
+            canvasElement: this.requireCanvasElement(),
+            canvasHeight: display.height,
+            canvasWidth: display.width,
+            closeOverlay: () => this.close(),
+            createPanelBase: () => this.createPanelBase(),
+            focus: this.focus,
+            getHandler: (type) => this.deps.getHandler(type),
+            history,
+            items,
+            loadAsset: <T = unknown>(url: string) => this.deps.loadAsset<T>(url),
+            notifications,
+            overlayConfig: this.config,
+            saves,
+            setAutoAdvance: (delayMs) => this.deps.setAutoAdvance(delayMs),
+            showPanel: (panel) => this.showPanel(panel),
+            state,
+            theme: this.deps.getTheme(),
+            uiContext: this.getUIContext(),
+        };
+    }
+
+    private getCanvasElement(): HTMLCanvasElement | undefined {
+        return this.deps.getCanvasElement();
+    }
+
     private hideSceneLoading() {
         if (!this.sceneLoadingText) return;
         this.sceneLoadingText.destroy();
@@ -193,6 +268,14 @@ export class OverlayManager {
 
     private rebuildMainMenuFocus() {
         this.showMainMenu();
+    }
+
+    private requireCanvasElement(): HTMLCanvasElement {
+        const canvas = this.getCanvasElement();
+        if (!canvas) {
+            throw new Error('Overlay canvas is not initialized yet.');
+        }
+        return canvas;
     }
 
     private showMainMenu() {
@@ -245,7 +328,7 @@ export class OverlayManager {
         }
 
         this._focus.focusInitial(0);
-        this.engine.layers.overlay.addChild(this.container);
+        this.deps.overlayLayer.addChild(this.container);
     }
 
     private showSceneLoading(sceneName: string) {
@@ -261,9 +344,10 @@ export class OverlayManager {
             text: label
         });
         loadingText.anchor.set(1, 1);
-        loadingText.position.set(this.engine.display.width - this.scale(20), this.engine.display.height - this.scale(20));
+        const display = this.deps.display;
+        loadingText.position.set(display.width - this.scale(20), display.height - this.scale(20));
         this.sceneLoadingText = loadingText;
-        this.engine.layers.overlay.addChild(loadingText);
+        this.deps.overlayLayer.addChild(loadingText);
     }
 
     private subscribeInput() {
@@ -276,22 +360,24 @@ export class OverlayManager {
         this._onBack = () => {
             this._focus?.back();
         };
-        this.engine.events.on('input:navigate', this._onNavigate);
-        this.engine.events.on('input:confirm', this._onConfirm);
-        this.engine.events.on('input:back', this._onBack);
+        const events = this.deps.events;
+        events.on('input:navigate', this._onNavigate);
+        events.on('input:confirm', this._onConfirm);
+        events.on('input:back', this._onBack);
     }
 
     private unsubscribeInput() {
+        const events = this.deps.events;
         if (this._onNavigate) {
-            this.engine.events.off('input:navigate', this._onNavigate);
+            events.off('input:navigate', this._onNavigate);
             this._onNavigate = undefined;
         }
         if (this._onConfirm) {
-            this.engine.events.off('input:confirm', this._onConfirm);
+            events.off('input:confirm', this._onConfirm);
             this._onConfirm = undefined;
         }
         if (this._onBack) {
-            this.engine.events.off('input:back', this._onBack);
+            events.off('input:back', this._onBack);
             this._onBack = undefined;
         }
         this._focus = undefined;

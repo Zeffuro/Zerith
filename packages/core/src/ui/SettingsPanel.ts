@@ -1,8 +1,8 @@
 import { Graphics } from "pixi.js";
 
-import type { Engine } from '../Engine';
 import type { MenuPanel } from '../types';
 import type { SliderResult, ToggleResult } from './UIComponents';
+import type { UIRenderContext } from './UIRenderContext';
 
 import { createButton, createPanelTitle, createSlider, createToggle, registerFocusableButton } from './UIComponents';
 
@@ -10,13 +10,12 @@ export class SettingsPanel implements MenuPanel {
     public id = 'settings';
     public label = 'Settings';
 
-    build(engine: Engine, onClose: () => void) {
-        const overlay = engine.overlay;
-        const context = overlay.getUIContext();
+    build(renderContext: UIRenderContext, onClose: () => void) {
+        const context = renderContext.uiContext;
         const cfg = context.overlayConfig;
-        const focus = overlay.focus;
+        const focus = renderContext.focus;
 
-        const root = overlay.createPanelBase();
+        const root = renderContext.createPanelBase();
         root.addChild(createPanelTitle(context, 'SETTINGS'));
 
         const contentStartX = (context.canvasWidth - 400 - 180 - 80) / 2;
@@ -34,10 +33,10 @@ export class SettingsPanel implements MenuPanel {
         };
 
         const sliderDefs: { getValue: () => number; label: string; setValue: (v: number) => void }[] = [
-            { getValue: () => engine.audio.masterVolume, label: 'Master Volume', setValue: (v) => engine.audio.setMasterVolume(v) },
-            { getValue: () => engine.audio.bgmVolume, label: 'BGM Volume', setValue: (v) => engine.audio.setVolume('bgm', v) },
-            { getValue: () => engine.audio.sfxVolume, label: 'SFX Volume', setValue: (v) => engine.audio.setVolume('sfx', v) },
-            { getValue: () => engine.audio.voiceVolume, label: 'Voice Volume', setValue: (v) => engine.audio.setVolume('voice', v) },
+            { getValue: () => renderContext.audio.masterVolume, label: 'Master Volume', setValue: (v) => renderContext.audio.setMasterVolume(v) },
+            { getValue: () => renderContext.audio.bgmVolume, label: 'BGM Volume', setValue: (v) => renderContext.audio.setVolume('bgm', v) },
+            { getValue: () => renderContext.audio.sfxVolume, label: 'SFX Volume', setValue: (v) => renderContext.audio.setVolume('sfx', v) },
+            { getValue: () => renderContext.audio.voiceVolume, label: 'Voice Volume', setValue: (v) => renderContext.audio.setVolume('voice', v) },
         ];
 
         const sliderResults: SliderResult[] = [];
@@ -65,8 +64,8 @@ export class SettingsPanel implements MenuPanel {
         yPos += 10;
         const toggleResult: ToggleResult = createToggle(context, {
             label: 'Auto-Advance',
-            onChange: (on) => engine.setAutoAdvance(on ? 3000 : undefined),
-            value: engine.autoAdvanceDelay !== undefined,
+            onChange: (on) => renderContext.setAutoAdvance(on ? 3000 : undefined),
+            value: renderContext.autoAdvanceDelay !== undefined,
         });
         toggleResult.container.position.set(contentStartX, yPos);
         root.addChild(toggleResult.container);
@@ -77,12 +76,12 @@ export class SettingsPanel implements MenuPanel {
             label: 'Text Size',
             onChange: (v) => {
                 const newSize = Math.round(14 + v * 26);
-                engine.theme.fontSize = newSize;
+                renderContext.theme.fontSize = newSize;
 
-                const dh = engine.getHandler('dialogue');
+                const dh = renderContext.getHandler('dialogue');
                 dh?.reset?.();
             },
-            value: (engine.theme.fontSize - 14) / 26,
+            value: (renderContext.theme.fontSize - 14) / 26,
         });
         fontSizeSlider.container.position.set(contentStartX, yPos);
         root.addChild(fontSizeSlider.container);

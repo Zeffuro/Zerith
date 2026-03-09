@@ -1,6 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 
-import type { Engine } from '../Engine';
+import type { IDisplayManager } from '../interfaces/managers';
+import type { Theme } from '../utils/Theme';
 
 export interface NotificationConfig {
     backgroundAlpha?: number;
@@ -14,12 +15,18 @@ export interface NotificationConfig {
     width?: number;
 }
 
-export class NotificationManager {
-    private config: Required<NotificationConfig>;
-    private engine: Engine;
+export interface NotificationDeps {
+    display: Pick<IDisplayManager, 'width'>;
+    getTheme: () => Theme;
+    overlayLayer: Container;
+}
 
-    constructor(engine: Engine, config: NotificationConfig = {}) {
-        this.engine = engine;
+export class NotificationManager {
+    private readonly config: Required<NotificationConfig>;
+    private readonly deps: NotificationDeps;
+
+    constructor(deps: NotificationDeps, config: NotificationConfig = {}) {
+        this.deps = deps;
         this.config = {
             backgroundAlpha: 0.8,
             backgroundColor: 0x00_00_00,
@@ -36,12 +43,13 @@ export class NotificationManager {
 
     public show(message: string) {
         const { backgroundAlpha, backgroundColor, duration, fadeTime, fontFamily, fontSize, height, textColor, width } = this.config;
+        const { display, getTheme, overlayLayer } = this.deps;
 
         const toast = new Container();
         const bg = new Graphics()
             .roundRect(0, 0, width, height, 8)
             .fill({ alpha: backgroundAlpha, color: backgroundColor })
-            .stroke({ color: this.engine.theme.borderColor, width: 1 });
+            .stroke({ color: getTheme().borderColor, width: 1 });
 
         const txt = new Text({
             style: { fill: textColor, fontFamily, fontSize },
@@ -51,10 +59,10 @@ export class NotificationManager {
         txt.position.set(width / 2, height / 2);
 
         toast.addChild(bg, txt);
-        toast.position.set(this.engine.display.width - width - 20, 20);
+        toast.position.set(display.width - width - 20, 20);
         toast.alpha = 0;
 
-        this.engine.layers.overlay.addChild(toast);
+        overlayLayer.addChild(toast);
 
         const startTime = performance.now();
         const animate = (time: number) => {

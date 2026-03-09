@@ -5,7 +5,7 @@ export interface WaitCommand extends BaseCommand {
     type: 'wait';
 }
 
-export class WaitHandler implements CommandHandler<WaitCommand> {
+export class WaitHandler implements CommandHandler<WaitCommand, unknown> {
     public autoNext = true;
     public type = 'wait' as const;
 

@@ -1,4 +1,4 @@
-import type { ExecutionContext } from '../execution/ExecutionContext';
+import type { SceneTemplateContext } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface CallCommand extends BaseCommand {
@@ -6,14 +6,15 @@ export interface CallCommand extends BaseCommand {
     type: 'call';
 }
 
-export class CallHandler implements CommandHandler<CallCommand> {
+export class CallHandler implements CommandHandler<CallCommand, SceneTemplateContext> {
     public autoNext = true;
     public type = 'call' as const;
 
-    execute = (command: CallCommand, engine: ExecutionContext) => {
-        const template = engine.scenes.getTemplate(command.name);
+    execute = (command: CallCommand, engine: SceneTemplateContext) => {
+        const scenes = engine.getSystem('scenes');
+        const template = scenes.getTemplate(command.name);
         if (template) {
-            engine.scenes.injectCommands(template);
+            scenes.injectCommands(template);
         } else {
             engine.logger.warn(`Template '${command.name}' not found!`);
         }

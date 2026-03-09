@@ -1,7 +1,7 @@
 // packages/core/src/handlers/SfxHandler.ts
 import { sound } from '@pixi/sound';
 
-import type { ExecutionContext } from '../execution/ExecutionContext';
+import type { AudioPlaybackContext } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface SfxCommand extends BaseCommand {
@@ -10,11 +10,12 @@ export interface SfxCommand extends BaseCommand {
     volume?: number;
 }
 
-export class SfxHandler implements CommandHandler<SfxCommand> {
+export class SfxHandler implements CommandHandler<SfxCommand, AudioPlaybackContext> {
     public autoNext = true;
     public type = 'sfx' as const;
 
-    execute = async (command: SfxCommand, engine: ExecutionContext) => {
+    execute = async (command: SfxCommand, engine: AudioPlaybackContext) => {
+        const audio = engine.getSystem('audio');
         const url = command.assetUrl;
         if (!url) return;
 
@@ -32,7 +33,7 @@ export class SfxHandler implements CommandHandler<SfxCommand> {
             }
 
             await sound.play(resolvedUrl, {
-                volume: (command.volume ?? 0.8) * engine.audio.sfxVolume,
+                volume: (command.volume ?? 0.8) * audio.sfxVolume,
             });
 
             engine.logger.info(`Played SFX: ${url}`);

@@ -1,4 +1,4 @@
-import type { ExecutionContext } from '../execution/ExecutionContext';
+import type { ContextWithItems } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface ItemCommand extends BaseCommand {
@@ -8,12 +8,12 @@ export interface ItemCommand extends BaseCommand {
     type: 'item';
 }
 
-export class ItemHandler implements CommandHandler<ItemCommand> {
+export class ItemHandler implements CommandHandler<ItemCommand, ContextWithItems> {
     public autoNext = true;
     public type = 'item' as const;
 
-    execute = (command: ItemCommand, engine: ExecutionContext) => {
-        const manager = engine.items;
+    execute = (command: ItemCommand, engine: ContextWithItems) => {
+        const manager = engine.getSystem('items');
 
         switch (command.action) {
             case 'add': {

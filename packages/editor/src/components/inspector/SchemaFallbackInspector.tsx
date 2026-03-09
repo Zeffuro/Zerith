@@ -4,7 +4,7 @@ import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { inferCommandFields } from '../../utils/zodInference';
 import { FieldError } from './FieldError';
 
-const HIDDEN_COMPLEX_KEYS = new Set(['body', 'commands', 'else', 'options', 'then']);
+const HIDDEN_COMPLEX_KEYS = new Set(['body', 'commands', 'else', 'onFalse', 'onTrue', 'options', 'then']);
 
 const getNodeFieldValue = (node: BaseCommand, key: string): unknown => (node as Record<string, unknown>)[key];
 

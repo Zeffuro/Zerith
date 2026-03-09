@@ -3,15 +3,22 @@ import type { CommandHandlerRegistry } from '../interfaces/ICommandHandler';
 import type { IEventBus, ISceneManager } from '../interfaces/managers';
 import type { BaseCommand } from '../types';
 import type { Logger } from '../utils/Logger';
-import type { ExecutionContext } from './ExecutionContext';
+
+import {
+    type CommandExecutionContext,
+    HandlerExecutionContext,
+    type HandlerRuntime,
+    type SystemRegistry,
+} from './ExecutionContext';
 
 export interface ScriptExecutorDeps {
-    context: ExecutionContext;
     events: IEventBus;
     handlers: CommandHandlerRegistry;
     logger: Logger;
     onSceneNavigation?: EngineConfig['onSceneNavigation'];
+    runtime: HandlerRuntime;
     scenes: ISceneManager;
+    systems: SystemRegistry;
 }
 
 export class ScriptExecutor {
@@ -24,7 +31,7 @@ export class ScriptExecutor {
     }
 
     private _lastSavePoint = 0;
-    private readonly context: ExecutionContext;
+    private readonly context: CommandExecutionContext;
     private readonly events: IEventBus;
     private readonly handlers: CommandHandlerRegistry;
     private injectedCommands: BaseCommand[] = [];
@@ -37,7 +44,7 @@ export class ScriptExecutor {
     private started = false;
 
     constructor(deps: ScriptExecutorDeps) {
-        this.context = deps.context;
+        this.context = new HandlerExecutionContext(deps.systems, deps.runtime);
         this.events = deps.events;
         this.handlers = deps.handlers;
         this.logger = deps.logger;
@@ -51,6 +58,10 @@ export class ScriptExecutor {
             return true;
         }
         return false;
+    }
+
+    public getContext(): CommandExecutionContext {
+        return this.context;
     }
 
     public injectCommands(commands: BaseCommand[]) {

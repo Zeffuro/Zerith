@@ -1,6 +1,7 @@
 import { sound } from '@pixi/sound';
 
-import type { ExecutionContext } from '../execution/ExecutionContext';
+import type { BgmPlaybackContext } from '../execution/ExecutionContext';
+import type { SaveState } from '../managers/SaveManager';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface BgmCommand extends BaseCommand {
@@ -11,13 +12,21 @@ export interface BgmCommand extends BaseCommand {
     volume?: number;
 }
 
-export class BgmHandler implements CommandHandler<BgmCommand> {
+export class BgmHandler implements CommandHandler<BgmCommand, BgmPlaybackContext> {
     public autoNext = true;
     public type = 'bgm' as const;
+    private context: BgmPlaybackContext | undefined;
     private currentBgmUrl: string | undefined;
     private isPaused = false;
+    public destroy() {
+        if (this.context) {
+            this.context.getSystem('events').off('state:loaded', this.handleStateLoaded);
+        }
+    }
 
-    execute = async (command: BgmCommand, engine: ExecutionContext) => {
+    execute = async (command: BgmCommand, engine: BgmPlaybackContext) => {
+        const audio = engine.getSystem('audio');
+        const state = engine.getSystem('state');
         if (command.action === 'stop') {
             if (this.currentBgmUrl) {
                 sound.stop(this.currentBgmUrl);
@@ -25,7 +34,7 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
             }
             this.currentBgmUrl = undefined;
             this.isPaused = false;
-            engine.stateManager.system.bgm = undefined;
+            state.system.bgm = undefined;
             return;
         }
 
@@ -81,14 +90,25 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
                 await sound.play(resolvedUrl, {
                     loop: command.loop ?? true,
                     singleInstance: true,
-                    volume: (command.volume ?? 0.5) * engine.audio.bgmVolume
+                    volume: (command.volume ?? 0.5) * audio.bgmVolume
                 });
-                engine.stateManager.system.bgm = url;
+                state.system.bgm = url;
 
                 engine.logger.info(`Playing BGM: ${url}`);
             } catch (error) {
                 engine.logger.error(`Failed to load/play BGM: ${url}`, error);
             }
         }
+    };
+
+    public init(context: BgmPlaybackContext) {
+        this.context = context;
+        context.getSystem('events').on('state:loaded', this.handleStateLoaded);
+    }
+
+    private readonly handleStateLoaded = (...arguments_: unknown[]) => {
+        const saveData = arguments_[0] as SaveState;
+        if (!this.context || !saveData.system.bgm) return;
+        void this.execute({ action: 'play', assetUrl: saveData.system.bgm, type: 'bgm' }, this.context);
     };
 }

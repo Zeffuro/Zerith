@@ -1,7 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 
-import type { Engine } from '../Engine';
 import type { MenuPanel } from '../types';
+import type { UIRenderContext } from './UIRenderContext';
 
 import { createButton, createPanelTitle, registerFocusableButton } from './UIComponents';
 
@@ -18,18 +18,17 @@ export class HistoryPanel implements MenuPanel {
         this.config = { maxLines: 50, ...config };
     }
 
-    build(engine: Engine, onClose: () => void) {
-        const overlay = engine.overlay;
-        const context = overlay.getUIContext();
+    build(renderContext: UIRenderContext, onClose: () => void) {
+        const context = renderContext.uiContext;
         const cfg = context.overlayConfig;
         const w = context.canvasWidth;
         const h = context.canvasHeight;
-        const focus = overlay.focus;
+        const focus = renderContext.focus;
 
-        const root = overlay.createPanelBase();
+        const root = renderContext.createPanelBase();
         root.addChild(createPanelTitle(context, 'HISTORY'));
 
-        const entries = engine.history.getRecent(this.config.maxLines);
+        const entries = renderContext.history.getRecent(this.config.maxLines);
         const padding = 40;
         const lineHeight = 30;
         const backMargin = 20;
@@ -101,7 +100,7 @@ export class HistoryPanel implements MenuPanel {
             event.preventDefault();
             applyScroll(-event.deltaY);
         };
-        engine.app.canvas.addEventListener('wheel', onWheel, { passive: false });
+        renderContext.canvasElement.addEventListener('wheel', onWheel, { passive: false });
 
         // Keyboard/gamepad scroll via navigate
         focus.onNavigateRaw = (direction: 'down' | 'left' | 'right' | 'up') => {
@@ -122,7 +121,7 @@ export class HistoryPanel implements MenuPanel {
         registerFocusableButton(context, focus, backButton, onClose);
 
         return {
-            cleanup: () => engine.app.canvas.removeEventListener('wheel', onWheel),
+            cleanup: () => renderContext.canvasElement.removeEventListener('wheel', onWheel),
             container: root,
         };
     }

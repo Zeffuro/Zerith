@@ -13,7 +13,18 @@ export function normalizeNode(node: unknown): unknown {
     if (!node || typeof node !== 'object') return node;
 
     const next: Record<string, unknown> = { ...(node as Record<string, unknown>) };
-    if (next.type === 'if' && !Array.isArray(next.else)) next.else = [];
+    if (next.type === 'if') {
+        if (Array.isArray(next.then) && !Array.isArray(next.onTrue)) {
+            next.onTrue = next.then;
+        }
+        if (Array.isArray(next.else) && !Array.isArray(next.onFalse)) {
+            next.onFalse = next.else;
+        }
+        delete next.then;
+        delete next.else;
+        if (!Array.isArray(next.onTrue)) next.onTrue = [];
+        if (!Array.isArray(next.onFalse)) next.onFalse = [];
+    }
 
     if (next.type === 'while') {
         if (!Array.isArray(next.body)) next.body = [];
@@ -29,7 +40,8 @@ export function normalizeNode(node: unknown): unknown {
         if (next.step === undefined || next.step === 0) next.step = 1;
     }
 
-    if (Array.isArray(next.else)) next.else = next.else.map((child) => normalizeNode(child));
+    if (Array.isArray(next.onTrue)) next.onTrue = next.onTrue.map((child) => normalizeNode(child));
+    if (Array.isArray(next.onFalse)) next.onFalse = next.onFalse.map((child) => normalizeNode(child));
     if (Array.isArray(next.body)) next.body = next.body.map((child) => normalizeNode(child));
     
     // Process options for choice command

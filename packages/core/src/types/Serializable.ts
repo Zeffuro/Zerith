@@ -1,8 +1,8 @@
 export type Serializable =
-    | string
-    | number
+    | { [key: string]: Serializable }
     | boolean
     | null
+    | number
     | Serializable[]
-    | { [key: string]: Serializable };
+    | string;
 

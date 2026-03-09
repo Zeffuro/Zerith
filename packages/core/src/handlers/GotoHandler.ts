@@ -1,4 +1,4 @@
-import type { ExecutionContext } from '../execution/ExecutionContext';
+import type { SceneTemplateContext } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface GotoCommand extends BaseCommand {
@@ -6,12 +6,13 @@ export interface GotoCommand extends BaseCommand {
     type: 'goto';
 }
 
-export class GotoHandler implements CommandHandler<GotoCommand> {
+export class GotoHandler implements CommandHandler<GotoCommand, SceneTemplateContext> {
     public autoNext = true;
     public type = 'goto' as const;
 
-    execute = (command: GotoCommand, engine: ExecutionContext) => {
-        const script = engine.scenes.script;
+    execute = (command: GotoCommand, engine: SceneTemplateContext) => {
+        const scenes = engine.getSystem('scenes');
+        const script = scenes.script;
         const targetIndex = script.findIndex(
             (cmd) => cmd.type === 'label' && (cmd as unknown as { name: string }).name === command.label
         );
@@ -19,7 +20,7 @@ export class GotoHandler implements CommandHandler<GotoCommand> {
         if (targetIndex === -1) {
             engine.logger.warn(`Label '${command.label}' not found.`);
         } else {
-            engine.scenes.currentIndex = targetIndex;
+            scenes.currentIndex = targetIndex;
         }
         return Promise.resolve();
     };

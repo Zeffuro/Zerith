@@ -1,4 +1,4 @@
-import type { ExecutionContext } from '../execution/ExecutionContext';
+import type { CommandExecutionContext, ExecutionContext } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandType } from '../types/Commands';
 
 export type CommandHandlerConstructor =
@@ -10,15 +10,18 @@ export type CommandHandlerProvider =
 
 export type CommandHandlerRegistry = Map<CommandType, RegisteredCommandHandler>;
 
-export interface ICommandHandler<T extends BaseCommand = BaseCommand> {
+export interface ICommandHandler<
+    T extends BaseCommand = BaseCommand,
+    C = ExecutionContext,
+> {
     autoNext?: boolean;
     destroy?(): Promise<void> | void;
-    execute(command: T, context: ExecutionContext): Promise<void> | void;
-    init?(context: ExecutionContext): Promise<void> | void;
+    execute(command: T, context: C): Promise<void> | void;
+    init?(context: C): Promise<void> | void;
     reset?(): void;
     type: T['type'];
 }
 
-export type RegisteredCommandHandler = ICommandHandler<BaseCommand>;
+export type RegisteredCommandHandler = ICommandHandler<BaseCommand, CommandExecutionContext>;
 
 

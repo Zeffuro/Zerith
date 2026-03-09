@@ -41,7 +41,6 @@ import { WhileInspector } from '../components/inspector/WhileInspector';
 
 const FALLBACK_ICON = (size: number) => <Gamepad2 color="#94a3b8" size={size} />;
 const titleCase = (s: string) => s.replaceAll('_', ' ').replaceAll(/\b\w/g, (c) => c.toUpperCase());
-const thenKey = ['th', 'en'].join('');
 
 const asRecord = (value: unknown): Record<string, unknown> | undefined =>
     value && typeof value === 'object' ? (value as Record<string, unknown>) : undefined;
@@ -158,19 +157,19 @@ const PLUGIN_OVERRIDES: Partial<Record<EditorCommandType, Partial<CommandPlugin>
     if: {
         createDefault: () => {
             const command: Record<string, unknown> = {
-                else: [],
                 key: '',
+                onFalse: [],
+                onTrue: [],
                 op: 'eq',
                 source: 'variable',
                 type: 'if',
                 value: true,
             };
-            Reflect.set(command, thenKey, []);
             return command as EditorNodeByType<'if'>;
         },
         getBranches: (n) => [
-            { label: 'THEN', nodes: readArray<PluginNode>(n, thenKey), path: [thenKey] },
-            { label: 'ELSE', nodes: readArray<PluginNode>(n, 'else'), path: ['else'] },
+            { label: 'ON TRUE', nodes: readArray<PluginNode>(n, 'onTrue'), path: ['onTrue'] },
+            { label: 'ON FALSE', nodes: readArray<PluginNode>(n, 'onFalse'), path: ['onFalse'] },
         ],
         getSummary: (n) => readString(n, 'key'),
         icon: (s) => <GitFork color="#4ec9b0" size={s} />,

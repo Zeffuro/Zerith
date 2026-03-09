@@ -1,4 +1,6 @@
-import type { Application } from 'pixi.js';
+import { Application, Container } from 'pixi.js';
+
+import type { DisplayLayerName } from '../interfaces/managers';
 
 export interface DisplayConfig {
     backgroundColor: number;
@@ -18,15 +20,28 @@ export class DisplayManager {
     public canvas: HTMLCanvasElement | undefined;
     public get height(): number { return this.config.height; }
     public get width(): number { return this.config.width; }
-    private app: Application;
+    private readonly app: Application;
     private boundApplyScale: (() => void) | undefined;
 
     private config: DisplayConfig;
+    private readonly layers: Record<DisplayLayerName, Container> = {
+        background: new Container(),
+        overlay: new Container(),
+        sprites: new Container(),
+        ui: new Container(),
+    };
+
     private resizeObserver: ResizeObserver | undefined;
 
-    constructor(app: Application, config: Partial<DisplayConfig> = {}) {
-        this.app = app;
+    constructor(config: Partial<DisplayConfig> = {}) {
+        this.app = new Application();
         this.config = { ...DefaultDisplayConfig, ...config };
+    }
+
+    public clearLayers() {
+        for (const layer of Object.values(this.layers)) {
+            for (const child of layer.removeChildren()) child.destroy({ children: true });
+        }
     }
 
     public destroy() {
@@ -36,6 +51,10 @@ export class DisplayManager {
         this.resizeObserver?.disconnect();
         this.resizeObserver = undefined;
         this.boundApplyScale = undefined;
+    }
+
+    public getLayer(name: DisplayLayerName): Container {
+        return this.layers[name];
     }
 
     public async init(canvas: HTMLCanvasElement) {
@@ -49,6 +68,13 @@ export class DisplayManager {
             resolution: window.devicePixelRatio || 1,
             width: this.config.width
         });
+
+        this.app.stage.addChild(
+            this.layers.background,
+            this.layers.sprites,
+            this.layers.ui,
+            this.layers.overlay
+        );
 
         if (this.config.scaleMode !== 'fixed') {
             this.boundApplyScale = () => this.applyScale();

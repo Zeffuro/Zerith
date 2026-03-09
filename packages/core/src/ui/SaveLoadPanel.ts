@@ -1,7 +1,7 @@
 import { Container, type FederatedPointerEvent, Graphics, Text } from 'pixi.js';
 
-import type { Engine } from '../Engine';
 import type { MenuPanel } from '../types';
+import type { UIRenderContext } from './UIRenderContext';
 
 import { createButton, createPanelTitle, registerFocusableButton } from './UIComponents';
 
@@ -22,18 +22,17 @@ export class SaveLoadPanel implements MenuPanel {
         this.config = { maxSlots: 6, ...config };
     }
 
-    build(engine: Engine, onClose: () => void) {
-        const overlay = engine.overlay;
-        const context = overlay.getUIContext();
+    build(renderContext: UIRenderContext, onClose: () => void) {
+        const context = renderContext.uiContext;
         const cfg = context.overlayConfig;
         const w = context.canvasWidth;
         const h = context.canvasHeight;
-        const focus = overlay.focus;
+        const focus = renderContext.focus;
 
-        const root = overlay.createPanelBase();
+        const root = renderContext.createPanelBase();
         root.addChild(createPanelTitle(context, this.mode === 'save' ? 'SAVE GAME' : 'LOAD GAME'));
 
-        const slots = engine.saves.listSlots(this.config.maxSlots);
+        const slots = renderContext.saves.listSlots(this.config.maxSlots);
         const slotHeight = 55;
         const slotSpacing = 8;
         const slotWidth = Math.min(600, w * 0.8);
@@ -82,14 +81,19 @@ export class SaveLoadPanel implements MenuPanel {
 
             const activateSlot = () => {
                 if (this.mode === 'save') {
-                    void engine.saves.save(slotNumber);
-                    engine.notifications.show(`Saved to Slot ${slotNumber}`);
-                    engine.overlay.close();
+                    void renderContext.saves.save(slotNumber);
+                    renderContext.notifications.show(`Saved to Slot ${slotNumber}`);
+                    renderContext.closeOverlay();
                 } else {
-                    if (!meta) { engine.notifications.show('Slot is empty'); return; }
-                    void engine.saves.load(slotNumber).then(() => {
-                        engine.notifications.show(`Loaded Slot ${slotNumber}`);
-                        engine.overlay.close();
+                    if (!meta) { renderContext.notifications.show('Slot is empty'); return; }
+                    void renderContext.saves.load(slotNumber).then(async (saveState) => {
+                        if (!saveState) {
+                            renderContext.notifications.show('Failed to load save');
+                            return;
+                        }
+                        await renderContext.applySaveState(saveState);
+                        renderContext.notifications.show(`Loaded Slot ${slotNumber}`);
+                        renderContext.closeOverlay();
                     });
                 }
             };

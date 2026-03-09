@@ -97,12 +97,11 @@ const ConditionSchema = z.object({
 export const IfCommandSchema = z.object({
     all: z.array(ConditionSchema).optional(),
     any: z.array(ConditionSchema).optional(),
-    else: z.array(z.lazy(() => CommandSchema)).optional(),
     key: z.string().optional(),
+    onFalse: z.array(z.lazy(() => CommandSchema)).optional(),
+    onTrue: z.array(z.lazy(() => CommandSchema)).optional(),
     op: ComparisonOpSchema.optional(),
     source: z.string().optional(),
-    // eslint-disable-next-line unicorn/no-thenable
-    then: z.array(z.lazy(() => CommandSchema)).optional(),
     type: z.literal('if'),
     value: z.any().optional(),
 });

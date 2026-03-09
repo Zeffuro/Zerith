@@ -2,11 +2,9 @@ import type { BaseCommand, SceneMap, Script } from '../../types';
 import type { IBaseManager } from './IBaseManager';
 
 export interface ISceneManager extends IBaseManager {
+    addScene(name: string, script: Script): void;
     currentIndex: number;
     currentSceneName: string;
-    readonly script: Script;
-    readonly scriptLength: number;
-    addScene(name: string, script: Script): void;
     getCommandAt(index: number): BaseCommand | undefined;
     getLastOriginalIndex(runtimeIndex: number): number;
     getOriginalIndex(runtimeIndex: number): number;
@@ -16,5 +14,7 @@ export interface ISceneManager extends IBaseManager {
     jumpToScene(sceneName: string, startIndex?: number): Promise<void>;
     loadScenes(scenes: SceneMap): void;
     registerTemplate(name: string, script: Script): void;
+    readonly script: Script;
+    readonly scriptLength: number;
 }
 

@@ -57,6 +57,7 @@ export * from './ui/SaveLoadPanel';
 export * from './ui/SettingsPanel';
 /* UI */
 export * from './ui/UIComponents';
+export * from './ui/UIRenderContext';
 
 export * from './utils/ChromaKey';
 export * from './utils/ManifestResolver';

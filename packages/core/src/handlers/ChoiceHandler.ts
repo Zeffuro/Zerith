@@ -1,6 +1,6 @@
 import { Container, FederatedPointerEvent, Graphics, Text, type TextStyleOptions } from 'pixi.js';
 
-import type { ExecutionContext } from '../execution/ExecutionContext';
+import type { ChoiceInteractionContext } from '../execution/ExecutionContext';
 import type { NavigationDirection } from '../interfaces/managers';
 import type { BaseCommand, CommandHandler } from '../types';
 
@@ -25,7 +25,7 @@ export interface ChoiceOption {
     label: string;
 }
 
-export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
+export class ChoiceHandler implements CommandHandler<ChoiceCommand, ChoiceInteractionContext> {
     public autoNext = true;
     public type = 'choice' as const;
     private config: Required<ChoiceConfig>;
@@ -44,12 +44,15 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
         };
     }
 
-    execute = (command: ChoiceCommand, engine: ExecutionContext): Promise<void> => {
+    execute = (command: ChoiceCommand, engine: ChoiceInteractionContext): Promise<void> => {
         return new Promise((resolve) => {
+            const display = engine.getSystem('display');
+            const events = engine.getSystem('events');
+            const scenes = engine.getSystem('scenes');
             const choiceContainer = new Container();
 
-            const w = engine.display.width;
-            const h = engine.display.height;
+            const w = display.width;
+            const h = display.height;
 
             const buttonWidth = Math.min(600, w * 0.75);
             const buttonHeight = 60;
@@ -79,7 +82,7 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
 
                 const option = command.options[selectedIndex];
                 if (option.commands) {
-                    engine.scenes.injectCommands(option.commands);
+                    scenes.injectCommands(option.commands);
                 }
                 requestAnimationFrame(() => {
                     engine.consumeSkip();
@@ -137,15 +140,15 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
                 confirmSelection();
             };
 
-            engine.events.on('input:navigate', onNavigate);
-            engine.events.on('input:confirm', onConfirm);
+            events.on('input:navigate', onNavigate);
+            events.on('input:confirm', onConfirm);
 
             const cleanup = () => {
-                engine.events.off('input:navigate', onNavigate);
-                engine.events.off('input:confirm', onConfirm);
+                events.off('input:navigate', onNavigate);
+                events.off('input:confirm', onConfirm);
             };
 
-            engine.layers.ui.addChild(choiceContainer);
+            engine.getLayer('ui').addChild(choiceContainer);
         });
     };
 

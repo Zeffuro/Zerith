@@ -58,8 +58,8 @@ export class AssetManager {
                 }
                 if (cmd.type === 'if') {
                     const ifCmd = cmd as IfCommand;
-                    if (Array.isArray(ifCmd.then)) walk(ifCmd.then);
-                    if (Array.isArray(ifCmd.else)) walk(ifCmd.else);
+                    if (Array.isArray(ifCmd.onTrue)) walk(ifCmd.onTrue);
+                    if (Array.isArray(ifCmd.onFalse)) walk(ifCmd.onFalse);
                 }
                 if (cmd.type === 'while') {
                     const whileCmd = cmd as WhileCommand;

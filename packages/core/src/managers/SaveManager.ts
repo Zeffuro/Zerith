@@ -1,8 +1,17 @@
-import type { Engine } from '../Engine';
 import type { SpriteState } from '../handlers/SpriteHandler';
 import type { Serializable, SystemState } from '../types';
 
 import { createDefaultSystemState } from '../types';
+
+export interface SaveContext {
+    getCurrentSceneName(): string;
+    getLastSavePoint(): number;
+    getStateSnapshot(): Record<string, Serializable>;
+    getSystemSnapshot(): SystemState;
+    logInfo(message: string): void;
+    logWarn(message: string): void;
+    serializeItems(): string[];
+}
 
 export interface SaveMeta {
     label?: string;
@@ -29,17 +38,17 @@ const LEGACY_SYSTEM_KEYS = new Set([
 ]);
 
 export class SaveManager {
-    private engine: Engine;
+    private readonly context: SaveContext;
     private readonly prefix: string;
 
-    constructor(engine: Engine, prefix: string = 'zerith_save') {
-        this.engine = engine;
+    constructor(context: SaveContext, prefix: string = 'zerith_save') {
+        this.context = context;
         this.prefix = prefix;
     }
 
     public deleteSlot(slot: number) {
         localStorage.removeItem(`${this.prefix}_${slot}`);
-        this.engine.logger.info(`Save slot ${slot} deleted`);
+        this.context.logInfo(`Save slot ${slot} deleted`);
     }
 
     public getMeta(slot: number): SaveMeta | undefined {
@@ -70,87 +79,44 @@ export class SaveManager {
         return slots;
     }
 
-    public async load(slot: number = 1) {
+    public load(slot: number = 1): Promise<SaveState | undefined> {
         const saveString = localStorage.getItem(`${this.prefix}_${slot}`);
         if (!saveString) {
-            this.engine.logger.warn(`No save found in slot ${slot}`);
-            return;
+            this.context.logWarn(`No save found in slot ${slot}`);
+            return Promise.resolve<SaveState | undefined>(void 0);
         }
 
         const saveData = this.parseSaveState(saveString);
         if (!saveData) {
-            this.engine.logger.warn(`Save data in slot ${slot} is invalid`);
-            return;
+            this.context.logWarn(`Save data in slot ${slot} is invalid`);
+            return Promise.resolve<SaveState | undefined>(void 0);
         }
-        this.engine.logger.info(`Loading save from slot ${slot}...`);
-
-        this.engine.clear();
-
-        this.engine.stateManager.replaceState(saveData.state, saveData.system);
-        if (saveData.system.items.length > 0) {
-            this.engine.items.deserialize(saveData.system.items);
-        }
-
-        const bgUrl = saveData.system.background;
-        if (bgUrl) await this.engine.runCommand({ assetUrl: bgUrl, type: 'background' });
-
-        const bgmUrl = saveData.system.bgm;
-        if (bgmUrl) await this.engine.runCommand({ action: 'play', assetUrl: bgmUrl, type: 'bgm' });
-
-        for (const [id, s] of Object.entries(saveData.system.sprites)) {
-            await this.engine.runCommand({
-                action: 'show',
-                anchorX: s.anchorX,
-                anchorY: s.anchorY,
-                assetUrl: s.assetUrl,
-                flip: s.flip,
-                id,
-                pose: s.pose,
-                scaleX: s.scaleX,
-                scaleY: s.scaleY,
-                transition: 'instant',
-                type: 'sprite',
-                x: s.x,
-                y: s.y,
-            });
-
-            if (s.animation) {
-                await this.engine.runCommand({
-                    action: 'animate',
-                    animation: s.animation,
-                    id,
-                    type: 'sprite',
-                });
-            }
-        }
-
-        await this.engine.scenes.jumpToScene(saveData.sceneName, saveData.index);
-        if (this.engine.isStarted) {
-            await this.engine.playNext();
-        }
+        this.context.logInfo(`Loading save from slot ${slot}...`);
+        return Promise.resolve(saveData);
     }
 
     public save(slot: number = 1, label?: string) {
+        const currentSceneName = this.context.getCurrentSceneName();
         const meta: SaveMeta = {
             label,
             savedAt: Date.now(),
-            sceneName: this.engine.currentSceneName,
+            sceneName: currentSceneName,
             slot
         };
 
         const saveData: SaveState = {
-            index: this.engine.lastSavePoint,
+            index: this.context.getLastSavePoint(),
             meta,
-            sceneName: this.engine.currentSceneName,
-            state: structuredClone(this.engine.stateManager.state),
+            sceneName: currentSceneName,
+            state: structuredClone(this.context.getStateSnapshot()),
             system: {
-                ...structuredClone(this.engine.stateManager.system),
-                items: this.engine.items.serialize(),
+                ...structuredClone(this.context.getSystemSnapshot()),
+                items: this.context.serializeItems(),
             },
         };
 
         localStorage.setItem(`${this.prefix}_${slot}`, JSON.stringify(saveData));
-        this.engine.logger.info(`Game saved to slot ${slot}`);
+        this.context.logInfo(`Game saved to slot ${slot}`);
     }
 
     private isRecord(value: unknown): value is Record<string, unknown> {

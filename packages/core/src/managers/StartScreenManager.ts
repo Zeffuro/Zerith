@@ -1,6 +1,6 @@
 import { Container, Graphics, Text, type TextStyleFontWeight } from 'pixi.js';
 
-import type { Engine } from '../Engine';
+import type { IDisplayManager, IEventBus, ISceneManager } from '../interfaces/managers';
 
 export interface StartScreenConfig {
     backgroundAlpha?: number;
@@ -15,12 +15,20 @@ export interface StartScreenConfig {
     textColor?: number;
 }
 
+export interface StartScreenDeps {
+    display: Pick<IDisplayManager, 'height' | 'width'>;
+    events: Pick<IEventBus, 'off' | 'on'>;
+    onStart: () => void;
+    overlayLayer: Container;
+    scenes: Pick<ISceneManager, 'jumpToScene'>;
+}
+
 export class StartScreenManager {
     private readonly config: Required<StartScreenConfig>;
-    private engine: Engine;
+    private readonly deps: StartScreenDeps;
 
-    constructor(engine: Engine, config: StartScreenConfig = {}) {
-        this.engine = engine;
+    constructor(deps: StartScreenDeps, config: StartScreenConfig = {}) {
+        this.deps = deps;
         this.config = {
             backgroundAlpha: 0.85,
             backgroundColor: 0x00_00_00,
@@ -43,8 +51,9 @@ export class StartScreenManager {
      * so this should be the standard entry point.
      */
     public show(startScene: string): Promise<void> {
-        const w = this.engine.display.width;
-        const h = this.engine.display.height;
+        const { display, events, onStart: beginGame, overlayLayer, scenes } = this.deps;
+        const w = display.width;
+        const h = display.height;
         const cfg = this.config;
 
         const startLayer = new Container();
@@ -67,7 +76,7 @@ export class StartScreenManager {
         startLayer.addChild(overlayBg, startTxt);
         startLayer.eventMode = 'static';
         startLayer.cursor = 'pointer';
-        this.engine.layers.overlay.addChild(startLayer);
+        overlayLayer.addChild(startLayer);
 
         const { pulseMax, pulseMin, pulseSpeed } = cfg;
         const pulseRange = pulseMax - pulseMin;
@@ -79,21 +88,21 @@ export class StartScreenManager {
         requestAnimationFrame(animate);
 
         return new Promise<void>((resolve) => {
-            const onStart = () => {
+            const startGame = () => {
                 startLayer.destroy({ children: true });
-                void this.engine.scenes.jumpToScene(startScene).then(() => {
-                    this.engine.start();
+                void scenes.jumpToScene(startScene).then(() => {
+                    beginGame();
                     resolve();
                 });
             };
 
-            startLayer.on('pointerdown', onStart);
+            startLayer.on('pointerdown', startGame);
 
             const onKeyStart = () => {
-                this.engine.events.off('input:start', onKeyStart);
-                onStart();
+                events.off('input:start', onKeyStart);
+                startGame();
             };
-            this.engine.events.on('input:start', onKeyStart);
+            events.on('input:start', onKeyStart);
         });
     }
 }

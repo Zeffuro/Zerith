@@ -1,3 +1,4 @@
+import type { ExecutionContext } from '../execution/ExecutionContext';
 import type { ICommandHandler } from '../interfaces/ICommandHandler';
 
 export const BuiltInCommandTypes = [
@@ -29,7 +30,10 @@ export interface BaseCommand {
     type: CommandType;
 }
 
-export type CommandHandler<T extends BaseCommand = BaseCommand> = ICommandHandler<T>;
+export type CommandHandler<
+    T extends BaseCommand = BaseCommand,
+    C = ExecutionContext,
+> = ICommandHandler<T, C>;
 
 export type CommandType = ({} & string) | typeof BuiltInCommandTypes[number];
 

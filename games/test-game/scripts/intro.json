@@ -31,10 +31,10 @@
     "type": "if",
     "source": "items",
     "key": "attorney_badge",
-    "then": [
+    "onTrue": [
       { "type": "dialogue", "speaker": "phoenix", "text": "(Good, I have my badge on me.)" }
     ],
-    "else": [
+    "onFalse": [
       { "type": "dialogue", "speaker": "phoenix", "text": "(I hope I don't need my badge today...)" }
     ]
   },

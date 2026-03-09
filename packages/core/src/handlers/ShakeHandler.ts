@@ -1,6 +1,6 @@
 import gsap from 'gsap';
 
-import type { ExecutionContext } from '../execution/ExecutionContext';
+import type { ContextWithLayers } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface ShakeCommand extends BaseCommand {
@@ -10,14 +10,14 @@ export interface ShakeCommand extends BaseCommand {
     wait?: boolean;
 }
 
-export class ShakeHandler implements CommandHandler<ShakeCommand> {
+export class ShakeHandler implements CommandHandler<ShakeCommand, ContextWithLayers> {
     public autoNext = true;
     public type = 'shake' as const;
 
-    execute = async (command: ShakeCommand, engine: ExecutionContext) => {
+    execute = async (command: ShakeCommand, engine: ContextWithLayers) => {
         const duration = (command.duration ?? 500) / 1000;
         const intensity = command.intensity ?? 10;
-        const targets = [engine.layers.background, engine.layers.sprites];
+        const targets = [engine.getLayer('background'), engine.getLayer('sprites')];
 
         const tl = gsap.timeline();
 

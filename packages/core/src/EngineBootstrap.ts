@@ -55,11 +55,11 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
     engine.setManifest({ ...manifest, characters });
 
     if (preloadAssets) {
-        await engine.assets.preloadCharacterAssets(characters);
+        await engine.getSystem('assets').preloadCharacterAssets(characters);
     }
 
     if (Object.keys(items).length > 0) {
-        engine.items.loadDefinitions(items);
+        engine.getSystem('items').loadDefinitions(items);
     }
 
     engine.registerHandlers(BuiltInHandlers);
@@ -75,11 +75,12 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
     }));
 
     if (Object.keys(macros).length > 0) {
-        for (const [name, script] of Object.entries(macros)) engine.scenes.registerTemplate(name, script);
+        const scenesSystem = engine.getSystem('scenes');
+        for (const [name, script] of Object.entries(macros)) scenesSystem.registerTemplate(name, script);
     }
     
     if (Object.keys(scenes).length > 0) {
-        engine.scenes.loadScenes(scenes);
+        engine.getSystem('scenes').loadScenes(scenes);
     }
 
     if (engine.config.debug) {
@@ -94,22 +95,67 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
 
 function createDefaultEngineDeps(engine: Engine, config: EngineConfig): EngineDeps {
     const events = new EventBus();
-    // Ensure managers that subscribe in constructor see the final bus instance.
-    engine.events = events;
+    engine.registerSystem('events', events);
 
     const audio = new AudioManager(config.audio);
-    const display = new DisplayManager(engine.app, config.display);
-    const input = new InputManager(engine, config.input);
-    const scenes = new SceneManager(engine);
-    const saves = new SaveManager(engine);
-    const notifications = new NotificationManager(engine, config.notifications);
-    const startScreen = new StartScreenManager(engine, config.startScreen);
+    const display = new DisplayManager(config.display);
     const history = new HistoryManager();
     const items = new EvidenceManager();
     const state = new StateManager();
     const spritesheets = new SpritesheetManager();
     const assets = new AssetManager(spritesheets);
-    const overlay = new OverlayManager(engine, config.overlay);
+    const input = new InputManager(events, {
+        get isOverlayOpen() {
+            return engine.getSystem('overlay').isOpen;
+        },
+        get isStarted() {
+            return engine.isStarted;
+        },
+    }, config.input);
+    const scenes = new SceneManager({
+        assets,
+        events,
+        logger: engine.logger,
+    });
+    const saves = new SaveManager({
+        getCurrentSceneName: () => engine.currentSceneName,
+        getLastSavePoint: () => engine.lastSavePoint,
+        getStateSnapshot: () => engine.state,
+        getSystemSnapshot: () => state.system,
+        logInfo: (message) => engine.logger.info(message),
+        logWarn: (message) => engine.logger.warn(message),
+        serializeItems: () => items.serialize(),
+    });
+    const notifications = new NotificationManager({
+        display,
+        getTheme: () => engine.theme,
+        overlayLayer: display.getLayer('overlay'),
+    }, config.notifications);
+    const startScreen = new StartScreenManager({
+        display,
+        events,
+        onStart: () => engine.start(),
+        overlayLayer: display.getLayer('overlay'),
+        scenes,
+    }, config.startScreen);
+    const overlay = new OverlayManager({
+        audio,
+        display,
+        events,
+        getAutoAdvanceDelay: () => engine.autoAdvanceDelay,
+        getCanvasElement: () => display.canvas,
+        getHandler: (type) => engine.getHandler(type),
+        getTheme: () => engine.theme,
+        history,
+        items,
+        loadAsset: <T = unknown>(url: string) => engine.loadAsset<T>(url),
+        loadState: (saveState) => engine.applySaveState(saveState),
+        notifications,
+        overlayLayer: display.getLayer('overlay'),
+        saves,
+        setAutoAdvance: (delayMs) => engine.setAutoAdvance(delayMs),
+        state,
+    }, config.overlay);
 
     return {
         assets,

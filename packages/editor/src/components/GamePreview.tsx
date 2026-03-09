@@ -39,7 +39,7 @@ export function GamePreview({ script }: { script: Script }) {
     useEffect(() => {
         scriptReference.current = script;
 
-        if (engineReference.current) engineReference.current.scenes.addScene('preview', script);
+        if (engineReference.current) engineReference.current.getSystem('scenes').addScene('preview', script);
     }, [script]);
 
     useEffect(() => {
@@ -76,11 +76,12 @@ export function GamePreview({ script }: { script: Script }) {
             scenes: bootstrapScenes,
         }).then(engine => {
             if (destroyed) { engine.destroy(); return; }
-            engine.stateManager.setPersistent('projectPath', projectPath);
+            engine.getSystem('state').setPersistent('projectPath', projectPath);
             engineReference.current = engine;
             engine.setInputEnabled(false);
-            engine.scenes.addScene('preview', scriptReference.current);
-            void engine.scenes.jumpToScene('preview');
+            const scenes = engine.getSystem('scenes');
+            scenes.addScene('preview', scriptReference.current);
+            void scenes.jumpToScene('preview');
         });
         return () => { destroyed = true; engineReference.current?.destroy(); engineReference.current = undefined; };
     }, [projectPath, manifest]);
@@ -90,9 +91,10 @@ export function GamePreview({ script }: { script: Script }) {
         if (engineReference.current && playTrigger > 0) {
             const startIndex = typeof playFromIndexReference.current === 'number' ? playFromIndexReference.current : 0;
             engineReference.current.clear();
+            const scenes = engineReference.current.getSystem('scenes');
              
-            engineReference.current.scenes.addScene('preview', scriptReference.current);
-            void engineReference.current.scenes.jumpToScene('preview', startIndex);
+            scenes.addScene('preview', scriptReference.current);
+            void scenes.jumpToScene('preview', startIndex);
             void engineReference.current.start();
             containerReference.current?.focus();
         }
@@ -101,9 +103,10 @@ export function GamePreview({ script }: { script: Script }) {
     useEffect(() => {
         if (engineReference.current && stopTrigger > 0) {
             engineReference.current.clear();
+            const scenes = engineReference.current.getSystem('scenes');
              
-            engineReference.current.scenes.addScene('preview', scriptReference.current);
-            void engineReference.current.scenes.jumpToScene('preview', 0);
+            scenes.addScene('preview', scriptReference.current);
+            void scenes.jumpToScene('preview', 0);
             containerReference.current?.blur();
         }
     }, [stopTrigger]);
@@ -111,7 +114,7 @@ export function GamePreview({ script }: { script: Script }) {
     // Mute
     useEffect(() => {
         if (engineReference.current) {
-            engineReference.current.audio.muted = isMuted;
+            engineReference.current.getSystem('audio').muted = isMuted;
         }
     }, [isMuted]);
 

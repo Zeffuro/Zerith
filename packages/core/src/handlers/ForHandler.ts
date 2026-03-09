@@ -1,4 +1,4 @@
-import type { ExecutionContext } from '../execution/ExecutionContext';
+import type { FlowStateContext } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface ForCommand extends BaseCommand {
@@ -10,11 +10,11 @@ export interface ForCommand extends BaseCommand {
     type: 'for';
 }
 
-export class ForHandler implements CommandHandler<ForCommand> {
+export class ForHandler implements CommandHandler<ForCommand, FlowStateContext> {
     public autoNext = true;
     public type = 'for' as const;
 
-    execute = async (command: ForCommand, engine: ExecutionContext) => {
+    execute = async (command: ForCommand, engine: FlowStateContext) => {
         const iterator = command.iterator ?? 'i';
         const from = Number(command.from ?? 0);
         const to = Number(command.to ?? 0);

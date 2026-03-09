@@ -1,5 +1,11 @@
-import type { Engine } from '../Engine';
+import type { IAssetManager, IEventBus } from '../interfaces/managers';
 import type { BaseCommand, RuntimeEntry, SceneMap, Script } from '../types';
+
+export interface SceneManagerDeps {
+    assets: Pick<IAssetManager, 'preloadSceneAssets'>;
+    events: Pick<IEventBus, 'emit'>;
+    logger: { error(message: string): void };
+}
 
 export class SceneManager {
     public currentIndex: number = 0;
@@ -11,15 +17,15 @@ export class SceneManager {
         return this.runtimeScript.length;
     }
 
-    private engine: Engine;
+    private readonly deps: SceneManagerDeps;
     private runtimeScript: RuntimeEntry[] = [];
 
     private scenes: SceneMap = {};
 
     private templates: Map<string, Script> = new Map();
 
-    constructor(engine: Engine) {
-        this.engine = engine;
+    constructor(deps: SceneManagerDeps) {
+        this.deps = deps;
     }
 
     public addScene(name: string, script: Script) {
@@ -52,18 +58,19 @@ export class SceneManager {
     }
 
     public injectCommands(commands: BaseCommand[]) {
-        const injectedEntries: RuntimeEntry[] = commands.map((command) => ({ kind: 'injected', command }));
+        const injectedEntries: RuntimeEntry[] = commands.map((command) => ({ command, kind: 'injected' }));
         this.runtimeScript.splice(this.currentIndex, 0, ...injectedEntries);
     }
 
     public async jumpToScene(sceneName: string, startIndex: number = 0) {
+        const { assets, events, logger } = this.deps;
         if (!this.scenes[sceneName]) {
-            this.engine.logger.error(`Scene '${sceneName}' missing.`);
+            logger.error(`Scene '${sceneName}' missing.`);
             return;
         }
-        this.engine.events.emit('scene:loading', sceneName);
+        events.emit('scene:loading', sceneName);
         try {
-            await this.engine.assets.preloadSceneAssets(this.scenes[sceneName]);
+            await assets.preloadSceneAssets(this.scenes[sceneName]);
 
             this.currentSceneName = sceneName;
             this.runtimeScript = this.scenes[sceneName].map((command, originalIndex) => ({
@@ -73,7 +80,7 @@ export class SceneManager {
             }));
             this.currentIndex = startIndex;
         } finally {
-            this.engine.events.emit('scene:loaded', sceneName);
+            events.emit('scene:loaded', sceneName);
         }
     }
 

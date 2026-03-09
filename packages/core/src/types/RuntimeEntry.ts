@@ -1,6 +1,6 @@
 import type { BaseCommand } from './Commands';
 
 export type RuntimeEntry =
-    | { kind: 'original'; originalIndex: number; command: BaseCommand }
-    | { kind: 'injected'; command: BaseCommand };
+    | { command: BaseCommand; kind: 'injected' }
+    | { command: BaseCommand; kind: 'original'; originalIndex: number };
 

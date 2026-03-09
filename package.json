@@ -7,7 +7,8 @@
   "scripts": {
     "dev:player": "npm run dev --workspace=player",
     "dev:editor": "npm run tauri dev --workspace=editor",
-    "lint": "eslint \"packages/**/*.{ts,tsx}\" --max-warnings 0"
+    "lint": "eslint \"packages/**/*.{ts,tsx}\" --max-warnings 0",
+    "lint:fix": "eslint \"packages/**/*.{ts,tsx}\" --max-warnings 0 --fix"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

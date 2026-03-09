@@ -2,7 +2,8 @@ import type { TextStyleOptions } from 'pixi.js';
 
 import { sound } from '@pixi/sound';
 
-import type { ExecutionContext } from '../execution/ExecutionContext';
+import type { DialogueExecutionContext } from '../execution/ExecutionContext';
+import type { IEventBus } from '../interfaces/managers';
 import type { CharacterDefinition } from '../types';
 import type { CommandHandler } from '../types';
 import type { BaseCommand } from '../types';
@@ -36,7 +37,7 @@ export interface DialogueConfig {
     typewriterSpeed?: number;
 }
 
-export class DialogueHandler implements CommandHandler<DialogueCommand> {
+export class DialogueHandler implements CommandHandler<DialogueCommand, DialogueExecutionContext> {
     public autoNext = false;
     public type = 'dialogue' as const;
     private activeAbortController: AbortController | undefined;
@@ -50,7 +51,11 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         this.typewriter = new TypewriterController();
     }
 
-    execute = async (command: DialogueCommand, engine: ExecutionContext) => {
+    execute = async (command: DialogueCommand, engine: DialogueExecutionContext) => {
+        const audio = engine.getSystem('audio');
+        const events = engine.getSystem('events');
+        const history = engine.getSystem('history');
+        const state = engine.getSystem('state');
         this.activeAbortController?.abort();
         const abortController = new AbortController();
         this.activeAbortController = abortController;
@@ -68,7 +73,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
 
         const displayName = charData?.displayName || command.speaker;
 
-        engine.history.push(displayName, command.text);
+        history.push(displayName, command.text);
 
         this.renderer.setSpeaker(displayName, charData?.nameColor || engine.theme.accentColor);
 
@@ -76,7 +81,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
             await this.renderer.showPortrait(engine, charData.portraitUrl, command.portraitSide ?? 'left');
             if (signal.aborted) return;
 
-            engine.stateManager.system.dialogue = {
+            state.system.dialogue = {
                 portraitSide: command.portraitSide ?? 'left',
                 portraitUrl: charData.portraitUrl,
                 speaker: command.speaker,
@@ -84,7 +89,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
             };
         } else {
             this.renderer.hidePortrait();
-            engine.stateManager.system.dialogue = {
+            state.system.dialogue = {
                 portraitSide: undefined,
                 portraitUrl: undefined,
                 speaker: command.speaker,
@@ -94,7 +99,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
 
         const fullCharData = engine.manifest?.characters?.[speakerKey];
         if (fullCharData?.talkAnimation) {
-            const spriteState = engine.stateManager.system.sprites;
+            const spriteState = state.system.sprites;
             if (spriteState?.[command.speaker] || spriteState?.[speakerKey]) {
                 const spriteId = spriteState[command.speaker] ? command.speaker : speakerKey;
                 const animCommand: SpriteCommand = {
@@ -145,12 +150,12 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
             consumeSkip: () => engine.consumeSkip(),
             createPromptBlinker: () => this.renderer.createPromptBlinker(),
             getMessageText: () => this.renderer.getMessageText(),
-            getVoiceVolume: () => engine.audio.voiceVolume,
+            getVoiceVolume: () => audio.voiceVolume,
             initialSpeed: this.config.typewriterSpeed!,
             setMessageText: (text) => this.renderer.setMessageText(text),
             signal,
             tokens,
-            waitForPromptInput: (abortSignal) => this.waitForPromptInput(engine, abortSignal),
+            waitForPromptInput: (abortSignal) => this.waitForPromptInput(events, abortSignal),
         });
 
         if (!signal.aborted && engine.autoAdvanceDelay !== undefined) {
@@ -185,15 +190,15 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         });
     }
 
-    private async waitForPromptInput(engine: ExecutionContext, signal: AbortSignal): Promise<void> {
+    private async waitForPromptInput(events: IEventBus, signal: AbortSignal): Promise<void> {
         if (signal.aborted) return;
 
         await new Promise<void>((resolve) => {
             let resolved = false;
 
             const cleanup = () => {
-                engine.events.off('input:confirm', onInput);
-                engine.events.off('input:next', onInput);
+                events.off('input:confirm', onInput);
+                events.off('input:next', onInput);
                 signal.removeEventListener('abort', onAbort);
             };
 
@@ -207,8 +212,8 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
             const onInput = () => finish();
             const onAbort = () => finish();
 
-            engine.events.on('input:confirm', onInput);
-            engine.events.on('input:next', onInput);
+            events.on('input:confirm', onInput);
+            events.on('input:next', onInput);
             signal.addEventListener('abort', onAbort, { once: true });
         });
     }

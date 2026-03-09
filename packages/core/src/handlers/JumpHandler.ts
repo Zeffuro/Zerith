@@ -1,4 +1,4 @@
-import type { ExecutionContext } from '../execution/ExecutionContext';
+import type { SceneInjectionContext } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface JumpCommand extends BaseCommand {
@@ -6,11 +6,11 @@ export interface JumpCommand extends BaseCommand {
     type: 'jump';
 }
 
-export class JumpHandler implements CommandHandler<JumpCommand> {
+export class JumpHandler implements CommandHandler<JumpCommand, SceneInjectionContext> {
     public autoNext = true;
     public type = 'jump' as const;
 
-    execute = async (command: JumpCommand, engine: ExecutionContext) => {
-        await engine.scenes.jumpToScene(command.to);
+    execute = async (command: JumpCommand, engine: SceneInjectionContext) => {
+        await engine.getSystem('scenes').jumpToScene(command.to);
     };
 }

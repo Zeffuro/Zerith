@@ -1,4 +1,4 @@
-import type { ExecutionContext } from '../execution/ExecutionContext';
+import type { SceneConditionalContext } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export type ComparisonOp = 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'neq';
@@ -13,20 +13,20 @@ export interface Condition {
 export interface IfCommand extends BaseCommand {
     all?: Condition[];
     any?: Condition[];
-    else?: BaseCommand[];
     key?: string;
+    onFalse?: BaseCommand[];
+    onTrue?: BaseCommand[];
     op?: ComparisonOp;
     source?: string;
-    then?: BaseCommand[];
     type: 'if';
     value?: unknown;
 }
 
-export class IfHandler implements CommandHandler<IfCommand> {
+export class IfHandler implements CommandHandler<IfCommand, SceneConditionalContext> {
     public autoNext = true;
     public type = 'if' as const;
 
-    execute = (command: IfCommand, engine: ExecutionContext) => {
+    execute = (command: IfCommand, engine: SceneConditionalContext) => {
         let conditionMet: boolean;
 
         if (command.all) {
@@ -46,17 +46,18 @@ export class IfHandler implements CommandHandler<IfCommand> {
             );
         }
 
-        if (conditionMet && command.then) {
-            engine.scenes.injectCommands(command.then);
-        } else if (!conditionMet && command.else) {
-            engine.scenes.injectCommands(command.else);
+        const scenes = engine.getSystem('scenes');
+        if (conditionMet && command.onTrue) {
+            scenes.injectCommands(command.onTrue);
+        } else if (!conditionMet && command.onFalse) {
+            scenes.injectCommands(command.onFalse);
         }
         return Promise.resolve();
     };
 
-    private evaluate(condition: Condition, engine: ExecutionContext): boolean {
+    private evaluate(condition: Condition, engine: SceneConditionalContext): boolean {
         if (condition.source === 'items' || condition.source === 'evidence') {
-            const hasItem = engine.items.has(condition.key);
+            const hasItem = engine.getSystem('items').has(condition.key);
             if (condition.value === undefined) return hasItem;
             return condition.op === 'neq' ? hasItem !== condition.value : hasItem === condition.value;
         }

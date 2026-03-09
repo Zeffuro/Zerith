@@ -1,4 +1,4 @@
-import type { ExecutionContext } from '../execution/ExecutionContext';
+import type { ContextWithState } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface SetCommand extends BaseCommand {
@@ -8,11 +8,11 @@ export interface SetCommand extends BaseCommand {
     value?: unknown;
 }
 
-export class SetHandler implements CommandHandler<SetCommand> {
+export class SetHandler implements CommandHandler<SetCommand, ContextWithState> {
     public autoNext = true;
     public type = 'set' as const;
 
-    execute = (command: SetCommand, engine: ExecutionContext) => {
+    execute = (command: SetCommand, engine: ContextWithState) => {
         const current = engine.getState(command.key);
 
         switch (command.op ?? 'set') {

@@ -34,12 +34,12 @@
                 "type": "if",
                 "source": "items",
                 "key": "autopsy_report",
-                "then": [
+                "onTrue": [
                   { "type": "call", "name": "phoenix_objection" },
                   { "type": "dialogue", "speaker": "phoenix", "text": "This report contradicts your timeline!" },
                   { "type": "set", "key": "press_count", "value": 2 }
                 ],
-                "else": [
+                "onFalse": [
                   { "type": "dialogue", "speaker": "phoenix", "text": "(I don't have the report yet...)" }
                 ]
               }

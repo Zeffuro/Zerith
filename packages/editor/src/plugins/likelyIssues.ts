@@ -19,7 +19,7 @@ export function hasLikelyIssue(node: unknown): boolean {
             return typeof object.label !== 'string' || object.label.trim() === '';
         }
         case 'if': {
-            return !Array.isArray(object.then) || !Array.isArray(object.else);
+            return !Array.isArray(object.onTrue) || !Array.isArray(object.onFalse);
         }
         case 'jump': {
             return typeof object.to !== 'string' || object.to.trim() === '';

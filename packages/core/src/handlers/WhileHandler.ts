@@ -1,4 +1,4 @@
-import type { ExecutionContext } from '../execution/ExecutionContext';
+import type { LoopContext } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface WhileCommand extends BaseCommand {
@@ -20,11 +20,11 @@ export interface WhileCondition {
     value?: unknown;
 }
 
-export class WhileHandler implements CommandHandler<WhileCommand> {
+export class WhileHandler implements CommandHandler<WhileCommand, LoopContext> {
     public autoNext = true;
     public type = 'while' as const;
 
-    execute = async (command: WhileCommand, engine: ExecutionContext) => {
+    execute = async (command: WhileCommand, engine: LoopContext) => {
         const body = Array.isArray(command.body) ? command.body : [];
         const maxIterations = Number.isFinite(command.maxIterations as number)
             ? Math.max(1, Number(command.maxIterations))
@@ -43,7 +43,7 @@ export class WhileHandler implements CommandHandler<WhileCommand> {
         }
     };
 
-    private evaluateCommand(command: WhileCommand, engine: ExecutionContext): boolean {
+    private evaluateCommand(command: WhileCommand, engine: LoopContext): boolean {
         if (Array.isArray(command.all)) return command.all.every(c => this.evaluateCondition(c, engine));
         if (Array.isArray(command.any)) return command.any.some(c => this.evaluateCondition(c, engine));
         if (!command.key) return false;
@@ -55,10 +55,10 @@ export class WhileHandler implements CommandHandler<WhileCommand> {
 
     private evaluateCondition(
         condition: WhileCondition,
-        engine: ExecutionContext
+        engine: LoopContext
     ): boolean {
         if (condition.source === 'items' || condition.source === 'evidence') {
-            const hasItem = engine.items.has(condition.key);
+            const hasItem = engine.getSystem('items').has(condition.key);
             if (condition.value === undefined) return hasItem;
             return condition.op === 'neq' ? hasItem !== condition.value : hasItem === condition.value;
         }
