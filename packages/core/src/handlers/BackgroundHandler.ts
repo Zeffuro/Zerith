@@ -1,6 +1,6 @@
 import { Sprite, Texture } from 'pixi.js';
 
-import type { StatefulVisualContext } from '../execution/ExecutionContext';
+import type { IAssetManager, IDisplayManager, IEventBus, IStateManager } from '../interfaces/managers';
 import type { SaveState } from '../managers/SaveManager';
 import type { BaseCommand, CommandHandler } from '../types';
 
@@ -9,44 +9,52 @@ export interface BackgroundCommand extends BaseCommand {
     type: 'background';
 }
 
-export class BackgroundHandler implements CommandHandler<BackgroundCommand, StatefulVisualContext> {
+export class BackgroundHandler implements CommandHandler<BackgroundCommand> {
     public autoNext = true;
     public type = 'background' as const;
-    private context: StatefulVisualContext | undefined;
+    private readonly assets: IAssetManager;
+    private readonly display: IDisplayManager;
+    private readonly events: IEventBus;
     private sprite: Sprite | undefined;
-    public destroy() {
-        if (this.context) {
-            this.context.getSystem('events').off('state:loaded', this.handleStateLoaded);
-        }
+    private readonly state: IStateManager;
+
+    constructor(
+        assets: IAssetManager,
+        display: IDisplayManager,
+        state: IStateManager,
+        events: IEventBus,
+    ) {
+        this.assets = assets;
+        this.display = display;
+        this.state = state;
+        this.events = events;
+        this.events.on('state:loaded', this.handleStateLoaded);
     }
 
-    execute = async (command: BackgroundCommand, engine: StatefulVisualContext) => {
-        const display = engine.getSystem('display');
-        const state = engine.getSystem('state');
-        const texture = await engine.loadAsset<Texture>(command.assetUrl);
+    public destroy() {
+        this.events.off('state:loaded', this.handleStateLoaded);
+    }
+
+    execute = async (command: BackgroundCommand) => {
+        const texture = await this.assets.load<Texture>(command.assetUrl);
 
         if (this.sprite) {
             this.sprite.texture = texture;
-            this.sprite.width = display.width;
-            this.sprite.height = display.height;
+            this.sprite.width = this.display.width;
+            this.sprite.height = this.display.height;
         } else {
             this.sprite = new Sprite(texture);
-            this.sprite.width = display.width;
-            this.sprite.height = display.height;
-            engine.getLayer('background').addChild(this.sprite);
+            this.sprite.width = this.display.width;
+            this.sprite.height = this.display.height;
+            this.display.getLayer('background').addChild(this.sprite);
         }
 
-        state.system.background = command.assetUrl;
+        this.state.system.background = command.assetUrl;
     };
-
-    public init(context: StatefulVisualContext) {
-        this.context = context;
-        context.getSystem('events').on('state:loaded', this.handleStateLoaded);
-    }
 
     private readonly handleStateLoaded = (...arguments_: unknown[]) => {
         const saveData = arguments_[0] as SaveState;
-        if (!this.context || !saveData.system.background) return;
-        void this.execute({ assetUrl: saveData.system.background, type: 'background' }, this.context);
+        if (!saveData.system.background) return;
+        void this.execute({ assetUrl: saveData.system.background, type: 'background' });
     };
 }

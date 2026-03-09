@@ -1,4 +1,4 @@
-import type { ContextWithState } from '../execution/ExecutionContext';
+import type { IStateManager } from '../interfaces/managers';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface SetCommand extends BaseCommand {
@@ -8,28 +8,33 @@ export interface SetCommand extends BaseCommand {
     value?: unknown;
 }
 
-export class SetHandler implements CommandHandler<SetCommand, ContextWithState> {
+export class SetHandler implements CommandHandler<SetCommand> {
     public autoNext = true;
     public type = 'set' as const;
+    private readonly state: IStateManager;
 
-    execute = (command: SetCommand, engine: ContextWithState) => {
-        const current = engine.getState(command.key);
+    constructor(state: IStateManager) {
+        this.state = state;
+    }
+
+    execute = (command: SetCommand) => {
+        const current = this.state.get(command.key);
 
         switch (command.op ?? 'set') {
             case 'add': {
-                engine.setState(command.key, ((current as number | undefined) ?? 0) + ((command.value as number | undefined) ?? 1));
+                this.state.set(command.key, ((current as number | undefined) ?? 0) + ((command.value as number | undefined) ?? 1));
                 break;
             }
             case 'set': {
-                engine.setState(command.key, command.value);
+                this.state.set(command.key, command.value);
                 break;
             }
             case 'sub': {
-                engine.setState(command.key, ((current as number | undefined) ?? 0) - ((command.value as number | undefined) ?? 1));
+                this.state.set(command.key, ((current as number | undefined) ?? 0) - ((command.value as number | undefined) ?? 1));
                 break;
             }
             case 'toggle': {
-                engine.setState(command.key, !current);
+                this.state.set(command.key, !current);
                 break;
             }
         }

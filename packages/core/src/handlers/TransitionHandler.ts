@@ -1,7 +1,7 @@
 import gsap from 'gsap';
 import { Graphics } from 'pixi.js';
 
-import type { VisualEffectContext } from '../execution/ExecutionContext';
+import type { IDisplayManager } from '../interfaces/managers';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface TransitionCommand extends BaseCommand {
@@ -10,20 +10,24 @@ export interface TransitionCommand extends BaseCommand {
     type: 'transition';
 }
 
-export class TransitionHandler implements CommandHandler<TransitionCommand, VisualEffectContext> {
+export class TransitionHandler implements CommandHandler<TransitionCommand> {
     public autoNext = true;
     public type = 'transition' as const;
+    private readonly display: IDisplayManager;
     private fadeRect: Graphics | undefined;
 
-    execute = (command: TransitionCommand, engine: VisualEffectContext) => {
-        const display = engine.getSystem('display');
+    constructor(display: IDisplayManager) {
+        this.display = display;
+    }
+
+    execute = (command: TransitionCommand) => {
         const duration = (command.duration || 500) / 1000;
 
         if (!this.fadeRect) {
             this.fadeRect = new Graphics()
-                .rect(0, 0, display.width, display.height)
+                .rect(0, 0, this.display.width, this.display.height)
                 .fill(0x00_00_00);
-            engine.getLayer('overlay').addChild(this.fadeRect);
+            this.display.getLayer('overlay').addChild(this.fadeRect);
         }
 
         const targetAlpha = command.action === 'fade_out' ? 1 : 0;

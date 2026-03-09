@@ -1,7 +1,6 @@
 import { Container, FederatedPointerEvent, Graphics, Text, type TextStyleOptions } from 'pixi.js';
 
-import type { ChoiceInteractionContext } from '../execution/ExecutionContext';
-import type { NavigationDirection } from '../interfaces/managers';
+import type { IDisplayManager, IEventBus, IFlowManager, NavigationDirection } from '../interfaces/managers';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface ChoiceCommand extends BaseCommand {
@@ -25,12 +24,23 @@ export interface ChoiceOption {
     label: string;
 }
 
-export class ChoiceHandler implements CommandHandler<ChoiceCommand, ChoiceInteractionContext> {
+export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
     public autoNext = true;
     public type = 'choice' as const;
     private config: Required<ChoiceConfig>;
+    private readonly display: IDisplayManager;
+    private readonly events: IEventBus;
+    private readonly flow: IFlowManager;
 
-    constructor(config: ChoiceConfig = {}) {
+    constructor(
+        display: IDisplayManager,
+        events: IEventBus,
+        flow: IFlowManager,
+        config: ChoiceConfig = {},
+    ) {
+        this.display = display;
+        this.events = events;
+        this.flow = flow;
         this.config = {
             backgroundAlpha: 0.8,
             backgroundColor: 0x00_00_00,
@@ -44,15 +54,12 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand, ChoiceIntera
         };
     }
 
-    execute = (command: ChoiceCommand, engine: ChoiceInteractionContext): Promise<void> => {
+    execute = (command: ChoiceCommand): Promise<void> => {
         return new Promise((resolve) => {
-            const display = engine.getSystem('display');
-            const events = engine.getSystem('events');
-            const scenes = engine.getSystem('scenes');
             const choiceContainer = new Container();
 
-            const w = display.width;
-            const h = display.height;
+            const w = this.display.width;
+            const h = this.display.height;
 
             const buttonWidth = Math.min(600, w * 0.75);
             const buttonHeight = 60;
@@ -82,10 +89,10 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand, ChoiceIntera
 
                 const option = command.options[selectedIndex];
                 if (option.commands) {
-                    scenes.injectCommands(option.commands);
+                    this.flow.injectCommands(option.commands);
                 }
                 requestAnimationFrame(() => {
-                    engine.consumeSkip();
+                    this.flow.consumeSkip();
                     resolve();
                 });
             };
@@ -103,8 +110,8 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand, ChoiceIntera
                     style: {
                         align: 'center',
                         fill: 0xFF_FF_FF,
-                        fontFamily: engine.theme.fontFamily,
-                        fontSize: engine.theme.fontSize,
+                        fontFamily: 'Arial',
+                        fontSize: 28,
                         ...this.config.textStyle
                     },
                     text: option.label
@@ -140,15 +147,15 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand, ChoiceIntera
                 confirmSelection();
             };
 
-            events.on('input:navigate', onNavigate);
-            events.on('input:confirm', onConfirm);
+            this.events.on('input:navigate', onNavigate);
+            this.events.on('input:confirm', onConfirm);
 
             const cleanup = () => {
-                events.off('input:navigate', onNavigate);
-                events.off('input:confirm', onConfirm);
+                this.events.off('input:navigate', onNavigate);
+                this.events.off('input:confirm', onConfirm);
             };
 
-            engine.getLayer('ui').addChild(choiceContainer);
+            this.display.getLayer('ui').addChild(choiceContainer);
         });
     };
 

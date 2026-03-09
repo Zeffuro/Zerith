@@ -1,25 +1,42 @@
 import { Container, type FederatedPointerEvent, Graphics, Sprite, Text } from 'pixi.js';
 
+import type { IEvidenceManager } from '../interfaces/managers';
 import type { MenuPanel as Panel } from '../types';
-import type { UIRenderContext } from './UIRenderContext';
+import type { UIVisualContext } from './UIRenderContext';
 
 import { createButton, createPanelTitle, createSelectableList, registerFocusableButton } from './UIComponents';
 
 export class ItemBrowserPanel implements Panel {
     public id = 'evidence';
     public label = 'Evidence';
+    private readonly itemsManager: Pick<IEvidenceManager, 'getAll' | 'getEvidence' | 'getProfiles'>;
+    private readonly loadAsset: <T = unknown>(url: string) => Promise<T>;
 
-    build(renderContext: UIRenderContext, onClose: () => void) {
-        const context = renderContext.uiContext;
+    constructor(
+        itemsManager: Pick<IEvidenceManager, 'getAll' | 'getEvidence' | 'getProfiles'>,
+        loadAsset: <T = unknown>(url: string) => Promise<T>,
+    ) {
+        this.itemsManager = itemsManager;
+        this.loadAsset = loadAsset;
+    }
+
+    build(visualContext: UIVisualContext, onClose: () => void) {
+        const context = {
+            canvasHeight: visualContext.canvasHeight,
+            canvasWidth: visualContext.canvasWidth,
+            getCanvasRect: () => visualContext.canvasElement.getBoundingClientRect(),
+            overlayConfig: visualContext.overlayConfig,
+            theme: visualContext.theme,
+        };
         const cfg = context.overlayConfig;
         const w = context.canvasWidth;
         const h = context.canvasHeight;
-        const focus = renderContext.focus;
+        const focus = visualContext.focus;
 
-        const root = renderContext.createPanelBase();
+        const root = visualContext.createPanelBase();
         root.addChild(createPanelTitle(context, 'COURT RECORD'));
 
-        const items = renderContext.items.getAll();
+        const items = this.itemsManager.getAll();
         const backMargin = 20;
 
         if (items.length === 0) {
@@ -44,8 +61,8 @@ export class ItemBrowserPanel implements Panel {
         const detailX = listWidth + 20;
         const detailWidth = w - detailX - 20;
 
-        const evidence = renderContext.items.getEvidence();
-        const profiles = renderContext.items.getProfiles();
+        const evidence = this.itemsManager.getEvidence();
+        const profiles = this.itemsManager.getProfiles();
         const activeTab: 'evidence' | 'profiles' = evidence.length > 0 ? 'evidence' : 'profiles';
 
         // Detail panel
@@ -87,7 +104,7 @@ export class ItemBrowserPanel implements Panel {
 
             if (item.imageUrl) {
                 try {
-                    const texture = await renderContext.loadAsset<import('pixi.js').Texture>(item.imageUrl);
+                    const texture = await this.loadAsset<import('pixi.js').Texture>(item.imageUrl);
                     detailSprite.texture = texture;
                     detailSprite.visible = true;
                     const maxImgW = detailWidth * 0.6;
@@ -179,7 +196,8 @@ export class ItemBrowserPanel implements Panel {
 
             tabButton.on('pointerdown', (event: FederatedPointerEvent) => {
                 event.stopPropagation();
-                renderContext.showPanel(this);
+                // Tab switching currently rebuilds the panel; close/reopen from menu for now.
+                onClose();
             });
             return tabButton;
         };
@@ -205,7 +223,7 @@ export class ItemBrowserPanel implements Panel {
             scrollY = Math.max(0, Math.min(maxScroll, scrollY));
             listContainer.children[0].y = -scrollY;
         };
-        renderContext.canvasElement.addEventListener('wheel', onWheel, { passive: false });
+        visualContext.canvasElement.addEventListener('wheel', onWheel, { passive: false });
 
         // Back button
         const backButton = createButton(context, { label: 'Back', x: w / 2, y: h - cfg.buttonHeight - backMargin }, onClose);
@@ -214,7 +232,7 @@ export class ItemBrowserPanel implements Panel {
         registerFocusableButton(context, focus, backButton, onClose);
 
         return {
-            cleanup: () => renderContext.canvasElement.removeEventListener('wheel', onWheel),
+            cleanup: () => visualContext.canvasElement.removeEventListener('wheel', onWheel),
             container: root,
         };
     }

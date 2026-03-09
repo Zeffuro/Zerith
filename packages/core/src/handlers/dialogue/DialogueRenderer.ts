@@ -1,7 +1,7 @@
 import gsap from 'gsap';
 import { Container, Graphics, HTMLText, Sprite, Text, type TextStyleOptions, type Texture } from 'pixi.js';
 
-import type { DialogueRenderContext } from '../../execution/ExecutionContext';
+import type { IAssetManager, IDisplayManager } from '../../interfaces/managers';
 
 export interface DialogueRendererConfig {
     backgroundAlpha?: number;
@@ -17,14 +17,22 @@ export interface DialogueRendererConfig {
 }
 
 export class DialogueRenderer {
+    private readonly assets: IAssetManager;
     private readonly config: DialogueRendererConfig;
     private container: Container | undefined;
+    private readonly display: IDisplayManager;
     private messageText!: HTMLText;
     private nameText!: Text;
     private portraitSprite!: Sprite;
 
-    constructor(config: DialogueRendererConfig) {
+    constructor(
+        config: DialogueRendererConfig,
+        display: IDisplayManager,
+        assets: IAssetManager,
+    ) {
         this.config = config;
+        this.display = display;
+        this.assets = assets;
     }
 
     public clearMessage() {
@@ -42,13 +50,11 @@ export class DialogueRenderer {
         return blinker;
     }
 
-    public ensureUI(engine: DialogueRenderContext) {
+    public ensureUI() {
         if (this.container) return;
 
-        const display = engine.getSystem('display');
-        const t = engine.theme;
-        const w = display.width;
-        const h = display.height;
+        const w = this.display.width;
+        const h = this.display.height;
 
         const margin = 20;
         const boxWidth = this.config.boxWidth ?? (w - margin * 2);
@@ -59,24 +65,24 @@ export class DialogueRenderer {
 
         this.container = new Container();
         this.portraitSprite = new Sprite();
-        engine.getLayer('sprites').addChild(this.portraitSprite);
+        this.display.getLayer('sprites').addChild(this.portraitSprite);
 
         const bg = new Graphics()
             .roundRect(boxX, boxY, boxWidth, boxHeight, 10)
             .fill({
-                alpha: this.config.backgroundAlpha ?? t.boxAlpha,
-                color: this.config.backgroundColor ?? t.boxColor
+                alpha: this.config.backgroundAlpha ?? 0.85,
+                color: this.config.backgroundColor ?? 0x00_00_00
             })
             .stroke({
-                color: this.config.borderColor ?? t.borderColor,
-                width: this.config.borderWidth ?? t.borderWidth
+                color: this.config.borderColor ?? 0xFF_FF_FF,
+                width: this.config.borderWidth ?? 2
             });
 
         this.nameText = new Text({
             style: {
                 ...this.config.nameStyle,
-                fontFamily: t.fontFamily,
-                fontSize: t.fontSize + 4,
+                fontFamily: 'Arial',
+                fontSize: 32,
                 fontWeight: 'bold',
             },
             text: ''
@@ -89,8 +95,8 @@ export class DialogueRenderer {
             style: {
                 align: 'left',
                 fill: '#ffffff',
-                fontFamily: t.fontFamily,
-                fontSize: t.fontSize,
+                fontFamily: 'Arial',
+                fontSize: 28,
                 wordWrap: true,
                 wordWrapWidth: boxWidth - (padding * 2),
             },
@@ -101,7 +107,7 @@ export class DialogueRenderer {
         this.messageText.position.set(messageX, messageY);
 
         this.container.addChild(bg, this.nameText, this.messageText);
-        engine.getLayer('ui').addChild(this.container);
+        this.display.getLayer('ui').addChild(this.container);
     }
 
     public getMessageText(): string {
@@ -125,14 +131,13 @@ export class DialogueRenderer {
         this.nameText.style.fill = fill;
     }
 
-    public async showPortrait(engine: DialogueRenderContext, portraitUrl: string, side: 'left' | 'right') {
-        const display = engine.getSystem('display');
-        this.portraitSprite.texture = await engine.loadAsset<Texture>(portraitUrl);
+    public async showPortrait(portraitUrl: string, side: 'left' | 'right') {
+        this.portraitSprite.texture = await this.assets.load<Texture>(portraitUrl);
         this.portraitSprite.visible = true;
         this.portraitSprite.anchor.set(0.5, 1);
 
-        const w = display.width;
-        const boxY = this.config.boxY ?? (display.height * 2 / 3);
+        const w = this.display.width;
+        const boxY = this.config.boxY ?? (this.display.height * 2 / 3);
         this.portraitSprite.position.set(
             side === 'right' ? w * 0.8 : w * 0.2,
             boxY

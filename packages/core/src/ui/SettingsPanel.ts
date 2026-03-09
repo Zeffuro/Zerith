@@ -1,21 +1,39 @@
 import { Graphics } from "pixi.js";
 
+import type { DialogueHandler } from '../handlers/DialogueHandler';
+import type { IAudioManager } from '../interfaces/managers';
 import type { MenuPanel } from '../types';
 import type { SliderResult, ToggleResult } from './UIComponents';
-import type { UIRenderContext } from './UIRenderContext';
+import type { UIVisualContext } from './UIRenderContext';
 
 import { createButton, createPanelTitle, createSlider, createToggle, registerFocusableButton } from './UIComponents';
 
 export class SettingsPanel implements MenuPanel {
     public id = 'settings';
     public label = 'Settings';
+    private readonly audio: IAudioManager;
+    private readonly dialogueHandler: DialogueHandler;
 
-    build(renderContext: UIRenderContext, onClose: () => void) {
-        const context = renderContext.uiContext;
+    constructor(
+        audio: IAudioManager,
+        dialogueHandler: DialogueHandler,
+    ) {
+        this.audio = audio;
+        this.dialogueHandler = dialogueHandler;
+    }
+
+    build(visualContext: UIVisualContext, onClose: () => void) {
+        const context = {
+            canvasHeight: visualContext.canvasHeight,
+            canvasWidth: visualContext.canvasWidth,
+            getCanvasRect: () => visualContext.canvasElement.getBoundingClientRect(),
+            overlayConfig: visualContext.overlayConfig,
+            theme: visualContext.theme,
+        };
         const cfg = context.overlayConfig;
-        const focus = renderContext.focus;
+        const focus = visualContext.focus;
 
-        const root = renderContext.createPanelBase();
+        const root = visualContext.createPanelBase();
         root.addChild(createPanelTitle(context, 'SETTINGS'));
 
         const contentStartX = (context.canvasWidth - 400 - 180 - 80) / 2;
@@ -33,10 +51,10 @@ export class SettingsPanel implements MenuPanel {
         };
 
         const sliderDefs: { getValue: () => number; label: string; setValue: (v: number) => void }[] = [
-            { getValue: () => renderContext.audio.masterVolume, label: 'Master Volume', setValue: (v) => renderContext.audio.setMasterVolume(v) },
-            { getValue: () => renderContext.audio.bgmVolume, label: 'BGM Volume', setValue: (v) => renderContext.audio.setVolume('bgm', v) },
-            { getValue: () => renderContext.audio.sfxVolume, label: 'SFX Volume', setValue: (v) => renderContext.audio.setVolume('sfx', v) },
-            { getValue: () => renderContext.audio.voiceVolume, label: 'Voice Volume', setValue: (v) => renderContext.audio.setVolume('voice', v) },
+            { getValue: () => this.audio.masterVolume, label: 'Master Volume', setValue: (v) => this.audio.setMasterVolume(v) },
+            { getValue: () => this.audio.bgmVolume, label: 'BGM Volume', setValue: (v) => this.audio.setVolume('bgm', v) },
+            { getValue: () => this.audio.sfxVolume, label: 'SFX Volume', setValue: (v) => this.audio.setVolume('sfx', v) },
+            { getValue: () => this.audio.voiceVolume, label: 'Voice Volume', setValue: (v) => this.audio.setVolume('voice', v) },
         ];
 
         const sliderResults: SliderResult[] = [];
@@ -64,8 +82,8 @@ export class SettingsPanel implements MenuPanel {
         yPos += 10;
         const toggleResult: ToggleResult = createToggle(context, {
             label: 'Auto-Advance',
-            onChange: (on) => renderContext.setAutoAdvance(on ? 3000 : undefined),
-            value: renderContext.autoAdvanceDelay !== undefined,
+            onChange: (on) => this.dialogueHandler.setAutoAdvanceDelay(on ? 3000 : undefined),
+            value: this.dialogueHandler.getAutoAdvanceDelay() !== undefined,
         });
         toggleResult.container.position.set(contentStartX, yPos);
         root.addChild(toggleResult.container);
@@ -75,13 +93,10 @@ export class SettingsPanel implements MenuPanel {
         const fontSizeSlider = createSlider(context, {
             label: 'Text Size',
             onChange: (v) => {
-                const newSize = Math.round(14 + v * 26);
-                renderContext.theme.fontSize = newSize;
-
-                const dh = renderContext.getHandler('dialogue');
-                dh?.reset?.();
+                visualContext.theme.fontSize = Math.round(14 + v * 26);
+                this.dialogueHandler.reset?.();
             },
-            value: (renderContext.theme.fontSize - 14) / 26,
+            value: (visualContext.theme.fontSize - 14) / 26,
         });
         fontSizeSlider.container.position.set(contentStartX, yPos);
         root.addChild(fontSizeSlider.container);

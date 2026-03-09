@@ -5,7 +5,7 @@ export interface LabelCommand extends BaseCommand {
     type: 'label';
 }
 
-export class LabelHandler implements CommandHandler<LabelCommand, unknown> {
+export class LabelHandler implements CommandHandler<LabelCommand> {
     public autoNext = true;
     public type = 'label' as const;
 

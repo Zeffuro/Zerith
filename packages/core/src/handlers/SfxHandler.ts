@@ -1,8 +1,8 @@
-// packages/core/src/handlers/SfxHandler.ts
 import { sound } from '@pixi/sound';
 
-import type { AudioPlaybackContext } from '../execution/ExecutionContext';
+import type { IAssetManager, IAudioManager } from '../interfaces/managers';
 import type { BaseCommand, CommandHandler } from '../types';
+import type { Logger } from '../utils/Logger';
 
 export interface SfxCommand extends BaseCommand {
     assetUrl: string;
@@ -10,16 +10,28 @@ export interface SfxCommand extends BaseCommand {
     volume?: number;
 }
 
-export class SfxHandler implements CommandHandler<SfxCommand, AudioPlaybackContext> {
+export class SfxHandler implements CommandHandler<SfxCommand> {
     public autoNext = true;
     public type = 'sfx' as const;
+    private readonly assets: IAssetManager;
+    private readonly audio: IAudioManager;
+    private readonly logger: Logger;
 
-    execute = async (command: SfxCommand, engine: AudioPlaybackContext) => {
-        const audio = engine.getSystem('audio');
+    constructor(
+        assets: IAssetManager,
+        audio: IAudioManager,
+        logger: Logger,
+    ) {
+        this.assets = assets;
+        this.audio = audio;
+        this.logger = logger;
+    }
+
+    execute = async (command: SfxCommand) => {
         const url = command.assetUrl;
         if (!url) return;
 
-        const resolvedUrl = engine.assetResolver(url);
+        const resolvedUrl = this.assets.resolve(url);
 
         try {
             if (!sound.exists(resolvedUrl)) {
@@ -33,12 +45,12 @@ export class SfxHandler implements CommandHandler<SfxCommand, AudioPlaybackConte
             }
 
             await sound.play(resolvedUrl, {
-                volume: (command.volume ?? 0.8) * audio.sfxVolume,
+                volume: (command.volume ?? 0.8) * this.audio.sfxVolume,
             });
 
-            engine.logger.info(`Played SFX: ${url}`);
+            this.logger.info(`Played SFX: ${url}`);
         } catch (error) {
-            engine.logger.error(`Failed to load/play SFX: ${url}`, error);
+            this.logger.error(`Failed to load/play SFX: ${url}`, error);
         }
     };
 }

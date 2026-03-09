@@ -1,7 +1,6 @@
 export * from './BackgroundHandler';
 export * from './BgmHandler';
 export * from './BlockHandler';
-export * from './builtins';
 export * from './CallHandler';
 export * from './ChoiceHandler';
 export * from './DialogueHandler';

@@ -1,27 +1,18 @@
 import type { EngineConfig } from '../EngineConfig';
 import type { CommandHandlerRegistry } from '../interfaces/ICommandHandler';
-import type { IEventBus, ISceneManager } from '../interfaces/managers';
+import type { IEventBus, IFlowManager, ISceneManager } from '../interfaces/managers';
 import type { BaseCommand } from '../types';
 import type { Logger } from '../utils/Logger';
 
-import {
-    type CommandExecutionContext,
-    HandlerExecutionContext,
-    type HandlerRuntime,
-    type SystemRegistry,
-} from './ExecutionContext';
-
-export interface ScriptExecutorDeps {
+export interface FlowManagerDeps {
     events: IEventBus;
     handlers: CommandHandlerRegistry;
     logger: Logger;
     onSceneNavigation?: EngineConfig['onSceneNavigation'];
-    runtime: HandlerRuntime;
     scenes: ISceneManager;
-    systems: SystemRegistry;
 }
 
-export class ScriptExecutor {
+export class FlowManager implements IFlowManager {
     public get isStarted(): boolean {
         return this.started;
     }
@@ -31,11 +22,9 @@ export class ScriptExecutor {
     }
 
     private _lastSavePoint = 0;
-    private readonly context: CommandExecutionContext;
     private readonly events: IEventBus;
     private readonly handlers: CommandHandlerRegistry;
     private injectedCommands: BaseCommand[] = [];
-
     private isExecuting = false;
     private readonly logger: Logger;
     private readonly onSceneNavigation?: EngineConfig['onSceneNavigation'];
@@ -43,8 +32,7 @@ export class ScriptExecutor {
     private skipRequested = false;
     private started = false;
 
-    constructor(deps: ScriptExecutorDeps) {
-        this.context = new HandlerExecutionContext(deps.systems, deps.runtime);
+    constructor(deps: FlowManagerDeps) {
         this.events = deps.events;
         this.handlers = deps.handlers;
         this.logger = deps.logger;
@@ -53,15 +41,11 @@ export class ScriptExecutor {
     }
 
     public consumeSkip(): boolean {
-        if (this.skipRequested) {
-            this.skipRequested = false;
-            return true;
+        if (!this.skipRequested) {
+            return false;
         }
-        return false;
-    }
-
-    public getContext(): CommandExecutionContext {
-        return this.context;
+        this.skipRequested = false;
+        return true;
     }
 
     public injectCommands(commands: BaseCommand[]) {
@@ -127,7 +111,7 @@ export class ScriptExecutor {
         }
 
         try {
-            await handler.execute(command, this.context);
+            await handler.execute(command);
             this.events.emit('script:command_executed', command.type);
         } catch (error) {
             this.logger.error(
@@ -176,3 +160,4 @@ export class ScriptExecutor {
         return false;
     }
 }
+

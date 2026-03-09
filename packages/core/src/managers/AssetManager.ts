@@ -82,6 +82,10 @@ export class AssetManager {
         return AssetManager.extractAssetUrls(script);
     }
 
+    public async load<T = unknown>(url: string): Promise<T> {
+        return await Assets.load<T>(this.resolve(url));
+    }
+
     public async preloadCharacterAssets(characters: Record<string, CharacterDefinition>): Promise<void> {
         if (Object.keys(characters).length === 0) return;
 
@@ -114,6 +118,10 @@ export class AssetManager {
 
         await Promise.all([...texturePromises, ...audioPromises]);
         this.logger.info(`Preloaded ${textures.size} textures, ${audio.size} audio files.`);
+    }
+
+    public resolve(url: string): string {
+        return this.resolver(url);
     }
 
     public setResolver(resolver: AssetResolver) {

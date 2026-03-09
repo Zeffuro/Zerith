@@ -1,4 +1,4 @@
-import type { ContextWithItems } from '../execution/ExecutionContext';
+import type { IEvidenceManager } from '../interfaces/managers';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface ItemCommand extends BaseCommand {
@@ -8,25 +8,28 @@ export interface ItemCommand extends BaseCommand {
     type: 'item';
 }
 
-export class ItemHandler implements CommandHandler<ItemCommand, ContextWithItems> {
+export class ItemHandler implements CommandHandler<ItemCommand> {
     public autoNext = true;
     public type = 'item' as const;
+    private readonly manager: IEvidenceManager;
 
-    execute = (command: ItemCommand, engine: ContextWithItems) => {
-        const manager = engine.getSystem('items');
+    constructor(manager: IEvidenceManager) {
+        this.manager = manager;
+    }
 
+    execute = (command: ItemCommand) => {
         switch (command.action) {
             case 'add': {
-                manager.add(command.id);
+                this.manager.add(command.id);
                 break;
             }
             case 'remove': {
-                manager.remove(command.id);
+                this.manager.remove(command.id);
                 break;
             }
             case 'update': {
                 if (command.changes) {
-                    manager.update(command.id, command.changes);
+                    this.manager.update(command.id, command.changes);
                 }
                 break;
             }

@@ -1,4 +1,4 @@
-import type { SceneConditionalContext } from '../execution/ExecutionContext';
+import type { IEvidenceManager, IFlowManager, IStateManager } from '../interfaces/managers';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export type ComparisonOp = 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'neq';
@@ -22,47 +22,56 @@ export interface IfCommand extends BaseCommand {
     value?: unknown;
 }
 
-export class IfHandler implements CommandHandler<IfCommand, SceneConditionalContext> {
+export class IfHandler implements CommandHandler<IfCommand> {
     public autoNext = true;
     public type = 'if' as const;
+    private readonly flow: IFlowManager;
+    private readonly items: IEvidenceManager;
+    private readonly state: IStateManager;
 
-    execute = (command: IfCommand, engine: SceneConditionalContext) => {
+    constructor(
+        flow: IFlowManager,
+        items: IEvidenceManager,
+        state: IStateManager,
+    ) {
+        this.flow = flow;
+        this.items = items;
+        this.state = state;
+    }
+
+    execute = (command: IfCommand) => {
         let conditionMet: boolean;
 
         if (command.all) {
             conditionMet = command.all.every(c => this.evaluate(
                 { key: c.key, op: c.op, source: c.source, value: c.value },
-                engine
             ));
         } else if (command.any) {
             conditionMet = command.any.some(c => this.evaluate(
                 { key: c.key, op: c.op, source: c.source, value: c.value },
-                engine
             ));
         } else {
             conditionMet = this.evaluate(
                 { key: command.key!, op: command.op, source: command.source, value: command.value },
-                engine
             );
         }
 
-        const scenes = engine.getSystem('scenes');
         if (conditionMet && command.onTrue) {
-            scenes.injectCommands(command.onTrue);
+            this.flow.injectCommands(command.onTrue);
         } else if (!conditionMet && command.onFalse) {
-            scenes.injectCommands(command.onFalse);
+            this.flow.injectCommands(command.onFalse);
         }
         return Promise.resolve();
     };
 
-    private evaluate(condition: Condition, engine: SceneConditionalContext): boolean {
+    private evaluate(condition: Condition): boolean {
         if (condition.source === 'items' || condition.source === 'evidence') {
-            const hasItem = engine.getSystem('items').has(condition.key);
+            const hasItem = this.items.has(condition.key);
             if (condition.value === undefined) return hasItem;
             return condition.op === 'neq' ? hasItem !== condition.value : hasItem === condition.value;
         }
 
-        const actual = engine.getState(condition.key);
+        const actual = this.state.get(condition.key);
         const op = condition.op ?? 'eq';
 
         if (condition.value === undefined) {
@@ -86,4 +95,5 @@ export class IfHandler implements CommandHandler<IfCommand, SceneConditionalCont
             }
         }
     }
+
 }

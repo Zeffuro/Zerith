@@ -1,7 +1,9 @@
 import { Container, type FederatedPointerEvent, Graphics, Text } from 'pixi.js';
 
+import type { INotificationManager, ISaveManager } from '../interfaces/managers';
+import type { SaveState } from '../managers/SaveManager';
 import type { MenuPanel } from '../types';
-import type { UIRenderContext } from './UIRenderContext';
+import type { UIVisualContext } from './UIRenderContext';
 
 import { createButton, createPanelTitle, registerFocusableButton } from './UIComponents';
 
@@ -12,27 +14,48 @@ export interface SaveLoadPanelConfig {
 export class SaveLoadPanel implements MenuPanel {
     public id: string;
     public label: string;
+    private readonly applySaveState: (saveState: SaveState) => Promise<void>;
+    private readonly closeOverlay: () => void;
     private config: Required<SaveLoadPanelConfig>;
     private readonly mode: 'load' | 'save';
+    private readonly notifications: INotificationManager;
+    private readonly saves: ISaveManager;
 
-    constructor(mode: 'load' | 'save', config: SaveLoadPanelConfig = {}) {
+    constructor(
+        mode: 'load' | 'save',
+        saves: ISaveManager,
+        notifications: INotificationManager,
+        applySaveState: (saveState: SaveState) => Promise<void>,
+        closeOverlay: () => void,
+        config: SaveLoadPanelConfig = {},
+    ) {
         this.mode = mode;
+        this.saves = saves;
+        this.notifications = notifications;
+        this.applySaveState = applySaveState;
+        this.closeOverlay = closeOverlay;
         this.id = mode === 'save' ? 'save' : 'load';
         this.label = mode === 'save' ? 'Save Game' : 'Load Game';
         this.config = { maxSlots: 6, ...config };
     }
 
-    build(renderContext: UIRenderContext, onClose: () => void) {
-        const context = renderContext.uiContext;
+    build(visualContext: UIVisualContext, onClose: () => void) {
+        const context = {
+            canvasHeight: visualContext.canvasHeight,
+            canvasWidth: visualContext.canvasWidth,
+            getCanvasRect: () => visualContext.canvasElement.getBoundingClientRect(),
+            overlayConfig: visualContext.overlayConfig,
+            theme: visualContext.theme,
+        };
         const cfg = context.overlayConfig;
         const w = context.canvasWidth;
         const h = context.canvasHeight;
-        const focus = renderContext.focus;
+        const focus = visualContext.focus;
 
-        const root = renderContext.createPanelBase();
+        const root = visualContext.createPanelBase();
         root.addChild(createPanelTitle(context, this.mode === 'save' ? 'SAVE GAME' : 'LOAD GAME'));
 
-        const slots = renderContext.saves.listSlots(this.config.maxSlots);
+        const slots = this.saves.listSlots(this.config.maxSlots);
         const slotHeight = 55;
         const slotSpacing = 8;
         const slotWidth = Math.min(600, w * 0.8);
@@ -81,19 +104,19 @@ export class SaveLoadPanel implements MenuPanel {
 
             const activateSlot = () => {
                 if (this.mode === 'save') {
-                    void renderContext.saves.save(slotNumber);
-                    renderContext.notifications.show(`Saved to Slot ${slotNumber}`);
-                    renderContext.closeOverlay();
+                    void this.saves.save(slotNumber);
+                    this.notifications.show(`Saved to Slot ${slotNumber}`);
+                    this.closeOverlay();
                 } else {
-                    if (!meta) { renderContext.notifications.show('Slot is empty'); return; }
-                    void renderContext.saves.load(slotNumber).then(async (saveState) => {
+                    if (!meta) { this.notifications.show('Slot is empty'); return; }
+                    void this.saves.load(slotNumber).then(async (saveState) => {
                         if (!saveState) {
-                            renderContext.notifications.show('Failed to load save');
+                            this.notifications.show('Failed to load save');
                             return;
                         }
-                        await renderContext.applySaveState(saveState);
-                        renderContext.notifications.show(`Loaded Slot ${slotNumber}`);
-                        renderContext.closeOverlay();
+                        await this.applySaveState(saveState);
+                        this.notifications.show(`Loaded Slot ${slotNumber}`);
+                        this.closeOverlay();
                     });
                 }
             };

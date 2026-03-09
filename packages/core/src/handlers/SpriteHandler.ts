@@ -1,9 +1,11 @@
 import { Sprite, type Texture } from 'pixi.js';
 
-import type { SpriteExecutionContext } from '../execution/ExecutionContext';
+import type { IAssetManager, IDisplayManager, IEventBus, ISpritesheetManager, IStateManager } from '../interfaces/managers';
 import type { SaveState } from '../managers/SaveManager';
 import type { BaseCommand, CommandHandler } from '../types';
 import type { CharacterDefinition } from '../types/Character';
+import type { GameManifest } from '../types/GameManifest';
+import type { Logger } from '../utils/Logger';
 
 export interface SpriteCommand extends BaseCommand {
     action: 'animate' | 'hide' | 'move' | 'pose' | 'show';
@@ -43,37 +45,56 @@ interface ActiveAnimation {
     running: boolean;
 }
 
-export class SpriteHandler implements CommandHandler<SpriteCommand, SpriteExecutionContext> {
+export class SpriteHandler implements CommandHandler<SpriteCommand> {
     public autoNext = true;
     public type = 'sprite' as const;
     private activeAnimations: Map<string, ActiveAnimation> = new Map();
-    private context: SpriteExecutionContext | undefined;
+    private readonly assets: IAssetManager;
+    private readonly display: IDisplayManager;
+    private readonly events: IEventBus;
+    private readonly getManifest: () => GameManifest;
+    private readonly logger: Logger;
     private sprites: Map<string, Sprite> = new Map();
-    public destroy() {
-        if (this.context) {
-            this.context.getSystem('events').off('state:loaded', this.handleStateLoaded);
-        }
+    private readonly spritesheets: ISpritesheetManager;
+    private readonly state: IStateManager;
+
+    constructor(
+        assets: IAssetManager,
+        display: IDisplayManager,
+        events: IEventBus,
+        logger: Logger,
+        spritesheets: ISpritesheetManager,
+        state: IStateManager,
+        getManifest: () => GameManifest,
+    ) {
+        this.assets = assets;
+        this.display = display;
+        this.events = events;
+        this.logger = logger;
+        this.spritesheets = spritesheets;
+        this.state = state;
+        this.getManifest = getManifest;
+        this.events.on('state:loaded', this.handleStateLoaded);
     }
 
-    execute = async (command: SpriteCommand, engine: SpriteExecutionContext) => {
+    public destroy() {
+        this.events.off('state:loaded', this.handleStateLoaded);
+    }
+
+    execute = async (command: SpriteCommand) => {
         switch (command.action) {
-            case 'animate': { await this.animate(command, engine); break;
+            case 'animate': { await this.animate(command); break;
             }
-            case 'hide': { await this.hide(command, engine); break;
+            case 'hide': { await this.hide(command); break;
             }
-            case 'move': { await this.move(command, engine); break;
+            case 'move': { await this.move(command); break;
             }
-            case 'pose': { await this.changePose(command, engine); break;
+            case 'pose': { await this.changePose(command); break;
             }
-            case 'show': { await this.show(command, engine); break;
+            case 'show': { await this.show(command); break;
             }
         }
     };
-
-    public init(context: SpriteExecutionContext) {
-        this.context = context;
-        context.getSystem('events').on('state:loaded', this.handleStateLoaded);
-    }
 
     reset = () => {
         for (const anim of this.activeAnimations.values()) {
@@ -84,23 +105,21 @@ export class SpriteHandler implements CommandHandler<SpriteCommand, SpriteExecut
         this.sprites.clear();
     };
 
-    private async animate(command: SpriteCommand, engine: SpriteExecutionContext) {
-        const spritesheets = engine.getSystem('spritesheets');
-        const state = engine.getSystem('state');
+    private async animate(command: SpriteCommand) {
         if (!command.animation) {
-            engine.logger.warn(`Sprite 'animate' requires an animation name (id: '${command.id}')`);
+            this.logger.warn(`Sprite 'animate' requires an animation name (id: '${command.id}')`);
             return;
         }
 
         const sprite = this.sprites.get(command.id);
         if (!sprite) {
-            engine.logger.warn(`Sprite '${command.id}' not found for 'animate'`);
+            this.logger.warn(`Sprite '${command.id}' not found for 'animate'`);
             return;
         }
 
-        const charData = this.findCharacter(command.id, engine);
+        const charData = this.findCharacter(command.id);
         if (!charData?.animations?.[command.animation]) {
-            engine.logger.warn(`Animation '${command.animation}' not found for character '${command.id}'`);
+            this.logger.warn(`Animation '${command.animation}' not found for character '${command.id}'`);
             return;
         }
 
@@ -110,19 +129,19 @@ export class SpriteHandler implements CommandHandler<SpriteCommand, SpriteExecut
         const loop: boolean = animConfig.loop ?? false;
 
         const sheetConfig = charData.spritesheet;
-        if (sheetConfig?.atlasUrl && !spritesheets.has(sheetConfig.atlasUrl)) {
-            await spritesheets.load(sheetConfig);
+        if (sheetConfig?.atlasUrl && !this.spritesheets.has(sheetConfig.atlasUrl)) {
+            await this.spritesheets.load(sheetConfig);
         }
 
         const textures: Texture[] = [];
         for (const frameName of frames) {
             const tex = sheetConfig?.atlasUrl
-                ? spritesheets.getFrame(sheetConfig.atlasUrl, frameName)
-                : await engine.loadAsset<Texture>(frameName);
+                ? this.spritesheets.getFrame(sheetConfig.atlasUrl, frameName)
+                : await this.assets.load<Texture>(frameName);
             if (tex) {
                 textures.push(tex);
             } else {
-                engine.logger.warn(`Animation frame '${frameName}' not found`);
+                this.logger.warn(`Animation frame '${frameName}' not found`);
                 return;
             }
         }
@@ -141,7 +160,7 @@ export class SpriteHandler implements CommandHandler<SpriteCommand, SpriteExecut
         }
 
         // Update saved state
-        const sprites = state.system.sprites;
+        const sprites = this.state.system.sprites;
         if (sprites[command.id]) {
             sprites[command.id].animation = command.animation;
         }
@@ -149,18 +168,17 @@ export class SpriteHandler implements CommandHandler<SpriteCommand, SpriteExecut
 
     /* Animation */
 
-    private async changePose(command: SpriteCommand, engine: SpriteExecutionContext) {
-        const state = engine.getSystem('state');
+    private async changePose(command: SpriteCommand) {
         this.stopAnimation(command.id);
 
-        const texture = await this.resolveTexture(command, engine);
+        const texture = await this.resolveTexture(command);
         if (!texture) {
-            engine.logger.warn(`Sprite 'pose' could not resolve texture (id: '${command.id}')`);
+            this.logger.warn(`Sprite 'pose' could not resolve texture (id: '${command.id}')`);
             return;
         }
 
         const sprite = this.sprites.get(command.id);
-        if (!sprite) { engine.logger.warn(`Sprite '${command.id}' not found for 'pose'`); return; }
+        if (!sprite) { this.logger.warn(`Sprite '${command.id}' not found for 'pose'`); return; }
 
         sprite.texture = texture;
 
@@ -168,7 +186,7 @@ export class SpriteHandler implements CommandHandler<SpriteCommand, SpriteExecut
             sprite.scale.x = command.flip ? -Math.abs(sprite.scale.x) : Math.abs(sprite.scale.x);
         }
 
-        const sprites = state.system.sprites;
+        const sprites = this.state.system.sprites;
         if (sprites[command.id]) {
             sprites[command.id].assetUrl = command.assetUrl;
             sprites[command.id].pose = command.pose;
@@ -205,8 +223,8 @@ export class SpriteHandler implements CommandHandler<SpriteCommand, SpriteExecut
 
     /* Texture Resolution */
 
-    private findCharacter(spriteId: string, engine: SpriteExecutionContext): CharacterDefinition | undefined {
-        const chars = engine.manifest?.characters;
+    private findCharacter(spriteId: string): CharacterDefinition | undefined {
+        const chars = this.getManifest()?.characters;
         if (!chars) return undefined;
         return chars[spriteId] ||
             Object.entries(chars).find(([k]) => k.toLowerCase() === spriteId.toLowerCase())?.[1] ||
@@ -216,19 +234,15 @@ export class SpriteHandler implements CommandHandler<SpriteCommand, SpriteExecut
     private async getSheetFrame(
         sheetConfig: { atlasUrl: string; chromaKey?: string; chromaTolerance?: number },
         frameName: string,
-        engine: SpriteExecutionContext
     ): Promise<Texture | undefined> {
-        const spritesheets = engine.getSystem('spritesheets');
-        if (!spritesheets.has(sheetConfig.atlasUrl)) {
-            await spritesheets.load(sheetConfig);
+        if (!this.spritesheets.has(sheetConfig.atlasUrl)) {
+            await this.spritesheets.load(sheetConfig);
         }
-        return spritesheets.getFrame(sheetConfig.atlasUrl, frameName) ?? undefined;
+        return this.spritesheets.getFrame(sheetConfig.atlasUrl, frameName) ?? undefined;
     }
 
     private readonly handleStateLoaded = (...arguments_: unknown[]) => {
         const saveData = arguments_[0] as SaveState;
-        if (!this.context) return;
-
         for (const [id, sprite] of Object.entries(saveData.system.sprites)) {
             void this.execute({
                 action: 'show',
@@ -244,14 +258,14 @@ export class SpriteHandler implements CommandHandler<SpriteCommand, SpriteExecut
                 type: 'sprite',
                 x: sprite.x,
                 y: sprite.y,
-            }, this.context).then(async () => {
-                if (sprite.animation && this.context) {
+            }).then(async () => {
+                if (sprite.animation) {
                     await this.execute({
                         action: 'animate',
                         animation: sprite.animation,
                         id,
                         type: 'sprite',
-                    }, this.context);
+                    });
                 }
             });
         }
@@ -259,8 +273,7 @@ export class SpriteHandler implements CommandHandler<SpriteCommand, SpriteExecut
 
     /* Actions */
 
-    private async hide(command: SpriteCommand, engine: SpriteExecutionContext) {
-        const state = engine.getSystem('state');
+    private async hide(command: SpriteCommand) {
         this.stopAnimation(command.id);
 
         const sprite = this.sprites.get(command.id);
@@ -272,14 +285,13 @@ export class SpriteHandler implements CommandHandler<SpriteCommand, SpriteExecut
         sprite.destroy();
         this.sprites.delete(command.id);
 
-        const sprites = state.system.sprites;
+        const sprites = this.state.system.sprites;
         delete sprites[command.id];
     }
 
-    private async move(command: SpriteCommand, engine: SpriteExecutionContext) {
-        const state = engine.getSystem('state');
+    private async move(command: SpriteCommand) {
         const sprite = this.sprites.get(command.id);
-        if (!sprite) { engine.logger.warn(`Sprite '${command.id}' not found for 'move'`); return; }
+        if (!sprite) { this.logger.warn(`Sprite '${command.id}' not found for 'move'`); return; }
 
         const targetX = command.x ?? sprite.x;
         const targetY = command.y ?? sprite.y;
@@ -314,7 +326,7 @@ export class SpriteHandler implements CommandHandler<SpriteCommand, SpriteExecut
             requestAnimationFrame(tick);
         });
 
-        const sprites = state.system.sprites;
+        const sprites = this.state.system.sprites;
         if (sprites[command.id]) {
             sprites[command.id].x = sprite.x;
             sprites[command.id].y = sprite.y;
@@ -366,23 +378,22 @@ export class SpriteHandler implements CommandHandler<SpriteCommand, SpriteExecut
 
     private async resolveTexture(
         command: SpriteCommand,
-        engine: SpriteExecutionContext
     ): Promise<Texture | undefined> {
         if (command.pose) {
-            const charData = this.findCharacter(command.id, engine);
+            const charData = this.findCharacter(command.id);
             if (!charData) {
-                engine.logger.warn(`No character config found for sprite id '${command.id}'`);
+                this.logger.warn(`No character config found for sprite id '${command.id}'`);
                 return undefined;
             }
             const frameName = charData.poses?.[command.pose];
             if (!frameName) {
-                engine.logger.warn(`Pose '${command.pose}' not found for character '${command.id}'`);
+                this.logger.warn(`Pose '${command.pose}' not found for character '${command.id}'`);
                 return undefined;
             }
             if (charData.spritesheet?.atlasUrl) {
-                return await this.getSheetFrame(charData.spritesheet, frameName, engine);
+                return await this.getSheetFrame(charData.spritesheet, frameName);
             }
-            return await engine.loadAsset<Texture>(frameName);
+            return await this.assets.load<Texture>(frameName);
         }
 
         const url = command.assetUrl;
@@ -390,43 +401,41 @@ export class SpriteHandler implements CommandHandler<SpriteCommand, SpriteExecut
 
         if (url.includes(':') && !url.startsWith('http') && !url.startsWith('/')) {
             const [atlasKey, frameName] = url.split(':');
-            const frame = engine.getSystem('spritesheets').getFrame(atlasKey, frameName);
+            const frame = this.spritesheets.getFrame(atlasKey, frameName);
             if (frame) return frame;
-            engine.logger.warn(`Frame '${frameName}' not found in atlas '${atlasKey}'`);
+            this.logger.warn(`Frame '${frameName}' not found in atlas '${atlasKey}'`);
             return undefined;
         }
 
-        return await engine.loadAsset<Texture>(url);
+        return await this.assets.load<Texture>(url);
     }
 
-    private async show(command: SpriteCommand, engine: SpriteExecutionContext) {
-        const texture = await this.resolveTexture(command, engine);
+    private async show(command: SpriteCommand) {
+        const texture = await this.resolveTexture(command);
         if (!texture) {
             if (command.assetUrl) {
-                const fallback = await engine.loadAsset<Texture>(command.assetUrl);
-                return this.showWithTexture(command, fallback, engine);
+                const fallback = await this.assets.load<Texture>(command.assetUrl);
+                return this.showWithTexture(command, fallback);
             }
-            engine.logger.warn(`Sprite 'show' could not resolve texture (id: '${command.id}')`);
+            this.logger.warn(`Sprite 'show' could not resolve texture (id: '${command.id}')`);
             return;
         }
-        await this.showWithTexture(command, texture, engine);
+        await this.showWithTexture(command, texture);
     }
 
     /* Fades */
 
-    private async showWithTexture(command: SpriteCommand, texture: Texture, engine: SpriteExecutionContext) {
-        const display = engine.getSystem('display');
-        const state = engine.getSystem('state');
+    private async showWithTexture(command: SpriteCommand, texture: Texture) {
         let sprite = this.sprites.get(command.id);
         if (sprite) {
             sprite.texture = texture;
         } else {
             sprite = new Sprite(texture);
             this.sprites.set(command.id, sprite);
-            engine.getLayer('sprites').addChild(sprite);
+            this.display.getLayer('sprites').addChild(sprite);
         }
 
-        const charData = this.findCharacter(command.id, engine);
+        const charData = this.findCharacter(command.id);
         const defaults = charData?.displayDefaults;
 
         sprite.anchor.set(
@@ -434,8 +443,8 @@ export class SpriteHandler implements CommandHandler<SpriteCommand, SpriteExecut
             command.anchorY ?? defaults?.anchorY ?? 1
         );
         sprite.position.set(
-            command.x ?? defaults?.x ?? display.width / 2,
-            command.y ?? defaults?.y ?? display.height
+            command.x ?? defaults?.x ?? this.display.width / 2,
+            command.y ?? defaults?.y ?? this.display.height
         );
 
         const sX = command.scaleX ?? defaults?.scaleX;
@@ -454,7 +463,7 @@ export class SpriteHandler implements CommandHandler<SpriteCommand, SpriteExecut
             sprite.alpha = 1;
         }
 
-        const sprites = state.system.sprites;
+        const sprites = this.state.system.sprites;
         sprites[command.id] = {
             anchorX: sprite.anchor.x,
             anchorY: sprite.anchor.y,

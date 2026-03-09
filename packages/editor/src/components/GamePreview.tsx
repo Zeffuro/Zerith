@@ -39,7 +39,7 @@ export function GamePreview({ script }: { script: Script }) {
     useEffect(() => {
         scriptReference.current = script;
 
-        if (engineReference.current) engineReference.current.getSystem('scenes').addScene('preview', script);
+        if (engineReference.current) engineReference.current.scenes.addScene('preview', script);
     }, [script]);
 
     useEffect(() => {
@@ -76,10 +76,10 @@ export function GamePreview({ script }: { script: Script }) {
             scenes: bootstrapScenes,
         }).then(engine => {
             if (destroyed) { engine.destroy(); return; }
-            engine.getSystem('state').setPersistent('projectPath', projectPath);
+            engine.stateManager.setPersistent('projectPath', projectPath);
             engineReference.current = engine;
             engine.setInputEnabled(false);
-            const scenes = engine.getSystem('scenes');
+            const scenes = engine.scenes;
             scenes.addScene('preview', scriptReference.current);
             void scenes.jumpToScene('preview');
         });
@@ -91,7 +91,7 @@ export function GamePreview({ script }: { script: Script }) {
         if (engineReference.current && playTrigger > 0) {
             const startIndex = typeof playFromIndexReference.current === 'number' ? playFromIndexReference.current : 0;
             engineReference.current.clear();
-            const scenes = engineReference.current.getSystem('scenes');
+            const scenes = engineReference.current.scenes;
              
             scenes.addScene('preview', scriptReference.current);
             void scenes.jumpToScene('preview', startIndex);
@@ -103,7 +103,7 @@ export function GamePreview({ script }: { script: Script }) {
     useEffect(() => {
         if (engineReference.current && stopTrigger > 0) {
             engineReference.current.clear();
-            const scenes = engineReference.current.getSystem('scenes');
+            const scenes = engineReference.current.scenes;
              
             scenes.addScene('preview', scriptReference.current);
             void scenes.jumpToScene('preview', 0);
@@ -114,7 +114,7 @@ export function GamePreview({ script }: { script: Script }) {
     // Mute
     useEffect(() => {
         if (engineReference.current) {
-            engineReference.current.getSystem('audio').muted = isMuted;
+            engineReference.current.audio.muted = isMuted;
         }
     }, [isMuted]);
 

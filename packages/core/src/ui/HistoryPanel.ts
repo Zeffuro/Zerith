@@ -1,7 +1,8 @@
 import { Container, Graphics, Text } from 'pixi.js';
 
+import type { IHistoryManager } from '../interfaces/managers';
 import type { MenuPanel } from '../types';
-import type { UIRenderContext } from './UIRenderContext';
+import type { UIVisualContext } from './UIRenderContext';
 
 import { createButton, createPanelTitle, registerFocusableButton } from './UIComponents';
 
@@ -13,22 +14,33 @@ export class HistoryPanel implements MenuPanel {
     public id = 'history';
     public label = 'History';
     private config: Required<HistoryPanelConfig>;
+    private readonly history: Pick<IHistoryManager, 'getRecent'>;
 
-    constructor(config: HistoryPanelConfig = {}) {
+    constructor(
+        history: Pick<IHistoryManager, 'getRecent'>,
+        config: HistoryPanelConfig = {},
+    ) {
+        this.history = history;
         this.config = { maxLines: 50, ...config };
     }
 
-    build(renderContext: UIRenderContext, onClose: () => void) {
-        const context = renderContext.uiContext;
-        const cfg = context.overlayConfig;
-        const w = context.canvasWidth;
-        const h = context.canvasHeight;
-        const focus = renderContext.focus;
+    build(visualContext: UIVisualContext, onClose: () => void) {
+        const context = {
+            canvasHeight: visualContext.canvasHeight,
+            canvasWidth: visualContext.canvasWidth,
+            getCanvasRect: () => visualContext.canvasElement.getBoundingClientRect(),
+            overlayConfig: visualContext.overlayConfig,
+            theme: visualContext.theme,
+        };
+        const cfg = visualContext.overlayConfig;
+        const w = visualContext.canvasWidth;
+        const h = visualContext.canvasHeight;
+        const focus = visualContext.focus;
 
-        const root = renderContext.createPanelBase();
+        const root = visualContext.createPanelBase();
         root.addChild(createPanelTitle(context, 'HISTORY'));
 
-        const entries = renderContext.history.getRecent(this.config.maxLines);
+        const entries = this.history.getRecent(this.config.maxLines);
         const padding = 40;
         const lineHeight = 30;
         const backMargin = 20;
@@ -100,7 +112,7 @@ export class HistoryPanel implements MenuPanel {
             event.preventDefault();
             applyScroll(-event.deltaY);
         };
-        renderContext.canvasElement.addEventListener('wheel', onWheel, { passive: false });
+        visualContext.canvasElement.addEventListener('wheel', onWheel, { passive: false });
 
         // Keyboard/gamepad scroll via navigate
         focus.onNavigateRaw = (direction: 'down' | 'left' | 'right' | 'up') => {
@@ -121,7 +133,7 @@ export class HistoryPanel implements MenuPanel {
         registerFocusableButton(context, focus, backButton, onClose);
 
         return {
-            cleanup: () => renderContext.canvasElement.removeEventListener('wheel', onWheel),
+            cleanup: () => visualContext.canvasElement.removeEventListener('wheel', onWheel),
             container: root,
         };
     }

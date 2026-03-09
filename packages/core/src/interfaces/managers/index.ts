@@ -4,6 +4,7 @@ export * from './IBaseManager';
 export * from './IDisplayManager';
 export * from './IEventBus';
 export * from './IEvidenceManager';
+export * from './IFlowManager';
 export * from './IHistoryManager';
 export * from './IInputManager';
 export * from './INotificationManager';

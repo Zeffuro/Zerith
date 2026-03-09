@@ -2,11 +2,11 @@ import type { TextStyleOptions } from 'pixi.js';
 
 import { sound } from '@pixi/sound';
 
-import type { DialogueExecutionContext } from '../execution/ExecutionContext';
-import type { IEventBus } from '../interfaces/managers';
+import type { IAssetManager, IAudioManager, IDisplayManager, IEventBus, IFlowManager, IHistoryManager, IStateManager } from '../interfaces/managers';
 import type { CharacterDefinition } from '../types';
 import type { CommandHandler } from '../types';
 import type { BaseCommand } from '../types';
+import type { Logger } from '../utils/Logger';
 import type { SpriteCommand } from './SpriteHandler';
 
 import { parseTextTags, transformShorthands } from '../utils/TextParser';
@@ -37,34 +37,58 @@ export interface DialogueConfig {
     typewriterSpeed?: number;
 }
 
-export class DialogueHandler implements CommandHandler<DialogueCommand, DialogueExecutionContext> {
+export class DialogueHandler implements CommandHandler<DialogueCommand> {
     public autoNext = false;
     public type = 'dialogue' as const;
     private activeAbortController: AbortController | undefined;
+    private readonly assets: IAssetManager;
+    private readonly audio: IAudioManager;
+    private autoAdvanceDelay: number | undefined;
     private readonly config: DialogueConfig;
+    private readonly events: IEventBus;
+    private readonly executeCommand: (command: BaseCommand) => Promise<void>;
+    private readonly flow: IFlowManager;
+    private readonly history: IHistoryManager;
+    private readonly logger: Logger;
     private readonly renderer: DialogueRenderer;
+    private readonly state: IStateManager;
     private readonly typewriter: TypewriterController;
 
-    constructor(config: DialogueConfig) {
+    constructor(
+        assets: IAssetManager,
+        audio: IAudioManager,
+        display: IDisplayManager,
+        events: IEventBus,
+        flow: IFlowManager,
+        history: IHistoryManager,
+        logger: Logger,
+        state: IStateManager,
+        executeCommand: (command: BaseCommand) => Promise<void>,
+        config: DialogueConfig,
+    ) {
+        this.assets = assets;
+        this.audio = audio;
+        this.events = events;
+        this.flow = flow;
+        this.history = history;
+        this.logger = logger;
+        this.state = state;
+        this.executeCommand = executeCommand;
         this.config = { characters: {}, typewriterSpeed: 30, ...config };
-        this.renderer = new DialogueRenderer(this.config);
+        this.renderer = new DialogueRenderer(this.config, display, this.assets);
         this.typewriter = new TypewriterController();
     }
 
-    execute = async (command: DialogueCommand, engine: DialogueExecutionContext) => {
-        const audio = engine.getSystem('audio');
-        const events = engine.getSystem('events');
-        const history = engine.getSystem('history');
-        const state = engine.getSystem('state');
+    execute = async (command: DialogueCommand) => {
         this.activeAbortController?.abort();
         const abortController = new AbortController();
         this.activeAbortController = abortController;
         const { signal } = abortController;
 
-        engine.consumeSkip();
-        this.renderer.ensureUI(engine);
+        this.flow.consumeSkip();
+        this.renderer.ensureUI();
 
-        const resolvedText = engine.resolveText(command.text);
+        const resolvedText = this.resolveText(command.text, this.state);
 
         const speakerKey = command.speaker.toLowerCase();
         const charData = (this.config.characters?.[speakerKey] ||
@@ -73,15 +97,15 @@ export class DialogueHandler implements CommandHandler<DialogueCommand, Dialogue
 
         const displayName = charData?.displayName || command.speaker;
 
-        history.push(displayName, command.text);
+        this.history.push(displayName, command.text);
 
-        this.renderer.setSpeaker(displayName, charData?.nameColor || engine.theme.accentColor);
+        this.renderer.setSpeaker(displayName, charData?.nameColor || '#7A6EF6');
 
         if (charData?.portraitUrl) {
-            await this.renderer.showPortrait(engine, charData.portraitUrl, command.portraitSide ?? 'left');
+            await this.renderer.showPortrait(charData.portraitUrl, command.portraitSide ?? 'left');
             if (signal.aborted) return;
 
-            state.system.dialogue = {
+            this.state.system.dialogue = {
                 portraitSide: command.portraitSide ?? 'left',
                 portraitUrl: charData.portraitUrl,
                 speaker: command.speaker,
@@ -89,7 +113,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand, Dialogue
             };
         } else {
             this.renderer.hidePortrait();
-            state.system.dialogue = {
+            this.state.system.dialogue = {
                 portraitSide: undefined,
                 portraitUrl: undefined,
                 speaker: command.speaker,
@@ -97,9 +121,9 @@ export class DialogueHandler implements CommandHandler<DialogueCommand, Dialogue
             };
         }
 
-        const fullCharData = engine.manifest?.characters?.[speakerKey];
+        const fullCharData = this.config.characters?.[speakerKey];
         if (fullCharData?.talkAnimation) {
-            const spriteState = state.system.sprites;
+            const spriteState = this.state.system.sprites;
             if (spriteState?.[command.speaker] || spriteState?.[speakerKey]) {
                 const spriteId = spriteState[command.speaker] ? command.speaker : speakerKey;
                 const animCommand: SpriteCommand = {
@@ -108,13 +132,13 @@ export class DialogueHandler implements CommandHandler<DialogueCommand, Dialogue
                     id: spriteId,
                     type: 'sprite',
                 };
-                await engine.runCommand(animCommand);
+                await this.executeCommand(animCommand);
                 if (signal.aborted) return;
             }
         }
 
         const blipUrl = charData?.blipUrl || this.config.defaultBlipUrl;
-        const resolvedBlipUrl = blipUrl ? engine.assetResolver(blipUrl) : undefined;
+        const resolvedBlipUrl = blipUrl ? this.assets.resolve(blipUrl) : undefined;
         if (resolvedBlipUrl) {
             try {
                 if (!sound.exists(resolvedBlipUrl)) {
@@ -127,7 +151,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand, Dialogue
                     });
                 }
             } catch {
-                engine.logger.warn(`Blip failed to load: ${blipUrl}`);
+                this.logger.warn(`Blip failed to load: ${blipUrl}`);
             }
             if (signal.aborted) return;
         }
@@ -147,30 +171,55 @@ export class DialogueHandler implements CommandHandler<DialogueCommand, Dialogue
 
         await this.typewriter.run({
             blipUrl: resolvedBlipUrl,
-            consumeSkip: () => engine.consumeSkip(),
+            consumeSkip: () => this.flow.consumeSkip(),
             createPromptBlinker: () => this.renderer.createPromptBlinker(),
             getMessageText: () => this.renderer.getMessageText(),
-            getVoiceVolume: () => audio.voiceVolume,
+            getVoiceVolume: () => this.audio.voiceVolume,
             initialSpeed: this.config.typewriterSpeed!,
             setMessageText: (text) => this.renderer.setMessageText(text),
             signal,
             tokens,
-            waitForPromptInput: (abortSignal) => this.waitForPromptInput(events, abortSignal),
+            waitForPromptInput: (abortSignal) => this.waitForPromptInput(this.events, abortSignal),
         });
 
-        if (!signal.aborted && engine.autoAdvanceDelay !== undefined) {
-            await this.waitForDelay(engine.autoAdvanceDelay, signal);
+        if (!signal.aborted && this.autoAdvanceDelay !== undefined) {
+            await this.waitForDelay(this.autoAdvanceDelay, signal);
             if (!signal.aborted) {
-                void engine.playNext();
+                void this.flow.playNext();
             }
         }
     };
+
+    public getAutoAdvanceDelay(): number | undefined {
+        return this.autoAdvanceDelay;
+    }
 
     reset = () => {
         this.activeAbortController?.abort();
         this.activeAbortController = undefined;
         this.renderer.reset();
     };
+
+    public setAutoAdvanceDelay(delay: number | undefined) {
+        this.autoAdvanceDelay = delay;
+    }
+
+    private resolveText(
+        text: string,
+        state: { get<T = unknown>(key: string): T | undefined; getPersistent<T = unknown>(key: string): T | undefined }
+    ): string {
+        return text.replaceAll(/{(\w+)}/g, (match: string, key: string) => {
+            const value = state.get(key) ?? state.getPersistent(key);
+            if (value === undefined || value === null) return match;
+            if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+                return `${value}`;
+            }
+            if (Array.isArray(value) || typeof value === 'object') {
+                return JSON.stringify(value);
+            }
+            return match;
+        });
+    }
 
     private async waitForDelay(ms: number, signal: AbortSignal): Promise<void> {
         if (signal.aborted || ms <= 0) return;
@@ -217,4 +266,5 @@ export class DialogueHandler implements CommandHandler<DialogueCommand, Dialogue
             signal.addEventListener('abort', onAbort, { once: true });
         });
     }
+
 }

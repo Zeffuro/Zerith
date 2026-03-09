@@ -1,5 +1,6 @@
-import type { LoopContext } from '../execution/ExecutionContext';
+import type { IEvidenceManager, IFlowManager, IStateManager } from '../interfaces/managers';
 import type { BaseCommand, CommandHandler } from '../types';
+import type { Logger } from '../utils/Logger';
 
 export interface WhileCommand extends BaseCommand {
     all?: WhileCondition[];
@@ -20,50 +21,62 @@ export interface WhileCondition {
     value?: unknown;
 }
 
-export class WhileHandler implements CommandHandler<WhileCommand, LoopContext> {
+export class WhileHandler implements CommandHandler<WhileCommand> {
     public autoNext = true;
     public type = 'while' as const;
+    private readonly flow: IFlowManager;
+    private readonly items: IEvidenceManager;
+    private readonly logger: Logger;
+    private readonly state: IStateManager;
 
-    execute = async (command: WhileCommand, engine: LoopContext) => {
+    constructor(
+        flow: IFlowManager,
+        logger: Logger,
+        items: IEvidenceManager,
+        state: IStateManager,
+    ) {
+        this.flow = flow;
+        this.logger = logger;
+        this.items = items;
+        this.state = state;
+    }
+
+    execute = async (command: WhileCommand) => {
         const body = Array.isArray(command.body) ? command.body : [];
         const maxIterations = Number.isFinite(command.maxIterations as number)
             ? Math.max(1, Number(command.maxIterations))
             : 10_000;
 
         let count = 0;
-        while (this.evaluateCommand(command, engine)) {
+        while (this.evaluateCommand(command)) {
             for (const child of body) {
-                await engine.runCommand(child);
+                await this.flow.runCommand(child);
             }
             count++;
             if (count >= maxIterations) {
-                engine.logger.warn(`[while] maxIterations reached (${maxIterations}); breaking loop.`);
+                this.logger.warn(`[while] maxIterations reached (${maxIterations}); breaking loop.`);
                 break;
             }
         }
     };
 
-    private evaluateCommand(command: WhileCommand, engine: LoopContext): boolean {
-        if (Array.isArray(command.all)) return command.all.every(c => this.evaluateCondition(c, engine));
-        if (Array.isArray(command.any)) return command.any.some(c => this.evaluateCondition(c, engine));
+    private evaluateCommand(command: WhileCommand): boolean {
+        if (Array.isArray(command.all)) return command.all.every(c => this.evaluateCondition(c));
+        if (Array.isArray(command.any)) return command.any.some(c => this.evaluateCondition(c));
         if (!command.key) return false;
         return this.evaluateCondition(
             { key: command.key, op: command.op, source: command.source, value: command.value },
-            engine
         );
     }
 
-    private evaluateCondition(
-        condition: WhileCondition,
-        engine: LoopContext
-    ): boolean {
+    private evaluateCondition(condition: WhileCondition): boolean {
         if (condition.source === 'items' || condition.source === 'evidence') {
-            const hasItem = engine.getSystem('items').has(condition.key);
+            const hasItem = this.items.has(condition.key);
             if (condition.value === undefined) return hasItem;
             return condition.op === 'neq' ? hasItem !== condition.value : hasItem === condition.value;
         }
 
-        const actual = engine.getState(condition.key);
+        const actual = this.state.get(condition.key);
         const op = condition.op ?? 'eq';
 
         if (condition.value === undefined) return !!actual;

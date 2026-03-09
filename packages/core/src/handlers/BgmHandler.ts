@@ -1,8 +1,9 @@
 import { sound } from '@pixi/sound';
 
-import type { BgmPlaybackContext } from '../execution/ExecutionContext';
+import type { IAssetManager, IAudioManager, IEventBus, IStateManager } from '../interfaces/managers';
 import type { SaveState } from '../managers/SaveManager';
 import type { BaseCommand, CommandHandler } from '../types';
+import type { Logger } from '../utils/Logger';
 
 export interface BgmCommand extends BaseCommand {
     action: 'pause' | 'play' | 'resume' | 'stop';
@@ -12,29 +13,45 @@ export interface BgmCommand extends BaseCommand {
     volume?: number;
 }
 
-export class BgmHandler implements CommandHandler<BgmCommand, BgmPlaybackContext> {
+export class BgmHandler implements CommandHandler<BgmCommand> {
     public autoNext = true;
     public type = 'bgm' as const;
-    private context: BgmPlaybackContext | undefined;
+    private readonly assets: IAssetManager;
+    private readonly audio: IAudioManager;
     private currentBgmUrl: string | undefined;
+    private readonly events: IEventBus;
     private isPaused = false;
-    public destroy() {
-        if (this.context) {
-            this.context.getSystem('events').off('state:loaded', this.handleStateLoaded);
-        }
+    private readonly logger: Logger;
+    private readonly state: IStateManager;
+
+    constructor(
+        assets: IAssetManager,
+        audio: IAudioManager,
+        logger: Logger,
+        state: IStateManager,
+        events: IEventBus,
+    ) {
+        this.assets = assets;
+        this.audio = audio;
+        this.logger = logger;
+        this.state = state;
+        this.events = events;
+        this.events.on('state:loaded', this.handleStateLoaded);
     }
 
-    execute = async (command: BgmCommand, engine: BgmPlaybackContext) => {
-        const audio = engine.getSystem('audio');
-        const state = engine.getSystem('state');
+    public destroy() {
+        this.events.off('state:loaded', this.handleStateLoaded);
+    }
+
+    execute = async (command: BgmCommand) => {
         if (command.action === 'stop') {
             if (this.currentBgmUrl) {
                 sound.stop(this.currentBgmUrl);
-                engine.logger.info('BGM stopped.');
+                this.logger.info('BGM stopped.');
             }
             this.currentBgmUrl = undefined;
             this.isPaused = false;
-            state.system.bgm = undefined;
+            this.state.system.bgm = undefined;
             return;
         }
 
@@ -42,23 +59,23 @@ export class BgmHandler implements CommandHandler<BgmCommand, BgmPlaybackContext
             if (this.currentBgmUrl) {
                 sound.pause(this.currentBgmUrl);
                 this.isPaused = true;
-                engine.logger.info('BGM paused.');
+                this.logger.info('BGM paused.');
             }
             return;
         }
 
         if (command.action === 'resume') {
             if (!this.currentBgmUrl) {
-                engine.logger.warn('Tried to resume BGM, but no track is active.');
+                this.logger.warn('Tried to resume BGM, but no track is active.');
                 return;
             }
 
             if (this.isPaused) {
                 sound.resume(this.currentBgmUrl);
                 this.isPaused = false;
-                engine.logger.info(`BGM resumed: ${this.currentBgmUrl}`);
+                this.logger.info(`BGM resumed: ${this.currentBgmUrl}`);
             } else {
-                engine.logger.warn('BGM is not paused, nothing to resume.');
+                this.logger.warn('BGM is not paused, nothing to resume.');
             }
             return;
         }
@@ -67,7 +84,7 @@ export class BgmHandler implements CommandHandler<BgmCommand, BgmPlaybackContext
             const url = command.assetUrl;
             if (!url) return;
 
-            const resolvedUrl = engine.assetResolver(url);
+            const resolvedUrl = this.assets.resolve(url);
 
             try {
                 if (!sound.exists(resolvedUrl)) {
@@ -90,25 +107,20 @@ export class BgmHandler implements CommandHandler<BgmCommand, BgmPlaybackContext
                 await sound.play(resolvedUrl, {
                     loop: command.loop ?? true,
                     singleInstance: true,
-                    volume: (command.volume ?? 0.5) * audio.bgmVolume
+                    volume: (command.volume ?? 0.5) * this.audio.bgmVolume
                 });
-                state.system.bgm = url;
+                this.state.system.bgm = url;
 
-                engine.logger.info(`Playing BGM: ${url}`);
+                this.logger.info(`Playing BGM: ${url}`);
             } catch (error) {
-                engine.logger.error(`Failed to load/play BGM: ${url}`, error);
+                this.logger.error(`Failed to load/play BGM: ${url}`, error);
             }
         }
     };
 
-    public init(context: BgmPlaybackContext) {
-        this.context = context;
-        context.getSystem('events').on('state:loaded', this.handleStateLoaded);
-    }
-
     private readonly handleStateLoaded = (...arguments_: unknown[]) => {
         const saveData = arguments_[0] as SaveState;
-        if (!this.context || !saveData.system.bgm) return;
-        void this.execute({ action: 'play', assetUrl: saveData.system.bgm, type: 'bgm' }, this.context);
+        if (!saveData.system.bgm) return;
+        void this.execute({ action: 'play', assetUrl: saveData.system.bgm, type: 'bgm' });
     };
 }

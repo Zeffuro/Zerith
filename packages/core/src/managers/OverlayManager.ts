@@ -1,22 +1,13 @@
 import { Container, FederatedPointerEvent, Graphics, Text } from 'pixi.js';
 
-import type { RegisteredCommandHandler } from '../interfaces/ICommandHandler';
 import type {
-    IAudioManager,
     IDisplayManager,
     IEventBus,
-    IEvidenceManager,
-    IHistoryManager,
-    INotificationManager,
-    ISaveManager,
-    IStateManager,
 } from '../interfaces/managers';
 import type { NavigationDirection } from '../interfaces/managers';
-import type { CommandType } from '../types';
 import type { MenuPanel } from '../types';
-import type { UIRenderContext } from '../ui/UIRenderContext';
+import type { UIVisualContext } from '../ui/UIRenderContext';
 import type { Theme } from '../utils/Theme';
-import type { SaveState } from './SaveManager';
 
 import { PanelFocusManager } from '../ui/PanelFocusManager';
 import { createButton, registerFocusableButton, type UIContext } from '../ui/UIComponents';
@@ -37,22 +28,11 @@ export interface OverlayConfig {
 }
 
 export interface OverlayManagerDeps {
-    audio: IAudioManager;
     display: Pick<IDisplayManager, 'height' | 'width'>;
     events: Pick<IEventBus, 'off' | 'on'>;
-    getAutoAdvanceDelay: () => number | undefined;
     getCanvasElement: () => HTMLCanvasElement | undefined;
-    getHandler: (type: CommandType) => RegisteredCommandHandler | undefined;
     getTheme: () => Theme;
-    history: IHistoryManager;
-    items: IEvidenceManager;
-    loadAsset: <T = unknown>(url: string) => Promise<T>;
-    loadState: (saveState: SaveState) => Promise<void>;
-    notifications: INotificationManager;
     overlayLayer: Container;
-    saves: ISaveManager;
-    setAutoAdvance: (delayMs: number | undefined) => void;
-    state: IStateManager;
 }
 
 export class OverlayManager {
@@ -198,7 +178,7 @@ export class OverlayManager {
             this.rebuildMainMenuFocus();
         };
 
-        const { cleanup, container } = panel.build(this.createRenderContext(), this._focus.onBack);
+        const { cleanup, container } = panel.build(this.createVisualContext(), this._focus.onBack);
 
         this.panelContainer = container;
         this._activeCleanup = cleanup;
@@ -221,38 +201,16 @@ export class OverlayManager {
         this.hideSceneLoading();
     }
 
-    private createRenderContext(): UIRenderContext {
-        const {
-            audio,
-            display,
-            history,
-            items,
-            notifications,
-            saves,
-            state,
-        } = this.deps;
+    private createVisualContext(): UIVisualContext {
+        const { display } = this.deps;
         return {
-            applySaveState: (saveState) => this.deps.loadState(saveState),
-            audio,
-            autoAdvanceDelay: this.deps.getAutoAdvanceDelay(),
             canvasElement: this.requireCanvasElement(),
             canvasHeight: display.height,
             canvasWidth: display.width,
-            closeOverlay: () => this.close(),
             createPanelBase: () => this.createPanelBase(),
             focus: this.focus,
-            getHandler: (type) => this.deps.getHandler(type),
-            history,
-            items,
-            loadAsset: <T = unknown>(url: string) => this.deps.loadAsset<T>(url),
-            notifications,
             overlayConfig: this.config,
-            saves,
-            setAutoAdvance: (delayMs) => this.deps.setAutoAdvance(delayMs),
-            showPanel: (panel) => this.showPanel(panel),
-            state,
             theme: this.deps.getTheme(),
-            uiContext: this.getUIContext(),
         };
     }
 
