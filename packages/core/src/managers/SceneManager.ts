@@ -1,5 +1,5 @@
 import type { Engine } from '../Engine';
-import type { BaseCommand, SceneMap, Script } from '../types';
+import type { BaseCommand, RuntimeEntry, SceneMap, Script } from '../types';
 
 export class SceneManager {
     public currentIndex: number = 0;
@@ -12,7 +12,7 @@ export class SceneManager {
     }
 
     private engine: Engine;
-    private runtimeScript: Array<{ command: BaseCommand; originalIndex: number }> = [];
+    private runtimeScript: RuntimeEntry[] = [];
 
     private scenes: SceneMap = {};
 
@@ -32,14 +32,15 @@ export class SceneManager {
 
     public getLastOriginalIndex(runtimeIndex: number): number {
         for (let index = runtimeIndex; index >= 0; index--) {
-            const orig = this.runtimeScript[index]?.originalIndex ?? -1;
-            if (orig !== -1) return orig;
+            const entry = this.runtimeScript[index];
+            if (entry?.kind === 'original') return entry.originalIndex;
         }
         return 0;
     }
 
     public getOriginalIndex(runtimeIndex: number): number {
-        return this.runtimeScript[runtimeIndex]?.originalIndex ?? -1;
+        const entry = this.runtimeScript[runtimeIndex];
+        return entry?.kind === 'original' ? entry.originalIndex : -1;
     }
 
     public getTemplate(name: string): Script | undefined {
@@ -51,7 +52,7 @@ export class SceneManager {
     }
 
     public injectCommands(commands: BaseCommand[]) {
-        const injectedEntries = commands.map((command) => ({ command, originalIndex: -1 }));
+        const injectedEntries: RuntimeEntry[] = commands.map((command) => ({ kind: 'injected', command }));
         this.runtimeScript.splice(this.currentIndex, 0, ...injectedEntries);
     }
 
@@ -65,7 +66,11 @@ export class SceneManager {
             await this.engine.assets.preloadSceneAssets(this.scenes[sceneName]);
 
             this.currentSceneName = sceneName;
-            this.runtimeScript = this.scenes[sceneName].map((command, originalIndex) => ({ command, originalIndex }));
+            this.runtimeScript = this.scenes[sceneName].map((command, originalIndex) => ({
+                command,
+                kind: 'original',
+                originalIndex
+            }));
             this.currentIndex = startIndex;
         } finally {
             this.engine.events.emit('scene:loaded', sceneName);

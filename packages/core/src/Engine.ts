@@ -1,23 +1,29 @@
 import { Application, Assets, Container } from 'pixi.js';
 
 import type { EngineConfig } from './EngineConfig';
-import type { JumpCommand } from './handlers/JumpHandler';
-import type { SceneChangeCommand } from './handlers/SceneChangeHandler';
-import type { AssetManager } from './managers/AssetManager';
-import type { AudioManager } from './managers/AudioManager';
-import type { DisplayManager } from './managers/DisplayManager';
-import type { EventBus } from './managers/EventBus';
-import type { EvidenceManager } from './managers/EvidenceManager';
-import type { HistoryManager } from './managers/HistoryManager';
-import type { InputManager } from './managers/InputManager';
-import type { NotificationManager } from './managers/NotificationManager';
-import type { OverlayManager } from './managers/OverlayManager';
-import type { SaveManager } from './managers/SaveManager';
-import type { SceneManager } from './managers/SceneManager';
-import type { SpritesheetManager } from './managers/SpritesheetManager';
-import type { StartScreenManager } from './managers/StartScreenManager';
-import type { BaseCommand, CommandHandler, CommandType, GameManifest } from './types';
+import type {
+    CommandHandlerProvider,
+    CommandHandlerRegistry,
+    RegisteredCommandHandler,
+} from './interfaces/ICommandHandler';
+import type {
+    IAssetManager,
+    IAudioManager,
+    IDisplayManager,
+    IEvidenceManager,
+    IEventBus,
+    IHistoryManager,
+    IInputManager,
+    INotificationManager,
+    IOverlayManager,
+    ISaveManager,
+    ISceneManager,
+    ISpritesheetManager,
+    IStartScreenManager,
+} from './interfaces/managers';
+import type { BaseCommand, CommandType, GameManifest, Serializable } from './types';
 
+import { ScriptExecutor } from './execution/ScriptExecutor';
 import { HistoryPanel } from './ui/HistoryPanel';
 import { ItemBrowserPanel } from './ui/ItemBrowserPanel';
 import { SaveLoadPanel } from './ui/SaveLoadPanel';
@@ -28,34 +34,34 @@ import { DefaultTheme, type Theme } from './utils/Theme';
 export type AssetResolver = (url: string) => string;
 
 export interface EngineDeps {
-    assets: AssetManager;
-    audio: AudioManager;
-    display: DisplayManager;
-    events: EventBus;
-    history: HistoryManager;
-    input: InputManager;
-    items: EvidenceManager;
-    notifications: NotificationManager;
-    overlay: OverlayManager;
-    saves: SaveManager;
-    scenes: SceneManager;
-    spritesheets: SpritesheetManager;
-    startScreen: StartScreenManager;
+    assets: IAssetManager;
+    audio: IAudioManager;
+    display: IDisplayManager;
+    events: IEventBus;
+    history: IHistoryManager;
+    input: IInputManager;
+    items: IEvidenceManager;
+    notifications: INotificationManager;
+    overlay: IOverlayManager;
+    saves: ISaveManager;
+    scenes: ISceneManager;
+    spritesheets: ISpritesheetManager;
+    startScreen: IStartScreenManager;
 }
 
 export type EngineDepsFactory = (engine: Engine, config: EngineConfig) => EngineDeps;
 
 export class Engine {
     public app: Application;
-    public assets: AssetManager;
-    public audio: AudioManager;
+    public assets: IAssetManager;
+    public audio: IAudioManager;
     public config: EngineConfig;
 
-    public display: DisplayManager;
-    public events: EventBus;
-    public history: HistoryManager;
-    public input: InputManager;
-    public items: EvidenceManager;
+    public display: IDisplayManager;
+    public events: IEventBus;
+    public history: IHistoryManager;
+    public input: IInputManager;
+    public items: IEvidenceManager;
     public layers: {
         background: Container;
         overlay: Container;
@@ -64,14 +70,14 @@ export class Engine {
     };
     public logger: Logger = new Logger('[Engine]');
     public manifest: GameManifest = {};
-    public notifications: NotificationManager;
-    public overlay: OverlayManager;
-    public persistentState: Record<string, unknown> = {};
-    public saves: SaveManager;
-    public scenes: SceneManager;
-    public spritesheets: SpritesheetManager;
-    public startScreen: StartScreenManager;
-    public state: Record<string, unknown> = {};
+    public notifications: INotificationManager;
+    public overlay: IOverlayManager;
+    public persistentState: Record<string, Serializable> = {};
+    public saves: ISaveManager;
+    public scenes: ISceneManager;
+    public spritesheets: ISpritesheetManager;
+    public startScreen: IStartScreenManager;
+    public state: Record<string, Serializable> = {};
     public theme: Theme = DefaultTheme;
 
     public get assetResolver(): AssetResolver {
@@ -92,26 +98,20 @@ export class Engine {
         return this.scenes.currentSceneName;
     }
     public get isStarted(): boolean {
-        return this._isStarted;
+        return this.executor.isStarted;
     }
 
     public get lastSavePoint(): number {
-        return this._lastSavePoint;
+        return this.executor.lastSavePoint;
     }
 
     private _autoAdvanceDelay: number | undefined;
 
-    private _isStarted = false;
-
-    private _lastSavePoint: number = 0;
-
     /* Lifecycle */
 
-    private _skipRequested = false;
+    private handlers: CommandHandlerRegistry = new Map();
 
-    private handlers: Map<CommandType, CommandHandler<BaseCommand>> = new Map();
-
-    private isExecuting = false;
+    private readonly executor: ScriptExecutor;
 
     private readonly onSceneNavigation?: EngineConfig['onSceneNavigation'];
 
@@ -145,6 +145,14 @@ export class Engine {
         this.spritesheets = deps.spritesheets;
         this.assets = deps.assets;
         this.onSceneNavigation = config.onSceneNavigation;
+        this.executor = new ScriptExecutor({
+            engine: this,
+            events: this.events,
+            handlers: this.handlers,
+            logger: this.logger,
+            onSceneNavigation: this.onSceneNavigation,
+            scenes: this.scenes,
+        });
     }
 
     /* Handler Registration */
@@ -157,40 +165,36 @@ export class Engine {
         this.history.clear();
         this.items.clear();
         this.state = {};
-        this.isExecuting = false;
+        this.executor.reset();
     }
 
     public consumeSkip(): boolean {
-        if (this._skipRequested) {
-            this._skipRequested = false;
-            return true;
-        }
-        return false;
+        return this.executor.consumeSkip();
     }
 
     public destroy() {
-        this._isStarted = false;
+        this.executor.stop();
         this.input.detach();
-        this.display.destroy();
-        this.audio.destroy();
+        this.display.destroy?.();
+        this.audio.destroy?.();
         this.clear();
     }
 
     /* State */
 
-    public getHandler(type: CommandType): CommandHandler<BaseCommand> | undefined {
+    public getHandler(type: CommandType): RegisteredCommandHandler | undefined {
         return this.handlers.get(type);
     }
 
-    public getState<T = unknown>(k: string): T {
-        return this.state[k] as T;
+    public getState<T = Serializable>(k: string): T | undefined {
+        return this.state[k] as T | undefined;
     }
 
     /* Text Control */
 
     public async init(canvasElement: HTMLCanvasElement) {
         return this.display.init(canvasElement).then(() => {
-            this.audio.init();
+            this.audio.init?.();
 
             this.app.stage.addChild(
                 this.layers.background,
@@ -209,37 +213,7 @@ export class Engine {
     }
 
     public async playNext() {
-        if (this.isExecuting || !this._isStarted) return;
-        this.isExecuting = true;
-
-        try {
-            while (this.scenes.currentIndex < this.scenes.scriptLength) {
-                const index = this.scenes.currentIndex;
-                const command = this.scenes.getCommandAt(this.scenes.currentIndex++);
-                if (!command) break;
-                await this.runCommand(command);
-
-                if (this.shouldSkipSceneNavigation(command)) {
-                    return;
-                }
-
-                const handler = this.handlers.get(command.type);
-                if (handler && !handler.autoNext) {
-                    this._lastSavePoint = this.scenes.getLastOriginalIndex(index);
-                    this.isExecuting = false;
-                    return;
-                }
-            }
-        } catch (error) {
-            const index = this.scenes.currentIndex - 1;
-            const command = this.scenes.getCommandAt(index);
-            const type = command ? command.type : 'unknown';
-            this.logger.error(
-                `Error executing command at index ${index} (type: '${type}'): ${String(error)}`
-            );
-        } finally {
-            this.isExecuting = false;
-        }
+        await this.executor.playNext();
     }
 
     public registerDefaultPanels() {
@@ -250,21 +224,23 @@ export class Engine {
         this.overlay.registerPanel(new SaveLoadPanel('load'));
     }
 
-    public registerHandler<T extends BaseCommand>(h: CommandHandler<T>) {
-        this.handlers.set(h.type, h as unknown as CommandHandler<BaseCommand>);
+    public registerHandler(h: RegisteredCommandHandler) {
+        this.handlers.set(h.type, h);
+        if (h.init) {
+            void Promise.resolve(h.init(this)).catch((error: unknown) => {
+                this.logger.error(`Handler '${h.type}' init failed: ${String(error)}`);
+            });
+        }
     }
 
     /* Command Execution */
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    public registerHandlers(hs: (CommandHandler<any> | (new (...arguments_: unknown[]) => CommandHandler<any>))[]) {
+    public registerHandlers(hs: CommandHandlerProvider[]) {
         for (const h of hs) this.registerHandler(typeof h === 'function' ? new h() : h);
     }
 
     public requestSkip() {
-        if (this.isExecuting) {
-            this._skipRequested = true;
-        }
+        this.executor.requestSkip();
     }
 
     public resolveText(text: string): string {
@@ -272,7 +248,7 @@ export class Engine {
             const value = this.state[key] ?? this.persistentState[key];
             if (value === undefined || value === null) return match;
             if (typeof value === 'object') return JSON.stringify(value);
-            return String(value as boolean | number | string);
+            return String(value);
         });
     }
 
@@ -282,19 +258,7 @@ export class Engine {
     /* Convenience Getters */
 
     public async runCommand(command: BaseCommand) {
-        const handler = this.handlers.get(command.type);
-        if (!handler) {
-            this.logger.warn(`No handler registered for command type '${command.type}'`);
-            return;
-        }
-
-        try {
-            await handler.execute(command, this);
-        } catch (error) {
-            this.logger.error(
-                `Handler '${command.type}' threw during execute: ${String(error)}`
-            );
-        }
+        await this.executor.runCommand(command);
     }
 
     public setAutoAdvance(delayMs: number | undefined) {
@@ -315,37 +279,41 @@ export class Engine {
     /* Input */
 
     public setState(k: string, v: unknown) {
-        this.state[k] = v;
+        this.state[k] = this.toSerializable(v);
     }
 
     /* Assets */
 
     public start() {
-        this._isStarted = true;
-        void this.playNext();
+        this.executor.start();
     }
 
     private _assetResolver: AssetResolver = (url) => url;
 
-    private shouldSkipSceneNavigation(command: BaseCommand): boolean {
-        if (command.type !== 'jump' && command.type !== 'scene_change') {
-            return false;
+    private toSerializable(value: unknown): Serializable {
+        if (value === null) return null;
+        if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+            return value;
+        }
+        if (Array.isArray(value)) {
+            return value.map((item) => this.toSerializable(item));
+        }
+        if (this.isRecord(value)) {
+            const serializableObject: { [key: string]: Serializable } = {};
+            for (const [key, item] of Object.entries(value)) {
+                if (item !== undefined) {
+                    serializableObject[key] = this.toSerializable(item);
+                }
+            }
+            return serializableObject;
         }
 
-        let sceneName = '';
-        if (command.type === 'jump') {
-            sceneName = (command as JumpCommand).to;
-        } else if (command.type === 'scene_change') {
-            sceneName = (command as SceneChangeCommand).assetUrl;
-        }
-
-        const action = this.onSceneNavigation?.(sceneName, command.type as 'jump' | 'scene_change');
-        if (action === 'skip') {
-            this.logger.info(`[Engine] Skipping scene navigation to '${sceneName}'`);
-            return true;
-        }
-
-        return false;
+        return null;
     }
+
+    private isRecord(value: unknown): value is Record<string, unknown> {
+        return typeof value === 'object' && value !== null;
+    }
+
 }
 

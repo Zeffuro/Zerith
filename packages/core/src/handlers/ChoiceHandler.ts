@@ -1,6 +1,7 @@
 import { Container, FederatedPointerEvent, Graphics, Text, type TextStyleOptions } from 'pixi.js';
 
 import type { Engine } from '../Engine';
+import type { NavigationDirection } from '../interfaces/managers';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface ChoiceCommand extends BaseCommand {
@@ -127,8 +128,7 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
             }
 
             // Subscribe to InputManager events
-            const onNavigate = (navigationArgument: unknown) => {
-                const direction = navigationArgument as string;
+            const onNavigate = (direction: NavigationDirection) => {
                 if (direction === 'up') updateSelection(selectedIndex - 1);
                 if (direction === 'down') updateSelection(selectedIndex + 1);
             };

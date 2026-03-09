@@ -1,5 +1,6 @@
 import type { Engine } from '../Engine';
 import type { SpriteState } from '../handlers/SpriteHandler';
+import type { Serializable } from '../types';
 
 export interface SaveMeta {
     label?: string;
@@ -12,12 +13,12 @@ export interface SaveState {
     index: number;
     meta: SaveMeta;
     sceneName: string;
-    state: Record<string, unknown>;
+    state: Record<string, Serializable>;
 }
 
 export class SaveManager {
     private engine: Engine;
-    private prefix: string;
+    private readonly prefix: string;
 
     constructor(engine: Engine, prefix: string = 'zerith_save') {
         this.engine = engine;
@@ -33,16 +34,16 @@ export class SaveManager {
         const saveString = localStorage.getItem(`${this.prefix}_${slot}`);
         if (!saveString) return undefined;
 
-        try {
-            const saveData = JSON.parse(saveString) as SaveState;
-            return saveData.meta ?? {
-                savedAt: 0,
-                sceneName: saveData.sceneName,
-                slot
-            };
-        } catch {
+        const saveData = this.parseSaveState(saveString);
+        if (!saveData) {
             return undefined;
         }
+
+        return saveData.meta ?? {
+            savedAt: 0,
+            sceneName: saveData.sceneName,
+            slot
+        };
     }
 
     public hasSlot(slot: number): boolean {
@@ -64,18 +65,23 @@ export class SaveManager {
             return;
         }
 
-        const saveData = JSON.parse(saveString) as SaveState;
+        const saveData = this.parseSaveState(saveString);
+        if (!saveData) {
+            this.engine.logger.warn(`Save data in slot ${slot} is invalid`);
+            return;
+        }
         this.engine.logger.info(`Loading save from slot ${slot}...`);
 
         this.engine.clear();
 
         this.engine.state = saveData.state;
-        const itemIds = this.engine.getState<unknown>('__sys_items');
-        if (Array.isArray(itemIds)) {
-            this.engine.items.deserialize(itemIds as string[]);
+        const itemIds = this.engine.getState<Serializable>('__sys_items');
+        if (this.isStringArray(itemIds)) {
+            this.engine.items.deserialize(itemIds);
         }
 
-        const bgUrl = this.engine.getState<string | undefined>('__sys_bg');
+        const bgUrl = this.engine.getState<string | undefined>('__sys_bg')
+            ?? this.engine.getState<{ assetUrl?: string } | undefined>('__sys_background')?.assetUrl;
         if (bgUrl) await this.engine.runCommand({ assetUrl: bgUrl, type: 'background' });
 
         const bgmUrl = this.engine.getState<string | undefined>('__sys_bgm');
@@ -134,5 +140,72 @@ export class SaveManager {
 
         localStorage.setItem(`${this.prefix}_${slot}`, JSON.stringify(saveData));
         this.engine.logger.info(`Game saved to slot ${slot}`);
+    }
+
+    private isRecord(value: unknown): value is Record<string, unknown> {
+        return typeof value === 'object' && value !== null;
+    }
+
+    private isSaveMeta(value: unknown): value is SaveMeta {
+        if (!this.isRecord(value)) return false;
+        const labelOk = value.label === undefined || typeof value.label === 'string';
+        return labelOk
+            && typeof value.savedAt === 'number'
+            && typeof value.sceneName === 'string'
+            && typeof value.slot === 'number';
+    }
+
+    private isSerializableRecord(value: unknown): value is Record<string, Serializable> {
+        if (!this.isRecord(value)) return false;
+        for (const item of Object.values(value)) {
+            if (!this.isSerializable(item)) return false;
+        }
+        return true;
+    }
+
+    private isSerializable(value: unknown): value is Serializable {
+        if (value === null) return true;
+        if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+            return true;
+        }
+        if (Array.isArray(value)) {
+            return value.every((item) => this.isSerializable(item));
+        }
+        if (this.isRecord(value)) {
+            return Object.values(value).every((item) => this.isSerializable(item));
+        }
+        return false;
+    }
+
+    private isStringArray(value: unknown): value is string[] {
+        return Array.isArray(value) && value.every((item) => typeof item === 'string');
+    }
+
+    private parseSaveState(json: string): SaveState | undefined {
+        try {
+            const parsed = JSON.parse(json);
+            if (!this.isRecord(parsed)) return undefined;
+            if (typeof parsed.index !== 'number') return undefined;
+            if (typeof parsed.sceneName !== 'string') return undefined;
+            if (!this.isSerializableRecord(parsed.state)) return undefined;
+
+            const meta = parsed.meta;
+            if (meta !== undefined && !this.isSaveMeta(meta)) return undefined;
+
+            return {
+                index: parsed.index,
+                meta: this.isSaveMeta(meta)
+                    ? meta
+                    : {
+                        savedAt: 0,
+                        sceneName: parsed.sceneName,
+                        slot: 0
+                    },
+                sceneName: parsed.sceneName,
+                state: parsed.state
+            };
+        } catch {
+            return undefined;
+        }
     }
 }

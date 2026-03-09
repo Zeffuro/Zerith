@@ -1,6 +1,7 @@
 import { Container, FederatedPointerEvent, Graphics, Text } from 'pixi.js';
 
 import type { Engine } from '../Engine';
+import type { NavigationDirection } from '../interfaces/managers';
 import type { MenuPanel } from '../types';
 
 import { PanelFocusManager } from '../ui/PanelFocusManager';
@@ -37,7 +38,7 @@ export class OverlayManager {
     private _isOpen = false;
     private _onBack: (() => void) | undefined;
     private _onConfirm: (() => void) | undefined;
-    private _onNavigate: ((direction: unknown) => void) | undefined;
+    private _onNavigate: ((direction: NavigationDirection) => void) | undefined;
     private container: Container | undefined;
     private readonly engine: Engine;
     private panelContainer: Container | undefined;
@@ -65,7 +66,7 @@ export class OverlayManager {
         };
 
         this.engine.events.on('menu:toggle', () => this.toggle());
-        this.engine.events.on('scene:loading', (sceneName: unknown) => this.showSceneLoading(sceneName as string));
+        this.engine.events.on('scene:loading', (sceneName: string) => this.showSceneLoading(sceneName));
         this.engine.events.on('scene:loaded', () => this.hideSceneLoading());
     }
 
@@ -266,8 +267,8 @@ export class OverlayManager {
     }
 
     private subscribeInput() {
-        this._onNavigate = (direction: unknown) => {
-            this._focus?.navigate(direction as 'down' | 'left' | 'right' | 'up');
+        this._onNavigate = (direction: NavigationDirection) => {
+            this._focus?.navigate(direction);
         };
         this._onConfirm = () => {
             this._focus?.confirm();

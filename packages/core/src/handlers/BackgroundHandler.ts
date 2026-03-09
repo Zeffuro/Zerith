@@ -25,7 +25,8 @@ export class BackgroundHandler implements CommandHandler<BackgroundCommand> {
             this.sprite.width = engine.display.width;
             this.sprite.height = engine.display.height;
             engine.layers.background.addChild(this.sprite);
-            engine.setState('__sys_background', { assetUrl: command.assetUrl });
         }
+
+        engine.setState('__sys_bg', command.assetUrl);
     };
 }

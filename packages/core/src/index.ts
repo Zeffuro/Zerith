@@ -3,6 +3,8 @@ export * from './commands';
 export * from './Engine';
 export * from './EngineBootstrap';
 export * from './EngineConfig';
+export * from './interfaces/ICommandHandler';
+export * from './interfaces/managers';
 /* Handlers */
 export * from './handlers/BackgroundHandler';
 export * from './handlers/BgmHandler';

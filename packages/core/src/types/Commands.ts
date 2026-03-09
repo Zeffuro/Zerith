@@ -1,3 +1,5 @@
+import type { ICommandHandler } from '../interfaces/ICommandHandler';
+
 export const BuiltInCommandTypes = [
     'dialogue',
     'choice',
@@ -27,13 +29,7 @@ export interface BaseCommand {
     type: CommandType;
 }
 
-export interface CommandHandler<T extends BaseCommand> {
-    autoNext?: boolean;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    execute: (command: T, engine: any) => Promise<void>;
-    reset?: () => void;
-    type: T['type'];
-}
+export type CommandHandler<T extends BaseCommand = BaseCommand> = ICommandHandler<T>;
 
 export type CommandType = ({} & string) | typeof BuiltInCommandTypes[number];
 

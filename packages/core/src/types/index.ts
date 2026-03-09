@@ -5,4 +5,6 @@ export * from './Display';
 export * from './GameManifest';
 export * from './Item';
 export * from './MenuPanel';
+export * from './RuntimeEntry';
+export * from './Serializable';
 export * from './Spritesheet';

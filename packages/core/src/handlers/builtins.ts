@@ -1,3 +1,5 @@
+import type { CommandHandlerConstructor } from '../interfaces/ICommandHandler';
+
 import { BackgroundHandler } from './BackgroundHandler';
 import { BgmHandler } from './BgmHandler';
 import { BlockHandler } from './BlockHandler';
@@ -23,7 +25,7 @@ import { WhileHandler } from './WhileHandler';
  * DialogueHandler and ChoiceHandler need config objects,
  * so they must be instantiated manually.
  */
-export const BuiltInHandlers = [
+export const BuiltInHandlers: CommandHandlerConstructor[] = [
     BackgroundHandler,
     TransitionHandler,
     JumpHandler,
