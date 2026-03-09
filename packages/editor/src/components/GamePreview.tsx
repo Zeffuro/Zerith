@@ -76,7 +76,7 @@ export function GamePreview({ script }: { script: Script }) {
             scenes: bootstrapScenes,
         }).then(engine => {
             if (destroyed) { engine.destroy(); return; }
-            engine.persistentState.projectPath = projectPath;
+            engine.stateManager.setPersistent('projectPath', projectPath);
             engineReference.current = engine;
             engine.setInputEnabled(false);
             engine.scenes.addScene('preview', scriptReference.current);

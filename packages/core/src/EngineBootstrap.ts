@@ -18,6 +18,7 @@ import { SaveManager } from './managers/SaveManager';
 import { SceneManager } from './managers/SceneManager';
 import { SpritesheetManager } from './managers/SpritesheetManager';
 import { StartScreenManager } from './managers/StartScreenManager';
+import { StateManager } from './managers/StateManager';
 
 export interface EngineBootstrapOptions {
     assetResolver?: AssetResolver;
@@ -51,7 +52,7 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
         engine.assetResolver = assetResolver;
     }
 
-    engine.manifest = {...manifest, characters};
+    engine.setManifest({ ...manifest, characters });
 
     if (preloadAssets) {
         await engine.assets.preloadCharacterAssets(characters);
@@ -105,6 +106,7 @@ function createDefaultEngineDeps(engine: Engine, config: EngineConfig): EngineDe
     const startScreen = new StartScreenManager(engine, config.startScreen);
     const history = new HistoryManager();
     const items = new EvidenceManager();
+    const state = new StateManager();
     const spritesheets = new SpritesheetManager();
     const assets = new AssetManager(spritesheets);
     const overlay = new OverlayManager(engine, config.overlay);
@@ -123,5 +125,6 @@ function createDefaultEngineDeps(engine: Engine, config: EngineConfig): EngineDe
         scenes,
         spritesheets,
         startScreen,
+        state,
     };
 }

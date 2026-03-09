@@ -1,7 +1,7 @@
 // packages/core/src/handlers/SfxHandler.ts
 import { sound } from '@pixi/sound';
 
-import type { Engine } from '../Engine';
+import type { ExecutionContext } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface SfxCommand extends BaseCommand {
@@ -14,7 +14,7 @@ export class SfxHandler implements CommandHandler<SfxCommand> {
     public autoNext = true;
     public type = 'sfx' as const;
 
-    execute = async (command: SfxCommand, engine: Engine) => {
+    execute = async (command: SfxCommand, engine: ExecutionContext) => {
         const url = command.assetUrl;
         if (!url) return;
 

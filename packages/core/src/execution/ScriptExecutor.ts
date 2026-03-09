@@ -1,13 +1,12 @@
-import type { Engine } from '../Engine';
 import type { EngineConfig } from '../EngineConfig';
 import type { CommandHandlerRegistry } from '../interfaces/ICommandHandler';
 import type { IEventBus, ISceneManager } from '../interfaces/managers';
 import type { BaseCommand } from '../types';
-
 import type { Logger } from '../utils/Logger';
+import type { ExecutionContext } from './ExecutionContext';
 
 export interface ScriptExecutorDeps {
-    engine: Engine;
+    context: ExecutionContext;
     events: IEventBus;
     handlers: CommandHandlerRegistry;
     logger: Logger;
@@ -25,19 +24,20 @@ export class ScriptExecutor {
     }
 
     private _lastSavePoint = 0;
-    private isExecuting = false;
-    private skipRequested = false;
-    private started = false;
-
-    private readonly engine: Engine;
+    private readonly context: ExecutionContext;
     private readonly events: IEventBus;
     private readonly handlers: CommandHandlerRegistry;
+    private injectedCommands: BaseCommand[] = [];
+
+    private isExecuting = false;
     private readonly logger: Logger;
     private readonly onSceneNavigation?: EngineConfig['onSceneNavigation'];
     private readonly scenes: ISceneManager;
+    private skipRequested = false;
+    private started = false;
 
     constructor(deps: ScriptExecutorDeps) {
-        this.engine = deps.engine;
+        this.context = deps.context;
         this.events = deps.events;
         this.handlers = deps.handlers;
         this.logger = deps.logger;
@@ -53,15 +53,24 @@ export class ScriptExecutor {
         return false;
     }
 
+    public injectCommands(commands: BaseCommand[]) {
+        if (commands.length === 0) return;
+        this.injectedCommands = [...commands, ...this.injectedCommands];
+    }
+
     public async playNext() {
         if (this.isExecuting || !this.started) return;
         this.isExecuting = true;
 
         try {
-            while (this.scenes.currentIndex < this.scenes.scriptLength) {
+            while (this.injectedCommands.length > 0 || this.scenes.currentIndex < this.scenes.scriptLength) {
+                const hasInjected = this.injectedCommands.length > 0;
                 const index = this.scenes.currentIndex;
-                const command = this.scenes.getCommandAt(this.scenes.currentIndex++);
-                if (!command) break;
+                const command = hasInjected
+                    ? this.injectedCommands.shift()
+                    : this.scenes.getCommandAt(this.scenes.currentIndex++);
+
+                if (!command) continue;
                 await this.runCommand(command);
 
                 if (this.shouldSkipSceneNavigation(command)) {
@@ -69,7 +78,7 @@ export class ScriptExecutor {
                 }
 
                 const handler = this.handlers.get(command.type);
-                if (handler && !handler.autoNext) {
+                if (handler && !handler.autoNext && !hasInjected) {
                     this._lastSavePoint = this.scenes.getLastOriginalIndex(index);
                     this.isExecuting = false;
                     return;
@@ -94,6 +103,7 @@ export class ScriptExecutor {
     }
 
     public reset() {
+        this.injectedCommands = [];
         this.isExecuting = false;
         this.skipRequested = false;
     }
@@ -106,7 +116,7 @@ export class ScriptExecutor {
         }
 
         try {
-            await handler.execute(command, this.engine);
+            await handler.execute(command, this.context);
             this.events.emit('script:command_executed', command.type);
         } catch (error) {
             this.logger.error(
@@ -155,4 +165,3 @@ export class ScriptExecutor {
         return false;
     }
 }
-

@@ -1,7 +1,7 @@
 import gsap from 'gsap';
 import { Graphics } from 'pixi.js';
 
-import type { Engine } from '../Engine';
+import type { ExecutionContext } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface FlashCommand extends BaseCommand {
@@ -15,7 +15,7 @@ export class FlashHandler implements CommandHandler<FlashCommand> {
     public autoNext = true;
     public type = 'flash' as const;
 
-    execute = async (command: FlashCommand, engine: Engine) => {
+    execute = async (command: FlashCommand, engine: ExecutionContext) => {
         const color = command.color ?? 0xFF_FF_FF;
         const duration = (command.duration ?? 200) / 1000;
 

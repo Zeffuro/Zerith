@@ -1,4 +1,4 @@
-import type { Engine } from '../Engine';
+import type { ExecutionContext } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface WhileCommand extends BaseCommand {
@@ -24,7 +24,7 @@ export class WhileHandler implements CommandHandler<WhileCommand> {
     public autoNext = true;
     public type = 'while' as const;
 
-    execute = async (command: WhileCommand, engine: Engine) => {
+    execute = async (command: WhileCommand, engine: ExecutionContext) => {
         const body = Array.isArray(command.body) ? command.body : [];
         const maxIterations = Number.isFinite(command.maxIterations as number)
             ? Math.max(1, Number(command.maxIterations))
@@ -43,7 +43,7 @@ export class WhileHandler implements CommandHandler<WhileCommand> {
         }
     };
 
-    private evaluateCommand(command: WhileCommand, engine: Engine): boolean {
+    private evaluateCommand(command: WhileCommand, engine: ExecutionContext): boolean {
         if (Array.isArray(command.all)) return command.all.every(c => this.evaluateCondition(c, engine));
         if (Array.isArray(command.any)) return command.any.some(c => this.evaluateCondition(c, engine));
         if (!command.key) return false;
@@ -55,7 +55,7 @@ export class WhileHandler implements CommandHandler<WhileCommand> {
 
     private evaluateCondition(
         condition: WhileCondition,
-        engine: Engine
+        engine: ExecutionContext
     ): boolean {
         if (condition.source === 'items' || condition.source === 'evidence') {
             const hasItem = engine.items.has(condition.key);

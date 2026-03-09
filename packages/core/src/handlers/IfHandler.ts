@@ -1,4 +1,4 @@
-import type { Engine } from '../Engine';
+import type { ExecutionContext } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export type ComparisonOp = 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'neq';
@@ -26,7 +26,7 @@ export class IfHandler implements CommandHandler<IfCommand> {
     public autoNext = true;
     public type = 'if' as const;
 
-    execute = (command: IfCommand, engine: Engine) => {
+    execute = (command: IfCommand, engine: ExecutionContext) => {
         let conditionMet: boolean;
 
         if (command.all) {
@@ -54,7 +54,7 @@ export class IfHandler implements CommandHandler<IfCommand> {
         return Promise.resolve();
     };
 
-    private evaluate(condition: Condition, engine: Engine): boolean {
+    private evaluate(condition: Condition, engine: ExecutionContext): boolean {
         if (condition.source === 'items' || condition.source === 'evidence') {
             const hasItem = engine.items.has(condition.key);
             if (condition.value === undefined) return hasItem;

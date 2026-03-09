@@ -8,3 +8,4 @@ export * from './MenuPanel';
 export * from './RuntimeEntry';
 export * from './Serializable';
 export * from './Spritesheet';
+export * from './SystemState';

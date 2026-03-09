@@ -1,6 +1,6 @@
 import { Container, FederatedPointerEvent, Graphics, Text, type TextStyleOptions } from 'pixi.js';
 
-import type { Engine } from '../Engine';
+import type { ExecutionContext } from '../execution/ExecutionContext';
 import type { NavigationDirection } from '../interfaces/managers';
 import type { BaseCommand, CommandHandler } from '../types';
 
@@ -44,7 +44,7 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
         };
     }
 
-    execute = (command: ChoiceCommand, engine: Engine): Promise<void> => {
+    execute = (command: ChoiceCommand, engine: ExecutionContext): Promise<void> => {
         return new Promise((resolve) => {
             const choiceContainer = new Container();
 

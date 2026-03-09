@@ -1,6 +1,7 @@
 import { Application, Assets, Container } from 'pixi.js';
 
 import type { EngineConfig } from './EngineConfig';
+import type { ExecutionContext } from './execution/ExecutionContext';
 import type {
     CommandHandlerProvider,
     CommandHandlerRegistry,
@@ -10,8 +11,8 @@ import type {
     IAssetManager,
     IAudioManager,
     IDisplayManager,
-    IEvidenceManager,
     IEventBus,
+    IEvidenceManager,
     IHistoryManager,
     IInputManager,
     INotificationManager,
@@ -20,6 +21,7 @@ import type {
     ISceneManager,
     ISpritesheetManager,
     IStartScreenManager,
+    IStateManager,
 } from './interfaces/managers';
 import type { BaseCommand, CommandType, GameManifest, Serializable } from './types';
 
@@ -47,6 +49,7 @@ export interface EngineDeps {
     scenes: ISceneManager;
     spritesheets: ISpritesheetManager;
     startScreen: IStartScreenManager;
+    state: IStateManager;
 }
 
 export type EngineDepsFactory = (engine: Engine, config: EngineConfig) => EngineDeps;
@@ -72,25 +75,27 @@ export class Engine {
     public manifest: GameManifest = {};
     public notifications: INotificationManager;
     public overlay: IOverlayManager;
-    public persistentState: Record<string, Serializable> = {};
     public saves: ISaveManager;
     public scenes: ISceneManager;
     public spritesheets: ISpritesheetManager;
     public startScreen: IStartScreenManager;
-    public state: Record<string, Serializable> = {};
+    public stateManager: IStateManager;
     public theme: Theme = DefaultTheme;
 
     public get assetResolver(): AssetResolver {
         return this._assetResolver;
     }
+
     public set assetResolver(resolver: AssetResolver) {
         this._assetResolver = resolver;
         this.spritesheets.setResolver(resolver);
         this.assets.setResolver(resolver);
     }
+
     public get autoAdvanceDelay(): number | undefined {
         return this._autoAdvanceDelay;
     }
+
     public get currentIndex(): number {
         return this.scenes.currentIndex;
     }
@@ -100,18 +105,28 @@ export class Engine {
     public get isStarted(): boolean {
         return this.executor.isStarted;
     }
-
     public get lastSavePoint(): number {
         return this.executor.lastSavePoint;
+    }
+    public get persistentState(): Record<string, Serializable> {
+        return this.stateManager.persistentState;
+    }
+    public get state(): Record<string, Serializable> {
+        return this.stateManager.state;
+    }
+
+    public set state(value: Record<string, Serializable>) {
+        this.stateManager.replaceState(value, this.stateManager.system);
     }
 
     private _autoAdvanceDelay: number | undefined;
 
     /* Lifecycle */
 
-    private handlers: CommandHandlerRegistry = new Map();
-
+    private readonly executionContext: ExecutionContext;
     private readonly executor: ScriptExecutor;
+
+    private handlers: CommandHandlerRegistry = new Map();
 
     private readonly onSceneNavigation?: EngineConfig['onSceneNavigation'];
 
@@ -142,17 +157,54 @@ export class Engine {
         this.overlay = deps.overlay;
         this.history = deps.history;
         this.items = deps.items;
-        this.spritesheets = deps.spritesheets;
         this.assets = deps.assets;
+        this.stateManager = deps.state;
+        this.spritesheets = deps.spritesheets;
         this.onSceneNavigation = config.onSceneNavigation;
+
+        this.executionContext = {
+            assetResolver: (url: string) => this.assetResolver(url),
+            assets: this.assets,
+            audio: this.audio,
+            autoAdvanceDelay: this.autoAdvanceDelay,
+            consumeSkip: () => this.consumeSkip(),
+            display: this.display,
+            events: this.events,
+            getState: <T = unknown>(key: string) => this.getState<T>(key),
+            history: this.history,
+            injectCommands: () => {},
+            items: this.items,
+            layers: this.layers,
+            loadAsset: <T = unknown>(url: string) => this.loadAsset<T>(url),
+            logger: this.logger,
+            manifest: this.manifest,
+            notifications: this.notifications,
+            overlay: this.overlay,
+            playNext: () => this.playNext(),
+            resolveText: (text: string) => this.resolveText(text),
+            runCommand: async (command: BaseCommand) => {
+                await this.runCommand(command);
+            },
+            saves: this.saves,
+            scenes: this.scenes,
+            setState: (key: string, value: unknown) => this.setState(key, value),
+            spritesheets: this.spritesheets,
+            startScreen: this.startScreen,
+            stateManager: this.stateManager,
+            theme: this.theme,
+        };
+
         this.executor = new ScriptExecutor({
-            engine: this,
+            context: this.executionContext,
             events: this.events,
             handlers: this.handlers,
             logger: this.logger,
             onSceneNavigation: this.onSceneNavigation,
             scenes: this.scenes,
         });
+        this.executionContext.injectCommands = (commands: BaseCommand[]) => {
+            this.executor.injectCommands(commands);
+        };
     }
 
     /* Handler Registration */
@@ -164,7 +216,7 @@ export class Engine {
         for (const h of this.handlers.values()) h.reset?.();
         this.history.clear();
         this.items.clear();
-        this.state = {};
+        this.stateManager.clear();
         this.executor.reset();
     }
 
@@ -175,8 +227,8 @@ export class Engine {
     public destroy() {
         this.executor.stop();
         this.input.detach();
-        this.display.destroy?.();
-        this.audio.destroy?.();
+        void this.display.destroy?.();
+        void this.audio.destroy?.();
         this.clear();
     }
 
@@ -187,24 +239,23 @@ export class Engine {
     }
 
     public getState<T = Serializable>(k: string): T | undefined {
-        return this.state[k] as T | undefined;
+        return this.stateManager.get<T>(k);
     }
 
     /* Text Control */
 
     public async init(canvasElement: HTMLCanvasElement) {
-        return this.display.init(canvasElement).then(() => {
-            this.audio.init?.();
+        await this.display.init(canvasElement);
+        await this.audio.init?.();
 
-            this.app.stage.addChild(
-                this.layers.background,
-                this.layers.sprites,
-                this.layers.ui,
-                this.layers.overlay
-            );
+        this.app.stage.addChild(
+            this.layers.background,
+            this.layers.sprites,
+            this.layers.ui,
+            this.layers.overlay
+        );
 
-            this.input.attach(canvasElement);
-        });
+        this.input.attach(canvasElement);
     }
 
     public async loadAsset<T = unknown>(url: string): Promise<T> {
@@ -227,7 +278,7 @@ export class Engine {
     public registerHandler(h: RegisteredCommandHandler) {
         this.handlers.set(h.type, h);
         if (h.init) {
-            void Promise.resolve(h.init(this)).catch((error: unknown) => {
+            void Promise.resolve(h.init(this.executionContext)).catch((error: unknown) => {
                 this.logger.error(`Handler '${h.type}' init failed: ${String(error)}`);
             });
         }
@@ -245,7 +296,7 @@ export class Engine {
 
     public resolveText(text: string): string {
         return text.replaceAll(/\{(\w+)}/g, (match: string, key: string) => {
-            const value = this.state[key] ?? this.persistentState[key];
+            const value = this.stateManager.get(key) ?? this.stateManager.getPersistent(key);
             if (value === undefined || value === null) return match;
             if (typeof value === 'object') return JSON.stringify(value);
             return String(value);
@@ -261,8 +312,14 @@ export class Engine {
         await this.executor.runCommand(command);
     }
 
+    public setManifest(manifest: GameManifest) {
+        this.manifest = manifest;
+        this.executionContext.manifest = manifest;
+    }
+
     public setAutoAdvance(delayMs: number | undefined) {
         this._autoAdvanceDelay = delayMs;
+        this.executionContext.autoAdvanceDelay = delayMs;
     }
 
     public setInputEnabled(enabled: boolean) {
@@ -279,7 +336,7 @@ export class Engine {
     /* Input */
 
     public setState(k: string, v: unknown) {
-        this.state[k] = this.toSerializable(v);
+        this.stateManager.set(k, v);
     }
 
     /* Assets */
@@ -290,30 +347,6 @@ export class Engine {
 
     private _assetResolver: AssetResolver = (url) => url;
 
-    private toSerializable(value: unknown): Serializable {
-        if (value === null) return null;
-        if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-            return value;
-        }
-        if (Array.isArray(value)) {
-            return value.map((item) => this.toSerializable(item));
-        }
-        if (this.isRecord(value)) {
-            const serializableObject: { [key: string]: Serializable } = {};
-            for (const [key, item] of Object.entries(value)) {
-                if (item !== undefined) {
-                    serializableObject[key] = this.toSerializable(item);
-                }
-            }
-            return serializableObject;
-        }
-
-        return null;
-    }
-
-    private isRecord(value: unknown): value is Record<string, unknown> {
-        return typeof value === 'object' && value !== null;
-    }
 
 }
 

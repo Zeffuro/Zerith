@@ -1,4 +1,4 @@
-import type { Engine } from '../Engine';
+import type { ExecutionContext } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface SceneChangeCommand extends BaseCommand {
@@ -11,7 +11,7 @@ export class SceneChangeHandler implements CommandHandler<SceneChangeCommand> {
     public autoNext = true;
     public type = 'scene_change' as const;
 
-    execute = async (command: SceneChangeCommand, engine: Engine) => {
+    execute = async (command: SceneChangeCommand, engine: ExecutionContext) => {
         const fadeTime = (command.duration || 1000) / 2;
 
         await engine.runCommand({

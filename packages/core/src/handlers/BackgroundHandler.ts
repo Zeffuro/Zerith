@@ -1,6 +1,6 @@
 import { Sprite, Texture } from 'pixi.js';
 
-import type { Engine } from '../Engine';
+import type { ExecutionContext } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface BackgroundCommand extends BaseCommand {
@@ -13,7 +13,7 @@ export class BackgroundHandler implements CommandHandler<BackgroundCommand> {
     public type = 'background' as const;
     private sprite: Sprite | undefined;
 
-    execute = async (command: BackgroundCommand, engine: Engine) => {
+    execute = async (command: BackgroundCommand, engine: ExecutionContext) => {
         const texture = await engine.loadAsset<Texture>(command.assetUrl);
 
         if (this.sprite) {
@@ -27,6 +27,6 @@ export class BackgroundHandler implements CommandHandler<BackgroundCommand> {
             engine.layers.background.addChild(this.sprite);
         }
 
-        engine.setState('__sys_bg', command.assetUrl);
+        engine.stateManager.system.background = command.assetUrl;
     };
 }

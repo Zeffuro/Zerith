@@ -1,7 +1,7 @@
 import gsap from 'gsap';
 import { Container, Graphics, HTMLText, Sprite, Text, type TextStyleOptions, type Texture } from 'pixi.js';
 
-import type { Engine } from '../../Engine';
+import type { ExecutionContext } from '../../execution/ExecutionContext';
 
 export interface DialogueRendererConfig {
     backgroundAlpha?: number;
@@ -42,7 +42,7 @@ export class DialogueRenderer {
         return blinker;
     }
 
-    public ensureUI(engine: Engine) {
+    public ensureUI(engine: ExecutionContext) {
         if (this.container) return;
 
         const t = engine.theme;
@@ -124,7 +124,7 @@ export class DialogueRenderer {
         this.nameText.style.fill = fill;
     }
 
-    public async showPortrait(engine: Engine, portraitUrl: string, side: 'left' | 'right') {
+    public async showPortrait(engine: ExecutionContext, portraitUrl: string, side: 'left' | 'right') {
         this.portraitSprite.texture = await engine.loadAsset<Texture>(portraitUrl);
         this.portraitSprite.visible = true;
         this.portraitSprite.anchor.set(0.5, 1);

@@ -1,7 +1,7 @@
 import gsap from 'gsap';
 import { Graphics } from 'pixi.js';
 
-import type { Engine } from '../Engine';
+import type { ExecutionContext } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface TransitionCommand extends BaseCommand {
@@ -15,7 +15,7 @@ export class TransitionHandler implements CommandHandler<TransitionCommand> {
     public type = 'transition' as const;
     private fadeRect: Graphics | undefined;
 
-    execute = (command: TransitionCommand, engine: Engine) => {
+    execute = (command: TransitionCommand, engine: ExecutionContext) => {
         const duration = (command.duration || 500) / 1000;
 
         if (!this.fadeRect) {

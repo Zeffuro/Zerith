@@ -1,4 +1,4 @@
-import type { Engine } from '../Engine';
+import type { ExecutionContext } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface ItemCommand extends BaseCommand {
@@ -12,7 +12,7 @@ export class ItemHandler implements CommandHandler<ItemCommand> {
     public autoNext = true;
     public type = 'item' as const;
 
-    execute = (command: ItemCommand, engine: Engine) => {
+    execute = (command: ItemCommand, engine: ExecutionContext) => {
         const manager = engine.items;
 
         switch (command.action) {

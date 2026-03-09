@@ -2,7 +2,7 @@ import type { TextStyleOptions } from 'pixi.js';
 
 import { sound } from '@pixi/sound';
 
-import type { Engine } from '../Engine';
+import type { ExecutionContext } from '../execution/ExecutionContext';
 import type { CharacterDefinition } from '../types';
 import type { CommandHandler } from '../types';
 import type { BaseCommand } from '../types';
@@ -50,7 +50,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         this.typewriter = new TypewriterController();
     }
 
-    execute = async (command: DialogueCommand, engine: Engine) => {
+    execute = async (command: DialogueCommand, engine: ExecutionContext) => {
         this.activeAbortController?.abort();
         const abortController = new AbortController();
         this.activeAbortController = abortController;
@@ -76,25 +76,25 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
             await this.renderer.showPortrait(engine, charData.portraitUrl, command.portraitSide ?? 'left');
             if (signal.aborted) return;
 
-            engine.setState('__sys_dialogue', {
+            engine.stateManager.system.dialogue = {
                 portraitSide: command.portraitSide ?? 'left',
                 portraitUrl: charData.portraitUrl,
                 speaker: command.speaker,
                 text: command.text,
-            });
+            };
         } else {
             this.renderer.hidePortrait();
-            engine.setState('__sys_dialogue', {
+            engine.stateManager.system.dialogue = {
                 portraitSide: undefined,
                 portraitUrl: undefined,
                 speaker: command.speaker,
                 text: command.text,
-            });
+            };
         }
 
         const fullCharData = engine.manifest?.characters?.[speakerKey];
         if (fullCharData?.talkAnimation) {
-            const spriteState = engine.getState<Record<string, unknown>>('__sys_sprites');
+            const spriteState = engine.stateManager.system.sprites;
             if (spriteState?.[command.speaker] || spriteState?.[speakerKey]) {
                 const spriteId = spriteState[command.speaker] ? command.speaker : speakerKey;
                 const animCommand: SpriteCommand = {
@@ -185,7 +185,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         });
     }
 
-    private async waitForPromptInput(engine: Engine, signal: AbortSignal): Promise<void> {
+    private async waitForPromptInput(engine: ExecutionContext, signal: AbortSignal): Promise<void> {
         if (signal.aborted) return;
 
         await new Promise<void>((resolve) => {

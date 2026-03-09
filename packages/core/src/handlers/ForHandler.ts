@@ -1,4 +1,4 @@
-import type { Engine } from '../Engine';
+import type { ExecutionContext } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface ForCommand extends BaseCommand {
@@ -14,7 +14,7 @@ export class ForHandler implements CommandHandler<ForCommand> {
     public autoNext = true;
     public type = 'for' as const;
 
-    execute = async (command: ForCommand, engine: Engine) => {
+    execute = async (command: ForCommand, engine: ExecutionContext) => {
         const iterator = command.iterator ?? 'i';
         const from = Number(command.from ?? 0);
         const to = Number(command.to ?? 0);

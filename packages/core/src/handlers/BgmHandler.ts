@@ -1,6 +1,6 @@
 import { sound } from '@pixi/sound';
 
-import type { Engine } from '../Engine';
+import type { ExecutionContext } from '../execution/ExecutionContext';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface BgmCommand extends BaseCommand {
@@ -17,7 +17,7 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
     private currentBgmUrl: string | undefined;
     private isPaused = false;
 
-    execute = async (command: BgmCommand, engine: Engine) => {
+    execute = async (command: BgmCommand, engine: ExecutionContext) => {
         if (command.action === 'stop') {
             if (this.currentBgmUrl) {
                 sound.stop(this.currentBgmUrl);
@@ -25,6 +25,7 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
             }
             this.currentBgmUrl = undefined;
             this.isPaused = false;
+            engine.stateManager.system.bgm = undefined;
             return;
         }
 
@@ -82,7 +83,7 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
                     singleInstance: true,
                     volume: (command.volume ?? 0.5) * engine.audio.bgmVolume
                 });
-                engine.setState('__sys_bgm', url);
+                engine.stateManager.system.bgm = url;
 
                 engine.logger.info(`Playing BGM: ${url}`);
             } catch (error) {

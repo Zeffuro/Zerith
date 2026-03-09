@@ -3,15 +3,14 @@ export * from './commands';
 export * from './Engine';
 export * from './EngineBootstrap';
 export * from './EngineConfig';
-export * from './interfaces/ICommandHandler';
-export * from './interfaces/managers';
+export * from './execution/ExecutionContext';
 /* Handlers */
 export * from './handlers/BackgroundHandler';
 export * from './handlers/BgmHandler';
 export * from './handlers/BlockHandler';
-
 export { BuiltInHandlers } from './handlers/builtins';
 export * from './handlers/CallHandler';
+
 export * from './handlers/ChoiceHandler';
 export * from './handlers/DialogueHandler';
 export * from './handlers/FlashHandler';
@@ -29,6 +28,8 @@ export * from './handlers/SpriteHandler';
 export * from './handlers/TransitionHandler';
 export * from './handlers/WaitHandler';
 export * from './handlers/WhileHandler';
+export * from './interfaces/ICommandHandler';
+export * from './interfaces/managers';
 export * from './managers/AssetManager';
 export * from './managers/AudioManager';
 
@@ -45,6 +46,7 @@ export * from './managers/SaveManager';
 export * from './managers/SceneManager';
 export * from './managers/SpritesheetManager';
 export * from './managers/StartScreenManager';
+export * from './managers/StateManager';
 export * from './schemas';
 export * from './types';
 
