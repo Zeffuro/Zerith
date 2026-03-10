@@ -1,10 +1,12 @@
-import { Graphics } from "pixi.js";
+import { Container, type FederatedPointerEvent, Graphics } from 'pixi.js';
 
 import type { DialogueHandler } from '../handlers/DialogueHandler';
-import type { IAudioManager } from '../interfaces/managers';
+import type { IAudioManager, IDisplayManager } from '../interfaces/managers';
+import type { OverlayConfig } from '../managers/OverlayManager';
 import type { MenuPanel } from '../types';
+import type { Theme } from '../utils/Theme';
 import type { SliderResult, ToggleResult } from './UIComponents';
-import type { UIVisualContext } from './UIRenderContext';
+import type { PanelFocusManager } from './PanelFocusManager';
 
 import { createButton, createPanelTitle, createSlider, createToggle, registerFocusableButton } from './UIComponents';
 
@@ -22,21 +24,26 @@ export class SettingsPanel implements MenuPanel {
         this.dialogueHandler = dialogueHandler;
     }
 
-    build(visualContext: UIVisualContext, onClose: () => void) {
-        const context = {
-            canvasHeight: visualContext.canvasHeight,
-            canvasWidth: visualContext.canvasWidth,
-            getCanvasRect: () => visualContext.canvasElement.getBoundingClientRect(),
-            overlayConfig: visualContext.overlayConfig,
-            theme: visualContext.theme,
-        };
-        const cfg = context.overlayConfig;
-        const focus = visualContext.focus;
+    build(
+        display: Pick<IDisplayManager, 'height' | 'width'> & { canvasElement: HTMLCanvasElement; },
+        theme: Theme,
+        overlayConfig: Required<OverlayConfig>,
+        focus: PanelFocusManager,
+        onClose: () => void,
+    ) {
+        const cfg = overlayConfig;
 
-        const root = visualContext.createPanelBase();
-        root.addChild(createPanelTitle(context, 'SETTINGS'));
+        const container = new Container();
+        container.eventMode = 'static';
+        const bg = new Graphics()
+            .rect(0, 0, display.width, display.height)
+            .fill({ alpha: 0.95, color: cfg.backgroundColor });
+        bg.eventMode = 'static';
+        bg.on('pointerdown', (event: FederatedPointerEvent) => event.stopPropagation());
+        container.addChild(bg);
+        container.addChild(createPanelTitle(cfg, display.width, 'SETTINGS'));
 
-        const contentStartX = (context.canvasWidth - 400 - 180 - 80) / 2;
+        const contentStartX = (display.width - 400 - 180 - 80) / 2;
         let yPos = 100;
         const spacing = 70;
         const cleanups: (() => void)[] = [];
@@ -44,9 +51,9 @@ export class SettingsPanel implements MenuPanel {
         const createFocusIndicator = (atY: number): Graphics => {
             const indicator = new Graphics();
             indicator.roundRect(contentStartX - 15, atY, 4, 40, 2);
-            indicator.fill({ alpha: 0.9, color: context.theme.accentColor });
+            indicator.fill({ alpha: 0.9, color: theme.accentColor });
             indicator.visible = false;
-            root.addChild(indicator);
+            container.addChild(indicator);
             return indicator;
         };
 
@@ -60,13 +67,13 @@ export class SettingsPanel implements MenuPanel {
         const sliderResults: SliderResult[] = [];
 
         for (const { getValue, label, setValue } of sliderDefs) {
-            const result = createSlider(context, {
+            const result = createSlider(theme, cfg, display.width, () => display.canvasElement.getBoundingClientRect(), {
                 label,
                 onChange: setValue,
                 value: getValue(),
             });
             result.container.position.set(contentStartX, yPos);
-            root.addChild(result.container);
+            container.addChild(result.container);
             cleanups.push(result.cleanup);
             sliderResults.push(result);
 
@@ -80,26 +87,26 @@ export class SettingsPanel implements MenuPanel {
         }
 
         yPos += 10;
-        const toggleResult: ToggleResult = createToggle(context, {
+        const toggleResult: ToggleResult = createToggle(theme, cfg, {
             label: 'Auto-Advance',
             onChange: (on) => this.dialogueHandler.setAutoAdvanceDelay(on ? 3000 : undefined),
             value: this.dialogueHandler.getAutoAdvanceDelay() !== undefined,
         });
         toggleResult.container.position.set(contentStartX, yPos);
-        root.addChild(toggleResult.container);
+        container.addChild(toggleResult.container);
 
         // ── Dialogue Font Size ──
         yPos += spacing;
-        const fontSizeSlider = createSlider(context, {
+        const fontSizeSlider = createSlider(theme, cfg, display.width, () => display.canvasElement.getBoundingClientRect(), {
             label: 'Text Size',
             onChange: (v) => {
-                visualContext.theme.fontSize = Math.round(14 + v * 26);
+                theme.fontSize = Math.round(14 + v * 26);
                 this.dialogueHandler.reset?.();
             },
-            value: (visualContext.theme.fontSize - 14) / 26,
+            value: (theme.fontSize - 14) / 26,
         });
         fontSizeSlider.container.position.set(contentStartX, yPos);
-        root.addChild(fontSizeSlider.container);
+        container.addChild(fontSizeSlider.container);
         cleanups.push(fontSizeSlider.cleanup);
         sliderResults.push(fontSizeSlider);
 
@@ -111,14 +118,14 @@ export class SettingsPanel implements MenuPanel {
         });
 
         const backMargin = 20;
-        const backButton = createButton(context, {
+        const backButton = createButton(theme, cfg, {
             label: 'Back',
-            x: context.canvasWidth / 2,
-            y: context.canvasHeight - cfg.buttonHeight - backMargin,
+            x: display.width / 2,
+            y: display.height - cfg.buttonHeight - backMargin,
         }, onClose);
-        root.addChild(backButton);
+        container.addChild(backButton);
 
-        registerFocusableButton(context, focus, backButton, onClose);
+        registerFocusableButton(theme, cfg, focus, backButton, onClose);
 
         const sliderStep = 0.05;
         focus.onNavigateRaw = (direction: 'down' | 'left' | 'right' | 'up') => {
@@ -145,7 +152,7 @@ export class SettingsPanel implements MenuPanel {
 
         return {
             cleanup: () => { for (const function_ of cleanups) function_() },
-            container: root,
+            container,
         };
     }
 }

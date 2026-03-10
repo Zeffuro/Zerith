@@ -1,7 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 
 import type { IDisplayManager } from '../interfaces/managers';
-import type { Theme } from '../utils/Theme';
+import type { IThemeProvider } from '../interfaces/providers';
 
 export interface NotificationConfig {
     backgroundAlpha?: number;
@@ -17,8 +17,8 @@ export interface NotificationConfig {
 
 export interface NotificationDeps {
     display: Pick<IDisplayManager, 'width'>;
-    getTheme: () => Theme;
     overlayLayer: Container;
+    themeProvider: IThemeProvider;
 }
 
 export class NotificationManager {
@@ -43,13 +43,13 @@ export class NotificationManager {
 
     public show(message: string) {
         const { backgroundAlpha, backgroundColor, duration, fadeTime, fontFamily, fontSize, height, textColor, width } = this.config;
-        const { display, getTheme, overlayLayer } = this.deps;
+        const { display, overlayLayer, themeProvider } = this.deps;
 
         const toast = new Container();
         const bg = new Graphics()
             .roundRect(0, 0, width, height, 8)
             .fill({ alpha: backgroundAlpha, color: backgroundColor })
-            .stroke({ color: getTheme().borderColor, width: 1 });
+            .stroke({ color: themeProvider.getTheme().borderColor, width: 1 });
 
         const txt = new Text({
             style: { fill: textColor, fontFamily, fontSize },

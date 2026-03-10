@@ -1,5 +1,5 @@
 import type { EngineConfig } from '../EngineConfig';
-import type { CommandHandlerRegistry } from '../interfaces/ICommandHandler';
+import type { CommandHandlerRegistry, RegisteredCommandHandler } from '../interfaces/ICommandHandler';
 import type { IEventBus, IFlowManager, ISceneManager } from '../interfaces/managers';
 import type { BaseCommand } from '../types';
 import type { Logger } from '../utils/Logger';
@@ -48,6 +48,10 @@ export class FlowManager implements IFlowManager {
         return true;
     }
 
+    public getHandler(type: BaseCommand['type']): RegisteredCommandHandler | undefined {
+        return this.handlers.get(type);
+    }
+
     public injectCommands(commands: BaseCommand[]) {
         if (commands.length === 0) return;
         this.injectedCommands = [...commands, ...this.injectedCommands];
@@ -72,7 +76,7 @@ export class FlowManager implements IFlowManager {
                     return;
                 }
 
-                const handler = this.handlers.get(command.type);
+                const handler = this.getHandler(command.type);
                 if (handler && !handler.autoNext && !hasInjected) {
                     this._lastSavePoint = this.scenes.getLastOriginalIndex(index);
                     this.isExecuting = false;
@@ -91,6 +95,16 @@ export class FlowManager implements IFlowManager {
         }
     }
 
+    public registerHandler(handler: RegisteredCommandHandler) {
+        this.handlers.set(handler.type, handler);
+    }
+
+    public registerHandlers(handlers: RegisteredCommandHandler[]) {
+        for (const handler of handlers) {
+            this.registerHandler(handler);
+        }
+    }
+
     public requestSkip() {
         if (this.isExecuting) {
             this.skipRequested = true;
@@ -103,8 +117,14 @@ export class FlowManager implements IFlowManager {
         this.skipRequested = false;
     }
 
+    public resetHandlers() {
+        for (const handler of this.handlers.values()) {
+            handler.reset?.();
+        }
+    }
+
     public async runCommand(command: BaseCommand) {
-        const handler = this.handlers.get(command.type);
+        const handler = this.getHandler(command.type);
         if (!handler) {
             this.logger.warn(`No handler registered for command type '${command.type}'`);
             return;

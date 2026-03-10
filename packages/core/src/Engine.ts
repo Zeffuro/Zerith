@@ -1,7 +1,7 @@
 import { Assets } from 'pixi.js';
 
 import type { EngineConfig } from './EngineConfig';
-import type { CommandHandlerRegistry, RegisteredCommandHandler } from './interfaces/ICommandHandler';
+import type { RegisteredCommandHandler } from './interfaces/ICommandHandler';
 import type {
     IAssetManager,
     IAudioManager,
@@ -23,7 +23,6 @@ import type { SaveState } from './managers/SaveManager';
 import type { MenuPanel } from './types';
 import type { BaseCommand, GameManifest, Serializable } from './types';
 
-import { FlowManager } from './managers/FlowManager';
 import { Logger } from './utils/Logger';
 import { DefaultTheme, type Theme } from './utils/Theme';
 
@@ -34,6 +33,7 @@ export interface EngineDeps {
     audio: IAudioManager;
     display: IDisplayManager;
     events: IEventBus;
+    flow: IFlowManager;
     history: IHistoryManager;
     input: IInputManager;
     items: IEvidenceManager;
@@ -111,8 +111,7 @@ export class Engine {
     }
 
     private _autoAdvanceDelay: number | undefined;
-    private handlers: CommandHandlerRegistry = new Map();
-    private readonly onSceneNavigation?: EngineConfig['onSceneNavigation'];
+
     constructor(config: EngineConfig = {}, deps: EngineDeps) {
         this.config = config;
         if (config.theme) {
@@ -123,6 +122,7 @@ export class Engine {
         this.audio = deps.audio;
         this.display = deps.display;
         this.events = deps.events;
+        this.flow = deps.flow;
         this.history = deps.history;
         this.input = deps.input;
         this.items = deps.items;
@@ -133,15 +133,6 @@ export class Engine {
         this.spritesheets = deps.spritesheets;
         this.startScreen = deps.startScreen;
         this.stateManager = deps.state;
-
-        this.onSceneNavigation = config.onSceneNavigation;
-        this.flow = new FlowManager({
-            events: this.events,
-            handlers: this.handlers,
-            logger: this.logger,
-            onSceneNavigation: this.onSceneNavigation,
-            scenes: this.scenes,
-        });
     }
 
     public async applySaveState(saveData: SaveState) {
@@ -162,9 +153,7 @@ export class Engine {
 
     public clear() {
         this.display.clearLayers?.();
-        for (const handler of this.handlers.values()) {
-            handler.reset?.();
-        }
+        this.flow.resetHandlers();
         this.history.clear();
         this.items.clear();
         this.stateManager.clear();
@@ -184,7 +173,7 @@ export class Engine {
     }
 
     public getHandler(type: BaseCommand['type']): RegisteredCommandHandler | undefined {
-        return this.handlers.get(type);
+        return this.flow.getHandler(type);
     }
 
     public getState<T = Serializable>(key: string): T | undefined {
@@ -213,13 +202,11 @@ export class Engine {
     }
 
     public registerHandler(handler: RegisteredCommandHandler) {
-        this.handlers.set(handler.type, handler);
+        this.flow.registerHandler(handler);
     }
 
     public registerHandlers(handlers: RegisteredCommandHandler[]) {
-        for (const handler of handlers) {
-            this.registerHandler(handler);
-        }
+        this.flow.registerHandlers(handlers);
     }
 
     public requestSkip() {

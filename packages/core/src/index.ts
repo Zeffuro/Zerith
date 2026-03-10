@@ -28,6 +28,7 @@ export * from './handlers/WaitHandler';
 export * from './handlers/WhileHandler';
 export * from './interfaces/ICommandHandler';
 export * from './interfaces/managers';
+export * from './interfaces/providers';
 export * from './managers/AssetManager';
 export * from './managers/AudioManager';
 
@@ -56,7 +57,6 @@ export * from './ui/SaveLoadPanel';
 export * from './ui/SettingsPanel';
 /* UI */
 export * from './ui/UIComponents';
-export * from './ui/UIRenderContext';
 
 export * from './utils/ChromaKey';
 export * from './utils/ManifestResolver';

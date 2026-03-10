@@ -80,8 +80,8 @@ export class AudioManager {
 
     private applyBgmVolume() {
         if (!this.currentBgmUrl || !sound.exists(this.currentBgmUrl)) return;
-        // eslint-disable-next-line unicorn/no-array-callback-reference
-        const snd = sound.find(this.currentBgmUrl);
+        const getSound = (url: string) => sound.find(url);
+        const snd = getSound(this.currentBgmUrl);
         if (snd) {
             snd.volume = this.bgmVolume;
         }

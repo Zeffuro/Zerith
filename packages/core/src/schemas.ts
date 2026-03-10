@@ -80,7 +80,7 @@ export const SetCommandSchema = z.object({
     key: z.string(),
     op: z.enum(['set', 'add', 'sub', 'toggle']).optional(),
     type: z.literal('set'),
-    value: z.any().optional(),
+    value: z.unknown().optional(),
 });
 
 /* If */
@@ -91,7 +91,7 @@ const ConditionSchema = z.object({
     key: z.string(),
     op: ComparisonOpSchema.optional(),
     source: z.string().optional(),
-    value: z.any().optional(),
+    value: z.unknown().optional(),
 });
 
 export const IfCommandSchema = z.object({
@@ -103,7 +103,7 @@ export const IfCommandSchema = z.object({
     op: ComparisonOpSchema.optional(),
     source: z.string().optional(),
     type: z.literal('if'),
-    value: z.any().optional(),
+    value: z.unknown().optional(),
 });
 
 /* While */
@@ -117,7 +117,7 @@ export const WhileCommandSchema = z.object({
     op: ComparisonOpSchema.optional(),
     source: z.string().optional(),
     type: z.literal('while'),
-    value: z.any().optional(),
+    value: z.unknown().optional(),
 });
 
 /* For */
@@ -212,7 +212,7 @@ export const FlashCommandSchema = z.object({
 
 export const ItemCommandSchema = z.object({
     action: z.enum(['add', 'remove', 'update']),
-    changes: z.record(z.string(), z.any()).optional(),
+    changes: z.record(z.string(), z.unknown()).optional(),
     id: z.string(),
     type: z.literal('item'),
 });
@@ -269,7 +269,7 @@ const BuiltInCommandSchemaRegistry: Record<string, z.ZodType> = {
     while: WhileCommandSchema,
 };
 
-type DiscriminatedOption = z.ZodObject<z.ZodRawShape>;
+type DiscriminatedOption = z.ZodObject<{ type: z.ZodLiteral<string>; } & z.ZodRawShape>;
 
 class SchemaRegistrySingleton {
     public readonly schemas: Record<string, z.ZodType>;
@@ -298,8 +298,8 @@ class SchemaRegistrySingleton {
             return z.union([options[0], FallbackSchema]);
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const KnownCommandSchema = z.discriminatedUnion('type', options as [any, ...any[]]);
+        const [first, ...rest] = options as [DiscriminatedOption, ...DiscriminatedOption[]];
+        const KnownCommandSchema = z.discriminatedUnion('type', [first, ...rest]);
         return z.union([KnownCommandSchema, FallbackSchema]);
     }
 

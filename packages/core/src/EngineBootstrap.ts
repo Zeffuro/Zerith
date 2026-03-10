@@ -1,5 +1,7 @@
 import type { AssetResolver, EngineDeps } from './Engine';
 import type { EngineConfig } from './EngineConfig';
+import type { CommandHandlerRegistry } from './interfaces/ICommandHandler';
+import type { IOverlayConfigProvider, IThemeProvider } from './interfaces/providers';
 import type { EvidenceItem } from './managers/EvidenceManager';
 import type { CharacterDefinition, GameManifest, Script } from './types';
 
@@ -34,6 +36,7 @@ import { EventBus } from './managers/EventBus';
 import { EvidenceManager } from './managers/EvidenceManager';
 import { HistoryManager } from './managers/HistoryManager';
 import { InputManager } from './managers/InputManager';
+import { FlowManager } from './managers/FlowManager';
 import { NotificationManager } from './managers/NotificationManager';
 import { OverlayManager } from './managers/OverlayManager';
 import { SaveManager } from './managers/SaveManager';
@@ -83,52 +86,75 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
     const state = new StateManager();
     const spritesheets = new SpritesheetManager();
     const assets = new AssetManager(spritesheets);
-
-    let engineReference: Engine | undefined;
+    const logger = new Logger('[Engine]');
+    const sceneManager = new SceneManager({
+        assets,
+        events,
+        logger,
+    });
+    const handlers: CommandHandlerRegistry = new Map();
+    const flow = new FlowManager({
+        events,
+        handlers,
+        logger,
+        onSceneNavigation: config.onSceneNavigation,
+        scenes: sceneManager,
+    });
+    const theme = { ...DefaultTheme, ...config.theme };
+    const themeProvider: IThemeProvider = {
+        getTheme: () => theme,
+    };
+    const overlayConfigProvider: IOverlayConfigProvider = {
+        getConfig: () => ({
+            backgroundAlpha: 0.85,
+            backgroundColor: 0x00_00_00,
+            buttonAlpha: 0.9,
+            buttonColor: 0x22_22_44,
+            buttonHeight: 50,
+            buttonHoverColor: 0x33_33_99,
+            buttonSpacing: 12,
+            buttonWidth: 300,
+            fontFamily: 'Courier New',
+            fontSize: 22,
+            textColor: 0xFF_FF_FF,
+            uiScale: 1,
+            ...config.overlay,
+        }),
+    };
 
     const overlay = new OverlayManager({
         display,
         events,
         getCanvasElement: () => display.canvas,
-        getTheme: () => engineReference?.theme ?? DefaultTheme,
+        overlayConfigProvider,
         overlayLayer: display.getLayer('overlay'),
-    }, config.overlay);
-
-    const input = new InputManager(events, {
-        get isOverlayOpen() {
-            return overlay.isOpen;
-        },
-        get isStarted() {
-            return engineReference?.isStarted ?? false;
-        },
-    }, config.input);
-
-    const sceneManager = new SceneManager({
-        assets,
-        events,
-        logger: new Logger('[Engine]'),
+        themeProvider,
     });
 
+    const input = new InputManager(events, {
+        isOverlayOpen: () => overlay.isOpen,
+        isStarted: () => flow.isStarted,
+    }, config.input);
+
     const saveManager = new SaveManager({
-        getCurrentSceneName: () => engineReference?.currentSceneName ?? sceneManager.currentSceneName,
-        getLastSavePoint: () => engineReference?.lastSavePoint ?? 0,
-        getStateSnapshot: () => engineReference?.state ?? state.state,
+        getCurrentSceneName: () => sceneManager.currentSceneName,
+        getLastSavePoint: () => flow.lastSavePoint,
+        getStateSnapshot: () => state.state,
         getSystemSnapshot: () => state.system,
-        logInfo: (message) => engineReference?.logger.info(message),
-        logWarn: (message) => engineReference?.logger.warn(message),
+        logInfo: (message) => logger.info(message),
+        logWarn: (message) => logger.warn(message),
         serializeItems: () => evidence.serialize(),
     });
 
     const notifications = new NotificationManager({
         display,
-        getTheme: () => engineReference?.theme ?? DefaultTheme,
         overlayLayer: display.getLayer('overlay'),
+        themeProvider,
     }, config.notifications);
 
     const startScreen = new StartScreenManager({
         display,
         events,
-        onStart: () => engineReference?.start(),
         overlayLayer: display.getLayer('overlay'),
         scenes: sceneManager,
     }, config.startScreen);
@@ -138,6 +164,7 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
         audio,
         display,
         events,
+        flow,
         history,
         input,
         items: evidence,
@@ -149,15 +176,62 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
         startScreen,
         state,
     };
+    const manifestData = { ...manifest, characters };
+
+    const dialogueHandler = new DialogueHandler(
+        assets,
+        audio,
+        display,
+        events,
+        flow,
+        history,
+        logger,
+        state,
+        (command) => flow.runCommand(command),
+        {
+            ...theme,
+            characters,
+            defaultBlipUrl,
+        },
+    );
+
+    flow.registerHandlers([
+        new BackgroundHandler(assets, display, state, events),
+        new TransitionHandler(display),
+        new JumpHandler(sceneManager),
+        new SceneChangeHandler(flow),
+        new BlockHandler(flow),
+        new CallHandler(logger, sceneManager, flow),
+        new BgmHandler(assets, audio, logger, state, events),
+        new SfxHandler(assets, audio, logger),
+        new SetHandler(state),
+        new IfHandler(flow, evidence, state),
+        new WhileHandler(flow, logger, evidence, state),
+        new ForHandler(flow, state),
+        new ShakeHandler(display),
+        new WaitHandler(),
+        new LabelHandler(),
+        new GotoHandler(logger, sceneManager),
+        new SpriteHandler(assets, display, events, logger, spritesheets, state, () => manifestData),
+        new FlashHandler(display),
+        new ItemHandler(evidence),
+        dialogueHandler,
+        new ChoiceHandler(display, events, flow, {
+            ...theme,
+            selectedBackgroundColor: theme.hoverColor,
+            selectedBorderColor: theme.accentColor,
+        }),
+    ]);
 
     const engine = new Engine(config, deps);
-    engineReference = engine;
+    engine.theme = themeProvider.getTheme();
+    engine.logger = logger;
 
     if (assetResolver) {
         engine.assetResolver = assetResolver;
     }
 
-    engine.setManifest({ ...manifest, characters });
+    engine.setManifest(manifestData);
 
     if (preloadAssets) {
         await engine.assets.preloadCharacterAssets(characters);
@@ -166,51 +240,6 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
     if (Object.keys(items).length > 0) {
         engine.items.loadDefinitions(items);
     }
-
-    const dialogueHandler = new DialogueHandler(
-        assets,
-        audio,
-        display,
-        events,
-        engine.flow,
-        history,
-        engine.logger,
-        state,
-        (command) => engine.flow.runCommand(command),
-        {
-            ...engine.theme,
-            characters,
-            defaultBlipUrl,
-        },
-    );
-
-    engine.registerHandlers([
-        new BackgroundHandler(assets, display, state, events),
-        new TransitionHandler(display),
-        new JumpHandler(sceneManager),
-        new SceneChangeHandler(engine.flow),
-        new BlockHandler(engine.flow),
-        new CallHandler(engine.logger, sceneManager, engine.flow),
-        new BgmHandler(assets, audio, engine.logger, state, events),
-        new SfxHandler(assets, audio, engine.logger),
-        new SetHandler(state),
-        new IfHandler(engine.flow, evidence, state),
-        new WhileHandler(engine.flow, engine.logger, evidence, state),
-        new ForHandler(engine.flow, state),
-        new ShakeHandler(display),
-        new WaitHandler(),
-        new LabelHandler(),
-        new GotoHandler(engine.logger, sceneManager),
-        new SpriteHandler(assets, display, events, engine.logger, spritesheets, state, () => engine.manifest),
-        new FlashHandler(display),
-        new ItemHandler(evidence),
-        dialogueHandler,
-        new ChoiceHandler(display, events, engine.flow, {
-            ...engine.theme,
-            selectedBackgroundColor: engine.theme.hoverColor,
-            selectedBorderColor: engine.theme.accentColor,
-        }),
-    ]);
 
     engine.registerDefaultPanels([
         new HistoryPanel(history),

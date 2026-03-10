@@ -1,8 +1,11 @@
 import { Container, type FederatedPointerEvent, Graphics, Sprite, Text } from 'pixi.js';
 
-import type { IEvidenceManager } from '../interfaces/managers';
+import type { IDisplayManager, IEvidenceManager } from '../interfaces/managers';
+import type { OverlayConfig } from '../managers/OverlayManager';
 import type { MenuPanel as Panel } from '../types';
-import type { UIVisualContext } from './UIRenderContext';
+import type { Theme } from '../utils/Theme';
+
+import type { PanelFocusManager } from './PanelFocusManager';
 
 import { createButton, createPanelTitle, createSelectableList, registerFocusableButton } from './UIComponents';
 
@@ -20,21 +23,26 @@ export class ItemBrowserPanel implements Panel {
         this.loadAsset = loadAsset;
     }
 
-    build(visualContext: UIVisualContext, onClose: () => void) {
-        const context = {
-            canvasHeight: visualContext.canvasHeight,
-            canvasWidth: visualContext.canvasWidth,
-            getCanvasRect: () => visualContext.canvasElement.getBoundingClientRect(),
-            overlayConfig: visualContext.overlayConfig,
-            theme: visualContext.theme,
-        };
-        const cfg = context.overlayConfig;
-        const w = context.canvasWidth;
-        const h = context.canvasHeight;
-        const focus = visualContext.focus;
+    build(
+        display: Pick<IDisplayManager, 'height' | 'width'> & { canvasElement: HTMLCanvasElement; },
+        theme: Theme,
+        overlayConfig: Required<OverlayConfig>,
+        focus: PanelFocusManager,
+        onClose: () => void,
+    ) {
+        const cfg = overlayConfig;
+        const w = display.width;
+        const h = display.height;
 
-        const root = visualContext.createPanelBase();
-        root.addChild(createPanelTitle(context, 'COURT RECORD'));
+        const root = new Container();
+        root.eventMode = 'static';
+        const bg = new Graphics()
+            .rect(0, 0, w, h)
+            .fill({ alpha: 0.95, color: cfg.backgroundColor });
+        bg.eventMode = 'static';
+        bg.on('pointerdown', (event: FederatedPointerEvent) => event.stopPropagation());
+        root.addChild(bg);
+        root.addChild(createPanelTitle(cfg, w, 'COURT RECORD'));
 
         const items = this.itemsManager.getAll();
         const backMargin = 20;
@@ -48,10 +56,10 @@ export class ItemBrowserPanel implements Panel {
             empty.position.set(w / 2, h / 2);
             root.addChild(empty);
 
-            const backButton = createButton(context, { label: 'Back', x: w / 2, y: h - cfg.buttonHeight - backMargin }, onClose);
+            const backButton = createButton(theme, cfg, { label: 'Back', x: w / 2, y: h - cfg.buttonHeight - backMargin }, onClose);
             root.addChild(backButton);
 
-            registerFocusableButton(context, focus, backButton, onClose);
+            registerFocusableButton(theme, cfg, focus, backButton, onClose);
 
             return { container: root };
         }
@@ -77,7 +85,7 @@ export class ItemBrowserPanel implements Panel {
         detailContainer.addChild(detailSprite);
 
         const detailName = new Text({
-            style: { fill: context.theme.accentColor, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize, fontWeight: 'bold' },
+            style: { fill: theme.accentColor, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize, fontWeight: 'bold' },
             text: ''
         });
         detailContainer.addChild(detailName);
@@ -140,7 +148,7 @@ export class ItemBrowserPanel implements Panel {
         listContainer.mask = listMask;
 
         if (currentList.length > 0) {
-            const { container: listContent, select: selectList } = createSelectableList(context, {
+            const { container: listContent, select: selectList } = createSelectableList(theme, cfg, {
                 initialSelected: 0,
                 items: currentList.map((item) => ({
                     label: item.name,
@@ -184,7 +192,7 @@ export class ItemBrowserPanel implements Panel {
             const tabBg = new Graphics();
             tabBg.roundRect(0, 0, tabWidth, tabHeight, 6);
             tabBg.fill({ alpha: activeTab === tab ? 1 : 0.6, color: activeTab === tab ? cfg.buttonHoverColor : cfg.buttonColor });
-            tabBg.stroke({ color: activeTab === tab ? context.theme.accentColor : context.theme.borderColor, width: 1 });
+            tabBg.stroke({ color: activeTab === tab ? theme.accentColor : theme.borderColor, width: 1 });
 
             const tabText = new Text({
                 style: { fill: cfg.textColor, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize - 6, fontWeight: activeTab === tab ? 'bold' : 'normal' },
@@ -205,7 +213,7 @@ export class ItemBrowserPanel implements Panel {
         root.addChild(createTab('Evidence', 'evidence', padding));
         root.addChild(createTab('Profiles', 'profiles', padding + tabWidth + 5));
 
-        const divider = new Graphics().rect(listWidth + 5, 55, 2, h - 125).fill({ alpha: 0.4, color: context.theme.borderColor });
+        const divider = new Graphics().rect(listWidth + 5, 55, 2, h - 125).fill({ alpha: 0.4, color: theme.borderColor });
         root.addChild(divider);
 
         // Scroll
@@ -223,16 +231,16 @@ export class ItemBrowserPanel implements Panel {
             scrollY = Math.max(0, Math.min(maxScroll, scrollY));
             listContainer.children[0].y = -scrollY;
         };
-        visualContext.canvasElement.addEventListener('wheel', onWheel, { passive: false });
+        display.canvasElement.addEventListener('wheel', onWheel, { passive: false });
 
         // Back button
-        const backButton = createButton(context, { label: 'Back', x: w / 2, y: h - cfg.buttonHeight - backMargin }, onClose);
+        const backButton = createButton(theme, cfg, { label: 'Back', x: w / 2, y: h - cfg.buttonHeight - backMargin }, onClose);
         root.addChild(backButton);
 
-        registerFocusableButton(context, focus, backButton, onClose);
+        registerFocusableButton(theme, cfg, focus, backButton, onClose);
 
         return {
-            cleanup: () => visualContext.canvasElement.removeEventListener('wheel', onWheel),
+            cleanup: () => display.canvasElement.removeEventListener('wheel', onWheel),
             container: root,
         };
     }

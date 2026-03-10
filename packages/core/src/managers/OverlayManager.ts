@@ -5,12 +5,14 @@ import type {
     IEventBus,
 } from '../interfaces/managers';
 import type { NavigationDirection } from '../interfaces/managers';
+import type {
+    IOverlayConfigProvider,
+    IThemeProvider,
+} from '../interfaces/providers';
 import type { MenuPanel } from '../types';
-import type { UIVisualContext } from '../ui/UIRenderContext';
-import type { Theme } from '../utils/Theme';
 
 import { PanelFocusManager } from '../ui/PanelFocusManager';
-import { createButton, registerFocusableButton, type UIContext } from '../ui/UIComponents';
+import { createButton, registerFocusableButton } from '../ui/UIComponents';
 
 export interface OverlayConfig {
     backgroundAlpha?: number;
@@ -31,8 +33,9 @@ export interface OverlayManagerDeps {
     display: Pick<IDisplayManager, 'height' | 'width'>;
     events: Pick<IEventBus, 'off' | 'on'>;
     getCanvasElement: () => HTMLCanvasElement | undefined;
-    getTheme: () => Theme;
+    overlayConfigProvider: IOverlayConfigProvider;
     overlayLayer: Container;
+    themeProvider: IThemeProvider;
 }
 
 export class OverlayManager {
@@ -60,23 +63,9 @@ export class OverlayManager {
 
     private sceneLoadingText: Text | undefined;
 
-    constructor(deps: OverlayManagerDeps, config: OverlayConfig = {}) {
+    constructor(deps: OverlayManagerDeps) {
         this.deps = deps;
-        this.config = {
-            backgroundAlpha: 0.85,
-            backgroundColor: 0x00_00_00,
-            buttonAlpha: 0.9,
-            buttonColor: 0x22_22_44,
-            buttonHeight: 50,
-            buttonHoverColor: 0x33_33_99,
-            buttonSpacing: 12,
-            buttonWidth: 300,
-            fontFamily: 'Courier New',
-            fontSize: 22,
-            textColor: 0xFF_FF_FF,
-            uiScale: 1,
-            ...config
-        };
+        this.config = this.deps.overlayConfigProvider.getConfig();
 
         const events = this.deps.events;
         events.on('menu:toggle', () => this.toggle());
@@ -102,40 +91,6 @@ export class OverlayManager {
         }
     }
 
-    /*
-    public createButton(label: string, x: number, y: number, action: () => void): Container {
-        return createButton(this.getUIContext(), { label, x, y }, action);
-    }
-    */
-
-    public createPanelBase(): Container {
-        const display = this.deps.display;
-        const w = display.width;
-        const h = display.height;
-
-        const root = new Container();
-        root.eventMode = 'static';
-
-        const bg = new Graphics()
-            .rect(0, 0, w, h)
-            .fill({ alpha: 0.95, color: this.config.backgroundColor });
-        bg.eventMode = 'static';
-        bg.on('pointerdown', (event: FederatedPointerEvent) => event.stopPropagation());
-        root.addChild(bg);
-
-        return root;
-    }
-
-    public getUIContext(): UIContext {
-        const display = this.deps.display;
-        return {
-            canvasHeight: display.height,
-            canvasWidth: display.width,
-            getCanvasRect: () => this.getCanvasElement()?.getBoundingClientRect() ?? new DOMRect(0, 0, display.width, display.height),
-            overlayConfig: this.config,
-            theme: this.deps.getTheme(),
-        };
-    }
 
     public open() {
         if (this._isOpen) return;
@@ -172,13 +127,19 @@ export class OverlayManager {
         if (this.container) this.container.visible = false;
         
         this._focus = new PanelFocusManager();
-        this._focus.onBack = () => {
-            this.closePanel();
-            if (this.container) this.container.visible = true;
-            this.rebuildMainMenuFocus();
-        };
+        this._focus.onBack = this.handlePanelBack.bind(this);
 
-        const { cleanup, container } = panel.build(this.createVisualContext(), this._focus.onBack);
+        const { cleanup, container } = panel.build(
+            {
+                canvasElement: this.requireCanvasElement(),
+                height: this.deps.display.height,
+                width: this.deps.display.width,
+            },
+            this.deps.themeProvider.getTheme(),
+            this.config,
+            this._focus,
+            this.handlePanelBack.bind(this),
+        );
 
         this.panelContainer = container;
         this._activeCleanup = cleanup;
@@ -201,21 +162,14 @@ export class OverlayManager {
         this.hideSceneLoading();
     }
 
-    private createVisualContext(): UIVisualContext {
-        const { display } = this.deps;
-        return {
-            canvasElement: this.requireCanvasElement(),
-            canvasHeight: display.height,
-            canvasWidth: display.width,
-            createPanelBase: () => this.createPanelBase(),
-            focus: this.focus,
-            overlayConfig: this.config,
-            theme: this.deps.getTheme(),
-        };
-    }
-
     private getCanvasElement(): HTMLCanvasElement | undefined {
         return this.deps.getCanvasElement();
+    }
+
+    private handlePanelBack() {
+        this.closePanel();
+        if (this.container) this.container.visible = true;
+        this.rebuildMainMenuFocus();
     }
 
     private hideSceneLoading() {
@@ -239,9 +193,9 @@ export class OverlayManager {
     private showMainMenu() {
         this.clearAll();
 
-        const context = this.getUIContext();
-        const w = context.canvasWidth;
-        const h = context.canvasHeight;
+        const w = this.deps.display.width;
+        const h = this.deps.display.height;
+        const theme = this.deps.themeProvider.getTheme();
 
         this.container = new Container();
         this.container.eventMode = 'static';
@@ -279,9 +233,9 @@ export class OverlayManager {
         let y = (h / 2) - (totalHeight / 2);
 
         for (const { action, label } of buttons) {
-            const button = createButton(context, { label, x: w / 2, y }, action);
+            const button = createButton(theme, this.config, { label, x: w / 2, y }, action);
             this.container.addChild(button);
-            registerFocusableButton(context, this._focus, button, action);
+            registerFocusableButton(theme, this.config, this._focus, button, action);
             y += this.config.buttonHeight + this.config.buttonSpacing;
         }
 

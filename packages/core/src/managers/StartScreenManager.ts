@@ -18,7 +18,6 @@ export interface StartScreenConfig {
 export interface StartScreenDeps {
     display: Pick<IDisplayManager, 'height' | 'width'>;
     events: Pick<IEventBus, 'off' | 'on'>;
-    onStart: () => void;
     overlayLayer: Container;
     scenes: Pick<ISceneManager, 'jumpToScene'>;
 }
@@ -46,12 +45,12 @@ export class StartScreenManager {
 
     /**
      * Shows a "click to start" overlay, waits for user interaction,
-     * then jumps to the given scene and starts the engine.
+     * then jumps to the given scene.
      * Browsers require a user gesture before playing audio,
      * so this should be the standard entry point.
      */
     public show(startScene: string): Promise<void> {
-        const { display, events, onStart: beginGame, overlayLayer, scenes } = this.deps;
+        const { display, events, overlayLayer, scenes } = this.deps;
         const w = display.width;
         const h = display.height;
         const cfg = this.config;
@@ -91,7 +90,6 @@ export class StartScreenManager {
             const startGame = () => {
                 startLayer.destroy({ children: true });
                 void scenes.jumpToScene(startScene).then(() => {
-                    beginGame();
                     resolve();
                 });
             };

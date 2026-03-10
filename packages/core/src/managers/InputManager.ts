@@ -1,8 +1,8 @@
 import type { IEventBus } from '../interfaces/managers';
 
 export interface IInputContext {
-    readonly isOverlayOpen: boolean;
-    readonly isStarted: boolean;
+    isOverlayOpen(): boolean;
+    isStarted(): boolean;
 }
 
 export interface InputConfig {
@@ -73,7 +73,7 @@ export class InputManager {
         this.canvas = canvas;
 
         this.boundOnPointerDown = () => {
-            if (this.context.isStarted && !this.context.isOverlayOpen) {
+            if (this.context.isStarted() && !this.context.isOverlayOpen()) {
                 this.events.emit('input:skip');
                 this.events.emit('input:next');
             }
@@ -114,16 +114,16 @@ export class InputManager {
             // Back / Menu
             if (this.config.backKeys.includes(event.key)) {
                 event.preventDefault();
-                if (this.context.isOverlayOpen) {
+                if (this.context.isOverlayOpen()) {
                     this.events.emit('input:back');
-                } else if (this.context.isStarted) {
+                } else if (this.context.isStarted()) {
                     this.events.emit('menu:toggle');
                 }
                 return;
             }
 
             // Start screen
-            if (!this.context.isStarted) {
+            if (!this.context.isStarted()) {
                 if (this.config.advanceKeys.includes(event.key)) {
                     event.preventDefault();
                     this.events.emit('input:start');
@@ -134,7 +134,7 @@ export class InputManager {
             // Advance dialogue
             if (this.config.advanceKeys.includes(event.key)) {
                 event.preventDefault();
-                if (!this.context.isOverlayOpen) {
+                if (!this.context.isOverlayOpen()) {
                     this.events.emit('input:skip');
                     this.events.emit('input:next');
                 }
@@ -205,21 +205,21 @@ export class InputManager {
                 if (pressed(this.config.gamepadConfirmButton)) this.events.emit('input:confirm');
 
                 if (pressed(this.config.gamepadBackButton)) {
-                    if (this.context.isOverlayOpen) this.events.emit('input:back');
-                    else if (this.context.isStarted) this.events.emit('menu:toggle');
+                    if (this.context.isOverlayOpen()) this.events.emit('input:back');
+                    else if (this.context.isStarted()) this.events.emit('menu:toggle');
                 }
 
                 if (pressed(this.config.gamepadAdvanceButton)) {
-                    if (this.context.isStarted && !this.context.isOverlayOpen) {
+                    if (this.context.isStarted() && !this.context.isOverlayOpen()) {
                         this.events.emit('input:skip');
                         this.events.emit('input:next');
-                    } else if (!this.context.isStarted) {
+                    } else if (!this.context.isStarted()) {
                         this.events.emit('input:start');
                     }
                 }
 
-                if (pressed(this.config.gamepadMenuButton) && this.context.isStarted) {
-                    if (this.context.isOverlayOpen) this.events.emit('input:back');
+                if (pressed(this.config.gamepadMenuButton) && this.context.isStarted()) {
+                    if (this.context.isOverlayOpen()) this.events.emit('input:back');
                     else this.events.emit('menu:toggle');
                 }
 

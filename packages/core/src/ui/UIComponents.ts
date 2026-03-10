@@ -71,23 +71,20 @@ export interface ToggleResult {
     toggle: () => void;
 }
 
-export interface UIContext {
-    canvasHeight: number;
-    canvasWidth: number;
-    getCanvasRect: () => DOMRect;
-    overlayConfig: Required<OverlayConfig>;
-    theme: Theme;
-}
-
-export function createButton(context: UIContext, options: ButtonOptions, action: () => void): Container {
-    const cfg = context.overlayConfig;
+export function createButton(
+    theme: Theme,
+    overlayConfig: Required<OverlayConfig>,
+    options: ButtonOptions,
+    action: () => void,
+): Container {
+    const cfg = overlayConfig;
     const w = options.width ?? cfg.buttonWidth;
     const h = options.height ?? cfg.buttonHeight;
     const bgColor = options.bgColor ?? cfg.buttonColor;
     const bgAlpha = options.bgAlpha ?? cfg.buttonAlpha;
     const hoverColor = options.hoverColor ?? cfg.buttonHoverColor;
-    const borderColor = options.borderColor ?? context.theme.borderColor;
-    const hoverBorderColor = options.hoverBorderColor ?? context.theme.accentColor;
+    const borderColor = options.borderColor ?? theme.borderColor;
+    const hoverBorderColor = options.hoverBorderColor ?? theme.accentColor;
     const borderWidth = options.borderWidth ?? 2;
     const borderRadius = options.borderRadius ?? 8;
 
@@ -136,8 +133,12 @@ export function createButton(context: UIContext, options: ButtonOptions, action:
 
 /* Panel Title */
 
-export function createPanelTitle(context: UIContext, text: string): Text {
-    const cfg = context.overlayConfig;
+export function createPanelTitle(
+    overlayConfig: Required<OverlayConfig>,
+    canvasWidth: number,
+    text: string,
+): Text {
+    const cfg = overlayConfig;
     const title = new Text({
         style: {
             fill: cfg.textColor,
@@ -148,14 +149,18 @@ export function createPanelTitle(context: UIContext, text: string): Text {
         text
     });
     title.anchor.set(0.5, 0);
-    title.position.set(context.canvasWidth / 2, 20);
+    title.position.set(canvasWidth / 2, 20);
     return title;
 }
 
 /* Selectable Row List */
 
-export function createSelectableList(context: UIContext, options: ListRowOptions): ListRowResult {
-    const cfg = context.overlayConfig;
+export function createSelectableList(
+    theme: Theme,
+    overlayConfig: Required<OverlayConfig>,
+    options: ListRowOptions,
+): ListRowResult {
+    const cfg = overlayConfig;
     const rowHeight = options.rowHeight ?? 45;
     const rowSpacing = options.rowSpacing ?? 4;
     const listW = options.width;
@@ -172,7 +177,7 @@ export function createSelectableList(context: UIContext, options: ListRowOptions
             color: selected ? cfg.buttonHoverColor : cfg.buttonColor
         });
         bg.stroke({
-            color: selected ? context.theme.accentColor : context.theme.borderColor,
+            color: selected ? theme.accentColor : theme.borderColor,
             width: selected ? 2 : 1
         });
     };
@@ -208,7 +213,7 @@ export function createSelectableList(context: UIContext, options: ListRowOptions
                 rowBg.clear();
                 rowBg.roundRect(0, 0, listW, rowHeight, 6);
                 rowBg.fill({ alpha: 0.6, color: cfg.buttonHoverColor });
-                rowBg.stroke({ color: context.theme.accentColor, width: 1 });
+                rowBg.stroke({ color: theme.accentColor, width: 1 });
             }
         });
         row.on('pointerout', () => {
@@ -227,9 +232,15 @@ export function createSelectableList(context: UIContext, options: ListRowOptions
     return { container: content, select };
 }
 
-export function createSlider(context: UIContext, options: SliderOptions): SliderResult {
-    const cfg = context.overlayConfig;
-    const trackWidth = options.trackWidth ?? Math.min(400, context.canvasWidth * 0.5);
+export function createSlider(
+    theme: Theme,
+    overlayConfig: Required<OverlayConfig>,
+    canvasWidth: number,
+    getCanvasRect: () => DOMRect,
+    options: SliderOptions,
+): SliderResult {
+    const cfg = overlayConfig;
+    const trackWidth = options.trackWidth ?? Math.min(400, canvasWidth * 0.5);
     const labelWidth = options.labelWidth ?? 180;
     const rowHeight = options.rowHeight ?? 40;
     const sliderHeight = 8;
@@ -250,7 +261,7 @@ export function createSlider(context: UIContext, options: SliderOptions): Slider
 
     // Value display
     const valueText = new Text({
-        style: { fill: context.theme.accentColor, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize - 4 },
+        style: { fill: theme.accentColor, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize - 4 },
         text: `${Math.round(options.value * 100)}%`
     });
     valueText.anchor.set(0, 0.5);
@@ -261,7 +272,7 @@ export function createSlider(context: UIContext, options: SliderOptions): Slider
     const trackBg = new Graphics();
     trackBg.roundRect(trackX, trackY - sliderHeight / 2, trackWidth, sliderHeight, 4);
     trackBg.fill({ alpha: 0.8, color: cfg.buttonColor });
-    trackBg.stroke({ color: context.theme.borderColor, width: 1 });
+    trackBg.stroke({ color: theme.borderColor, width: 1 });
     row.addChild(trackBg);
 
     // Track fill
@@ -270,7 +281,7 @@ export function createSlider(context: UIContext, options: SliderOptions): Slider
         trackFill.clear();
         const fillWidth = Math.max(1, trackWidth * value);
         trackFill.roundRect(trackX, trackY - sliderHeight / 2, fillWidth, sliderHeight, 4);
-        trackFill.fill({ alpha: 0.8, color: context.theme.accentColor });
+        trackFill.fill({ alpha: 0.8, color: theme.accentColor });
     };
     drawFill(options.value);
     row.addChild(trackFill);
@@ -279,7 +290,7 @@ export function createSlider(context: UIContext, options: SliderOptions): Slider
     const handle = new Graphics();
     handle.circle(0, 0, handleRadius);
     handle.fill({ alpha: 1, color: cfg.buttonHoverColor });
-    handle.stroke({ color: context.theme.accentColor, width: 2 });
+    handle.stroke({ color: theme.accentColor, width: 2 });
     handle.position.set(trackX + trackWidth * options.value, trackY);
     handle.eventMode = 'static';
     handle.cursor = 'pointer';
@@ -321,8 +332,8 @@ export function createSlider(context: UIContext, options: SliderOptions): Slider
 
     const onMouseMove = (event: MouseEvent) => {
         if (!dragging) return;
-        const rect = context.getCanvasRect();
-        const scaleX = context.canvasWidth / rect.width;
+        const rect = getCanvasRect();
+        const scaleX = canvasWidth / rect.width;
         const canvasX = (event.clientX - rect.left) * scaleX;
         const rowWorldX = row.getGlobalPosition().x;
         const fraction = (canvasX - rowWorldX - trackX) / trackWidth;
@@ -347,8 +358,12 @@ export function createSlider(context: UIContext, options: SliderOptions): Slider
     };
 }
 
-export function createToggle(context: UIContext, options: ToggleOptions): ToggleResult {
-    const cfg = context.overlayConfig;
+export function createToggle(
+    theme: Theme,
+    overlayConfig: Required<OverlayConfig>,
+    options: ToggleOptions,
+): ToggleResult {
+    const cfg = overlayConfig;
     const labelWidth = options.labelWidth ?? 180;
     const toggleW = 60;
     const toggleH = 30;
@@ -377,8 +392,8 @@ export function createToggle(context: UIContext, options: ToggleOptions): Toggle
     const draw = () => {
         bg.clear();
         bg.roundRect(0, 0, toggleW, toggleH, toggleH / 2);
-        bg.fill({ alpha: on ? 0.8 : 0.6, color: on ? context.theme.accentColor : cfg.buttonColor });
-        bg.stroke({ color: context.theme.borderColor, width: 1 });
+        bg.fill({ alpha: on ? 0.8 : 0.6, color: on ? theme.accentColor : cfg.buttonColor });
+        bg.stroke({ color: theme.borderColor, width: 1 });
 
         knob.clear();
         const knobX = on ? toggleW - toggleH / 2 : toggleH / 2;
@@ -404,13 +419,14 @@ export function createToggle(context: UIContext, options: ToggleOptions): Toggle
 }
 
 export function registerFocusableButton(
-    context: UIContext,
+    theme: Theme,
+    overlayConfig: Required<OverlayConfig>,
     focus: PanelFocusManager,
     button: Container,
     action: () => void,
     options?: { height?: number; width?: number; }
 ) {
-    const cfg = context.overlayConfig;
+    const cfg = overlayConfig;
     const bg = button.children[0] as Graphics;
     const w = options?.width ?? cfg.buttonWidth;
     const h = options?.height ?? cfg.buttonHeight;
@@ -421,13 +437,13 @@ export function registerFocusableButton(
             bg.clear();
             bg.roundRect(0, 0, w, h, 8);
             bg.fill({ alpha: cfg.buttonAlpha, color: cfg.buttonColor });
-            bg.stroke({ color: context.theme.borderColor, width: 2 });
+            bg.stroke({ color: theme.borderColor, width: 2 });
         },
         focus: () => {
             bg.clear();
             bg.roundRect(0, 0, w, h, 8);
             bg.fill({ alpha: 1, color: cfg.buttonHoverColor });
-            bg.stroke({ color: context.theme.accentColor, width: 2 });
+            bg.stroke({ color: theme.accentColor, width: 2 });
         },
     });
 }

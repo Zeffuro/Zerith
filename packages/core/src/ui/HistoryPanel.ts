@@ -1,8 +1,11 @@
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, type FederatedPointerEvent, Graphics, Text } from 'pixi.js';
 
-import type { IHistoryManager } from '../interfaces/managers';
+import type { IDisplayManager, IHistoryManager } from '../interfaces/managers';
+import type { OverlayConfig } from '../managers/OverlayManager';
 import type { MenuPanel } from '../types';
-import type { UIVisualContext } from './UIRenderContext';
+import type { Theme } from '../utils/Theme';
+
+import type { PanelFocusManager } from './PanelFocusManager';
 
 import { createButton, createPanelTitle, registerFocusableButton } from './UIComponents';
 
@@ -24,21 +27,26 @@ export class HistoryPanel implements MenuPanel {
         this.config = { maxLines: 50, ...config };
     }
 
-    build(visualContext: UIVisualContext, onClose: () => void) {
-        const context = {
-            canvasHeight: visualContext.canvasHeight,
-            canvasWidth: visualContext.canvasWidth,
-            getCanvasRect: () => visualContext.canvasElement.getBoundingClientRect(),
-            overlayConfig: visualContext.overlayConfig,
-            theme: visualContext.theme,
-        };
-        const cfg = visualContext.overlayConfig;
-        const w = visualContext.canvasWidth;
-        const h = visualContext.canvasHeight;
-        const focus = visualContext.focus;
+    build(
+        display: Pick<IDisplayManager, 'height' | 'width'> & { canvasElement: HTMLCanvasElement; },
+        theme: Theme,
+        overlayConfig: Required<OverlayConfig>,
+        focus: PanelFocusManager,
+        onClose: () => void,
+    ) {
+        const cfg = overlayConfig;
+        const w = display.width;
+        const h = display.height;
 
-        const root = visualContext.createPanelBase();
-        root.addChild(createPanelTitle(context, 'HISTORY'));
+        const root = new Container();
+        root.eventMode = 'static';
+        const bg = new Graphics()
+            .rect(0, 0, w, h)
+            .fill({ alpha: 0.95, color: cfg.backgroundColor });
+        bg.eventMode = 'static';
+        bg.on('pointerdown', (event: FederatedPointerEvent) => event.stopPropagation());
+        root.addChild(bg);
+        root.addChild(createPanelTitle(cfg, w, 'HISTORY'));
 
         const entries = this.history.getRecent(this.config.maxLines);
         const padding = 40;
@@ -65,7 +73,7 @@ export class HistoryPanel implements MenuPanel {
             for (const entry of entries) {
                 const speakerText = new Text({
                     style: {
-                        fill: context.theme.accentColor,
+                        fill: theme.accentColor,
                         fontFamily: cfg.fontFamily,
                         fontSize: cfg.fontSize - 4,
                         fontWeight: 'bold'
@@ -112,7 +120,7 @@ export class HistoryPanel implements MenuPanel {
             event.preventDefault();
             applyScroll(-event.deltaY);
         };
-        visualContext.canvasElement.addEventListener('wheel', onWheel, { passive: false });
+        display.canvasElement.addEventListener('wheel', onWheel, { passive: false });
 
         // Keyboard/gamepad scroll via navigate
         focus.onNavigateRaw = (direction: 'down' | 'left' | 'right' | 'up') => {
@@ -127,13 +135,13 @@ export class HistoryPanel implements MenuPanel {
             return false;
         };
 
-        const backButton = createButton(context, { label: 'Back', x: w / 2, y: h - backHeight - backMargin }, onClose);
+        const backButton = createButton(theme, cfg, { label: 'Back', x: w / 2, y: h - backHeight - backMargin }, onClose);
         root.addChild(backButton);
 
-        registerFocusableButton(context, focus, backButton, onClose);
+        registerFocusableButton(theme, cfg, focus, backButton, onClose);
 
         return {
-            cleanup: () => visualContext.canvasElement.removeEventListener('wheel', onWheel),
+            cleanup: () => display.canvasElement.removeEventListener('wheel', onWheel),
             container: root,
         };
     }
