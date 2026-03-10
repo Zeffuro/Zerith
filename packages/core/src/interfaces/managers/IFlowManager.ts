@@ -4,6 +4,7 @@ import type { IBaseManager } from './IBaseManager';
 
 export interface IFlowManager extends IBaseManager {
     consumeSkip(): boolean;
+    destroyHandlers(): void;
     getHandler(type: BaseCommand['type']): RegisteredCommandHandler | undefined;
     injectCommands(commands: BaseCommand[]): void;
     readonly isStarted: boolean;

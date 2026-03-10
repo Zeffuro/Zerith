@@ -44,39 +44,54 @@ export class StateManager implements IStateManager {
     }
 
     public set(key: string, value: unknown): void {
-        this._state[key] = this.toSerializable(value);
+        const serializable = this.toSerializable(value);
+        if (serializable === undefined) {
+            delete this._state[key];
+            return;
+        }
+
+        this._state[key] = serializable;
     }
 
     public setPersistent(key: string, value: unknown): void {
-        this._persistentState[key] = this.toSerializable(value);
+        const serializable = this.toSerializable(value);
+        if (serializable === undefined) {
+            delete this._persistentState[key];
+            return;
+        }
+
+        this._persistentState[key] = serializable;
     }
 
     private isRecord(value: unknown): value is Record<string, unknown> {
         return typeof value === 'object' && value !== null;
     }
 
-    private toSerializable(value: unknown): Serializable {
-        if (value == undefined) return undefined as unknown as Serializable;
+    private toSerializable(value: unknown): Serializable | undefined {
+        if (value === undefined) return undefined;
+        if (value === null) return value;
 
         if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
             return value;
         }
 
         if (Array.isArray(value)) {
-            return value.map((item) => this.toSerializable(item));
+            return value
+                .map((item) => this.toSerializable(item))
+                .filter((item): item is Serializable => item !== undefined);
         }
 
         if (this.isRecord(value)) {
             const serializableObject: Record<string, Serializable> = {};
             for (const [key, item] of Object.entries(value)) {
-                if (item !== undefined) {
-                    serializableObject[key] = this.toSerializable(item);
-                }
+                const serializableItem = this.toSerializable(item);
+                if (serializableItem === undefined) continue;
+                serializableObject[key] = serializableItem;
             }
             return serializableObject;
         }
 
-        return undefined as unknown as Serializable;
+        return undefined;
     }
 }
 

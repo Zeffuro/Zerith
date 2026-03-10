@@ -1,11 +1,7 @@
 import { Container, type FederatedPointerEvent, Graphics, Text } from 'pixi.js';
 
-import type { IDisplayManager, IHistoryManager } from '../interfaces/managers';
-import type { OverlayConfig } from '../managers/OverlayManager';
-import type { MenuPanel } from '../types';
-import type { Theme } from '../utils/Theme';
-
-import type { PanelFocusManager } from './PanelFocusManager';
+import type { IHistoryManager } from '../interfaces/managers';
+import type { MenuPanel, PanelBuildDeps } from '../types';
 
 import { createButton, createPanelTitle, registerFocusableButton } from './UIComponents';
 
@@ -27,13 +23,8 @@ export class HistoryPanel implements MenuPanel {
         this.config = { maxLines: 50, ...config };
     }
 
-    build(
-        display: Pick<IDisplayManager, 'height' | 'width'> & { canvasElement: HTMLCanvasElement; },
-        theme: Theme,
-        overlayConfig: Required<OverlayConfig>,
-        focus: PanelFocusManager,
-        onClose: () => void,
-    ) {
+    build(deps: PanelBuildDeps) {
+        const { display, focus, onClose, overlayConfig, theme } = deps;
         const cfg = overlayConfig;
         const w = display.width;
         const h = display.height;
@@ -116,11 +107,10 @@ export class HistoryPanel implements MenuPanel {
         };
 
         // Mouse wheel
-        const onWheel = (event: WheelEvent) => {
-            event.preventDefault();
+        const onWheel = (event: { deltaY: number; }) => {
             applyScroll(-event.deltaY);
         };
-        display.canvasElement.addEventListener('wheel', onWheel, { passive: false });
+        root.on('wheel', onWheel);
 
         // Keyboard/gamepad scroll via navigate
         focus.onNavigateRaw = (direction: 'down' | 'left' | 'right' | 'up') => {
@@ -140,9 +130,6 @@ export class HistoryPanel implements MenuPanel {
 
         registerFocusableButton(theme, cfg, focus, backButton, onClose);
 
-        return {
-            cleanup: () => display.canvasElement.removeEventListener('wheel', onWheel),
-            container: root,
-        };
+        return { container: root };
     }
 }

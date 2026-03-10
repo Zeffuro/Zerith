@@ -51,7 +51,6 @@ export interface SliderOptions {
 export interface SliderResult {
     /** Programmatically set the slider to a 0–1 fraction */
     applyValue: (fraction: number) => void;
-    cleanup: () => void;
     container: Container;
     /** Get the current 0–1 value */
     getValue: () => number;
@@ -236,7 +235,6 @@ export function createSlider(
     theme: Theme,
     overlayConfig: Required<OverlayConfig>,
     canvasWidth: number,
-    getCanvasRect: () => DOMRect,
     options: SliderOptions,
 ): SliderResult {
     const cfg = overlayConfig;
@@ -330,29 +328,23 @@ export function createSlider(
         dragging = true;
     });
 
-    const onMouseMove = (event: MouseEvent) => {
+    const onGlobalPointerMove = (event: FederatedPointerEvent) => {
         if (!dragging) return;
-        const rect = getCanvasRect();
-        const scaleX = canvasWidth / rect.width;
-        const canvasX = (event.clientX - rect.left) * scaleX;
         const rowWorldX = row.getGlobalPosition().x;
-        const fraction = (canvasX - rowWorldX - trackX) / trackWidth;
+        const fraction = (event.global.x - rowWorldX - trackX) / trackWidth;
         applyValue(fraction);
     };
 
-    const onMouseUp = () => {
+    const onGlobalPointerUp = () => {
         dragging = false;
     };
 
-    globalThis.addEventListener('mousemove', onMouseMove);
-    globalThis.addEventListener('mouseup', onMouseUp);
+    hitArea.on('globalpointermove', onGlobalPointerMove);
+    hitArea.on('globalpointerup', onGlobalPointerUp);
+    hitArea.on('globalpointerupoutside', onGlobalPointerUp);
 
     return {
         applyValue,
-        cleanup: () => {
-            globalThis.removeEventListener('mousemove', onMouseMove);
-            globalThis.removeEventListener('mouseup', onMouseUp);
-        },
         container: row,
         getValue: () => currentValue,
     };

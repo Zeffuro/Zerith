@@ -1,5 +1,3 @@
-import { sound } from '@pixi/sound';
-
 import type { IAssetManager, IAudioManager, IEventBus, IStateManager } from '../interfaces/managers';
 import type { SaveState } from '../managers/SaveManager';
 import type { BaseCommand, CommandHandler } from '../types';
@@ -18,7 +16,6 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
     public type = 'bgm' as const;
     private readonly assets: IAssetManager;
     private readonly audio: IAudioManager;
-    private currentBgmUrl: string | undefined;
     private readonly events: IEventBus;
     private isPaused = false;
     private readonly logger: Logger;
@@ -45,19 +42,18 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
 
     execute = async (command: BgmCommand) => {
         if (command.action === 'stop') {
-            if (this.currentBgmUrl) {
-                sound.stop(this.currentBgmUrl);
+            if (this.audio.currentBgmUrl) {
+                this.audio.stopBgm();
                 this.logger.info('BGM stopped.');
             }
-            this.currentBgmUrl = undefined;
             this.isPaused = false;
             this.state.system.bgm = undefined;
             return;
         }
 
         if (command.action === 'pause') {
-            if (this.currentBgmUrl) {
-                sound.pause(this.currentBgmUrl);
+            if (this.audio.currentBgmUrl) {
+                this.audio.pauseBgm();
                 this.isPaused = true;
                 this.logger.info('BGM paused.');
             }
@@ -65,15 +61,15 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
         }
 
         if (command.action === 'resume') {
-            if (!this.currentBgmUrl) {
+            if (!this.audio.currentBgmUrl) {
                 this.logger.warn('Tried to resume BGM, but no track is active.');
                 return;
             }
 
             if (this.isPaused) {
-                sound.resume(this.currentBgmUrl);
+                this.audio.resumeBgm();
                 this.isPaused = false;
-                this.logger.info(`BGM resumed: ${this.currentBgmUrl}`);
+                this.logger.info(`BGM resumed: ${this.audio.currentBgmUrl}`);
             } else {
                 this.logger.warn('BGM is not paused, nothing to resume.');
             }
@@ -87,28 +83,17 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
             const resolvedUrl = this.assets.resolve(url);
 
             try {
-                if (!sound.exists(resolvedUrl)) {
-                    await new Promise((resolve, reject) => {
-                        sound.add(resolvedUrl, {
-                            loaded: (error, snd) => error ? reject(error) : resolve(snd),
-                            preload: true,
-                            url: resolvedUrl
-                        });
-                    });
+                if (!this.audio.audioExists(resolvedUrl)) {
+                    await this.audio.preloadAudio(resolvedUrl);
                 }
 
-                if (this.currentBgmUrl && this.currentBgmUrl !== resolvedUrl) {
-                    sound.stop(this.currentBgmUrl);
+                if (this.audio.currentBgmUrl && this.audio.currentBgmUrl !== resolvedUrl) {
+                    this.audio.stopBgm();
                 }
 
-                this.currentBgmUrl = resolvedUrl;
                 this.isPaused = false;
 
-                await sound.play(resolvedUrl, {
-                    loop: command.loop ?? true,
-                    singleInstance: true,
-                    volume: (command.volume ?? 0.5) * this.audio.bgmVolume
-                });
+                await this.audio.playBgm(resolvedUrl, command.loop ?? true, command.volume ?? 0.5);
                 this.state.system.bgm = url;
 
                 this.logger.info(`Playing BGM: ${url}`);

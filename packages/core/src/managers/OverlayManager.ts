@@ -32,7 +32,6 @@ export interface OverlayConfig {
 export interface OverlayManagerDeps {
     display: Pick<IDisplayManager, 'height' | 'width'>;
     events: Pick<IEventBus, 'off' | 'on'>;
-    getCanvasElement: () => HTMLCanvasElement | undefined;
     overlayConfigProvider: IOverlayConfigProvider;
     overlayLayer: Container;
     themeProvider: IThemeProvider;
@@ -49,7 +48,6 @@ export class OverlayManager {
     public get isOpen(): boolean {
         return this._isOpen;
     }
-    private _activeCleanup: (() => void) | undefined;
     private _focus: PanelFocusManager | undefined;
     private _isOpen = false;
     private _onBack: (() => void) | undefined;
@@ -58,9 +56,7 @@ export class OverlayManager {
     private container: Container | undefined;
     private readonly deps: OverlayManagerDeps;
     private panelContainer: Container | undefined;
-
     private panels: MenuPanel[] = [];
-
     private sceneLoadingText: Text | undefined;
 
     constructor(deps: OverlayManagerDeps) {
@@ -68,9 +64,9 @@ export class OverlayManager {
         this.config = this.deps.overlayConfigProvider.getConfig();
 
         const events = this.deps.events;
-        events.on('menu:toggle', () => this.toggle());
-        events.on('scene:loading', (sceneName: string) => this.showSceneLoading(sceneName));
-        events.on('scene:loaded', () => this.hideSceneLoading());
+        events.on('menu:toggle', this.onMenuToggle);
+        events.on('scene:loading', this.onSceneLoading);
+        events.on('scene:loaded', this.onSceneLoaded);
     }
 
     public close() {
@@ -81,14 +77,18 @@ export class OverlayManager {
     }
 
     public closePanel() {
-        if (this._activeCleanup) {
-            this._activeCleanup();
-            this._activeCleanup = undefined;
-        }
         if (this.panelContainer) {
             this.panelContainer.destroy({ children: true });
             this.panelContainer = undefined;
         }
+    }
+
+    public destroy() {
+        this.close();
+        const events = this.deps.events;
+        events.off('menu:toggle', this.onMenuToggle);
+        events.off('scene:loading', this.onSceneLoading);
+        events.off('scene:loaded', this.onSceneLoaded);
     }
 
 
@@ -129,20 +129,18 @@ export class OverlayManager {
         this._focus = new PanelFocusManager();
         this._focus.onBack = this.handlePanelBack.bind(this);
 
-        const { cleanup, container } = panel.build(
-            {
-                canvasElement: this.requireCanvasElement(),
+        const { container } = panel.build({
+            display: {
                 height: this.deps.display.height,
                 width: this.deps.display.width,
             },
-            this.deps.themeProvider.getTheme(),
-            this.config,
-            this._focus,
-            this.handlePanelBack.bind(this),
-        );
+            focus: this._focus,
+            onClose: this.handlePanelBack.bind(this),
+            overlayConfig: this.config,
+            theme: this.deps.themeProvider.getTheme(),
+        });
 
         this.panelContainer = container;
-        this._activeCleanup = cleanup;
         this.deps.overlayLayer.addChild(this.panelContainer);
 
         this._focus.focusInitial(0);
@@ -161,11 +159,6 @@ export class OverlayManager {
         }
         this.hideSceneLoading();
     }
-
-    private getCanvasElement(): HTMLCanvasElement | undefined {
-        return this.deps.getCanvasElement();
-    }
-
     private handlePanelBack() {
         this.closePanel();
         if (this.container) this.container.visible = true;
@@ -178,17 +171,16 @@ export class OverlayManager {
         this.sceneLoadingText = undefined;
     }
 
+    private readonly onMenuToggle = () => this.toggle();
+
+    private readonly onSceneLoaded = () => this.hideSceneLoading();
+
+    private readonly onSceneLoading = (sceneName: string) => this.showSceneLoading(sceneName);
+
     private rebuildMainMenuFocus() {
         this.showMainMenu();
     }
 
-    private requireCanvasElement(): HTMLCanvasElement {
-        const canvas = this.getCanvasElement();
-        if (!canvas) {
-            throw new Error('Overlay canvas is not initialized yet.');
-        }
-        return canvas;
-    }
 
     private showMainMenu() {
         this.clearAll();

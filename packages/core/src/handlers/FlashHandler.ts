@@ -1,7 +1,6 @@
-import gsap from 'gsap';
 import { Graphics } from 'pixi.js';
 
-import type { IDisplayManager } from '../interfaces/managers';
+import type { IAnimationManager, IDisplayManager } from '../interfaces/managers';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface FlashCommand extends BaseCommand {
@@ -14,9 +13,11 @@ export interface FlashCommand extends BaseCommand {
 export class FlashHandler implements CommandHandler<FlashCommand> {
     public autoNext = true;
     public type = 'flash' as const;
+    private readonly animations: IAnimationManager;
     private readonly display: IDisplayManager;
 
-    constructor(display: IDisplayManager) {
+    constructor(animations: IAnimationManager, display: IDisplayManager) {
+        this.animations = animations;
         this.display = display;
     }
 
@@ -30,7 +31,7 @@ export class FlashHandler implements CommandHandler<FlashCommand> {
 
         this.display.getLayer('overlay').addChild(rect);
 
-        const tween = gsap.to(rect, {
+        const tween = this.animations.to(rect, {
             alpha: 0,
             duration: duration,
             ease: "power2.out",

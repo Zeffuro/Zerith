@@ -1,5 +1,3 @@
-import { sound } from '@pixi/sound';
-
 import type { IAssetManager, IAudioManager } from '../interfaces/managers';
 import type { BaseCommand, CommandHandler } from '../types';
 import type { Logger } from '../utils/Logger';
@@ -34,19 +32,7 @@ export class SfxHandler implements CommandHandler<SfxCommand> {
         const resolvedUrl = this.assets.resolve(url);
 
         try {
-            if (!sound.exists(resolvedUrl)) {
-                await new Promise((resolve, reject) => {
-                    sound.add(resolvedUrl, {
-                        loaded: (error, snd) => error ? reject(error) : resolve(snd),
-                        preload: true,
-                        url: resolvedUrl
-                    });
-                });
-            }
-
-            await sound.play(resolvedUrl, {
-                volume: (command.volume ?? 0.8) * this.audio.sfxVolume,
-            });
+            await this.audio.playSfx(resolvedUrl, command.volume ?? 0.8);
 
             this.logger.info(`Played SFX: ${url}`);
         } catch (error) {

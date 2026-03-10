@@ -30,6 +30,11 @@ export class SpritesheetManager {
         return this.sheets.has(atlasUrl);
     }
 
+    public destroy() {
+        this.clear();
+        this.loading.clear();
+    }
+
     public async load(config: SpritesheetConfig): Promise<Spritesheet> {
         const key = config.atlasUrl;
 

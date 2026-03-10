@@ -1,5 +1,3 @@
-import { sound } from '@pixi/sound';
-
 import type { Token } from '../../utils/TextParser';
 
 export interface TypewriterRunOptions {
@@ -7,8 +5,8 @@ export interface TypewriterRunOptions {
     consumeSkip: () => boolean;
     createPromptBlinker: () => { destroy: () => void };
     getMessageText: () => string;
-    getVoiceVolume: () => number;
     initialSpeed: number;
+    playVoice: (url: string) => Promise<void>;
     setMessageText: (text: string) => void;
     signal: AbortSignal;
     tokens: Token[];
@@ -22,8 +20,8 @@ export class TypewriterController {
             consumeSkip,
             createPromptBlinker,
             getMessageText,
-            getVoiceVolume,
             initialSpeed,
+            playVoice,
             setMessageText,
             signal,
             tokens,
@@ -72,7 +70,7 @@ export class TypewriterController {
                     blipUrl,
                     consumeSkip,
                     getMessageText,
-                    getVoiceVolume,
+                    playVoice,
                     setMessageText,
                     signal,
                     speed,
@@ -104,7 +102,7 @@ export class TypewriterController {
         blipUrl?: string;
         consumeSkip: () => boolean;
         getMessageText: () => string;
-        getVoiceVolume: () => number;
+        playVoice: (url: string) => Promise<void>;
         setMessageText: (text: string) => void;
         signal: AbortSignal;
         speed: number;
@@ -114,7 +112,7 @@ export class TypewriterController {
             blipUrl,
             consumeSkip,
             getMessageText,
-            getVoiceVolume,
+            playVoice,
             setMessageText,
             signal,
             speed,
@@ -146,8 +144,8 @@ export class TypewriterController {
                 const ch = text[index];
                 current += ch;
 
-                if (blipUrl && ch !== ' ' && ch !== '\n' && sound.exists(blipUrl)) {
-                    await sound.play(blipUrl, { volume: 0.1 * getVoiceVolume() });
+                if (blipUrl && ch !== ' ' && ch !== '\n') {
+                    await playVoice(blipUrl);
                 }
                 index++;
             }

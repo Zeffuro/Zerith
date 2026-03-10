@@ -8,7 +8,6 @@ export * from './handlers/BackgroundHandler';
 export * from './handlers/BgmHandler';
 export * from './handlers/BlockHandler';
 export * from './handlers/CallHandler';
-
 export * from './handlers/ChoiceHandler';
 export * from './handlers/DialogueHandler';
 export * from './handlers/FlashHandler';
@@ -30,6 +29,7 @@ export * from './interfaces/ICommandHandler';
 export * from './interfaces/managers';
 export * from './interfaces/providers';
 export * from './managers/AssetManager';
+export * from './managers/AnimationManager';
 export * from './managers/AudioManager';
 
 export * from './managers/DisplayManager';

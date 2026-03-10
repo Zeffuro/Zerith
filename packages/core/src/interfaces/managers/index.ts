@@ -1,3 +1,4 @@
+export * from './IAnimationManager';
 export * from './IAssetManager';
 export * from './IAudioManager';
 export * from './IBaseManager';

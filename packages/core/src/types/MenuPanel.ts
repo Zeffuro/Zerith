@@ -7,19 +7,20 @@ import type { Theme } from '../utils/Theme';
 
 /**
  * A pluggable panel shown from the overlay menu.
- * Each panel owns its own rendering and cleanup.
+ * Each panel owns its own rendering.
  */
 export interface MenuPanel {
-    build(
-        display: Pick<IDisplayManager, 'height' | 'width'> & { canvasElement: HTMLCanvasElement; },
-        theme: Theme,
-        overlayConfig: Required<OverlayConfig>,
-        focus: PanelFocusManager,
-        onClose: () => void,
-    ): {
-        cleanup?: () => void;
+    build(deps: PanelBuildDeps): {
         container: Container;
     };
     id: string;
     label: string;
+}
+
+export interface PanelBuildDeps {
+    display: Pick<IDisplayManager, 'height' | 'width'>;
+    focus: PanelFocusManager;
+    onClose: () => void;
+    overlayConfig: Required<OverlayConfig>;
+    theme: Theme;
 }

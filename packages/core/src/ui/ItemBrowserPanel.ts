@@ -1,11 +1,7 @@
 import { Container, type FederatedPointerEvent, Graphics, Sprite, Text } from 'pixi.js';
 
-import type { IDisplayManager, IEvidenceManager } from '../interfaces/managers';
-import type { OverlayConfig } from '../managers/OverlayManager';
-import type { MenuPanel as Panel } from '../types';
-import type { Theme } from '../utils/Theme';
-
-import type { PanelFocusManager } from './PanelFocusManager';
+import type { IEvidenceManager } from '../interfaces/managers';
+import type { MenuPanel as Panel, PanelBuildDeps } from '../types';
 
 import { createButton, createPanelTitle, createSelectableList, registerFocusableButton } from './UIComponents';
 
@@ -23,13 +19,8 @@ export class ItemBrowserPanel implements Panel {
         this.loadAsset = loadAsset;
     }
 
-    build(
-        display: Pick<IDisplayManager, 'height' | 'width'> & { canvasElement: HTMLCanvasElement; },
-        theme: Theme,
-        overlayConfig: Required<OverlayConfig>,
-        focus: PanelFocusManager,
-        onClose: () => void,
-    ) {
+    build(deps: PanelBuildDeps) {
+        const { display, focus, onClose, overlayConfig, theme } = deps;
         const cfg = overlayConfig;
         const w = display.width;
         const h = display.height;
@@ -224,14 +215,13 @@ export class ItemBrowserPanel implements Panel {
         const maxScroll = Math.max(0, totalListHeight - visibleHeight);
         let scrollY = 0;
 
-        const onWheel = (event: WheelEvent) => {
-            event.preventDefault();
+        const onWheel = (event: { deltaY: number; }) => {
             if (listContainer.destroyed) return;
             scrollY += event.deltaY;
             scrollY = Math.max(0, Math.min(maxScroll, scrollY));
             listContainer.children[0].y = -scrollY;
         };
-        display.canvasElement.addEventListener('wheel', onWheel, { passive: false });
+        root.on('wheel', onWheel);
 
         // Back button
         const backButton = createButton(theme, cfg, { label: 'Back', x: w / 2, y: h - cfg.buttonHeight - backMargin }, onClose);
@@ -239,9 +229,6 @@ export class ItemBrowserPanel implements Panel {
 
         registerFocusableButton(theme, cfg, focus, backButton, onClose);
 
-        return {
-            cleanup: () => display.canvasElement.removeEventListener('wheel', onWheel),
-            container: root,
-        };
+        return { container: root };
     }
 }

@@ -1,12 +1,9 @@
 import { Container, type FederatedPointerEvent, Graphics } from 'pixi.js';
 
 import type { DialogueHandler } from '../handlers/DialogueHandler';
-import type { IAudioManager, IDisplayManager } from '../interfaces/managers';
-import type { OverlayConfig } from '../managers/OverlayManager';
-import type { MenuPanel } from '../types';
-import type { Theme } from '../utils/Theme';
+import type { IAudioManager } from '../interfaces/managers';
+import type { MenuPanel, PanelBuildDeps } from '../types';
 import type { SliderResult, ToggleResult } from './UIComponents';
-import type { PanelFocusManager } from './PanelFocusManager';
 
 import { createButton, createPanelTitle, createSlider, createToggle, registerFocusableButton } from './UIComponents';
 
@@ -24,13 +21,8 @@ export class SettingsPanel implements MenuPanel {
         this.dialogueHandler = dialogueHandler;
     }
 
-    build(
-        display: Pick<IDisplayManager, 'height' | 'width'> & { canvasElement: HTMLCanvasElement; },
-        theme: Theme,
-        overlayConfig: Required<OverlayConfig>,
-        focus: PanelFocusManager,
-        onClose: () => void,
-    ) {
+    build(deps: PanelBuildDeps) {
+        const { display, focus, onClose, overlayConfig, theme } = deps;
         const cfg = overlayConfig;
 
         const container = new Container();
@@ -46,7 +38,6 @@ export class SettingsPanel implements MenuPanel {
         const contentStartX = (display.width - 400 - 180 - 80) / 2;
         let yPos = 100;
         const spacing = 70;
-        const cleanups: (() => void)[] = [];
 
         const createFocusIndicator = (atY: number): Graphics => {
             const indicator = new Graphics();
@@ -67,14 +58,13 @@ export class SettingsPanel implements MenuPanel {
         const sliderResults: SliderResult[] = [];
 
         for (const { getValue, label, setValue } of sliderDefs) {
-            const result = createSlider(theme, cfg, display.width, () => display.canvasElement.getBoundingClientRect(), {
+            const result = createSlider(theme, cfg, display.width, {
                 label,
                 onChange: setValue,
                 value: getValue(),
             });
             result.container.position.set(contentStartX, yPos);
             container.addChild(result.container);
-            cleanups.push(result.cleanup);
             sliderResults.push(result);
 
             focus.register({
@@ -97,7 +87,7 @@ export class SettingsPanel implements MenuPanel {
 
         // ── Dialogue Font Size ──
         yPos += spacing;
-        const fontSizeSlider = createSlider(theme, cfg, display.width, () => display.canvasElement.getBoundingClientRect(), {
+        const fontSizeSlider = createSlider(theme, cfg, display.width, {
             label: 'Text Size',
             onChange: (v) => {
                 theme.fontSize = Math.round(14 + v * 26);
@@ -107,7 +97,6 @@ export class SettingsPanel implements MenuPanel {
         });
         fontSizeSlider.container.position.set(contentStartX, yPos);
         container.addChild(fontSizeSlider.container);
-        cleanups.push(fontSizeSlider.cleanup);
         sliderResults.push(fontSizeSlider);
 
         const fontSizeIndicator = createFocusIndicator(yPos);
@@ -150,9 +139,6 @@ export class SettingsPanel implements MenuPanel {
             return false;
         };
 
-        return {
-            cleanup: () => { for (const function_ of cleanups) function_() },
-            container,
-        };
+        return { container };
     }
 }

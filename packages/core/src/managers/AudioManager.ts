@@ -35,10 +35,16 @@ export class AudioManager {
         this._muted = config.muted ?? false;
     }
 
+    public audioExists(url: string): boolean {
+        return sound.exists(url);
+    }
+
     public destroy() {
         sound.stopAll();
         sound.removeAll();
+        this.currentBgmUrl = undefined;
     }
+
 
     public getVolumes(): Required<AudioConfig> {
         return {
@@ -50,9 +56,58 @@ export class AudioManager {
         };
     }
 
+
     public init() {
         sound.init();
         this.updateSystemVolume();
+    }
+
+
+    public pauseBgm(): void {
+        if (!this.currentBgmUrl) return;
+        sound.pause(this.currentBgmUrl);
+    }
+
+    public async playBgm(url: string, loop: boolean, volume: number = 1): Promise<void> {
+        await this.preloadAudio(url);
+
+        if (this.currentBgmUrl && this.currentBgmUrl !== url) {
+            sound.stop(this.currentBgmUrl);
+        }
+
+        this.currentBgmUrl = url;
+        await sound.play(url, {
+            loop,
+            singleInstance: true,
+            volume: volume * this.bgmVolume,
+        });
+    }
+
+    public async playSfx(url: string, volume: number = 1): Promise<void> {
+        await this.preloadAudio(url);
+        await sound.play(url, { volume: volume * this.sfxVolume });
+    }
+
+    public async playVoice(url: string): Promise<void> {
+        await this.preloadAudio(url);
+        await sound.play(url, { volume: 0.1 * this.voiceVolume });
+    }
+
+    public async preloadAudio(url: string): Promise<void> {
+        if (this.audioExists(url)) return;
+
+        await new Promise<void>((resolve, reject) => {
+            sound.add(url, {
+                loaded: (error) => error ? reject(error) : resolve(),
+                preload: true,
+                url,
+            });
+        });
+    }
+
+    public resumeBgm(): void {
+        if (!this.currentBgmUrl) return;
+        sound.resume(this.currentBgmUrl);
     }
 
     public setMasterVolume(v: number) {
@@ -78,10 +133,15 @@ export class AudioManager {
         }
     }
 
+    public stopBgm(): void {
+        if (!this.currentBgmUrl) return;
+        sound.stop(this.currentBgmUrl);
+        this.currentBgmUrl = undefined;
+    }
+
     private applyBgmVolume() {
         if (!this.currentBgmUrl || !sound.exists(this.currentBgmUrl)) return;
-        const getSound = (url: string) => sound.find(url);
-        const snd = getSound(this.currentBgmUrl);
+        const snd = sound['find'](this.currentBgmUrl);
         if (snd) {
             snd.volume = this.bgmVolume;
         }

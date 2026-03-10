@@ -79,6 +79,7 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
 
     public destroy() {
         this.events.off('state:loaded', this.handleStateLoaded);
+        this.reset();
     }
 
     execute = async (command: SpriteCommand) => {

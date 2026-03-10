@@ -1,14 +1,14 @@
 import type { EngineEventMap } from '../interfaces/managers';
 
-type Listener = (...arguments_: unknown[]) => void;
+type AnyListener = (...arguments_: unknown[]) => void;
+type EventName = keyof EngineEventMap;
+type Listener<K extends EventName> = (...arguments_: EngineEventMap[K]) => void;
 
 export class EventBus {
-    private listeners: Map<string, Set<Listener>> = new Map();
+    private listeners: Map<EventName, Set<AnyListener>> = new Map();
 
-    public emit<K extends keyof EngineEventMap>(event: K, ...arguments_: EngineEventMap[K]): void;
-    public emit(event: string, ...arguments_: unknown[]): void;
-    public emit(event: string, ...arguments_: unknown[]) {
-        const listeners = this.listeners.get(event);
+    public emit<K extends EventName>(event: K, ...arguments_: EngineEventMap[K]) {
+        const listeners = this.listeners.get(event) as Set<Listener<K>> | undefined;
         if (listeners) {
             for (const listener of listeners) {
                 listener(...arguments_);
@@ -16,25 +16,19 @@ export class EventBus {
         }
     }
 
-    public off<K extends keyof EngineEventMap>(event: K, listener: (...arguments_: EngineEventMap[K]) => void): void;
-    public off(event: string, listener: Listener): void;
-    public off(event: string, listener: Listener) {
-        this.listeners.get(event)?.delete(listener);
+    public off<K extends EventName>(event: K, listener: Listener<K>) {
+        this.listeners.get(event)?.delete(listener as AnyListener);
     }
 
-    public on<K extends keyof EngineEventMap>(event: K, listener: (...arguments_: EngineEventMap[K]) => void): void;
-    public on(event: string, listener: Listener): void;
-    public on(event: string, listener: Listener) {
+    public on<K extends EventName>(event: K, listener: Listener<K>) {
         if (!this.listeners.has(event)) {
             this.listeners.set(event, new Set());
         }
-        this.listeners.get(event)!.add(listener);
+        this.listeners.get(event)!.add(listener as AnyListener);
     }
 
-    public once<K extends keyof EngineEventMap>(event: K, listener: (...arguments_: EngineEventMap[K]) => void): void;
-    public once(event: string, listener: Listener): void;
-    public once(event: string, listener: Listener) {
-        const wrapper = (...arguments_: unknown[]) => {
+    public once<K extends EventName>(event: K, listener: Listener<K>) {
+        const wrapper: Listener<K> = (...arguments_) => {
             listener(...arguments_);
             this.off(event, wrapper);
         };

@@ -48,6 +48,18 @@ export class FlowManager implements IFlowManager {
         return true;
     }
 
+    public destroy() {
+        this.started = false;
+        this.destroyHandlers();
+        this.reset();
+    }
+
+    public destroyHandlers() {
+        for (const handler of this.handlers.values()) {
+            void handler.destroy?.();
+        }
+    }
+
     public getHandler(type: BaseCommand['type']): RegisteredCommandHandler | undefined {
         return this.handlers.get(type);
     }
@@ -117,11 +129,13 @@ export class FlowManager implements IFlowManager {
         this.skipRequested = false;
     }
 
+
     public resetHandlers() {
         for (const handler of this.handlers.values()) {
             handler.reset?.();
         }
     }
+
 
     public async runCommand(command: BaseCommand) {
         const handler = this.getHandler(command.type);

@@ -3,6 +3,7 @@ import { Assets } from 'pixi.js';
 import type { EngineConfig } from './EngineConfig';
 import type { RegisteredCommandHandler } from './interfaces/ICommandHandler';
 import type {
+    IAnimationManager,
     IAssetManager,
     IAudioManager,
     IDisplayManager,
@@ -29,6 +30,7 @@ import { DefaultTheme, type Theme } from './utils/Theme';
 export type AssetResolver = (url: string) => string;
 
 export interface EngineDeps {
+    animations: IAnimationManager;
     assets: IAssetManager;
     audio: IAudioManager;
     display: IDisplayManager;
@@ -47,6 +49,7 @@ export interface EngineDeps {
 }
 
 export class Engine {
+    public readonly animations: IAnimationManager;
     public readonly assets: IAssetManager;
     public readonly audio: IAudioManager;
     public config: EngineConfig;
@@ -119,6 +122,7 @@ export class Engine {
         }
 
         this.assets = deps.assets;
+        this.animations = deps.animations;
         this.audio = deps.audio;
         this.display = deps.display;
         this.events = deps.events;
@@ -167,9 +171,23 @@ export class Engine {
     public destroy() {
         this.flow.stop();
         this.input.detach();
+        void this.animations.destroy?.();
+        this.clear();
+        this.flow.destroyHandlers();
+        void this.overlay.destroy?.();
+        void this.startScreen.destroy?.();
+        void this.notifications.destroy?.();
+        void this.saves.destroy?.();
+        void this.scenes.destroy?.();
+        void this.events.destroy?.();
+        void this.stateManager.destroy?.();
+        void this.history.destroy?.();
+        void this.items.destroy?.();
+        void this.spritesheets.destroy?.();
+        void this.assets.destroy?.();
+        void this.input.destroy?.();
         void this.display.destroy?.();
         void this.audio.destroy?.();
-        this.clear();
     }
 
     public getHandler(type: BaseCommand['type']): RegisteredCommandHandler | undefined {

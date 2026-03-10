@@ -29,14 +29,15 @@ import {
     WaitHandler,
     WhileHandler,
 } from './handlers';
+import { AnimationManager } from './managers/AnimationManager';
 import { AssetManager } from './managers/AssetManager';
 import { AudioManager } from './managers/AudioManager';
 import { DisplayManager } from './managers/DisplayManager';
 import { EventBus } from './managers/EventBus';
 import { EvidenceManager } from './managers/EvidenceManager';
+import { FlowManager } from './managers/FlowManager';
 import { HistoryManager } from './managers/HistoryManager';
 import { InputManager } from './managers/InputManager';
-import { FlowManager } from './managers/FlowManager';
 import { NotificationManager } from './managers/NotificationManager';
 import { OverlayManager } from './managers/OverlayManager';
 import { SaveManager } from './managers/SaveManager';
@@ -79,13 +80,14 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
     } = options;
 
     const events = new EventBus();
+    const animations = new AnimationManager();
     const audio = new AudioManager(config.audio);
     const display = new DisplayManager(config.display);
     const history = new HistoryManager();
     const evidence = new EvidenceManager();
     const state = new StateManager();
     const spritesheets = new SpritesheetManager();
-    const assets = new AssetManager(spritesheets);
+    const assets = new AssetManager(audio, spritesheets);
     const logger = new Logger('[Engine]');
     const sceneManager = new SceneManager({
         assets,
@@ -125,7 +127,6 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
     const overlay = new OverlayManager({
         display,
         events,
-        getCanvasElement: () => display.canvas,
         overlayConfigProvider,
         overlayLayer: display.getLayer('overlay'),
         themeProvider,
@@ -160,6 +161,7 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
     }, config.startScreen);
 
     const deps: EngineDeps = {
+        animations,
         assets,
         audio,
         display,
@@ -180,6 +182,7 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
 
     const dialogueHandler = new DialogueHandler(
         assets,
+        animations,
         audio,
         display,
         events,
@@ -187,7 +190,6 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
         history,
         logger,
         state,
-        (command) => flow.runCommand(command),
         {
             ...theme,
             characters,
@@ -197,7 +199,7 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
 
     flow.registerHandlers([
         new BackgroundHandler(assets, display, state, events),
-        new TransitionHandler(display),
+        new TransitionHandler(animations, display),
         new JumpHandler(sceneManager),
         new SceneChangeHandler(flow),
         new BlockHandler(flow),
@@ -208,12 +210,12 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
         new IfHandler(flow, evidence, state),
         new WhileHandler(flow, logger, evidence, state),
         new ForHandler(flow, state),
-        new ShakeHandler(display),
+        new ShakeHandler(animations, display),
         new WaitHandler(),
         new LabelHandler(),
         new GotoHandler(logger, sceneManager),
         new SpriteHandler(assets, display, events, logger, spritesheets, state, () => manifestData),
-        new FlashHandler(display),
+        new FlashHandler(animations, display),
         new ItemHandler(evidence),
         dialogueHandler,
         new ChoiceHandler(display, events, flow, {

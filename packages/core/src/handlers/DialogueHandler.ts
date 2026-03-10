@@ -1,8 +1,6 @@
 import type { TextStyleOptions } from 'pixi.js';
 
-import { sound } from '@pixi/sound';
-
-import type { IAssetManager, IAudioManager, IDisplayManager, IEventBus, IFlowManager, IHistoryManager, IStateManager } from '../interfaces/managers';
+import type { IAnimationManager, IAssetManager, IAudioManager, IDisplayManager, IEventBus, IFlowManager, IHistoryManager, IStateManager } from '../interfaces/managers';
 import type { CharacterDefinition } from '../types';
 import type { CommandHandler } from '../types';
 import type { BaseCommand } from '../types';
@@ -46,7 +44,6 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
     private autoAdvanceDelay: number | undefined;
     private readonly config: DialogueConfig;
     private readonly events: IEventBus;
-    private readonly executeCommand: (command: BaseCommand) => Promise<void>;
     private readonly flow: IFlowManager;
     private readonly history: IHistoryManager;
     private readonly logger: Logger;
@@ -56,6 +53,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
 
     constructor(
         assets: IAssetManager,
+        animations: IAnimationManager,
         audio: IAudioManager,
         display: IDisplayManager,
         events: IEventBus,
@@ -63,7 +61,6 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         history: IHistoryManager,
         logger: Logger,
         state: IStateManager,
-        executeCommand: (command: BaseCommand) => Promise<void>,
         config: DialogueConfig,
     ) {
         this.assets = assets;
@@ -73,9 +70,8 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         this.history = history;
         this.logger = logger;
         this.state = state;
-        this.executeCommand = executeCommand;
         this.config = { characters: {}, typewriterSpeed: 30, ...config };
-        this.renderer = new DialogueRenderer(this.config, display, this.assets);
+        this.renderer = new DialogueRenderer(this.config, animations, display, this.assets);
         this.typewriter = new TypewriterController();
     }
 
@@ -132,7 +128,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
                     id: spriteId,
                     type: 'sprite',
                 };
-                await this.executeCommand(animCommand);
+                await this.flow.runCommand(animCommand);
                 if (signal.aborted) return;
             }
         }
@@ -141,14 +137,8 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         const resolvedBlipUrl = blipUrl ? this.assets.resolve(blipUrl) : undefined;
         if (resolvedBlipUrl) {
             try {
-                if (!sound.exists(resolvedBlipUrl)) {
-                    await new Promise<void>((resolve, reject) => {
-                        sound.add(resolvedBlipUrl, {
-                            loaded: (error) => error ? reject(error) : resolve(),
-                            preload: true,
-                            url: resolvedBlipUrl
-                        });
-                    });
+                if (!this.audio.audioExists(resolvedBlipUrl)) {
+                    await this.audio.preloadAudio(resolvedBlipUrl);
                 }
             } catch {
                 this.logger.warn(`Blip failed to load: ${blipUrl}`);
@@ -174,8 +164,8 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
             consumeSkip: () => this.flow.consumeSkip(),
             createPromptBlinker: () => this.renderer.createPromptBlinker(),
             getMessageText: () => this.renderer.getMessageText(),
-            getVoiceVolume: () => this.audio.voiceVolume,
             initialSpeed: this.config.typewriterSpeed!,
+            playVoice: (url) => this.audio.playVoice(url),
             setMessageText: (text) => this.renderer.setMessageText(text),
             signal,
             tokens,

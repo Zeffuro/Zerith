@@ -1,7 +1,6 @@
-import gsap from 'gsap';
 import { Graphics } from 'pixi.js';
 
-import type { IDisplayManager } from '../interfaces/managers';
+import type { IAnimationManager, IDisplayManager } from '../interfaces/managers';
 import type { BaseCommand, CommandHandler } from '../types';
 
 export interface TransitionCommand extends BaseCommand {
@@ -13,10 +12,12 @@ export interface TransitionCommand extends BaseCommand {
 export class TransitionHandler implements CommandHandler<TransitionCommand> {
     public autoNext = true;
     public type = 'transition' as const;
+    private readonly animations: IAnimationManager;
     private readonly display: IDisplayManager;
     private fadeRect: Graphics | undefined;
 
-    constructor(display: IDisplayManager) {
+    constructor(animations: IAnimationManager, display: IDisplayManager) {
+        this.animations = animations;
         this.display = display;
     }
 
@@ -32,13 +33,10 @@ export class TransitionHandler implements CommandHandler<TransitionCommand> {
 
         const targetAlpha = command.action === 'fade_out' ? 1 : 0;
 
-        return new Promise<void>((resolve) => {
-            gsap.to(this.fadeRect!, {
-                alpha: targetAlpha,
-                duration: duration,
-                ease: "power2.inOut",
-                onComplete: resolve
-            });
+        return this.animations.to(this.fadeRect!, {
+            alpha: targetAlpha,
+            duration: duration,
+            ease: "power2.inOut",
         });
     };
 }

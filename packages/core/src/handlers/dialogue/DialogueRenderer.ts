@@ -1,7 +1,6 @@
-import gsap from 'gsap';
 import { Container, Graphics, HTMLText, Sprite, Text, type TextStyleOptions, type Texture } from 'pixi.js';
 
-import type { IAssetManager, IDisplayManager } from '../../interfaces/managers';
+import type { IAnimationManager, IAssetManager, IDisplayManager } from '../../interfaces/managers';
 
 export interface DialogueRendererConfig {
     backgroundAlpha?: number;
@@ -17,6 +16,7 @@ export interface DialogueRendererConfig {
 }
 
 export class DialogueRenderer {
+    private readonly animations: IAnimationManager;
     private readonly assets: IAssetManager;
     private readonly config: DialogueRendererConfig;
     private container: Container | undefined;
@@ -27,10 +27,12 @@ export class DialogueRenderer {
 
     constructor(
         config: DialogueRendererConfig,
+        animations: IAnimationManager,
         display: IDisplayManager,
         assets: IAssetManager,
     ) {
         this.config = config;
+        this.animations = animations;
         this.display = display;
         this.assets = assets;
     }
@@ -46,7 +48,7 @@ export class DialogueRenderer {
             this.messageText.y + this.messageText.height
         );
         this.container?.addChild(blinker);
-        gsap.to(blinker, { alpha: 0, duration: 0.5, repeat: -1, yoyo: true });
+        void this.animations.to(blinker, { alpha: 0, duration: 0.5, repeat: -1, yoyo: true });
         return blinker;
     }
 

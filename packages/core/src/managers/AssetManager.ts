@@ -1,4 +1,3 @@
-import { sound } from '@pixi/sound';
 import { Assets } from 'pixi.js';
 
 import type { AssetResolver } from '../Engine';
@@ -10,19 +9,22 @@ import type { IfCommand } from '../handlers/IfHandler';
 import type { SfxCommand } from '../handlers/SfxHandler';
 import type { SpriteCommand } from '../handlers/SpriteHandler';
 import type { WhileCommand } from '../handlers/WhileHandler';
+import type { IAudioManager } from '../interfaces/managers';
 import type { BaseCommand, CharacterDefinition, Script, SpritesheetConfig } from '../types';
 import type { SpritesheetManager } from './SpritesheetManager';
 
 import { Logger } from '../utils/Logger';
 
 export class AssetManager {
+    private readonly audio: IAudioManager;
     private readonly loadedUrls: Set<string> = new Set();
     private readonly logger = new Logger('[AssetManager]');
     private resolver: AssetResolver;
 
     private readonly spritesheets: SpritesheetManager;
 
-    constructor(spritesheets: SpritesheetManager, resolver: AssetResolver = (url) => url) {
+    constructor(audio: IAudioManager, spritesheets: SpritesheetManager, resolver: AssetResolver = (url) => url) {
+        this.audio = audio;
         this.spritesheets = spritesheets;
         this.resolver = resolver;
     }
@@ -82,6 +84,10 @@ export class AssetManager {
         return AssetManager.extractAssetUrls(script);
     }
 
+    public destroy() {
+        this.loadedUrls.clear();
+    }
+
     public async load<T = unknown>(url: string): Promise<T> {
         return await Assets.load<T>(this.resolve(url));
     }
@@ -131,22 +137,17 @@ export class AssetManager {
     private async preloadAudio(url: string): Promise<void> {
         const resolvedUrl = this.resolver(url);
         const key = `audio:${resolvedUrl}`;
-        if (this.loadedUrls.has(key) || sound.exists(resolvedUrl)) {
+        if (this.loadedUrls.has(key) || this.audio.audioExists(resolvedUrl)) {
             this.loadedUrls.add(key);
             return;
         }
 
-        await new Promise<void>((resolve) => {
-            sound.add(resolvedUrl, {
-                loaded: (error) => {
-                    if (error) this.logger.warn(`Failed to preload audio: ${url}`, error);
-                    else this.loadedUrls.add(key);
-                    resolve();
-                },
-                preload: true,
-                url: resolvedUrl,
-            });
-        });
+        try {
+            await this.audio.preloadAudio(resolvedUrl);
+            this.loadedUrls.add(key);
+        } catch (error) {
+            this.logger.warn(`Failed to preload audio: ${url}`, error);
+        }
     }
 
     private async preloadSpritesheet(config: SpritesheetConfig): Promise<void> {

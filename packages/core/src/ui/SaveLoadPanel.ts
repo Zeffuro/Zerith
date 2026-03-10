@@ -1,12 +1,8 @@
 import { Container, type FederatedPointerEvent, Graphics, Text } from 'pixi.js';
 
-import type { IDisplayManager, INotificationManager, ISaveManager } from '../interfaces/managers';
-import type { OverlayConfig } from '../managers/OverlayManager';
+import type { INotificationManager, ISaveManager } from '../interfaces/managers';
 import type { SaveState } from '../managers/SaveManager';
-import type { MenuPanel } from '../types';
-import type { Theme } from '../utils/Theme';
-
-import type { PanelFocusManager } from './PanelFocusManager';
+import type { MenuPanel, PanelBuildDeps } from '../types';
 
 import { createButton, createPanelTitle, registerFocusableButton } from './UIComponents';
 
@@ -42,13 +38,8 @@ export class SaveLoadPanel implements MenuPanel {
         this.config = { maxSlots: 6, ...config };
     }
 
-    build(
-        display: Pick<IDisplayManager, 'height' | 'width'> & { canvasElement: HTMLCanvasElement; },
-        theme: Theme,
-        overlayConfig: Required<OverlayConfig>,
-        focus: PanelFocusManager,
-        onClose: () => void,
-    ) {
+    build(deps: PanelBuildDeps) {
+        const { display, focus, onClose, overlayConfig, theme } = deps;
         const cfg = overlayConfig;
         const w = display.width;
         const h = display.height;
