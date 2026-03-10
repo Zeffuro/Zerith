@@ -85,6 +85,20 @@ export class AssetManager {
     }
 
     public destroy() {
+        for (const key of this.loadedUrls) {
+            const separatorIndex = key.indexOf(':');
+            if (separatorIndex < 0) continue;
+
+            const kind = key.slice(0, separatorIndex);
+            const rawUrl = key.slice(separatorIndex + 1);
+
+            if (kind === 'texture' || kind === 'sheet') {
+                void Assets.unload(rawUrl).catch(() => {
+                    // Ignore cache eviction races/duplicates during teardown.
+                });
+            }
+        }
+
         this.loadedUrls.clear();
     }
 

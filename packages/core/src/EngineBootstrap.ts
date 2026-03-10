@@ -1,7 +1,7 @@
 import type { AssetResolver, EngineDeps } from './Engine';
 import type { EngineConfig } from './EngineConfig';
 import type { CommandHandlerRegistry } from './interfaces/ICommandHandler';
-import type { IOverlayConfigProvider, IThemeProvider } from './interfaces/providers';
+import type { IOverlayConfigProvider, IStorageProvider, IThemeProvider } from './interfaces/providers';
 import type { EvidenceItem } from './managers/EvidenceManager';
 import type { CharacterDefinition, GameManifest, Script } from './types';
 
@@ -85,7 +85,7 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
     const display = new DisplayManager(config.display);
     const history = new HistoryManager();
     const evidence = new EvidenceManager();
-    const state = new StateManager();
+    const state = new StateManager(events);
     const spritesheets = new SpritesheetManager();
     const assets = new AssetManager(audio, spritesheets);
     const logger = new Logger('[Engine]');
@@ -137,6 +137,27 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
         isStarted: () => flow.isStarted,
     }, config.input);
 
+    const fallbackStorage = new Map<string, string>();
+    const storage: IStorageProvider = config.storage ?? (typeof globalThis.localStorage !== 'undefined'
+        ? {
+            getItem: (key: string) => globalThis.localStorage.getItem(key),
+            removeItem: (key: string) => {
+                globalThis.localStorage.removeItem(key);
+            },
+            setItem: (key: string, value: string) => {
+                globalThis.localStorage.setItem(key, value);
+            },
+        }
+        : {
+            getItem: (key: string) => fallbackStorage.get(key) ?? null,
+            removeItem: (key: string) => {
+                fallbackStorage.delete(key);
+            },
+            setItem: (key: string, value: string) => {
+                fallbackStorage.set(key, value);
+            },
+        });
+
     const saveManager = new SaveManager({
         getCurrentSceneName: () => sceneManager.currentSceneName,
         getLastSavePoint: () => flow.lastSavePoint,
@@ -145,6 +166,10 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
         logInfo: (message) => logger.info(message),
         logWarn: (message) => logger.warn(message),
         serializeItems: () => evidence.serialize(),
+    }, storage);
+
+    events.on('state:persistent_changed', (data) => {
+        saveManager.saveGlobalState(data);
     });
 
     const notifications = new NotificationManager({
@@ -261,12 +286,10 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
         sceneManager.loadScenes(scenes);
     }
 
-    if (engine.config.debug) {
-        (globalThis as unknown as { zerith: Engine }).zerith = engine;
-    }
 
     await engine.init(canvas);
     bindDefaultInputEvents(engine);
+    state.loadPersistentState(saveManager.loadGlobalState());
 
     return engine;
 }

@@ -1,4 +1,5 @@
 import type { SaveState } from '../../managers/SaveManager';
+import type { Serializable } from '../../types';
 import type { IBaseManager } from './IBaseManager';
 
 export interface EngineEventMap {
@@ -15,6 +16,7 @@ export interface EngineEventMap {
     'scene:loading': [string];
     'script:command_executed': [string];
     'state:loaded': [SaveState];
+    'state:persistent_changed': [Record<string, Serializable>];
 }
 
 export interface IEventBus extends IBaseManager {

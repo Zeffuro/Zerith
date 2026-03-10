@@ -1,4 +1,4 @@
-import type { IStateManager } from '../interfaces/managers';
+import type { IEventBus, IStateManager } from '../interfaces/managers';
 import type { Serializable, SystemState } from '../types';
 
 import { createDefaultSystemState } from '../types';
@@ -19,6 +19,11 @@ export class StateManager implements IStateManager {
     private _persistentState: Record<string, Serializable> = {};
     private _state: Record<string, Serializable> = {};
     private _system: SystemState = createDefaultSystemState();
+    private readonly events: IEventBus;
+
+    constructor(events: IEventBus) {
+        this.events = events;
+    }
 
     public clear(): void {
         this._state = {};
@@ -31,6 +36,10 @@ export class StateManager implements IStateManager {
 
     public getPersistent<T = Serializable>(key: string): T | undefined {
         return this._persistentState[key] as T | undefined;
+    }
+
+    public loadPersistentState(state: Record<string, Serializable>): void {
+        this._persistentState = structuredClone(state);
     }
 
     public replaceState(state: Record<string, Serializable>, system?: SystemState): void {
@@ -57,10 +66,12 @@ export class StateManager implements IStateManager {
         const serializable = this.toSerializable(value);
         if (serializable === undefined) {
             delete this._persistentState[key];
+            this.events.emit('state:persistent_changed', this._persistentState);
             return;
         }
 
         this._persistentState[key] = serializable;
+        this.events.emit('state:persistent_changed', this._persistentState);
     }
 
     private isRecord(value: unknown): value is Record<string, unknown> {

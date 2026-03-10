@@ -36,6 +36,7 @@ export class InputManager {
     private readonly events: IEventBus;
 
     private gamepadPollId: number | undefined;
+    private isPolling = false;
     private prevGamepadAxes: number[] = [];
     private prevGamepadButtons: boolean[] = [];
 
@@ -175,8 +176,11 @@ export class InputManager {
 
     private startGamepadPolling() {
         this.stopGamepadPolling();
+        this.isPolling = true;
 
         const poll = () => {
+            if (!this.isPolling) return;
+
             const gamepad = navigator.getGamepads()[0];
             if (gamepad) {
                 const buttons = gamepad.buttons.map(b => b.pressed);
@@ -232,6 +236,7 @@ export class InputManager {
     }
 
     private stopGamepadPolling() {
+        this.isPolling = false;
         if (this.gamepadPollId !== undefined) {
             cancelAnimationFrame(this.gamepadPollId);
             this.gamepadPollId = undefined;

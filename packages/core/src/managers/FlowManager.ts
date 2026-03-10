@@ -74,7 +74,11 @@ export class FlowManager implements IFlowManager {
         this.isExecuting = true;
 
         try {
-            while (this.injectedCommands.length > 0 || this.scenes.currentIndex < this.scenes.scriptLength) {
+            while (
+                (this.injectedCommands.length > 0 || this.scenes.currentIndex < this.scenes.scriptLength)
+                && this.started
+                && this.isExecuting
+            ) {
                 const hasInjected = this.injectedCommands.length > 0;
                 const index = this.scenes.currentIndex;
                 const command = hasInjected
@@ -83,6 +87,8 @@ export class FlowManager implements IFlowManager {
 
                 if (!command) continue;
                 await this.runCommand(command);
+
+                if (!this.isExecuting || !this.started) return;
 
                 if (this.shouldSkipSceneNavigation(command)) {
                     return;

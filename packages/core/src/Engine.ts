@@ -157,6 +157,7 @@ export class Engine {
 
     public clear() {
         this.display.clearLayers?.();
+        this.animations.clear();
         this.flow.resetHandlers();
         this.history.clear();
         this.items.clear();

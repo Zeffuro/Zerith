@@ -190,6 +190,10 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         this.renderer.reset();
     };
 
+    public destroy(): void {
+        this.reset();
+    }
+
     public setAutoAdvanceDelay(delay: number | undefined) {
         this.autoAdvanceDelay = delay;
     }

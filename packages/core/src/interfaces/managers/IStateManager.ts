@@ -6,6 +6,7 @@ export interface IStateManager extends IBaseManager {
     get<T = Serializable>(key: string): T | undefined;
     getPersistent<T = Serializable>(key: string): T | undefined;
     get persistentState(): Record<string, Serializable>;
+    loadPersistentState(state: Record<string, Serializable>): void;
     replaceState(state: Record<string, Serializable>, system?: SystemState): void;
     set(key: string, value: unknown): void;
     setPersistent(key: string, value: unknown): void;

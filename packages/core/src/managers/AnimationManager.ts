@@ -10,6 +10,10 @@ export class AnimationManager implements IAnimationManager {
     private readonly tweens: Set<GsapTween> = new Set();
 
     public destroy() {
+        this.clear();
+    }
+
+    public clear(): void {
         for (const timeline of this.timelines) {
             timeline.kill();
         }

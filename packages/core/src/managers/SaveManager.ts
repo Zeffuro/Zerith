@@ -1,4 +1,5 @@
 import type { SpriteState } from '../handlers/SpriteHandler';
+import type { IStorageProvider } from '../interfaces/providers';
 import type { Serializable, SystemState } from '../types';
 
 import { createDefaultSystemState } from '../types';
@@ -40,19 +41,21 @@ const LEGACY_SYSTEM_KEYS = new Set([
 export class SaveManager {
     private readonly context: SaveContext;
     private readonly prefix: string;
+    private readonly storage: IStorageProvider;
 
-    constructor(context: SaveContext, prefix: string = 'zerith_save') {
+    constructor(context: SaveContext, storage: IStorageProvider, prefix: string = 'zerith_save') {
         this.context = context;
+        this.storage = storage;
         this.prefix = prefix;
     }
 
     public deleteSlot(slot: number) {
-        localStorage.removeItem(`${this.prefix}_${slot}`);
+        this.storage.removeItem(`${this.prefix}_${slot}`);
         this.context.logInfo(`Save slot ${slot} deleted`);
     }
 
     public getMeta(slot: number): SaveMeta | undefined {
-        const saveString = localStorage.getItem(`${this.prefix}_${slot}`);
+        const saveString = this.storage.getItem(`${this.prefix}_${slot}`);
         if (!saveString) return undefined;
 
         const saveData = this.parseSaveState(saveString);
@@ -68,7 +71,7 @@ export class SaveManager {
     }
 
     public hasSlot(slot: number): boolean {
-        return localStorage.getItem(`${this.prefix}_${slot}`) !== null;
+        return this.storage.getItem(`${this.prefix}_${slot}`) !== null;
     }
 
     public listSlots(maxSlots: number = 10): (SaveMeta | undefined)[] {
@@ -80,7 +83,7 @@ export class SaveManager {
     }
 
     public load(slot: number = 1): Promise<SaveState | undefined> {
-        const saveString = localStorage.getItem(`${this.prefix}_${slot}`);
+        const saveString = this.storage.getItem(`${this.prefix}_${slot}`);
         if (!saveString) {
             this.context.logWarn(`No save found in slot ${slot}`);
             return Promise.resolve<SaveState | undefined>(void 0);
@@ -115,8 +118,26 @@ export class SaveManager {
             },
         };
 
-        localStorage.setItem(`${this.prefix}_${slot}`, JSON.stringify(saveData));
+        this.storage.setItem(`${this.prefix}_${slot}`, JSON.stringify(saveData));
         this.context.logInfo(`Game saved to slot ${slot}`);
+    }
+
+    public loadGlobalState(): Record<string, Serializable> {
+        const stateJson = this.storage.getItem(`${this.prefix}_global`);
+        if (!stateJson) {
+            return {};
+        }
+
+        try {
+            const parsed: unknown = JSON.parse(stateJson);
+            return this.isSerializableRecord(parsed) ? parsed : {};
+        } catch {
+            return {};
+        }
+    }
+
+    public saveGlobalState(state: Record<string, Serializable>): void {
+        this.storage.setItem(`${this.prefix}_global`, JSON.stringify(state));
     }
 
     private isRecord(value: unknown): value is Record<string, unknown> {

@@ -25,6 +25,7 @@ export interface StartScreenDeps {
 export class StartScreenManager {
     private readonly config: Required<StartScreenConfig>;
     private readonly deps: StartScreenDeps;
+    private onKeyStart: (() => void) | undefined;
 
     constructor(deps: StartScreenDeps, config: StartScreenConfig = {}) {
         this.deps = deps;
@@ -51,6 +52,7 @@ export class StartScreenManager {
      */
     public show(startScene: string): Promise<void> {
         const { display, events, overlayLayer, scenes } = this.deps;
+        this.destroy();
         const w = display.width;
         const h = display.height;
         const cfg = this.config;
@@ -88,6 +90,10 @@ export class StartScreenManager {
 
         return new Promise<void>((resolve) => {
             const startGame = () => {
+                if (this.onKeyStart) {
+                    events.off('input:start', this.onKeyStart);
+                    this.onKeyStart = undefined;
+                }
                 startLayer.destroy({ children: true });
                 void scenes.jumpToScene(startScene).then(() => {
                     resolve();
@@ -96,11 +102,17 @@ export class StartScreenManager {
 
             startLayer.on('pointerdown', startGame);
 
-            const onKeyStart = () => {
-                events.off('input:start', onKeyStart);
+            this.onKeyStart = () => {
                 startGame();
             };
-            events.on('input:start', onKeyStart);
+            events.on('input:start', this.onKeyStart);
         });
+    }
+
+    public destroy(): void {
+        if (this.onKeyStart) {
+            this.deps.events.off('input:start', this.onKeyStart);
+            this.onKeyStart = undefined;
+        }
     }
 }

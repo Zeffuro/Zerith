@@ -66,6 +66,8 @@ export class NotificationManager {
 
         const startTime = performance.now();
         const animate = (time: number) => {
+            if (toast.destroyed) return;
+
             const elapsed = time - startTime;
             if (elapsed < fadeTime) {
                 toast.alpha = elapsed / fadeTime;

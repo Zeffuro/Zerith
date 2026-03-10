@@ -31,6 +31,9 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
     private readonly display: IDisplayManager;
     private readonly events: IEventBus;
     private readonly flow: IFlowManager;
+    private activeChoiceContainer: Container | undefined;
+    private onConfirm: (() => void) | undefined;
+    private onNavigate: ((direction: NavigationDirection) => void) | undefined;
 
     constructor(
         display: IDisplayManager,
@@ -56,7 +59,9 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
 
     execute = (command: ChoiceCommand): Promise<void> => {
         return new Promise((resolve) => {
+            this.reset();
             const choiceContainer = new Container();
+            this.activeChoiceContainer = choiceContainer;
 
             const w = this.display.width;
             const h = this.display.height;
@@ -138,26 +143,52 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
             }
 
             // Subscribe to InputManager events
-            const onNavigate = (direction: NavigationDirection) => {
+            this.onNavigate = (direction: NavigationDirection) => {
                 if (direction === 'up') updateSelection(selectedIndex - 1);
                 if (direction === 'down') updateSelection(selectedIndex + 1);
             };
 
-            const onConfirm = () => {
+            this.onConfirm = () => {
                 confirmSelection();
             };
 
-            this.events.on('input:navigate', onNavigate);
-            this.events.on('input:confirm', onConfirm);
+            this.events.on('input:navigate', this.onNavigate);
+            this.events.on('input:confirm', this.onConfirm);
 
             const cleanup = () => {
-                this.events.off('input:navigate', onNavigate);
-                this.events.off('input:confirm', onConfirm);
+                if (this.onNavigate) {
+                    this.events.off('input:navigate', this.onNavigate);
+                    this.onNavigate = undefined;
+                }
+                if (this.onConfirm) {
+                    this.events.off('input:confirm', this.onConfirm);
+                    this.onConfirm = undefined;
+                }
+                this.activeChoiceContainer = undefined;
             };
 
             this.display.getLayer('ui').addChild(choiceContainer);
         });
     };
+
+    public destroy(): void {
+        this.reset();
+    }
+
+    public reset(): void {
+        if (this.onNavigate) {
+            this.events.off('input:navigate', this.onNavigate);
+            this.onNavigate = undefined;
+        }
+        if (this.onConfirm) {
+            this.events.off('input:confirm', this.onConfirm);
+            this.onConfirm = undefined;
+        }
+        if (this.activeChoiceContainer && !this.activeChoiceContainer.destroyed) {
+            this.activeChoiceContainer.destroy({ children: true });
+        }
+        this.activeChoiceContainer = undefined;
+    }
 
     private styleButton(bg: Graphics, w: number, h: number, selected: boolean) {
         bg.clear();
