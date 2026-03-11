@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useEditorStore } from '../../store/useEditorStore';
 import { useProjectStore } from '../../store/useProjectStore';
@@ -19,12 +19,13 @@ export function MacroHeaderInspector() {
 
     const currentName = macro?.name ?? '';
     const [name, setName] = useState(currentName);
-    const [previousName, setPreviousName] = useState(currentName);
 
-    if (currentName !== previousName) {
-        setPreviousName(currentName);
-        setName(currentName);
-    }
+    useEffect(() => {
+        const frame = requestAnimationFrame(() => {
+            setName(currentName);
+        });
+        return () => cancelAnimationFrame(frame);
+    }, [currentName]);
 
     if (index === undefined || !macro) {
         return <div style={{ color: t.text.faint, fontStyle: 'italic' }}>Select a macro header.</div>;

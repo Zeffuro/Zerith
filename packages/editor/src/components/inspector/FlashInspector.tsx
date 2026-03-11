@@ -1,6 +1,6 @@
 import type { FlashCommand } from 'core';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
@@ -9,12 +9,13 @@ export function FlashInspector({ index, node }: { index?: null | number; node: F
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle, uiScale } = useInspectorFieldEditor(index);
 
     const [localColor, setLocalColor] = useState(node.color ?? 0xFF_FF_FF);
-    const [previousColor, setPreviousColor] = useState(node.color);
 
-    if (node.color !== previousColor) {
-        setPreviousColor(node.color);
-        setLocalColor(node.color ?? 0xFF_FF_FF);
-    }
+    useEffect(() => {
+        const frame = requestAnimationFrame(() => {
+            setLocalColor(node.color ?? 0xFF_FF_FF);
+        });
+        return () => cancelAnimationFrame(frame);
+    }, [node.color]);
 
     const hexColor = '#' + localColor.toString(16).padStart(6, '0').toUpperCase();
 

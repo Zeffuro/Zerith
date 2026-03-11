@@ -3,6 +3,7 @@ import { Container, type FederatedPointerEvent, Graphics, Text } from 'pixi.js';
 import type { IEvidenceManager } from '../interfaces/managers';
 import type { EvidenceItem } from '../managers/EvidenceManager';
 import type { MenuPanel as Panel, PanelBuildDeps } from '../types';
+import type { Logger } from '../utils/Logger';
 
 import { createItemCardList } from './ItemCard';
 import { ItemDetailView } from './ItemDetailView';
@@ -13,13 +14,16 @@ export class ItemBrowserPanel implements Panel {
     public label = 'Evidence';
     private readonly itemsManager: Pick<IEvidenceManager, 'getAll' | 'getEvidence' | 'getProfiles'>;
     private readonly loadAsset: <T = unknown>(url: string) => Promise<T>;
+    private readonly logger: Logger;
 
     constructor(
         itemsManager: Pick<IEvidenceManager, 'getAll' | 'getEvidence' | 'getProfiles'>,
         loadAsset: <T = unknown>(url: string) => Promise<T>,
+        logger: Logger,
     ) {
         this.itemsManager = itemsManager;
         this.loadAsset = loadAsset;
+        this.logger = logger;
     }
 
     build(deps: PanelBuildDeps) {
@@ -71,7 +75,7 @@ export class ItemBrowserPanel implements Panel {
         detailContainer.position.set(detailX, 60);
         root.addChild(detailContainer);
 
-        const detailView = new ItemDetailView(cfg, theme, detailWidth, h, this.loadAsset);
+        const detailView = new ItemDetailView(cfg, theme, detailWidth, h, this.loadAsset, this.logger);
         detailContainer.addChild(detailView.container);
 
         const updateDetail = async (itemList: EvidenceItem[], index: number) => {

@@ -1,18 +1,11 @@
 import { convertFileSrc } from '@tauri-apps/api/core';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useAssetOptions } from '../../hooks/useAssetOptions';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useProjectStore } from '../../store/useProjectStore';
 import { editorTheme as t } from '../../theme/editorTheme';
-
-function extensionOf(path: string) {
-    const index = path.lastIndexOf('.');
-    return index === -1 ? '' : path.slice(index).toLowerCase();
-}
-
-const IMG_EXT = new Set(['.avif', '.jpeg', '.jpg', '.png', '.webp']);
-const AUDIO_EXT = new Set(['.m4a', '.mp3', '.ogg', '.wav']);
+import { AUDIO_EXT, getExtension, IMG_EXT } from '../../utils/assetTypes';
 
 export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
     const projectPath = useProjectStore((s) => s.projectPath);
@@ -20,14 +13,14 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
     const selectedAssetPath = useEditorStore((s) => s.selectedAssetPath);
 
     const [value, setValue] = useState('');
-    const [previousSelected, setPreviousSelected] = useState(selectedAssetPath);
 
-    if (selectedAssetPath !== previousSelected) {
-        setPreviousSelected(selectedAssetPath);
-        if (selectedAssetPath) {
+    useEffect(() => {
+        if (!selectedAssetPath) return;
+        const frame = requestAnimationFrame(() => {
             setValue(selectedAssetPath);
-        }
-    }
+        });
+        return () => cancelAnimationFrame(frame);
+    }, [selectedAssetPath]);
 
     const resolvedSource = useMemo(() => {
         if (!value) return '';
@@ -36,7 +29,7 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
         return convertFileSrc(projectPath + value);
     }, [value, projectPath]);
 
-    const extension = extensionOf(value);
+    const extension = getExtension(value);
     const isImg = IMG_EXT.has(extension);
     const isAudio = AUDIO_EXT.has(extension);
 

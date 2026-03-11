@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { type FsDirectoryEntry, fsReadDirectory } from '../services/fs';
 import { useProjectStore } from '../store/useProjectStore';
+import { AUDIO_EXT, getExtension, IMG_EXT } from '../utils/assetTypes';
 
 type AssetKind = 'all' | 'audio' | 'bg' | 'bgm' | 'sfx' | 'sprite';
 
@@ -11,9 +12,8 @@ type AssetOption = {
     value: string;
 };
 
-const BG_EXT = new Set(['.avif', '.jpeg', '.jpg', '.png', '.webp']);
-const SPRITE_EXT = BG_EXT;
-const AUDIO_EXT = new Set(['.m4a', '.mp3', '.ogg', '.wav']);
+const BG_EXT = IMG_EXT;
+const SPRITE_EXT = IMG_EXT;
 
 export function useAssetOptions(kind: AssetKind = 'all') {
     const projectPath = useProjectStore((s) => s.projectPath);
@@ -76,10 +76,6 @@ export function useAssetOptions(kind: AssetKind = 'all') {
     return { assets, error, loading, reload, values };
 }
 
-function getExtension(name: string) {
-    const index = name.lastIndexOf('.');
-    return index === -1 ? '' : name.slice(index).toLowerCase();
-}
 
 function joinPath(a: string, b: string) {
     if (!a) return b;

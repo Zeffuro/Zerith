@@ -1,4 +1,4 @@
-import { MouseEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { MouseEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { NonMacroEditorCommandType, PluginNode } from '../../../plugins/types';
 import type { ScriptPath } from '../../../utils/scriptPathUtilities';
@@ -173,17 +173,17 @@ export function Timeline() {
         };
     }, [contextMenu]);
 
-    const toggleCollapse = (path: ScriptPath) => {
+    const toggleCollapse = useCallback((path: ScriptPath) => {
         const key = pathKey(path);
         setCollapsed((previous) => ({ ...previous, [key]: !previous[key] }));
-    };
+    }, []);
 
-    const handleDeleteRootNode = (event_: MouseEvent, index: number) => {
+    const handleDeleteRootNode = useCallback((event_: MouseEvent, index: number) => {
         event_.stopPropagation();
         requestDelete([[index]], 'click');
-    };
+    }, [requestDelete]);
 
-    const onContextMenuNode = (event_: React.MouseEvent, path: ScriptPath, _node: unknown) => {
+    const onContextMenuNode = useCallback((event_: React.MouseEvent, path: ScriptPath, _node: unknown) => {
         void _node;
         event_.preventDefault();
         event_.stopPropagation();
@@ -210,7 +210,7 @@ export function Timeline() {
             x: event_.clientX,
             y: event_.clientY,
         });
-    };
+    }, [editingAllMacrosFile, requestDelete, triggerPlayFrom]);
 
     const handleConfirmDelete = () => {
         const request = useEditorStore.getState().pendingDeleteRequest;

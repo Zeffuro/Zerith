@@ -2,6 +2,7 @@ import type { IfCommand } from 'core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
+import { getEditableValue } from './utilities';
 
 export function IfInspector({ index, node }: { index?: null | number; node: IfCommand, }) {
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle, uiScale } = useInspectorFieldEditor(index);
@@ -67,6 +68,3 @@ export function IfInspector({ index, node }: { index?: null | number; node: IfCo
     );
 }
 
-function getEditableValue(value: unknown): string {
-    return typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string' ? String(value) : '';
-}

@@ -1,6 +1,6 @@
 import type { ItemCommand } from 'core';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
@@ -15,13 +15,14 @@ export function ItemInspector({ index, node }: { index?: null | number; node: It
 
     const [changesJson, setChangesJson] = useState(initialJson);
     const [jsonError, setJsonError] = useState<string | undefined>();
-    const [previousInitialJson, setPreviousInitialJson] = useState(initialJson);
 
-    if (initialJson !== previousInitialJson) {
-        setPreviousInitialJson(initialJson);
-        setChangesJson(initialJson);
-        setJsonError(undefined);
-    }
+    useEffect(() => {
+        const frame = requestAnimationFrame(() => {
+            setChangesJson(initialJson);
+            setJsonError(undefined);
+        });
+        return () => cancelAnimationFrame(frame);
+    }, [initialJson]);
 
     const onChangesBlur = () => {
         try {

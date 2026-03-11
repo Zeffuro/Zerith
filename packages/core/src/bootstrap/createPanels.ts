@@ -7,6 +7,7 @@ import { HistoryPanel } from '../ui/HistoryPanel';
 import { ItemBrowserPanel } from '../ui/ItemBrowserPanel';
 import { SaveLoadPanel } from '../ui/SaveLoadPanel';
 import { SettingsPanel } from '../ui/SettingsPanel';
+import { Logger } from '../utils/Logger';
 
 export interface CreatePanelsOptions {
     assets: IAssetManager;
@@ -33,7 +34,7 @@ export function createPanels(options: CreatePanelsOptions): MenuPanel[] {
 
     return [
         new HistoryPanel(history),
-        new ItemBrowserPanel(evidence, (url) => assets.load(url)),
+        new ItemBrowserPanel(evidence, (url) => assets.load(url), new Logger('[ItemDetailView]')),
         new SettingsPanel(engine.audio, dialogueHandler),
         new SaveLoadPanel('save', saveManager, notifications, (saveState) => engine.applySaveState(saveState), () => overlay.close()),
         new SaveLoadPanel('load', saveManager, notifications, (saveState) => engine.applySaveState(saveState), () => overlay.close()),

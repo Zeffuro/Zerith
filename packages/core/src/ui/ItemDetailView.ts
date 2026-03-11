@@ -2,6 +2,7 @@ import { Container, Sprite, Text, type Texture } from 'pixi.js';
 
 import type { EvidenceItem } from '../managers/EvidenceManager';
 import type { OverlayConfig } from '../managers/OverlayManager';
+import type { Logger } from '../utils/Logger';
 import type { Theme } from '../utils/Theme';
 
 export class ItemDetailView {
@@ -14,6 +15,7 @@ export class ItemDetailView {
     private readonly detailWidth: number;
     private readonly height: number;
     private readonly loadAsset: <T = unknown>(url: string) => Promise<T>;
+    private readonly logger: Logger;
 
     constructor(
         overlayConfig: Required<OverlayConfig>,
@@ -21,12 +23,14 @@ export class ItemDetailView {
         detailWidth: number,
         height: number,
         loadAsset: <T = unknown>(url: string) => Promise<T>,
+        logger: Logger,
     ) {
-                        this.detailContainer = new Container();
+        this.detailContainer = new Container();
 
         this.detailWidth = detailWidth;
         this.height = height;
         this.loadAsset = loadAsset;
+        this.logger = logger;
 
         this.detailSprite = new Sprite();
         this.detailSprite.anchor.set(0.5, 0);
@@ -81,7 +85,7 @@ export class ItemDetailView {
                 this.detailDescription.position.set(0, imageBottom + 50);
                 return;
             } catch {
-                // fall through to text-only layout
+                this.logger.warn(`Failed to load image for item '${item.imageUrl}'`);
             }
         }
 

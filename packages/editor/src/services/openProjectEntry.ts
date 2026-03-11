@@ -6,18 +6,12 @@ import {
     getPreferredScriptView,
 } from '../store/actions/workbenchOpenActions';
 import { makeTabId } from '../store/useWorkbenchStore';
+import { AUDIO_EXT, getExtension, IMG_EXT, TEXT_EXT } from '../utils/assetTypes';
 import { fsReadTextFile } from './fs';
 import { applyAssetSelection, applyMacrosFile, applyScriptFile, looksLikeMacrosObject } from './projectOpeners';
 
-const IMG_EXT = new Set(['.avif', '.jpeg', '.jpg', '.png', '.webp']);
-const AUDIO_EXT = new Set(['.m4a', '.mp3', '.ogg', '.wav']);
-const TEXT_EXT = new Set([
-    '.css', '.csv', '.html', '.ini', '.js', '.jsx', '.md',
-    '.toml', '.ts', '.tsx', '.txt', '.yaml', '.yml'
-]);
-
 export async function openProjectEntry(fullPath: string, entryName: string, options?: { forceView?: 'json' | 'timeline' }) {
-    const extension = extensionOf(entryName);
+    const extension = getExtension(entryName);
 
     try {
         if (IMG_EXT.has(extension) || AUDIO_EXT.has(extension)) {
@@ -124,10 +118,6 @@ function basename(path: string) {
     return path.split(/[\\/]/).pop() || path;
 }
 
-function extensionOf(name: string) {
-    const index = name.lastIndexOf('.');
-    return index === -1 ? '' : name.slice(index).toLowerCase();
-}
 
 function focusMainEditorFor(kind: 'asset' | 'scriptLike' | 'text') {
     // TODO: integrate with Dock model to select center tabset tab.

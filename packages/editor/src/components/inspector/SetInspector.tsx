@@ -2,6 +2,7 @@ import type { SetCommand } from 'core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
+import { getEditableValue } from './utilities';
 
 export function SetInspector({ index, node }: { index?: null | number; node: SetCommand; }) {
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle } = useInspectorFieldEditor(index);
@@ -56,6 +57,3 @@ export function SetInspector({ index, node }: { index?: null | number; node: Set
     );
 }
 
-function getEditableValue(value: unknown): string {
-    return typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string' ? String(value) : '';
-}

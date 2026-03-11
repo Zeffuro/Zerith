@@ -57,7 +57,33 @@ type TimelinePluginView = {
     icon: (size: number) => React.ReactNode;
 };
 
-export function TimelineNode({
+const CONTAINER_STYLE: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+};
+
+const ROW_BASE_STYLE: React.CSSProperties = {
+    alignItems: 'center',
+    borderRadius: '2px',
+    display: 'flex',
+    fontSize: 'inherit',
+    justifyContent: 'space-between',
+};
+
+const CONTENT_BASE_STYLE: React.CSSProperties = {
+    alignItems: 'center',
+    display: 'flex',
+    flexGrow: 1,
+    overflow: 'hidden',
+};
+
+const TRANSPARENT_ICON_BUTTON_STYLE: React.CSSProperties = {
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+};
+
+function TimelineNodeInner({
                                  depth,
                                  dragDisabled,
                                  dropIndicator,
@@ -94,7 +120,7 @@ export function TimelineNode({
         : (plugin.getSummary?.(node) ?? getNodeSummaryFallback(node));
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: `${2 * uiScale}px` }}>
+        <div style={{ ...CONTAINER_STYLE, gap: `${2 * uiScale}px` }}>
             <div
                 data-node-path={nodePath.join('.')}
                 draggable={!dragDisabled}
@@ -114,10 +140,9 @@ export function TimelineNode({
                     onDrop(event, parentArrayPath, indexInParent);
                 }}
                 style={{
-                    alignItems: 'center',
+                    ...ROW_BASE_STYLE,
                     backgroundColor: selected ? t.bg.selected : t.bg.panel,
                     borderLeft: `${3 * uiScale}px solid ${selected ? t.border.accent : 'transparent'}`,
-                    borderRadius: '2px',
                     borderTop:
                         !dragDisabled &&
                         dropIndicator &&
@@ -126,20 +151,14 @@ export function TimelineNode({
                             ? `2px solid ${t.border.accent}`
                             : '2px solid transparent',
                     cursor: dragDisabled ? 'default' : 'grab',
-                    display: 'flex',
-                    fontSize: 'inherit',
-                    justifyContent: 'space-between',
                     marginLeft: `${depth * 16 * uiScale}px`,
                     padding: `${6 * uiScale}px ${10 * uiScale}px`,
                 }}
             >
                 <div
                     style={{
-                        alignItems: 'center',
-                        display: 'flex',
-                        flexGrow: 1,
+                        ...CONTENT_BASE_STYLE,
                         gap: `${8 * uiScale}px`,
-                        overflow: 'hidden',
                     }}
                 >
                     {hasBranches ? (
@@ -149,10 +168,8 @@ export function TimelineNode({
                                 onToggleCollapse(nodePath);
                             }}
                             style={{
-                                background: 'transparent',
-                                border: 'none',
+                                ...TRANSPARENT_ICON_BUTTON_STYLE,
                                 color: t.text.muted,
-                                cursor: 'pointer',
                                 display: 'flex',
                                 padding: 0,
                             }}
@@ -199,10 +216,8 @@ export function TimelineNode({
                             onPlayFrom(nodePath[0] as number);
                         }}
                         style={{
-                            background: 'transparent',
-                            border: 'none',
+                            ...TRANSPARENT_ICON_BUTTON_STYLE,
                             color: t.accent.green,
-                            cursor: 'pointer',
                         }}
                         title="Play from this command"
                     >
@@ -214,10 +229,8 @@ export function TimelineNode({
                     <button
                         onClick={(event) => onDeleteRoot(event, nodePath[0] as number)}
                         style={{
-                            background: 'transparent',
-                            border: 'none',
+                            ...TRANSPARENT_ICON_BUTTON_STYLE,
                             color: t.accent.red,
-                            cursor: 'pointer',
                             padding: '2px',
                         }}
                     >
@@ -277,9 +290,39 @@ export function TimelineNode({
     );
 }
 
+export const TimelineNode = React.memo(TimelineNodeInner, areTimelineNodePropertiesEqual);
+
+function areTimelineNodePropertiesEqual(previous: Properties, next: Properties): boolean {
+    return previous.depth === next.depth
+        && previous.dragDisabled === next.dragDisabled
+        && sameDropIndicator(previous.dropIndicator, next.dropIndicator)
+        && previous.hasLikelyIssue === next.hasLikelyIssue
+        && previous.hasValidationError === next.hasValidationError
+        && previous.indexInParent === next.indexInParent
+        && previous.isCollapsed === next.isCollapsed
+        && previous.node === next.node
+        && samePath(previous.nodePath, next.nodePath)
+        && samePath(previous.parentArrayPath, next.parentArrayPath)
+        && previous.searchQuery === next.searchQuery
+        && previous.selected === next.selected
+        && previous.selectedNodeIndex === next.selectedNodeIndex
+        && previous.uiScale === next.uiScale
+        && previous.onClickNode === next.onClickNode
+        && previous.onContextMenuNode === next.onContextMenuNode
+        && previous.onDeleteRoot === next.onDeleteRoot
+        && previous.onDragEnd === next.onDragEnd
+        && previous.onDragOver === next.onDragOver
+        && previous.onDragStart === next.onDragStart
+        && previous.onDrop === next.onDrop
+        && previous.onPlayFrom === next.onPlayFrom
+        && previous.onToggleCollapse === next.onToggleCollapse
+        && previous.sameArrayPath === next.sameArrayPath;
+}
+
 function escapeRegExp(input: string) {
     return input.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
+
 
 function getNodeSummaryFallback(node: PluginNode): string {
     const summaryKeys = ['id', 'assetUrl', 'name', 'scene', 'key'] as const;
@@ -324,5 +367,20 @@ function highlightText(text: string, query: string, uiScale: number) {
             })}
         </>
     );
+}
+
+function sameDropIndicator(previous: DropIndicator, next: DropIndicator): boolean {
+    if (previous === next) return true;
+    if (!previous || !next) return false;
+    return previous.index === next.index && samePath(previous.arrayPath, next.arrayPath);
+}
+
+function samePath(a: ScriptPath, b: ScriptPath): boolean {
+    if (a === b) return true;
+    if (a.length !== b.length) return false;
+    for (const [index, part] of a.entries()) {
+        if (part !== b[index]) return false;
+    }
+    return true;
 }
 

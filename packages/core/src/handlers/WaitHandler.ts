@@ -8,6 +8,7 @@ export interface WaitCommand extends BaseCommand {
 export class WaitHandler implements CommandHandler<WaitCommand> {
     public autoNext = true;
     public type = 'wait' as const;
+    private activeResolve: (() => void) | undefined;
     private timeoutId: ReturnType<typeof setTimeout> | undefined;
 
     constructor() {}
@@ -18,8 +19,10 @@ export class WaitHandler implements CommandHandler<WaitCommand> {
 
     execute = (command: WaitCommand) => {
         return new Promise<void>((resolve) => {
+            this.activeResolve = resolve;
             this.timeoutId = setTimeout(() => {
                 this.timeoutId = undefined;
+                this.activeResolve = undefined;
                 resolve();
             }, command.duration);
         });
@@ -30,6 +33,10 @@ export class WaitHandler implements CommandHandler<WaitCommand> {
         if (this.timeoutId !== undefined) {
             clearTimeout(this.timeoutId);
             this.timeoutId = undefined;
+        }
+        if (this.activeResolve) {
+            this.activeResolve();
+            this.activeResolve = undefined;
         }
     }
 }

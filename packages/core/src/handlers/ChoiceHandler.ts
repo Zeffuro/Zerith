@@ -17,6 +17,7 @@ export interface ChoiceOption {
 export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
     public autoNext = true;
     public type = 'choice' as const;
+    private activeResolve: (() => void) | undefined;
     private readonly events: IEventBus;
     private readonly flow: IFlowManager;
     private onConfirm: (() => void) | undefined;
@@ -52,6 +53,7 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
     execute = (command: ChoiceCommand): Promise<void> => {
         return new Promise((resolve) => {
             this.reset();
+            this.activeResolve = resolve;
 
             let selectedIndex = 0;
 
@@ -72,6 +74,7 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
                 }
                 requestAnimationFrame(() => {
                     this.flow.consumeSkip();
+                    this.activeResolve = undefined;
                     resolve();
                 });
             };
@@ -104,6 +107,10 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
     public reset(): void {
         this.clearChoiceBindings();
         this.renderer.destroy();
+        if (this.activeResolve) {
+            this.activeResolve();
+            this.activeResolve = undefined;
+        }
     }
 
     private clearChoiceBindings(): void {
