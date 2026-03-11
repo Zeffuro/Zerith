@@ -4,6 +4,11 @@ export type Token =
     | { type: 'prompt' }
     | { type: 'text', val: string };
 
+interface TextStateAccessor {
+    get<T = unknown>(key: string): T | undefined;
+    getPersistent<T = unknown>(key: string): T | undefined;
+}
+
 /**
  * Parses engine control tags: {wait:ms} and {speed:value}
  * Should be called AFTER transformShorthands.
@@ -47,6 +52,25 @@ export function parseTextTags(text: string): Token[] {
  *
  * Standard HTML tags like <b>, <i>, <u> pass through untouched.
  */
+export function resolveTemplateText(text: string, state: TextStateAccessor): string {
+    return text.replaceAll(/{(\w+)}/g, (match: string, key: string) => {
+        const value = state.get(key) ?? state.getPersistent(key);
+        if (value === undefined || value === null) {
+            return match;
+        }
+
+        if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+            return `${value}`;
+        }
+
+        if (Array.isArray(value) || typeof value === 'object') {
+            return JSON.stringify(value);
+        }
+
+        return match;
+    });
+}
+
 export function transformShorthands(text: string): string {
     // {color:value}...{/color}
     text = text.replaceAll(
@@ -68,3 +92,4 @@ export function transformShorthands(text: string): string {
 
     return text;
 }
+

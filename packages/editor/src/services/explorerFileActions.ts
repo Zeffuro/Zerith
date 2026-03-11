@@ -2,6 +2,7 @@ import { executeConsoleMessageAction } from '../store/actions/consoleMessageActi
 import { executeProjectTreeRefreshAction, getCurrentProjectPath } from '../store/actions/projectTreeActions';
 import { useProjectStore } from '../store/useProjectStore';
 import { useWorkbenchStore } from '../store/useWorkbenchStore';
+import { sanitizeFileName } from '../utils/sanitizeFileName';
 import {
     type FsDirectoryEntry,
     fsDirname,
@@ -18,7 +19,22 @@ import {
 
 export async function createFileInDirectory(directoryPath: string, name: string, initialContent = '') {
     try {
-        const full = await fsJoin(directoryPath, name);
+        const sanitizedName = sanitizeFileName(name);
+        if (!sanitizedName) {
+            executeConsoleMessageAction('editor', 'warn', 'Create file aborted: invalid file name.');
+            return;
+        }
+
+        if (sanitizedName !== name) {
+            executeConsoleMessageAction('editor', 'warn', `File name sanitized: '${name}' -> '${sanitizedName}'`);
+        }
+
+        if (await hasSiblingWithName(directoryPath, sanitizedName)) {
+            executeConsoleMessageAction('editor', 'warn', `Create file aborted: '${sanitizedName}' already exists.`);
+            return;
+        }
+
+        const full = await fsJoin(directoryPath, sanitizedName);
         await fsWriteTextFile(full, initialContent);
         await refreshProjectTree();
         return full;
@@ -31,7 +47,22 @@ export async function createFileInDirectory(directoryPath: string, name: string,
 
 export async function createFolderInDirectory(directoryPath: string, name: string) {
     try {
-        const full = await fsJoin(directoryPath, name);
+        const sanitizedName = sanitizeFileName(name);
+        if (!sanitizedName) {
+            executeConsoleMessageAction('editor', 'warn', 'Create folder aborted: invalid folder name.');
+            return;
+        }
+
+        if (sanitizedName !== name) {
+            executeConsoleMessageAction('editor', 'warn', `Folder name sanitized: '${name}' -> '${sanitizedName}'`);
+        }
+
+        if (await hasSiblingWithName(directoryPath, sanitizedName)) {
+            executeConsoleMessageAction('editor', 'warn', `Create folder aborted: '${sanitizedName}' already exists.`);
+            return;
+        }
+
+        const full = await fsJoin(directoryPath, sanitizedName);
         await fsMkdir(full, true);
         await refreshProjectTree();
         return full;
@@ -85,12 +116,34 @@ export async function refreshProjectTree() {
 export async function renamePath(oldPath: string, nextName: string) {
     try {
         const parent = await fsDirname(oldPath);
-        const newPath = await fsJoin(parent, nextName);
+        const sanitizedName = sanitizeFileName(nextName);
+        if (!sanitizedName) {
+            executeConsoleMessageAction('editor', 'warn', 'Rename aborted: invalid file name.');
+            return;
+        }
+
+        if (sanitizedName !== nextName) {
+            executeConsoleMessageAction('editor', 'warn', `Rename sanitized: '${nextName}' -> '${sanitizedName}'`);
+        }
+
+        const oldName = basename(oldPath);
+        const isCaseOnlyRename = oldName.toLowerCase() === sanitizedName.toLowerCase();
+        if (!isCaseOnlyRename && await hasSiblingWithName(parent, sanitizedName)) {
+            executeConsoleMessageAction('editor', 'warn', `Rename aborted: '${sanitizedName}' already exists.`);
+            return;
+        }
+
+        const newPath = await fsJoin(parent, sanitizedName);
         await fsRename(oldPath, newPath);
         useWorkbenchStore.getState().renameTabPath(newPath, oldPath);
-        useProjectStore.setState((state) => ({
-            activeFile: state.activeFile === oldPath ? newPath : state.activeFile,
-        }));
+        useProjectStore.setState((state) => {
+            const remappedExpandedPaths = remapExpandedPathsForRename(state.expandedPaths, oldPath, newPath);
+
+            return {
+                activeFile: state.activeFile === oldPath ? newPath : state.activeFile,
+                expandedPaths: remappedExpandedPaths,
+            };
+        });
         await refreshProjectTree();
     } catch (error) {
         console.error('Rename failed:', error);
@@ -111,6 +164,12 @@ function basename(path: string) {
     return path.split(/[\\/]/).pop() || path;
 }
 
+async function hasSiblingWithName(directoryPath: string, candidateName: string): Promise<boolean> {
+    const siblingEntries = await fsReadDirectory(directoryPath);
+    const candidateLower = candidateName.toLowerCase();
+    return siblingEntries.some((entry) => entry.name.toLowerCase() === candidateLower);
+}
+
 function makeDuplicateName(sourceName: string, existing: Set<string>): string {
     const extensionIndex = sourceName.lastIndexOf('.');
     const hasExtension = extensionIndex > 0;
@@ -125,6 +184,23 @@ function makeDuplicateName(sourceName: string, existing: Set<string>): string {
         n += 1;
     }
     return `${root} copy ${n}${extension}`;
+}
+
+function remapExpandedPathsForRename(expandedPaths: string[], oldPath: string, newPath: string): string[] {
+    const remapped = expandedPaths.map((path) => replacePathPrefix(path, oldPath, newPath));
+    return [...new Set(remapped)];
+}
+
+function replacePathPrefix(path: string, oldPath: string, newPath: string): string {
+    if (path === oldPath) {
+        return newPath;
+    }
+
+    if (path.startsWith(`${oldPath}/`) || path.startsWith(`${oldPath}\\`)) {
+        return `${newPath}${path.slice(oldPath.length)}`;
+    }
+
+    return path;
 }
 
 function sortEntries(entries: FsDirectoryEntry[]) {

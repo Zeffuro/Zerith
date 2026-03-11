@@ -1,4 +1,3 @@
-export { deepClone } from 'core';
 
 import type { EditorNode } from '../../types/EditorNode';
 import type { ScriptPath } from '../../utils/scriptPathUtilities';

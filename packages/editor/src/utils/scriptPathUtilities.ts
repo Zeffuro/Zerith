@@ -45,37 +45,28 @@ export function moveNode<TRoot extends unknown[]>(
     destinationArrayPath: ScriptPath,
     destinationIndex: 'end' | number
 ): TRoot {
+    const sourceParentPath = getParentArrayPath(nodePath);
+    const sourceIndex = getNodeIndex(nodePath);
+    const adjustedDestinationArrayPath = adjustArrayPathAfterRemoval(destinationArrayPath, sourceParentPath, sourceIndex);
+
     const [intermediateRoot, node] = removeNodeAtPath(root, nodePath);
 
-    if (destinationArrayPath.length === 0) {
-        return insertNodeAtPath(intermediateRoot, destinationArrayPath, 0, node);
+    const destinationArray = getAtPath<unknown[]>(intermediateRoot, adjustedDestinationArrayPath);
+    if (!Array.isArray(destinationArray)) {
+        throw new TypeError(`Destination at path is not an array: ${JSON.stringify(adjustedDestinationArrayPath)}`);
     }
 
-    if (isNodePath(nodePath) && isNodePath(destinationArrayPath)) {
-        const sourceIndex = getNodeIndex(nodePath);
-        const boundedDestinationIndex = destinationIndex === 'end'
-            ? undefined
-            : Math.max(0, Math.min(getNodeIndex(destinationArrayPath), Number.MAX_SAFE_INTEGER));
+    const destinationIndexValue = destinationIndex === 'end'
+        ? destinationArray.length
+        : destinationIndex;
 
-        if (
-            boundedDestinationIndex !== undefined
-            && JSON.stringify(getParentArrayPath(nodePath)) === JSON.stringify(getParentArrayPath(destinationArrayPath))
-            && sourceIndex < boundedDestinationIndex
-        ) {
-                return insertNodeAtPath(intermediateRoot, destinationArrayPath, boundedDestinationIndex - 1, node);
-            }
-
-        if (destinationIndex === 'end') {
-            const destinationArray = getAtPath<unknown[]>(intermediateRoot, destinationArrayPath);
-            if (!Array.isArray(destinationArray)) {
-                throw new TypeError(`Destination at path is not an array: ${JSON.stringify(destinationArrayPath)}`);
-            }
-            return insertNodeAtPath(intermediateRoot, destinationArrayPath, destinationArray.length, node);
-        } else {
-            return insertNodeAtPath(intermediateRoot, destinationArrayPath, destinationIndex, node);
-        }
+    let adjustedIndex = destinationIndexValue;
+    if (samePath(sourceParentPath, adjustedDestinationArrayPath) && sourceIndex < destinationIndexValue) {
+        adjustedIndex -= 1;
     }
-    return intermediateRoot;
+
+    const insertIndex = Math.max(0, Math.min(adjustedIndex, destinationArray.length));
+    return insertNodeAtPath(intermediateRoot, adjustedDestinationArrayPath, insertIndex, node);
 }
 
 export function removeNodeAtPath<TRoot extends unknown[]>(root: TRoot, nodePath: ScriptPath): [TRoot, unknown] {
@@ -107,6 +98,26 @@ export function setAtPath<TRoot>(root: TRoot, path: ScriptPath, value: unknown):
     return writeAtKey(currentContainer, head, nextValue) as TRoot;
 }
 
+function adjustArrayPathAfterRemoval(destinationArrayPath: ScriptPath, sourceParentPath: ScriptPath, sourceIndex: number): ScriptPath {
+    if (destinationArrayPath.length <= sourceParentPath.length) {
+        return destinationArrayPath;
+    }
+
+    const parentPrefix = destinationArrayPath.slice(0, sourceParentPath.length);
+    if (!samePath(parentPrefix, sourceParentPath)) {
+        return destinationArrayPath;
+    }
+
+    const siblingSegment = destinationArrayPath[sourceParentPath.length];
+    if (typeof siblingSegment !== 'number' || siblingSegment <= sourceIndex) {
+        return destinationArrayPath;
+    }
+
+    const nextPath = [...destinationArrayPath];
+    nextPath[sourceParentPath.length] = siblingSegment - 1;
+    return nextPath;
+}
+
 function isIndexable(value: unknown): value is Indexable {
     return Boolean(value) && typeof value === 'object';
 }
@@ -114,6 +125,10 @@ function isIndexable(value: unknown): value is Indexable {
 function readAtKey(value: unknown, key: number | string): unknown {
     if (!isIndexable(value)) return undefined;
     return value[key as keyof typeof value];
+}
+
+function samePath(a: ScriptPath, b: ScriptPath): boolean {
+    return a.length === b.length && a.every((segment, index) => segment === b[index]);
 }
 
 

@@ -82,7 +82,6 @@ export function Explorer() {
 }
 
 function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; level?: number; parentPath: string; }) {
-    const [isOpen, setIsOpen] = useState(false);
     const [children, setChildren] = useState<FsDirectoryEntry[]>([]);
     const [fullPath, setFullPath] = useState<string>('');
     const [context, setContext] = useState<ExplorerContextMenuState>();
@@ -95,8 +94,9 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
     const [createDraft, setCreateDraft] = useState('');
     const [createTargetDirectory, setCreateTargetDirectory] = useState<string>();
 
-    const { activeFile, treeRevision } = useProjectStore();
+    const { activeFile, expandedPaths, setPathExpanded, treeRevision } = useProjectStore();
     const { uiScale } = useEditorStore();
+    const isOpen = entry.isDirectory && !!fullPath && expandedPaths.includes(fullPath);
 
     useEffect(() => {
         void fsJoin(parentPath, entry.name).then(setFullPath);
@@ -129,6 +129,23 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
         }
     }, [entry.isDirectory, fullPath]);
 
+    useEffect(() => {
+        if (!isOpen || !entry.isDirectory || !fullPath) return;
+
+        void fsReadDirectory(fullPath)
+            .then((entries) => {
+                const sortedEntries = entries.toSorted((a, b) => {
+                    if (a.isDirectory && !b.isDirectory) return -1;
+                    if (!a.isDirectory && b.isDirectory) return 1;
+                    return a.name.localeCompare(b.name);
+                });
+                setChildren(sortedEntries);
+            })
+            .catch((error: unknown) => {
+                console.error('Failed to read directory:', error);
+            });
+    }, [entry.isDirectory, fullPath, isOpen, treeRevision]);
+
     const openDefault = async () => {
         if (!fullPath) return;
         await openProjectEntry(fullPath, entry.name);
@@ -150,7 +167,9 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
         setCreateTargetDirectory(baseDirectory);
         setCreateMode(mode);
         setCreateDraft(mode === 'file' ? 'new-file.json' : 'new-folder');
-        if (entry.isDirectory && !isOpen) setIsOpen(true);
+        if (entry.isDirectory && !isOpen && fullPath) {
+            setPathExpanded(fullPath, true);
+        }
     };
 
     const commitCreate = async () => {
@@ -177,7 +196,8 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
             if (!isOpen && children.length === 0) {
                 await loadChildren();
             }
-            setIsOpen((v) => !v);
+            if (!fullPath) return;
+            setPathExpanded(fullPath, !isOpen);
             return;
         }
 

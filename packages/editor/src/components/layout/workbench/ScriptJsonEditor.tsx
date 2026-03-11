@@ -223,6 +223,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
                         fontSize: Math.round(12 * uiScale),
                         insertSpaces: true,
                         minimap: { enabled: true },
+                        mouseWheelZoom: true,
                         tabSize: 2,
                         wordWrap: 'off',
                     }}

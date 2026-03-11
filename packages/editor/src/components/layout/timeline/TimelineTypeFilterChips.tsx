@@ -46,9 +46,9 @@ export function TimelineTypeFilterChips({ activeType, chips, onChange, uiScale }
             style={{
                 display: 'flex',
                 gap: `${6 * uiScale}px`,
-                marginBottom: `${6 * uiScale}px`,
+                marginBottom: `${2 * uiScale}px`,
                 overflowX: 'auto',
-                paddingBottom: `${6 * uiScale}px`,
+                paddingBottom: `${2 * uiScale}px`,
             }}
         >
             {renderChip('all', allCount, 'All')}

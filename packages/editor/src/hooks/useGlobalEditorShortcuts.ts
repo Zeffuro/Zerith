@@ -64,6 +64,9 @@ async function handleGlobalShortcut(event: KeyboardEvent): Promise<void> {
     }
 
     if (module_ && key === 'c') {
+        if (isConsoleTarget(event.target)) {
+            return;
+        }
         event.preventDefault();
         await executeGlobalShortcutAction('copySelection');
         return;
@@ -77,10 +80,17 @@ async function handleGlobalShortcut(event: KeyboardEvent): Promise<void> {
     }
 }
 
+function isConsoleTarget(element: EventTarget | null): boolean {
+    const node = element as HTMLElement | null;
+    if (!node) return false;
+    return Boolean(node.closest('[data-console-panel="true"]'));
+}
+
 function isTypingTarget(element: EventTarget | null) {
     const node = element as HTMLElement | null;
     if (!node) return false;
     const tag = node.tagName?.toLowerCase();
     return tag === 'input' || tag === 'textarea' || node.isContentEditable;
 }
+
 

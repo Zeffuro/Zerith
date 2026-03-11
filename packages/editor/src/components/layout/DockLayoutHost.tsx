@@ -62,8 +62,8 @@ export function DockLayoutHost() {
     const activeWorkbenchTabId = useWorkbenchStore((s) => s.activeTabId);
 
     const [initialModelState] = useState(() => createInitialModelState(dockLayoutJson));
+    const [model, setModel] = useState<Model>(initialModelState.model);
     const [layoutRecoveryKey, setLayoutRecoveryKey] = useState(0);
-    const model = initialModelState.model;
     const lastJsonReference = useRef<string>(initialModelState.jsonSig);
 
     useEffect(() => {
@@ -74,8 +74,32 @@ export function DockLayoutHost() {
     useEffect(() => {
         const incomingSig = safeJsonSignature(dockLayoutJson);
         if (incomingSig === undefined) return;
+
+        // Ignore updates originating from this host's own onModelChange pipeline.
+        if (incomingSig === lastJsonReference.current) {
+            return;
+        }
+
+        try {
+            const nextModel = Model.fromJson(dockLayoutJson as IJsonModel);
+            queueMicrotask(() => {
+                setModel(nextModel);
+                setLayoutRecoveryKey((value) => value + 1);
+            });
+        } catch (error) {
+            console.warn('Failed to apply incoming dock layout, resetting to defaults.', error);
+            const fallbackLayout = createDefaultDockLayout() as IJsonModel;
+            setDockLayoutJson(fallbackLayout);
+            queueMicrotask(() => {
+                setModel(Model.fromJson(fallbackLayout));
+                setLayoutRecoveryKey((value) => value + 1);
+            });
+            lastJsonReference.current = JSON.stringify(fallbackLayout);
+            return;
+        }
+
         lastJsonReference.current = incomingSig;
-    }, [dockLayoutJson]);
+    }, [dockLayoutJson, setDockLayoutJson]);
 
     const saveTimerReference = useRef<ReturnType<typeof globalThis.setTimeout> | undefined>(undefined);
 

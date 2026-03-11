@@ -22,9 +22,7 @@ export class TransitionHandler implements CommandHandler<TransitionCommand> {
     }
 
     public destroy(): void {
-        this.fadeRect?.removeFromParent();
-        this.fadeRect?.destroy();
-        this.fadeRect = undefined;
+        this.reset();
     }
 
     execute = (command: TransitionCommand) => {
@@ -46,4 +44,13 @@ export class TransitionHandler implements CommandHandler<TransitionCommand> {
             ease: "power2.inOut",
         });
     };
+
+    public reset(): void {
+        if (this.fadeRect) {
+            this.animations.killTweensOf(this.fadeRect);
+        }
+        this.fadeRect?.removeFromParent();
+        this.fadeRect?.destroy();
+        this.fadeRect = undefined;
+    }
 }

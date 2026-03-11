@@ -1,5 +1,3 @@
-import { Assets } from 'pixi.js';
-
 import type { EngineConfig } from './EngineConfig';
 import type { RegisteredCommandHandler } from './interfaces/ICommandHandler';
 import type {
@@ -158,6 +156,7 @@ export class Engine {
     public clear() {
         this.display.clearLayers?.();
         this.animations.clear();
+        this.audio.stopAll();
         this.flow.resetHandlers();
         this.history.clear();
         this.items.clear();
@@ -206,8 +205,7 @@ export class Engine {
     }
 
     public async loadAsset<T = unknown>(url: string): Promise<T> {
-        const resolvedUrl = this.assetResolver(url);
-        return await Assets.load<T>(resolvedUrl);
+        return await this.assets.load<T>(url);
     }
 
     public async playNext() {

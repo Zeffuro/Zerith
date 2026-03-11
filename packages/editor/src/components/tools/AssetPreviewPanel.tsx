@@ -59,6 +59,7 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
             </datalist>
 
             <div
+                className="zerith-scrollbar"
                 style={{
                     background: t.bg.panelAlt,
                     border: `1px solid ${t.border.subtle}`,

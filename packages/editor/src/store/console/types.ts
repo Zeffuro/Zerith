@@ -1,6 +1,6 @@
 export interface ConsoleMessage {
     id: number;
-    source: 'editor' | 'engine';
+    source: 'editor' | 'preview';
     text: string;
     timestamp: Date;
     type: 'error' | 'info' | 'log' | 'warn';
@@ -14,6 +14,8 @@ export interface ConsoleMessagesSlice {
     ) => void;
     clear: () => void;
     messages: ConsoleMessage[];
+    previewLogCaptureEnabled: boolean;
+    setPreviewLogCaptureEnabled: (enabled: boolean) => void;
 }
 
 export type ConsoleSet = (

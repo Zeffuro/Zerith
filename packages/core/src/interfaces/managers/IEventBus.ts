@@ -5,17 +5,17 @@ import type { IBaseManager } from './IBaseManager';
 export interface EngineEventMap {
     'input:back': [];
     'input:confirm': [];
-    'input:load': [number];
+    'input:load': [slot: number];
     'input:navigate': [NavigationDirection];
     'input:next': [];
-    'input:save': [number];
+    'input:save': [slot: number];
     'input:skip': [];
     'input:start': [];
     'menu:toggle': [];
-    'scene:loaded': [string];
-    'scene:loading': [string];
-    'state:loaded': [SaveState];
-    'state:persistent_changed': [Record<string, Serializable>];
+    'scene:loaded': [sceneName: string];
+    'scene:loading': [sceneName: string];
+    'state:loaded': [saveData: SaveState];
+    'state:persistent_changed': [persistentState: Record<string, Serializable>];
 }
 
 export interface IEventBus extends IBaseManager {

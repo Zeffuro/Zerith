@@ -133,6 +133,11 @@ export class AudioManager {
         }
     }
 
+    public stopAll(): void {
+        sound.stopAll();
+        this.currentBgmUrl = undefined;
+    }
+
     public stopBgm(): void {
         if (!this.currentBgmUrl) return;
         sound.stop(this.currentBgmUrl);

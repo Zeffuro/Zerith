@@ -2,6 +2,12 @@ import type { EngineDeps } from '../Engine';
 import type { EngineConfig } from '../EngineConfig';
 import type { CommandHandlerRegistry } from '../interfaces/ICommandHandler';
 import type { IOverlayConfigProvider, IStorageProvider, IThemeProvider } from '../interfaces/providers';
+import type { FlowManagerDeps } from '../managers/FlowManager';
+import type { IInputContext } from '../managers/InputManager';
+import type { NotificationDeps } from '../managers/NotificationManager';
+import type { SaveContext } from '../managers/SaveManager';
+import type { SceneManagerDeps } from '../managers/SceneManager';
+import type { StartScreenDeps } from '../managers/StartScreenManager';
 
 import { AnimationManager } from '../managers/AnimationManager';
 import { AssetManager } from '../managers/AssetManager';
@@ -52,43 +58,30 @@ export function createManagers(options: CreateManagersOptions): CreateManagersRe
     const spritesheets = new SpritesheetManager();
     const assets = new AssetManager(audio, spritesheets);
     const logger = new Logger('[Engine]');
-    const sceneManager = new SceneManager({
+
+    const sceneManagerDeps: SceneManagerDeps = {
         assets,
         events,
         logger,
-    });
+    };
+    const sceneManager = new SceneManager(sceneManagerDeps);
 
     const handlers: CommandHandlerRegistry = new Map();
-    const flow = new FlowManager({
+
+    const flowDeps: FlowManagerDeps = {
         events,
         handlers,
         logger,
         onSceneNavigation: config.onSceneNavigation,
         scenes: sceneManager,
-    });
+    };
+    const flow = new FlowManager(flowDeps);
 
-    const theme = { ...DefaultTheme, ...config.theme };
+    const theme = createTheme(config);
     const themeProvider: IThemeProvider = {
         getTheme: () => theme,
     };
-
-    const overlayConfigProvider: IOverlayConfigProvider = {
-        getConfig: () => ({
-            backgroundAlpha: 0.85,
-            backgroundColor: 0x00_00_00,
-            buttonAlpha: 0.9,
-            buttonColor: 0x22_22_44,
-            buttonHeight: 50,
-            buttonHoverColor: 0x33_33_99,
-            buttonSpacing: 12,
-            buttonWidth: 300,
-            fontFamily: 'Courier New',
-            fontSize: 22,
-            textColor: 0xFF_FF_FF,
-            uiScale: 1,
-            ...config.overlay,
-        }),
-    };
+    const overlayConfigProvider = createOverlayConfigProvider(config);
 
     const overlay = new OverlayManager({
         display,
@@ -98,34 +91,15 @@ export function createManagers(options: CreateManagersOptions): CreateManagersRe
         themeProvider,
     });
 
-    const input = new InputManager(events, {
+    const inputContext: IInputContext = {
         isOverlayOpen: () => overlay.isOpen,
         isStarted: () => flow.isStarted,
-    }, config.input);
+    };
+    const input = new InputManager(events, inputContext, config.input);
 
-    const fallbackStorage = new Map<string, string>();
-    const browserStorage = globalThis.localStorage;
-    const storage: IStorageProvider = config.storage ?? (browserStorage === undefined
-        ? {
-            getItem: (key: string) => fallbackStorage.get(key),
-            removeItem: (key: string) => {
-                fallbackStorage.delete(key);
-            },
-            setItem: (key: string, value: string) => {
-                fallbackStorage.set(key, value);
-            },
-        }
-        : {
-            getItem: (key: string) => browserStorage.getItem(key) ?? undefined,
-            removeItem: (key: string) => {
-                browserStorage.removeItem(key);
-            },
-            setItem: (key: string, value: string) => {
-                browserStorage.setItem(key, value);
-            },
-        });
+    const storage = resolveStorageProvider(config.storage);
 
-    const saveManager = new SaveManager({
+    const saveContext: SaveContext = {
         getCurrentSceneName: () => sceneManager.currentSceneName,
         getLastSavePoint: () => flow.lastSavePoint,
         getStateSnapshot: () => state.state,
@@ -133,24 +107,27 @@ export function createManagers(options: CreateManagersOptions): CreateManagersRe
         logInfo: (message) => logger.info(message),
         logWarn: (message) => logger.warn(message),
         serializeItems: () => evidence.serialize(),
-    }, storage);
+    };
+    const saveManager = new SaveManager(saveContext, storage);
 
     events.on('state:persistent_changed', (data) => {
         saveManager.saveGlobalState(data);
     });
 
-    const notifications = new NotificationManager({
+    const notificationDeps: NotificationDeps = {
         display,
         overlayLayer: display.getLayer('overlay'),
         themeProvider,
-    }, config.notifications);
+    };
+    const notifications = new NotificationManager(notificationDeps, config.notifications);
 
-    const startScreen = new StartScreenManager({
+    const startScreenDeps: StartScreenDeps = {
         display,
         events,
         overlayLayer: display.getLayer('overlay'),
         scenes: sceneManager,
-    }, config.startScreen);
+    };
+    const startScreen = new StartScreenManager(startScreenDeps, config.startScreen);
 
     const deps: EngineDeps = {
         animations,
@@ -182,6 +159,60 @@ export function createManagers(options: CreateManagersOptions): CreateManagersRe
         sceneManager,
         state,
         theme,
+    };
+}
+
+function createOverlayConfigProvider(config: EngineConfig): IOverlayConfigProvider {
+    return {
+        getConfig: () => ({
+            backgroundAlpha: 0.85,
+            backgroundColor: 0x00_00_00,
+            buttonAlpha: 0.9,
+            buttonColor: 0x22_22_44,
+            buttonHeight: 50,
+            buttonHoverColor: 0x33_33_99,
+            buttonSpacing: 12,
+            buttonWidth: 300,
+            fontFamily: 'Courier New',
+            fontSize: 22,
+            textColor: 0xFF_FF_FF,
+            uiScale: 1,
+            ...config.overlay,
+        }),
+    };
+}
+
+function createTheme(config: EngineConfig): ReturnType<IThemeProvider['getTheme']> {
+    return { ...DefaultTheme, ...config.theme };
+}
+
+function resolveStorageProvider(storageOverride: IStorageProvider | undefined): IStorageProvider {
+    if (storageOverride) {
+        return storageOverride;
+    }
+
+    const browserStorage = globalThis.localStorage;
+    if (browserStorage !== undefined) {
+        return {
+            getItem: (key: string) => browserStorage.getItem(key) ?? undefined,
+            removeItem: (key: string) => {
+                browserStorage.removeItem(key);
+            },
+            setItem: (key: string, value: string) => {
+                browserStorage.setItem(key, value);
+            },
+        };
+    }
+
+    const fallbackStorage = new Map<string, string>();
+    return {
+        getItem: (key: string) => fallbackStorage.get(key),
+        removeItem: (key: string) => {
+            fallbackStorage.delete(key);
+        },
+        setItem: (key: string, value: string) => {
+            fallbackStorage.set(key, value);
+        },
     };
 }
 

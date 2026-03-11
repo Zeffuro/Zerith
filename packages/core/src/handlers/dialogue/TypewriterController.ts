@@ -1,5 +1,7 @@
 import type { Token } from '../../utils/TextParser';
 
+import { waitForAbortableDelay } from '../../utils/AsyncHelpers';
+
 export interface TypewriterRunOptions {
     blipUrl?: string;
     consumeSkip: () => boolean;
@@ -81,21 +83,7 @@ export class TypewriterController {
     }
 
     private async delay(ms: number, signal: AbortSignal): Promise<void> {
-        if (signal.aborted || ms <= 0) return;
-
-        await new Promise<void>((resolve) => {
-            const timeout = setTimeout(() => {
-                signal.removeEventListener('abort', onAbort);
-                resolve();
-            }, ms);
-
-            const onAbort = () => {
-                clearTimeout(timeout);
-                resolve();
-            };
-
-            signal.addEventListener('abort', onAbort, { once: true });
-        });
+        await waitForAbortableDelay(ms, signal);
     }
 
     private async typeText(options: {

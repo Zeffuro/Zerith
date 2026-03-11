@@ -86,6 +86,21 @@ pre, code, input, textarea {
   background: linear-gradient(180deg, #6b7280, #4b5563);
 }
 
+/* Monaco scrollbar parity with .zerith-scrollbar */
+.monaco-editor .scrollbar .slider {
+  background: linear-gradient(180deg, #4b5563, #374151) !important;
+  border-radius: 8px !important;
+}
+
+.monaco-editor .scrollbar .slider:hover {
+  background: linear-gradient(180deg, #6b7280, #4b5563) !important;
+}
+
+.monaco-editor .scrollbar.vertical,
+.monaco-editor .scrollbar.horizontal {
+  background: var(--editor-bg-popup) !important;
+}
+
 /* Toolbar Button Styling */
 .toolbar-btn {
   display: inline-flex;

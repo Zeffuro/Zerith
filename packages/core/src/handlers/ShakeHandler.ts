@@ -19,6 +19,10 @@ export class ShakeHandler implements CommandHandler<ShakeCommand> {
         this.display = display;
     }
 
+    public destroy(): void {
+        this.reset();
+    }
+
     execute = async (command: ShakeCommand) => {
         const duration = (command.duration ?? 500) / 1000;
         const intensity = command.intensity ?? 10;
@@ -46,4 +50,9 @@ export class ShakeHandler implements CommandHandler<ShakeCommand> {
             });
         }
     };
+
+    public reset(): void {
+        const targets = [this.display.getLayer('background'), this.display.getLayer('sprites')];
+        this.animations.set(targets, { x: 0, y: 0 });
+    }
 }

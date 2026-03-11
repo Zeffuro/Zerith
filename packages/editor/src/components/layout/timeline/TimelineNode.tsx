@@ -74,6 +74,7 @@ const CONTENT_BASE_STYLE: React.CSSProperties = {
     alignItems: 'center',
     display: 'flex',
     flexGrow: 1,
+    minWidth: 0,
     overflow: 'hidden',
 };
 
@@ -129,7 +130,8 @@ function TimelineNodeInner({
                 onDragEnd={onDragEnd}
                 onDragOver={(event) => {
                     if (dragDisabled) return;
-                    onDragOver(event, parentArrayPath, indexInParent);
+                    const nextIndex = getDropIndexForEvent(event, indexInParent);
+                    onDragOver(event, parentArrayPath, nextIndex);
                 }}
                 onDragStart={(event) => {
                     if (dragDisabled) return;
@@ -137,7 +139,8 @@ function TimelineNodeInner({
                 }}
                 onDrop={(event) => {
                     if (dragDisabled) return;
-                    onDrop(event, parentArrayPath, indexInParent);
+                    const nextIndex = getDropIndexForEvent(event, indexInParent);
+                    onDrop(event, parentArrayPath, nextIndex);
                 }}
                 style={{
                     ...ROW_BASE_STYLE,
@@ -209,33 +212,48 @@ function TimelineNodeInner({
                     </span>
                 )}
 
-                {!isMacroHeader && depth === 0 && (
-                    <button
-                        onClick={(event) => {
-                            event.stopPropagation();
-                            onPlayFrom(nodePath[0] as number);
-                        }}
+                {depth === 0 && (
+                    <div
                         style={{
-                            ...TRANSPARENT_ICON_BUTTON_STYLE,
-                            color: t.accent.green,
+                            alignItems: 'center',
+                            display: 'flex',
+                            gap: `${4 * uiScale}px`,
+                            justifyContent: 'flex-end',
+                            minWidth: `${38 * uiScale}px`,
                         }}
-                        title="Play from this command"
                     >
-                        <Play size={12 * uiScale} />
-                    </button>
-                )}
+                        {isMacroHeader ? (
+                            <span style={{ width: `${14 * uiScale}px` }} />
+                        ) : (
+                            <button
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    onPlayFrom(nodePath[0] as number);
+                                }}
+                                style={{
+                                    ...TRANSPARENT_ICON_BUTTON_STYLE,
+                                    color: t.accent.green,
+                                }}
+                                title="Play from this command"
+                            >
+                                <Play size={12 * uiScale} />
+                            </button>
+                        )}
 
-                {depth === 0 && selectedNodeIndex === nodePath[0] && (
-                    <button
-                        onClick={(event) => onDeleteRoot(event, nodePath[0] as number)}
-                        style={{
-                            ...TRANSPARENT_ICON_BUTTON_STYLE,
-                            color: t.accent.red,
-                            padding: '2px',
-                        }}
-                    >
-                        <Trash2 size={12 * uiScale} />
-                    </button>
+                        <button
+                            onClick={(event) => onDeleteRoot(event, nodePath[0] as number)}
+                            style={{
+                                ...TRANSPARENT_ICON_BUTTON_STYLE,
+                                color: t.accent.red,
+                                opacity: selectedNodeIndex === nodePath[0] ? 1 : 0,
+                                padding: '2px',
+                                pointerEvents: selectedNodeIndex === nodePath[0] ? 'auto' : 'none',
+                            }}
+                            tabIndex={selectedNodeIndex === nodePath[0] ? 0 : -1}
+                        >
+                            <Trash2 size={12 * uiScale} />
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -323,6 +341,13 @@ function escapeRegExp(input: string) {
     return input.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
 
+function getDropIndexForEvent(event: React.DragEvent, indexInParent: number): number {
+    const row = event.currentTarget as HTMLElement;
+    const bounds = row.getBoundingClientRect();
+    const middleY = bounds.top + bounds.height / 2;
+    return event.clientY >= middleY ? indexInParent + 1 : indexInParent;
+}
+
 
 function getNodeSummaryFallback(node: PluginNode): string {
     const summaryKeys = ['id', 'assetUrl', 'name', 'scene', 'key'] as const;
@@ -369,6 +394,7 @@ function highlightText(text: string, query: string, uiScale: number) {
     );
 }
 
+
 function sameDropIndicator(previous: DropIndicator, next: DropIndicator): boolean {
     if (previous === next) return true;
     if (!previous || !next) return false;
@@ -383,4 +409,5 @@ function samePath(a: ScriptPath, b: ScriptPath): boolean {
     }
     return true;
 }
+
 

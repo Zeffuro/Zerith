@@ -46,9 +46,11 @@ export interface ProjectScriptBridge {
 export interface ProjectSessionSlice {
     activeFile: string | undefined;
     bumpTreeRevision: () => void;
+    expandedPaths: string[];
     files: FsDirectoryEntry[];
     projectPath: string | undefined;
     setActiveFile: (file: string, content: EditorNode[]) => void;
+    setPathExpanded: (path: string, expanded: boolean) => void;
     setProject: (path: string, files: FsDirectoryEntry[]) => void;
     setProjectFiles: (files: FsDirectoryEntry[]) => void;
     treeRevision: number;

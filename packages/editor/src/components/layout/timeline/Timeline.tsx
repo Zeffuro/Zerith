@@ -288,10 +288,12 @@ export function Timeline() {
             })()
             : Object.keys(validationErrors).some((k) => k === nodePrefix || k.startsWith(nodePrefix + '.'));
 
+        const dragDisabled = isSearching || typeFilter !== 'all';
+
         return (
             <TimelineNode
                 depth={depth}
-                dragDisabled={isSearching}
+                dragDisabled={dragDisabled}
                 dropIndicator={dropIndicator}
                 hasLikelyIssue={!editingAllMacrosFile && hasLikelyIssue(node)}
                 hasValidationError={hasValidationError}
@@ -328,70 +330,89 @@ export function Timeline() {
                 display: 'flex',
                 flexDirection: 'column',
                 height: '100%',
+                minHeight: 0,
                 outline: 'none',
+                overflow: 'hidden',
                 padding: `${8 * uiScale}px`,
             }}
             tabIndex={0}
         >
-            <TimelineCommandBar
-                commandMenuItems={commandMenuItems}
-                getQuickMeta={getQuickMeta}
-                onAdd={handleAddCommand}
-                quickTypes={quickTypes}
-                uiScale={uiScale}
-            />
+            <div
+                style={{
+                    backgroundColor: t.bg.app,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    flexShrink: 0,
+                    gap: `${4 * uiScale}px`,
+                    paddingBottom: `${4 * uiScale}px`,
+                }}
+            >
+                <TimelineCommandBar
+                    commandMenuItems={commandMenuItems}
+                    getQuickMeta={getQuickMeta}
+                    onAdd={handleAddCommand}
+                    quickTypes={quickTypes}
+                    uiScale={uiScale}
+                />
 
-            {editingAllMacrosFile && (
-                <div style={{ marginBottom: `${8 * uiScale}px` }}>
-                    <button
-                        onClick={() => addMacroEntry()}
-                        style={{
-                            alignItems: 'center',
-                            background: t.accent.primary,
-                            border: `1px solid ${t.border.primaryBtn}`,
-                            borderRadius: t.radius.md,
-                            boxSizing: 'border-box',
-                            color: t.text.primary,
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            fontSize: '0.85em',
-                            fontWeight: 'bold',
-                            height: `${26 * uiScale}px`,
-                            justifyContent: 'center',
-                            padding: `0 ${10 * uiScale}px`,
-                        }}
-                    >
-                        + Add Macro
-                    </button>
-                </div>
-            )}
+                {editingAllMacrosFile && (
+                    <div>
+                        <button
+                            onClick={() => addMacroEntry()}
+                            style={{
+                                alignItems: 'center',
+                                background: t.accent.primary,
+                                border: `1px solid ${t.border.primaryBtn}`,
+                                borderRadius: t.radius.md,
+                                boxSizing: 'border-box',
+                                color: t.text.primary,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                fontSize: '0.85em',
+                                fontWeight: 'bold',
+                                height: `${26 * uiScale}px`,
+                                justifyContent: 'center',
+                                padding: `0 ${10 * uiScale}px`,
+                            }}
+                        >
+                            + Add Macro
+                        </button>
+                    </div>
+                )}
 
-            <TimelineSearchBar
-                activeMatchDisplayIndex={activeMatchDisplayIndex}
-                inputId={searchInputId}
-                isSearching={isSearching}
-                matchCount={matchCount}
-                onChangeQuery={setQuery}
-                onNextMatch={goToNextMatch}
-                onPrevMatch={goToPrevMatch}
-                query={query}
-                shown={visibleRoot.length}
-                total={rootNodes.length}
-                uiScale={uiScale}
-            />
+                <TimelineSearchBar
+                    activeMatchDisplayIndex={activeMatchDisplayIndex}
+                    inputId={searchInputId}
+                    isSearching={isSearching}
+                    matchCount={matchCount}
+                    onChangeQuery={setQuery}
+                    onNextMatch={goToNextMatch}
+                    onPrevMatch={goToPrevMatch}
+                    query={query}
+                    shown={visibleRoot.length}
+                    total={rootNodes.length}
+                    uiScale={uiScale}
+                />
 
-            <TimelineTypeFilterChips
-                activeType={typeFilter}
-                chips={typeChips}
-                onChange={setTypeFilter}
-                uiScale={uiScale}
-            />
+                <TimelineTypeFilterChips
+                    activeType={typeFilter}
+                    chips={typeChips}
+                    onChange={setTypeFilter}
+                    uiScale={uiScale}
+                />
 
-            {isSearching && (
-                <div style={{ fontSize: `${11 * uiScale}px`, marginBottom: `${6 * uiScale}px`, opacity: 0.75 }}>
-                    Search active: drag/reorder is temporarily disabled.
-                </div>
-            )}
+                {isSearching && (
+                    <div style={{ fontSize: `${11 * uiScale}px`, opacity: 0.75 }}>
+                        Search active: drag/reorder is temporarily disabled.
+                    </div>
+                )}
+
+                    {!isSearching && typeFilter !== 'all' && (
+                        <div style={{ fontSize: `${11 * uiScale}px`, opacity: 0.75 }}>
+                            Type filter active: drag/reorder is temporarily disabled.
+                        </div>
+                    )}
+            </div>
 
             <div
                 className="zerith-scrollbar"
@@ -400,6 +421,7 @@ export function Timeline() {
                     flexDirection: 'column',
                     flexGrow: 1,
                     gap: `${2 * uiScale}px`,
+                    minHeight: 0,
                     overflowY: 'auto',
                     userSelect: 'none',
                     WebkitUserSelect: 'none',
@@ -407,7 +429,7 @@ export function Timeline() {
             >
                 {visibleRoot.map(({ index, node }) => renderNode(node, [index], [], index, 0))}
 
-                {!isSearching && (
+                {!isSearching && typeFilter === 'all' && (
                     <TimelineDropZone
                         borderAccent={t.border.accent}
                         dropIndicator={dropIndicator}

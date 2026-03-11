@@ -1,5 +1,5 @@
 import { Copy, Trash2 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useConsoleStore } from '../../store/useConsoleStore';
 import { useEditorStore } from '../../store/useEditorStore';
@@ -10,16 +10,36 @@ export function ConsolePanel() {
     const { clear, messages } = useConsoleStore();
     const endReference = useRef<HTMLDivElement>(null);
 
-    const [sourceFilter, setSourceFilter] = useState<'all' | 'editor' | 'engine'>('all');
+    const [sourceFilter, setSourceFilter] = useState<'all' | 'editor' | 'preview'>('all');
+
+    const copyLatestVisible = async () => {
+        const latest = filtered.at(-1);
+        if (!latest) return;
+        await copyTextToClipboard(`[${latest.timestamp.toLocaleTimeString()}][${latest.source}][${latest.type}] ${latest.text}`);
+    };
+
+    const handleConsoleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+        const module_ = event.ctrlKey || event.metaKey;
+        if (!module_ || event.key.toLowerCase() !== 'c') return;
+
+        const selectedText = globalThis.getSelection?.()?.toString().trim() ?? '';
+        if (selectedText.length > 0) {
+            event.stopPropagation();
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        void copyLatestVisible();
+    };
 
     useEffect(() => {
         endReference.current?.scrollIntoView({ behavior: 'auto' });
     }, [messages]);
 
-    const filtered = useMemo(() => {
-        if (sourceFilter === 'all') return messages;
-        return messages.filter((m) => m.source === sourceFilter);
-    }, [messages, sourceFilter]);
+    const filtered = sourceFilter === 'all'
+        ? messages
+        : messages.filter((message) => message.source === sourceFilter);
 
     const copyAll = async () => {
         const payload = filtered
@@ -35,7 +55,7 @@ export function ConsolePanel() {
         return t.text.normal;
     };
 
-    const chip = (value: 'all' | 'editor' | 'engine', label: string) => {
+    const chip = (value: 'all' | 'editor' | 'preview', label: string) => {
         const active = sourceFilter === value;
         return (
             <button
@@ -56,7 +76,12 @@ export function ConsolePanel() {
     };
 
     return (
-        <div style={{ background: t.bg.app, display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div
+            data-console-panel="true"
+            onKeyDown={handleConsoleKeyDown}
+            style={{ background: t.bg.app, display: 'flex', flexDirection: 'column', height: '100%' }}
+            tabIndex={0}
+        >
             <div
                 style={{
                     alignItems: 'center',
@@ -75,7 +100,7 @@ export function ConsolePanel() {
                 <div style={{ display: 'flex', gap: `${4 * uiScale}px`, marginLeft: 'auto' }}>
                     {chip('all', 'All')}
                     {chip('editor', 'Editor')}
-                    {chip('engine', 'Engine')}
+                    {chip('preview', 'Preview')}
                 </div>
 
                 <button

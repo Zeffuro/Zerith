@@ -1,62 +1,28 @@
 import { Sprite, type Texture } from 'pixi.js';
 
 import type { IAssetManager, IDisplayManager, IEventBus, ISpritesheetManager, IStateManager } from '../interfaces/managers';
-import type { SaveState } from '../managers/SaveManager';
-import type { BaseCommand, CommandHandler } from '../types';
-import type { CharacterDefinition } from '../types/Character';
+import type { CommandHandler } from '../types';
 import type { GameManifest } from '../types/GameManifest';
 import type { Logger } from '../utils/Logger';
+import type { SpriteCommand } from './sprite/types';
 
-export interface SpriteCommand extends BaseCommand {
-    action: 'animate' | 'hide' | 'move' | 'pose' | 'show';
-    anchorX?: number;
-    anchorY?: number;
-    animation?: string;
-    assetUrl?: string;
-    duration?: number;
-    flip?: boolean;
-    id: string;
-    pose?: string;
-    scaleX?: number;
-    scaleY?: number;
-    transition?: 'fade' | 'instant';
-    type: 'sprite';
-    wait?: boolean;
-    x?: number;
-    y?: number;
-}
+import { SpriteAnimator } from './sprite/SpriteAnimator';
+import { SpriteStateSerializer } from './sprite/SpriteStateSerializer';
+import { SpriteTextureResolver } from './sprite/SpriteTextureResolver';
 
-export interface SpriteState {
-    alpha?: number;
-    anchorX?: number;
-    anchorY?: number;
-    animation?: string;
-    assetUrl?: string;
-    flip?: boolean;
-    pose?: string;
-    scaleX?: number;
-    scaleY?: number;
-    x?: number;
-    y?: number;
-}
-
-interface ActiveAnimation {
-    frameId: number;
-    running: boolean;
-}
+export type { SpriteCommand, SpriteState } from './sprite/types';
 
 export class SpriteHandler implements CommandHandler<SpriteCommand> {
     public autoNext = true;
     public type = 'sprite' as const;
-    private activeAnimations: Map<string, ActiveAnimation> = new Map();
+    private readonly animator: SpriteAnimator;
     private readonly assets: IAssetManager;
     private readonly display: IDisplayManager;
     private readonly events: IEventBus;
-    private readonly getManifest: () => GameManifest;
     private readonly logger: Logger;
+    private readonly serializer: SpriteStateSerializer;
     private sprites: Map<string, Sprite> = new Map();
-    private readonly spritesheets: ISpritesheetManager;
-    private readonly state: IStateManager;
+    private readonly textureResolver: SpriteTextureResolver;
 
     constructor(
         assets: IAssetManager,
@@ -71,38 +37,46 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
         this.display = display;
         this.events = events;
         this.logger = logger;
-        this.spritesheets = spritesheets;
-        this.state = state;
-        this.getManifest = getManifest;
-        this.events.on('state:loaded', this.handleStateLoaded);
+        this.animator = new SpriteAnimator();
+        this.textureResolver = new SpriteTextureResolver(assets, spritesheets, logger, getManifest);
+        this.serializer = new SpriteStateSerializer(state, async (command) => {
+            await this.execute(command);
+        });
+        this.events.on('state:loaded', this.serializer.handleStateLoaded);
     }
 
     public destroy() {
-        this.events.off('state:loaded', this.handleStateLoaded);
+        this.events.off('state:loaded', this.serializer.handleStateLoaded);
         this.reset();
     }
 
     execute = async (command: SpriteCommand) => {
         switch (command.action) {
-            case 'animate': { await this.animate(command); break;
+            case 'animate': {
+                await this.animate(command);
+                break;
             }
-            case 'hide': { await this.hide(command); break;
+            case 'hide': {
+                await this.hide(command);
+                break;
             }
-            case 'move': { await this.move(command); break;
+            case 'move': {
+                await this.move(command);
+                break;
             }
-            case 'pose': { await this.changePose(command); break;
+            case 'pose': {
+                await this.changePose(command);
+                break;
             }
-            case 'show': { await this.show(command); break;
+            case 'show': {
+                await this.show(command);
+                break;
             }
         }
     };
 
     reset = () => {
-        for (const anim of this.activeAnimations.values()) {
-            anim.running = false;
-            if (anim.frameId) cancelAnimationFrame(anim.frameId);
-        }
-        this.activeAnimations.clear();
+        this.animator.stopAllAnimations();
 
         for (const sprite of this.sprites.values()) {
             sprite.removeFromParent();
@@ -123,61 +97,27 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             return;
         }
 
-        const charData = this.findCharacter(command.id);
-        if (!charData?.animations?.[command.animation]) {
-            this.logger.warn(`Animation '${command.animation}' not found for character '${command.id}'`);
+        const resolvedAnimation = await this.textureResolver.resolveAnimation(command.id, command.animation);
+        if (!resolvedAnimation) {
             return;
         }
 
-        const animConfig = charData.animations[command.animation];
-        const frames: string[] = animConfig.frames;
-        const speed: number = animConfig.speed ?? 100;
-        const loop: boolean = animConfig.loop ?? false;
+        await this.animator.runAnimation({
+            id: command.id,
+            loop: resolvedAnimation.loop,
+            speed: resolvedAnimation.speed,
+            sprite,
+            textures: resolvedAnimation.textures,
+            wait: Boolean(command.wait && !resolvedAnimation.loop),
+        });
 
-        const sheetConfig = charData.spritesheet;
-        if (sheetConfig?.atlasUrl && !this.spritesheets.has(sheetConfig.atlasUrl)) {
-            await this.spritesheets.load(sheetConfig);
-        }
-
-        const textures: Texture[] = [];
-        for (const frameName of frames) {
-            const tex = sheetConfig?.atlasUrl
-                ? this.spritesheets.getFrame(sheetConfig.atlasUrl, frameName)
-                : await this.assets.load<Texture>(frameName);
-            if (tex) {
-                textures.push(tex);
-            } else {
-                this.logger.warn(`Animation frame '${frameName}' not found`);
-                return;
-            }
-        }
-
-        if (textures.length === 0) return;
-
-        this.stopAnimation(command.id);
-
-        const anim: ActiveAnimation = { frameId: 0, running: true };
-        this.activeAnimations.set(command.id, anim);
-
-        if (command.wait && !loop) {
-            await this.playAnimation(sprite, textures, speed, false, anim);
-        } else {
-            void this.playAnimation(sprite, textures, speed, loop, anim);
-        }
-
-        // Update saved state
-        const sprites = this.state.system.sprites;
-        if (sprites[command.id]) {
-            sprites[command.id].animation = command.animation;
-        }
+        this.serializer.saveAnimation(command.id, command.animation);
     }
 
-    /* Animation */
-
     private async changePose(command: SpriteCommand) {
-        this.stopAnimation(command.id);
+        this.animator.stopAnimation(command.id);
 
-        const texture = await this.resolveTexture(command);
+        const texture = await this.textureResolver.resolveTexture(command);
         if (!texture) {
             this.logger.warn(`Sprite 'pose' could not resolve texture (id: '${command.id}')`);
             return;
@@ -192,12 +132,7 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             sprite.scale.x = command.flip ? -Math.abs(sprite.scale.x) : Math.abs(sprite.scale.x);
         }
 
-        const sprites = this.state.system.sprites;
-        if (sprites[command.id]) {
-            sprites[command.id].assetUrl = command.assetUrl;
-            sprites[command.id].pose = command.pose;
-            sprites[command.id].animation = undefined;
-        }
+        this.serializer.savePose(command.id, command);
     }
 
     private fadeIn(sprite: Sprite, duration: number): Promise<void> {
@@ -227,60 +162,8 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
         });
     }
 
-    /* Texture Resolution */
-
-    private findCharacter(spriteId: string): CharacterDefinition | undefined {
-        const chars = this.getManifest()?.characters;
-        if (!chars) return undefined;
-        return chars[spriteId] ||
-            Object.entries(chars).find(([k]) => k.toLowerCase() === spriteId.toLowerCase())?.[1] ||
-            undefined;
-    }
-
-    private async getSheetFrame(
-        sheetConfig: { atlasUrl: string; chromaKey?: string; chromaTolerance?: number },
-        frameName: string,
-    ): Promise<Texture | undefined> {
-        if (!this.spritesheets.has(sheetConfig.atlasUrl)) {
-            await this.spritesheets.load(sheetConfig);
-        }
-        return this.spritesheets.getFrame(sheetConfig.atlasUrl, frameName) ?? undefined;
-    }
-
-    private readonly handleStateLoaded = (...arguments_: unknown[]) => {
-        const saveData = arguments_[0] as SaveState;
-        for (const [id, sprite] of Object.entries(saveData.system.sprites)) {
-            void this.execute({
-                action: 'show',
-                anchorX: sprite.anchorX,
-                anchorY: sprite.anchorY,
-                assetUrl: sprite.assetUrl,
-                flip: sprite.flip,
-                id,
-                pose: sprite.pose,
-                scaleX: sprite.scaleX,
-                scaleY: sprite.scaleY,
-                transition: 'instant',
-                type: 'sprite',
-                x: sprite.x,
-                y: sprite.y,
-            }).then(async () => {
-                if (sprite.animation) {
-                    await this.execute({
-                        action: 'animate',
-                        animation: sprite.animation,
-                        id,
-                        type: 'sprite',
-                    });
-                }
-            });
-        }
-    };
-
-    /* Actions */
-
     private async hide(command: SpriteCommand) {
-        this.stopAnimation(command.id);
+        this.animator.stopAnimation(command.id);
 
         const sprite = this.sprites.get(command.id);
         if (!sprite) return;
@@ -291,8 +174,7 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
         sprite.destroy();
         this.sprites.delete(command.id);
 
-        const sprites = this.state.system.sprites;
-        delete sprites[command.id];
+        this.serializer.removeSprite(command.id);
     }
 
     private async move(command: SpriteCommand) {
@@ -332,92 +214,11 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             requestAnimationFrame(tick);
         });
 
-        const sprites = this.state.system.sprites;
-        if (sprites[command.id]) {
-            sprites[command.id].x = sprite.x;
-            sprites[command.id].y = sprite.y;
-        }
-    }
-
-    private playAnimation(
-        sprite: Sprite,
-        textures: Texture[],
-        speed: number,
-        loop: boolean,
-        anim: ActiveAnimation
-    ): Promise<void> {
-        return new Promise((resolve) => {
-            let frameIndex = 0;
-            let lastTime = performance.now();
-
-            const tick = (time: number) => {
-                if (!anim.running) {
-                    resolve();
-                    return;
-                }
-
-                const elapsed = time - lastTime;
-                if (elapsed >= speed) {
-                    frameIndex++;
-
-                    if (frameIndex >= textures.length) {
-                        if (loop) {
-                            frameIndex = 0;
-                        } else {
-                            anim.running = false;
-                            resolve();
-                            return;
-                        }
-                    }
-
-                    sprite.texture = textures[frameIndex];
-                    lastTime = time;
-                }
-
-                anim.frameId = requestAnimationFrame(tick);
-            };
-
-            sprite.texture = textures[0];
-            anim.frameId = requestAnimationFrame(tick);
-        });
-    }
-
-    private async resolveTexture(
-        command: SpriteCommand,
-    ): Promise<Texture | undefined> {
-        if (command.pose) {
-            const charData = this.findCharacter(command.id);
-            if (!charData) {
-                this.logger.warn(`No character config found for sprite id '${command.id}'`);
-                return undefined;
-            }
-            const frameName = charData.poses?.[command.pose];
-            if (!frameName) {
-                this.logger.warn(`Pose '${command.pose}' not found for character '${command.id}'`);
-                return undefined;
-            }
-            if (charData.spritesheet?.atlasUrl) {
-                return await this.getSheetFrame(charData.spritesheet, frameName);
-            }
-            return await this.assets.load<Texture>(frameName);
-        }
-
-        const url = command.assetUrl;
-        if (!url) return undefined;
-
-        if (url.includes(':') && !url.startsWith('http') && !url.startsWith('/')) {
-            const [atlasKey, frameName] = url.split(':');
-            const frame = this.spritesheets.getFrame(atlasKey, frameName);
-            if (frame) return frame;
-            this.logger.warn(`Frame '${frameName}' not found in atlas '${atlasKey}'`);
-            return undefined;
-        }
-
-        return await this.assets.load<Texture>(url);
+        this.serializer.saveMove(command.id, sprite.x, sprite.y);
     }
 
     private async show(command: SpriteCommand) {
-        const texture = await this.resolveTexture(command);
+        const texture = await this.textureResolver.resolveTexture(command);
         if (!texture) {
             if (command.assetUrl) {
                 const fallback = await this.assets.load<Texture>(command.assetUrl);
@@ -429,8 +230,6 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
         await this.showWithTexture(command, texture);
     }
 
-    /* Fades */
-
     private async showWithTexture(command: SpriteCommand, texture: Texture) {
         let sprite = this.sprites.get(command.id);
         if (sprite) {
@@ -441,7 +240,7 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             this.display.getLayer('sprites').addChild(sprite);
         }
 
-        const charData = this.findCharacter(command.id);
+        const charData = this.textureResolver.findCharacter(command.id);
         const defaults = charData?.displayDefaults;
 
         sprite.anchor.set(
@@ -469,26 +268,16 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             sprite.alpha = 1;
         }
 
-        const sprites = this.state.system.sprites;
-        sprites[command.id] = {
+        this.serializer.saveShownSprite(command.id, {
             anchorX: sprite.anchor.x,
             anchorY: sprite.anchor.y,
-            assetUrl: command.assetUrl, 
+            assetUrl: command.assetUrl,
             flip: command.flip ?? defaults?.flip ?? false,
-            pose: command.pose, 
+            pose: command.pose,
             scaleX: sprite.scale.x,
-            scaleY: sprite.scale.y, 
+            scaleY: sprite.scale.y,
             x: sprite.x,
             y: sprite.y,
-        };
-    }
-
-    private stopAnimation(id: string) {
-        const existing = this.activeAnimations.get(id);
-        if (existing) {
-            existing.running = false;
-            if (existing.frameId) cancelAnimationFrame(existing.frameId);
-            this.activeAnimations.delete(id);
-        }
+        });
     }
 }

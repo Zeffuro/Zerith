@@ -29,7 +29,7 @@ export function TimelineCommandBar({
                                        uiScale,
                                    }: Properties) {
     return (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: `${4 * uiScale}px`, marginBottom: `${12 * uiScale}px` }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: `${4 * uiScale}px`, marginBottom: `${4 * uiScale}px` }}>
             <AddCommandMenu items={commandMenuItems} onAdd={onAdd} uiScale={uiScale} />
             {quickTypes.map((type) => {
                 const meta = getQuickMeta(type);

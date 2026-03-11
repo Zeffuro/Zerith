@@ -38,6 +38,7 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
 
     public destroy() {
         this.events.off('state:loaded', this.handleStateLoaded);
+        this.reset();
     }
 
     execute = async (command: BgmCommand) => {
@@ -102,6 +103,10 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
             }
         }
     };
+
+    public reset(): void {
+        this.isPaused = false;
+    }
 
     private readonly handleStateLoaded = (...arguments_: unknown[]) => {
         const saveData = arguments_[0] as SaveState;

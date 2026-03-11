@@ -17,6 +17,7 @@ export interface IAudioManager extends IBaseManager {
     setMasterVolume(v: number): void;
     setVolume(channel: 'bgm' | 'sfx' | 'voice', v: number): void;
     sfxVolume: number;
+    stopAll(): void;
     stopBgm(): void;
     voiceVolume: number;
 }

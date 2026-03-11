@@ -18,6 +18,8 @@ export function createConsoleMessagesSlice(set: ConsoleSet): ConsoleMessagesSlic
             }),
         clear: () => set({ messages: [] }),
         messages: [],
+        previewLogCaptureEnabled: false,
+        setPreviewLogCaptureEnabled: (enabled) => set({ previewLogCaptureEnabled: enabled }),
     };
 }
 

@@ -52,8 +52,8 @@ export function TimelineSearchBar({
                 borderRadius: 6,
                 display: 'flex',
                 gap: `${8 * uiScale}px`,
-                marginBottom: `${8 * uiScale}px`,
-                padding: `${6 * uiScale}px`,
+                marginBottom: `${2 * uiScale}px`,
+                padding: `${5 * uiScale}px`,
             }}
         >
             <Search color={t.text.muted} size={14 * uiScale} />

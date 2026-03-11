@@ -7,7 +7,8 @@ import type { BaseCommand } from '../types';
 import type { Logger } from '../utils/Logger';
 import type { SpriteCommand } from './SpriteHandler';
 
-import { parseTextTags, transformShorthands } from '../utils/TextParser';
+import { waitForAbortableDelay, waitForEventsOrAbort } from '../utils/AsyncHelpers';
+import { parseTextTags, resolveTemplateText, transformShorthands } from '../utils/TextParser';
 import { DialogueRenderer } from './dialogue/DialogueRenderer';
 import { TypewriterController } from './dialogue/TypewriterController';
 
@@ -88,7 +89,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         this.flow.consumeSkip();
         this.renderer.ensureUI();
 
-        const resolvedText = this.resolveText(command.text, this.state);
+        const resolvedText = resolveTemplateText(command.text, this.state);
 
         const speakerKey = command.speaker.toLowerCase();
         const charData = (this.config.characters?.[speakerKey] ||
@@ -101,25 +102,16 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
 
         this.renderer.setSpeaker(displayName, charData?.nameColor || '#7A6EF6');
 
-        if (charData?.portraitUrl) {
-            await this.renderer.showPortrait(charData.portraitUrl, command.portraitSide ?? 'left');
-            if (signal.aborted) return;
+        const portraitSide = command.portraitSide ?? 'left';
+        await this.renderer.syncPortrait(charData?.portraitUrl, portraitSide);
+        if (signal.aborted) return;
 
-            this.state.system.dialogue = {
-                portraitSide: command.portraitSide ?? 'left',
-                portraitUrl: charData.portraitUrl,
-                speaker: command.speaker,
-                text: command.text,
-            };
-        } else {
-            this.renderer.hidePortrait();
-            this.state.system.dialogue = {
-                portraitSide: undefined,
-                portraitUrl: undefined,
-                speaker: command.speaker,
-                text: command.text,
-            };
-        }
+        this.state.system.dialogue = {
+            portraitSide: charData?.portraitUrl ? portraitSide : undefined,
+            portraitUrl: charData?.portraitUrl,
+            speaker: command.speaker,
+            text: command.text,
+        };
 
         const fullCharData = this.config.characters?.[speakerKey];
         if (fullCharData?.talkAnimation) {
@@ -177,7 +169,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         });
 
         if (!signal.aborted && this.autoAdvanceDelay !== undefined) {
-            await this.waitForDelay(this.autoAdvanceDelay, signal);
+            await waitForAbortableDelay(this.autoAdvanceDelay, signal);
             if (!signal.aborted) {
                 void this.flow.playNext();
             }
@@ -200,67 +192,8 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         this.autoAdvanceDelay = delay;
     }
 
-    private resolveText(
-        text: string,
-        state: { get<T = unknown>(key: string): T | undefined; getPersistent<T = unknown>(key: string): T | undefined }
-    ): string {
-        return text.replaceAll(/{(\w+)}/g, (match: string, key: string) => {
-            const value = state.get(key) ?? state.getPersistent(key);
-            if (value === undefined || value === null) return match;
-            if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-                return `${value}`;
-            }
-            if (Array.isArray(value) || typeof value === 'object') {
-                return JSON.stringify(value);
-            }
-            return match;
-        });
-    }
-
-    private async waitForDelay(ms: number, signal: AbortSignal): Promise<void> {
-        if (signal.aborted || ms <= 0) return;
-
-        await new Promise<void>((resolve) => {
-            const timeout = setTimeout(() => {
-                signal.removeEventListener('abort', onAbort);
-                resolve();
-            }, ms);
-
-            const onAbort = () => {
-                clearTimeout(timeout);
-                resolve();
-            };
-
-            signal.addEventListener('abort', onAbort, { once: true });
-        });
-    }
-
     private async waitForPromptInput(events: IEventBus, signal: AbortSignal): Promise<void> {
-        if (signal.aborted) return;
-
-        await new Promise<void>((resolve) => {
-            let resolved = false;
-
-            const cleanup = () => {
-                events.off('input:confirm', onInput);
-                events.off('input:next', onInput);
-                signal.removeEventListener('abort', onAbort);
-            };
-
-            const finish = () => {
-                if (resolved) return;
-                resolved = true;
-                cleanup();
-                resolve();
-            };
-
-            const onInput = () => finish();
-            const onAbort = () => finish();
-
-            events.on('input:confirm', onInput);
-            events.on('input:next', onInput);
-            signal.addEventListener('abort', onAbort, { once: true });
-        });
+        await waitForEventsOrAbort(events, ['input:confirm', 'input:next'], signal);
     }
 
 }

@@ -159,4 +159,13 @@ export class DialogueRenderer {
         const scale = (boxY * 0.9) / this.portraitSprite.texture.height;
         this.portraitSprite.scale.set(side === 'right' ? -scale : scale, scale);
     }
+
+    public async syncPortrait(portraitUrl: string | undefined, side: 'left' | 'right'): Promise<void> {
+        if (!portraitUrl) {
+            this.hidePortrait();
+            return;
+        }
+
+        await this.showPortrait(portraitUrl, side);
+    }
 }

@@ -6,6 +6,7 @@ export function createProjectSessionSlice(set: ProjectSet, scriptBridge: Project
     return {
         activeFile: undefined,
         bumpTreeRevision: () => set((s) => ({ treeRevision: s.treeRevision + 1 })),
+        expandedPaths: [],
         files: [],
         projectPath: undefined,
 
@@ -14,12 +15,28 @@ export function createProjectSessionSlice(set: ProjectSet, scriptBridge: Project
             scriptBridge.setScript(content);
         },
 
+        setPathExpanded: (path: string, expanded: boolean) =>
+            set((state) => {
+                const hasPath = state.expandedPaths.includes(path);
+                if (expanded && !hasPath) {
+                    return { expandedPaths: [...state.expandedPaths, path] };
+                }
+
+                if (!expanded && hasPath) {
+                    return { expandedPaths: state.expandedPaths.filter((expandedPath) => expandedPath !== path) };
+                }
+
+                return {};
+            }),
+
+
         setProject: (path: string, files: FsDirectoryEntry[]) =>
             set({
                 activeFile: undefined,
                 activeMacroName: undefined,
                 characters: {},
                 editingAllMacrosFile: false,
+                expandedPaths: [],
                 files,
                 items: {},
                 macroEntries: [],

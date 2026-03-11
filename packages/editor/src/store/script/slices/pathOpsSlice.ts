@@ -1,3 +1,5 @@
+import { deepClone } from 'core';
+
 import type { EditorNode } from '../../../types/EditorNode';
 import type { PathOpsProjectBridge } from '../bridges/pathOpsProjectBridge';
 import type { ScriptGet, ScriptSet, ScriptState } from '../types';
@@ -13,7 +15,7 @@ import {
     setAtPath,
 } from '../../../utils/scriptPathUtilities';
 import { MAX_HISTORY } from '../constants';
-import { deepClone, isRootIndexPath } from '../helpers';
+import { isRootIndexPath } from '../helpers';
 
 type PathOpsSlice = Pick<
     ScriptState,
