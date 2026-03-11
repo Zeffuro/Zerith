@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { createGamePreviewLogger } from '../services/gamePreviewLoggerBridge';
 import { useConsoleStore } from '../store/useConsoleStore';
+import { useEngineBridgeStore } from '../store/useEngineBridgeStore';
 import { useEditorStore } from '../store/useEditorStore';
 import { useProjectStore } from '../store/useProjectStore';
 
@@ -74,6 +75,7 @@ export function GamePreview({ script }: { script: Script }) {
             setPreviewLogCaptureEnabled(true);
             engine.stateManager.setPersistent('projectPath', projectPath);
             engineReference.current = engine;
+            useEngineBridgeStore.getState().setEngine(engine);
             engine.setInputEnabled(false);
 
             const playbackState = useEditorStore.getState();
@@ -94,6 +96,7 @@ export function GamePreview({ script }: { script: Script }) {
             setPreviewLogCaptureEnabled(false);
             engineReference.current?.destroy();
             engineReference.current = undefined;
+            useEngineBridgeStore.getState().setEngine(undefined);
         };
     }, [projectPath, manifest, setPreviewLogCaptureEnabled]);
 

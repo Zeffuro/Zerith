@@ -91,12 +91,18 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
 
         const resolvedText = resolveTemplateText(command.text, this.state);
 
-        const speakerKey = command.speaker.toLowerCase();
-        const charData = (this.config.characters?.[speakerKey] ||
-            Object.values(this.config.characters || {})
-                .find((c) => c.name.toLowerCase() === speakerKey));
+        const speaker = coerceSpeaker(command.speaker);
+        const speakerKey = normalizeLower(speaker);
+        const characters = this.config.characters ?? {};
 
-        const displayName = charData?.displayName || command.speaker;
+        const charData = (
+            (speakerKey ? characters[speakerKey] : undefined) ||
+            (speakerKey
+                ? Object.values(characters).find((character) => normalizeLower(character.name) === speakerKey)
+                : undefined)
+        );
+
+        const displayName = charData?.displayName || (speaker || 'Narrator');
 
         this.history.push(displayName, command.text);
 
@@ -109,15 +115,15 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         this.state.system.dialogue = {
             portraitSide: charData?.portraitUrl ? portraitSide : undefined,
             portraitUrl: charData?.portraitUrl,
-            speaker: command.speaker,
+            speaker: speaker || displayName,
             text: command.text,
         };
 
-        const fullCharData = this.config.characters?.[speakerKey];
+        const fullCharData = speakerKey ? this.config.characters?.[speakerKey] : undefined;
         if (fullCharData?.talkAnimation) {
             const spriteState = this.state.system.sprites;
-            if (spriteState?.[command.speaker] || spriteState?.[speakerKey]) {
-                const spriteId = spriteState[command.speaker] ? command.speaker : speakerKey;
+            if (speakerKey && (spriteState?.[speaker] || spriteState?.[speakerKey])) {
+                const spriteId = spriteState[speaker] ? speaker : speakerKey;
                 const animCommand: SpriteCommand = {
                     action: 'animate',
                     animation: fullCharData.talkAnimation,
@@ -197,3 +203,14 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
     }
 
 }
+
+function normalizeLower(value: string | undefined): string | undefined {
+    if (!value) return undefined;
+    const normalized = value.trim().toLowerCase();
+    return normalized.length > 0 ? normalized : undefined;
+}
+
+function coerceSpeaker(value: unknown): string {
+    return typeof value === 'string' ? value.trim() : '';
+}
+

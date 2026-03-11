@@ -2,13 +2,13 @@ import { ArrowRightCircle, GitFork, Repeat, Sigma, Workflow } from 'lucide-react
 
 import type { EditorNodeByType, PluginNode } from '../types';
 
+import { CallInspector } from '../../components/inspector/CallInspector';
 import { ForInspector } from '../../components/inspector/ForInspector';
 import { GotoInspector } from '../../components/inspector/GotoInspector';
 import { IfInspector } from '../../components/inspector/IfInspector';
 import { JumpInspector } from '../../components/inspector/JumpInspector';
 import { LabelInspector } from '../../components/inspector/LabelInspector';
 import { MacroHeaderInspector } from '../../components/inspector/MacroHeaderInspector';
-import { MacroInspector } from '../../components/inspector/MacroInspector';
 import { WhileInspector } from '../../components/inspector/WhileInspector';
 import { asInspector, type CommandPluginOverrides, readArray, readNumber, readString } from './shared';
 
@@ -17,7 +17,7 @@ export const flowPluginOverrides: CommandPluginOverrides = {
         createDefault: () => ({ name: '', type: 'call' }),
         getSummary: (node) => readString(node, 'name'),
         icon: (size) => <Workflow color="#f472b6" size={size} />,
-        Inspector: MacroInspector,
+        Inspector: CallInspector,
     },
     for: {
         createDefault: () => ({ body: [], from: 0, iterator: 'i', step: 1, to: 3, type: 'for' }),

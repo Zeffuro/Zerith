@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, FileJson, FolderGit2, FolderOpen, Image as ImageIcon } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileAudio, FileCode, FileJson, FileText, FolderGit2, FolderOpen, Image as ImageIcon, Settings } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import {
@@ -13,6 +13,7 @@ import { type FsDirectoryEntry, fsDirname, fsJoin, fsReadDirectory } from '../..
 import { openProjectEntry } from '../../../services/openProjectEntry';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useProjectStore } from '../../../store/useProjectStore';
+import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
 import { ConfirmDialog } from '../../ConfirmDialog';
 import {
@@ -94,7 +95,8 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
     const [createDraft, setCreateDraft] = useState('');
     const [createTargetDirectory, setCreateTargetDirectory] = useState<string>();
 
-    const { activeFile, expandedPaths, setPathExpanded, treeRevision } = useProjectStore();
+    const { expandedPaths, setPathExpanded, treeRevision } = useProjectStore();
+    const activeTab = useWorkbenchStore((state) => state.activeTab());
     const { uiScale } = useEditorStore();
     const isOpen = entry.isDirectory && !!fullPath && expandedPaths.includes(fullPath);
 
@@ -276,7 +278,7 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
         }
     };
 
-    const isSelected = activeFile === fullPath;
+    const isSelected = activeTab?.path === fullPath;
     const iconSize = 14 * uiScale;
 
     return (
@@ -316,11 +318,7 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
 
                 {entry.isDirectory ? (
                     isOpen ? <FolderOpen color="#dcb67a" size={iconSize} /> : <FolderGit2 color="#dcb67a" size={iconSize} />
-                ) : (entry.name.endsWith('.json') ? (
-                    <FileJson color="#ce9178" size={iconSize} />
-                ) : (
-                    <ImageIcon color="#4ec9b0" size={iconSize} />
-                ))}
+                ) : getFileIcon(entry.name, fullPath, iconSize)}
 
                 {isRenaming ? (
                     <InlineNameInput
@@ -393,3 +391,45 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
         </div>
     );
 }
+
+const IMAGE_EXTENSIONS = new Set(['.avif', '.jpeg', '.jpg', '.png', '.webp']);
+const AUDIO_EXTENSIONS = new Set(['.m4a', '.mp3', '.ogg', '.wav']);
+const TEXT_EXTENSIONS = new Set(['.md', '.ts', '.tsx', '.txt']);
+
+function getFileIcon(entryName: string, fullPath: string, iconSize: number) {
+    const normalizedPath = fullPath.replaceAll('\\', '/').toLowerCase();
+    const lowerName = entryName.toLowerCase();
+    const extension = getFileExtension(lowerName);
+
+    if (lowerName === 'game.json') {
+        return <Settings color="#fbbf24" size={iconSize} />;
+    }
+
+    if (extension && IMAGE_EXTENSIONS.has(extension)) {
+        return <ImageIcon color="#4ec9b0" size={iconSize} />;
+    }
+
+    if (extension && AUDIO_EXTENSIONS.has(extension)) {
+        return <FileAudio color="#d8b4fe" size={iconSize} />;
+    }
+
+    if (normalizedPath.includes('/scripts/') || normalizedPath.includes('/macros/')) {
+        return <FileCode color="#4ade80" size={iconSize} />;
+    }
+
+    if (extension && TEXT_EXTENSIONS.has(extension)) {
+        return <FileText color="#9ca3af" size={iconSize} />;
+    }
+
+    if (extension === '.json') {
+        return <FileJson color="#ce9178" size={iconSize} />;
+    }
+
+    return <FileText color="#9ca3af" size={iconSize} />;
+}
+
+function getFileExtension(path: string): string {
+    const index = path.lastIndexOf('.');
+    return index === -1 ? '' : path.slice(index);
+}
+

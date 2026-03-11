@@ -10,6 +10,8 @@ import { useScriptStore } from '../../store/useScriptStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { Inspector } from '../inspector/Inspector';
 import { ConsolePanel } from '../tools/ConsolePanel';
+import { RuntimeMonitorPanel } from '../tools/RuntimeMonitorPanel';
+import { StateObserverPanel } from '../tools/StateObserverPanel';
 import { createDefaultDockLayout } from './dock/defaultDockLayout';
 import { DOCK_PANELS } from './dock/dockPanelIds';
 import { EditorSurface } from './EditorSurface';
@@ -158,6 +160,12 @@ export function DockLayoutHost() {
                         <GamePreview script={rootScript} />
                     </Suspense>
                 );
+            }
+            case DOCK_PANELS.runtimeMonitor: {
+                return <RuntimeMonitorPanel />;
+            }
+            case DOCK_PANELS.stateObserver: {
+                return <StateObserverPanel />;
             }
             default: {
                 return <div style={{ color: '#fca5a5', padding: 10 }}>Unknown panel: {String(comp)}</div>;

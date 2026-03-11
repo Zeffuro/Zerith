@@ -2,6 +2,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { FolderOpen, MonitorDot, Play, Save, Square, Star, Volume2, VolumeX, ZoomIn, ZoomOut } from 'lucide-react';
 import { useState } from 'react';
 
+import { openProjectEntry } from '../../services/openProjectEntry';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useProjectStore } from '../../store/useProjectStore';
 import { editorTheme as t } from '../../theme/editorTheme';
@@ -29,6 +30,7 @@ export function Toolbar() {
 
             if (selectedFile) {
                 await openProjectFromManifest(selectedFile);
+                await openInitialProjectEntry();
             }
         } catch (error) {
             console.error('Failed to open project dialog:', error);
@@ -124,4 +126,31 @@ export function Toolbar() {
             </div>
         </div>
     );
+}
+
+async function openInitialProjectEntry(): Promise<void> {
+    const { manifest, projectPath } = useProjectStore.getState();
+    if (!projectPath) return;
+
+    const startSceneName = manifest?.startScene;
+    const sceneEntry = startSceneName ? manifest?.scenes?.[startSceneName] : undefined;
+    if (typeof sceneEntry === 'string') {
+        const scenePath = resolveProjectPath(projectPath, sceneEntry);
+        await openProjectEntry(scenePath, basename(scenePath));
+        return;
+    }
+
+    const gameManifestPath = `${projectPath}/game.json`;
+    await openProjectEntry(gameManifestPath, 'game.json');
+}
+
+function basename(path: string): string {
+    return path.split(/[\\/]/).pop() || path;
+}
+
+function resolveProjectPath(projectPath: string, targetPath: string): string {
+    if (targetPath.startsWith('/') || targetPath.startsWith('\\')) {
+        return `${projectPath}${targetPath}`;
+    }
+    return `${projectPath}/${targetPath}`;
 }

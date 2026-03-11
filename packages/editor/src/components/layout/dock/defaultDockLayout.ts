@@ -1,6 +1,6 @@
 import { deepClone } from 'core';
 
-export const DOCK_LAYOUT_VERSION = 1 as const;
+export const DOCK_LAYOUT_VERSION = 2 as const;
 
 export const DEFAULT_DOCK_LAYOUT = {
     global: { splitterSize: 4, tabEnableClose: false },
@@ -32,6 +32,8 @@ export const DEFAULT_DOCK_LAYOUT = {
                                     {
                                         children:[
                                             { component: 'inspector', id: 'inspector', name: 'Inspector', type: 'tab' },
+                                            { component: 'runtime_monitor', id: 'runtime_monitor', name: 'Runtime', type: 'tab' },
+                                            { component: 'state_observer', id: 'state_observer', name: 'State', type: 'tab' },
                                         ],
                                         type: 'tabset',
                                         weight: 55,

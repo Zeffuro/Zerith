@@ -3,10 +3,12 @@ import type { ItemCommand } from 'core';
 import { useEffect, useMemo, useState } from 'react';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
+import { useProjectStore } from '../../store/useProjectStore';
 import { FieldError } from './FieldError';
 
 export function ItemInspector({ index, node }: { index?: null | number; node: ItemCommand; }) {
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle } = useInspectorFieldEditor(index);
+    const itemIds = Object.keys(useProjectStore((state) => state.items));
 
     const initialJson = useMemo(
         () => JSON.stringify(node.changes ?? {}, undefined, 2),
@@ -57,6 +59,7 @@ export function ItemInspector({ index, node }: { index?: null | number; node: It
             <div>
                 <label style={labelStyle}>Item ID</label>
                 <input
+                    list="item-ids"
                     onChange={(event) => handleChange('id', event.target.value)}
                     placeholder="e.g. attorney_badge"
                     style={getFieldInputStyle('id')}
@@ -64,6 +67,9 @@ export function ItemInspector({ index, node }: { index?: null | number; node: It
                     value={node.id || ''}
                 />
                 <FieldError errors={getFieldErrors('id')} />
+                <datalist id="item-ids">
+                    {itemIds.map((itemId) => <option key={itemId} value={itemId} />)}
+                </datalist>
             </div>
 
             {node.action === 'update' && (

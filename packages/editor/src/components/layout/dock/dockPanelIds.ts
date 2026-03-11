@@ -5,6 +5,8 @@ export const DOCK_PANELS = {
     explorer: 'explorer',
     inspector: 'inspector',
     preview: 'preview',
+    runtimeMonitor: 'runtime_monitor',
+    stateObserver: 'state_observer',
     toolbar: 'toolbar',
 } as const;
 

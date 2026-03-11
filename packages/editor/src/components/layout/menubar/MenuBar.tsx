@@ -2,6 +2,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useDismissiblePopup } from '../../../hooks/useDismissiblePopup';
+import { openProjectEntry } from '../../../services/openProjectEntry';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useProjectStore } from '../../../store/useProjectStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
@@ -39,6 +40,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
 
             if (selectedFile) {
                 await openProjectFromManifest(selectedFile);
+                await openInitialProjectEntry();
             }
         } catch (error) {
             console.error('Failed to open project dialog:', error);
@@ -135,4 +137,31 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
             ))}
         </div>
     );
+}
+
+async function openInitialProjectEntry(): Promise<void> {
+    const { manifest, projectPath } = useProjectStore.getState();
+    if (!projectPath) return;
+
+    const startSceneName = manifest?.startScene;
+    const sceneEntry = startSceneName ? manifest?.scenes?.[startSceneName] : undefined;
+    if (typeof sceneEntry === 'string') {
+        const scenePath = resolveProjectPath(projectPath, sceneEntry);
+        await openProjectEntry(scenePath, basename(scenePath));
+        return;
+    }
+
+    const gameManifestPath = `${projectPath}/game.json`;
+    await openProjectEntry(gameManifestPath, 'game.json');
+}
+
+function basename(path: string): string {
+    return path.split(/[\\/]/).pop() || path;
+}
+
+function resolveProjectPath(projectPath: string, targetPath: string): string {
+    if (targetPath.startsWith('/') || targetPath.startsWith('\\')) {
+        return `${projectPath}${targetPath}`;
+    }
+    return `${projectPath}/${targetPath}`;
 }
