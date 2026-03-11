@@ -1,3 +1,5 @@
+import { deepClone } from 'core';
+
 export const DOCK_LAYOUT_VERSION = 1 as const;
 
 export const DEFAULT_DOCK_LAYOUT = {
@@ -60,5 +62,5 @@ export const DEFAULT_DOCK_LAYOUT = {
 };
 
 export function createDefaultDockLayout() {
-    return structuredClone(DEFAULT_DOCK_LAYOUT);
+    return deepClone(DEFAULT_DOCK_LAYOUT);
 }

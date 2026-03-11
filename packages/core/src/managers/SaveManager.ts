@@ -1,8 +1,10 @@
 import type { SpriteState } from '../handlers/SpriteHandler';
+import type { ISaveManager } from '../interfaces/managers';
 import type { IStorageProvider } from '../interfaces/providers';
 import type { Serializable, SystemState } from '../types';
 
 import { createDefaultSystemState } from '../types';
+import { deepClone } from '../utils/deepClone';
 
 export interface SaveContext {
     getCurrentSceneName(): string;
@@ -38,8 +40,9 @@ const LEGACY_SYSTEM_KEYS = new Set([
     '__sys_sprites',
 ]);
 
-export class SaveManager {
+export class SaveManager implements ISaveManager {
     private readonly context: SaveContext;
+    private destroyed = false;
     private readonly prefix: string;
     private readonly storage: IStorageProvider;
 
@@ -50,11 +53,17 @@ export class SaveManager {
     }
 
     public deleteSlot(slot: number) {
+        if (this.destroyed) return;
         this.storage.removeItem(`${this.prefix}_${slot}`);
         this.context.logInfo(`Save slot ${slot} deleted`);
     }
 
+    public destroy(): void {
+        this.destroyed = true;
+    }
+
     public getMeta(slot: number): SaveMeta | undefined {
+        if (this.destroyed) return undefined;
         const saveString = this.storage.getItem(`${this.prefix}_${slot}`);
         if (!saveString) return undefined;
 
@@ -71,10 +80,12 @@ export class SaveManager {
     }
 
     public hasSlot(slot: number): boolean {
-        return this.storage.getItem(`${this.prefix}_${slot}`) !== null;
+        if (this.destroyed) return false;
+        return this.storage.getItem(`${this.prefix}_${slot}`) !== undefined;
     }
 
     public listSlots(maxSlots: number = 10): (SaveMeta | undefined)[] {
+        if (this.destroyed) return [];
         const slots: (SaveMeta | undefined)[] = [];
         for (let index = 1; index <= maxSlots; index++) {
             slots.push(this.getMeta(index));
@@ -83,6 +94,7 @@ export class SaveManager {
     }
 
     public load(slot: number = 1): Promise<SaveState | undefined> {
+        if (this.destroyed) return Promise.resolve<SaveState | undefined>(void 0);
         const saveString = this.storage.getItem(`${this.prefix}_${slot}`);
         if (!saveString) {
             this.context.logWarn(`No save found in slot ${slot}`);
@@ -98,31 +110,8 @@ export class SaveManager {
         return Promise.resolve(saveData);
     }
 
-    public save(slot: number = 1, label?: string) {
-        const currentSceneName = this.context.getCurrentSceneName();
-        const meta: SaveMeta = {
-            label,
-            savedAt: Date.now(),
-            sceneName: currentSceneName,
-            slot
-        };
-
-        const saveData: SaveState = {
-            index: this.context.getLastSavePoint(),
-            meta,
-            sceneName: currentSceneName,
-            state: structuredClone(this.context.getStateSnapshot()),
-            system: {
-                ...structuredClone(this.context.getSystemSnapshot()),
-                items: this.context.serializeItems(),
-            },
-        };
-
-        this.storage.setItem(`${this.prefix}_${slot}`, JSON.stringify(saveData));
-        this.context.logInfo(`Game saved to slot ${slot}`);
-    }
-
     public loadGlobalState(): Record<string, Serializable> {
+        if (this.destroyed) return {};
         const stateJson = this.storage.getItem(`${this.prefix}_global`);
         if (!stateJson) {
             return {};
@@ -136,9 +125,36 @@ export class SaveManager {
         }
     }
 
+    public save(slot: number = 1, label?: string) {
+        if (this.destroyed) return;
+        const currentSceneName = this.context.getCurrentSceneName();
+        const meta: SaveMeta = {
+            label,
+            savedAt: Date.now(),
+            sceneName: currentSceneName,
+            slot
+        };
+
+        const saveData: SaveState = {
+            index: this.context.getLastSavePoint(),
+            meta,
+            sceneName: currentSceneName,
+            state: deepClone(this.context.getStateSnapshot()),
+            system: {
+                ...deepClone(this.context.getSystemSnapshot()),
+                items: this.context.serializeItems(),
+            },
+        };
+
+        this.storage.setItem(`${this.prefix}_${slot}`, JSON.stringify(saveData));
+        this.context.logInfo(`Game saved to slot ${slot}`);
+    }
+
     public saveGlobalState(state: Record<string, Serializable>): void {
+        if (this.destroyed) return;
         this.storage.setItem(`${this.prefix}_global`, JSON.stringify(state));
     }
+
 
     private isRecord(value: unknown): value is Record<string, unknown> {
         return typeof value === 'object' && value !== null;

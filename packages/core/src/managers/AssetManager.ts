@@ -80,14 +80,10 @@ export class AssetManager {
         return { audio, textures };
     }
 
-    public extractAssetUrls(script: Script): { audio: Set<string>; textures: Set<string>; } {
-        return AssetManager.extractAssetUrls(script);
-    }
-
     public destroy() {
         for (const key of this.loadedUrls) {
             const separatorIndex = key.indexOf(':');
-            if (separatorIndex < 0) continue;
+            if (separatorIndex === -1) continue;
 
             const kind = key.slice(0, separatorIndex);
             const rawUrl = key.slice(separatorIndex + 1);
@@ -100,6 +96,10 @@ export class AssetManager {
         }
 
         this.loadedUrls.clear();
+    }
+
+    public extractAssetUrls(script: Script): { audio: Set<string>; textures: Set<string>; } {
+        return AssetManager.extractAssetUrls(script);
     }
 
     public async load<T = unknown>(url: string): Promise<T> {

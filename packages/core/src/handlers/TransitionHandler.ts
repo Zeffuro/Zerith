@@ -21,6 +21,12 @@ export class TransitionHandler implements CommandHandler<TransitionCommand> {
         this.display = display;
     }
 
+    public destroy(): void {
+        this.fadeRect?.removeFromParent();
+        this.fadeRect?.destroy();
+        this.fadeRect = undefined;
+    }
+
     execute = (command: TransitionCommand) => {
         const duration = (command.duration || 500) / 1000;
 
@@ -31,9 +37,10 @@ export class TransitionHandler implements CommandHandler<TransitionCommand> {
             this.display.getLayer('overlay').addChild(this.fadeRect);
         }
 
+        const fadeRect = this.fadeRect;
         const targetAlpha = command.action === 'fade_out' ? 1 : 0;
 
-        return this.animations.to(this.fadeRect!, {
+        return this.animations.to(fadeRect, {
             alpha: targetAlpha,
             duration: duration,
             ease: "power2.inOut",

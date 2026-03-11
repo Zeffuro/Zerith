@@ -103,6 +103,11 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             if (anim.frameId) cancelAnimationFrame(anim.frameId);
         }
         this.activeAnimations.clear();
+
+        for (const sprite of this.sprites.values()) {
+            sprite.removeFromParent();
+            sprite.destroy();
+        }
         this.sprites.clear();
     };
 

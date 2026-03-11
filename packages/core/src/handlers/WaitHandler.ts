@@ -12,6 +12,10 @@ export class WaitHandler implements CommandHandler<WaitCommand> {
 
     constructor() {}
 
+    public destroy(): void {
+        this.reset();
+    }
+
     execute = (command: WaitCommand) => {
         return new Promise<void>((resolve) => {
             this.timeoutId = setTimeout(() => {
@@ -21,9 +25,6 @@ export class WaitHandler implements CommandHandler<WaitCommand> {
         });
     };
 
-    public destroy(): void {
-        this.reset();
-    }
 
     public reset(): void {
         if (this.timeoutId !== undefined) {

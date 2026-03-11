@@ -1,3 +1,5 @@
+import { deepClone } from 'core';
+
 type Indexable = Record<string, unknown> | unknown[];
 type PathSegment = number | string;
 
@@ -22,7 +24,7 @@ export const updateDeepScript = <T>(root: T[], path: PathSegment[], newSubArray:
         const key = path[index];
         const currentValue = (current as Record<number | string, unknown>)[key];
         if (Array.isArray(currentValue)) {
-            (current as Record<number | string, unknown>)[key] = structuredClone(currentValue);
+            (current as Record<number | string, unknown>)[key] = deepClone(currentValue);
         } else if (currentValue && typeof currentValue === 'object') {
             (current as Record<number | string, unknown>)[key] = { ...currentValue };
         } else {

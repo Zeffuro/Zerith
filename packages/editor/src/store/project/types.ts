@@ -1,4 +1,4 @@
-import type { Command, GameManifest } from 'core';
+import type { CharacterDefinition, Command, GameManifest, ItemManifestEntry, Script } from 'core';
 
 import type { FsDirectoryEntry } from '../../services/fs';
 import type { EditorNode } from '../../types/EditorNode';
@@ -30,12 +30,12 @@ export interface ProjectMacrosSlice {
 }
 
 export interface ProjectManifestSlice {
-    characters: Record<string, unknown>;
-    items: Record<string, unknown>;
+    characters: Record<string, CharacterDefinition>;
+    items: Record<string, ItemManifestEntry>;
     loadManifest: () => Promise<void>;
-    macros: Record<string, Command[]>;
+    macros: Record<string, Script>;
     manifest: GameManifest | undefined;
-    scenes: Record<string, Command[]>;
+    scenes: Record<string, Script>;
 }
 
 export interface ProjectScriptBridge {

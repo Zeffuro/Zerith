@@ -28,8 +28,8 @@ export * from './handlers/WhileHandler';
 export * from './interfaces/ICommandHandler';
 export * from './interfaces/managers';
 export * from './interfaces/providers';
-export * from './managers/AssetManager';
 export * from './managers/AnimationManager';
+export * from './managers/AssetManager';
 export * from './managers/AudioManager';
 
 export * from './managers/DisplayManager';
@@ -59,6 +59,8 @@ export * from './ui/SettingsPanel';
 export * from './ui/UIComponents';
 
 export * from './utils/ChromaKey';
+export * from './utils/deepClone';
+export * from './utils/Logger';
 export * from './utils/ManifestResolver';
 /* Utils */
 export * from './utils/TextParser';

@@ -1,4 +1,4 @@
-import type { EditorCommandType, PluginNode } from '../../plugins/types';
+import type { PluginNode } from '../../plugins/types';
 
 import { getPlugin } from '../../plugins/commandPlugins';
 import { useEditorStore } from '../../store/useEditorStore';
@@ -59,7 +59,7 @@ export function Inspector() {
         );
     }
 
-    const plugin = getPlugin(node.type as EditorCommandType);
+    const plugin = getPlugin(node.type);
     const PluginInspector = plugin.Inspector;
 
     return (

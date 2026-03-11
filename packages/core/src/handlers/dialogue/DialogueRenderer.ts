@@ -52,6 +52,15 @@ export class DialogueRenderer {
         return blinker;
     }
 
+    public destroy(): void {
+        this.container?.removeFromParent();
+        this.container?.destroy({ children: true });
+        this.container = undefined;
+
+        this.portraitSprite?.removeFromParent();
+        this.portraitSprite?.destroy();
+    }
+
     public ensureUI() {
         if (this.container) return;
 
@@ -112,6 +121,7 @@ export class DialogueRenderer {
         this.display.getLayer('ui').addChild(this.container);
     }
 
+
     public getMessageText(): string {
         return this.messageText.text;
     }
@@ -121,6 +131,7 @@ export class DialogueRenderer {
     }
 
     public reset() {
+        this.destroy();
         this.container = undefined;
     }
 

@@ -1,10 +1,10 @@
+import type { IStorageProvider } from './interfaces/providers';
 import type { AudioConfig } from './managers/AudioManager';
 import type { DisplayConfig } from './managers/DisplayManager';
 import type { InputConfig } from './managers/InputManager';
 import type { NotificationConfig } from './managers/NotificationManager';
-import type { OverlayConfig } from './managers/OverlayManager.ts';
+import type { OverlayConfig } from './managers/OverlayManager';
 import type { StartScreenConfig } from './managers/StartScreenManager';
-import type { IStorageProvider } from './interfaces/providers';
 import type { SceneNavigationCommandType } from './types';
 import type { Theme } from './utils/Theme';
 
@@ -17,8 +17,8 @@ export interface EngineConfig {
     notifications?: NotificationConfig;
     onSceneNavigation?: (sceneName: string, commandType: SceneNavigationCommandType) => SceneNavigationAction;
     overlay?: OverlayConfig;
-    storage?: IStorageProvider;
     startScreen?: StartScreenConfig;
+    storage?: IStorageProvider;
     theme?: Partial<Theme>;
 }
 

@@ -2,6 +2,7 @@ import type { IEventBus, IStateManager } from '../interfaces/managers';
 import type { Serializable, SystemState } from '../types';
 
 import { createDefaultSystemState } from '../types';
+import { deepClone } from '../utils/deepClone';
 
 export class StateManager implements IStateManager {
     public get persistentState(): Record<string, Serializable> {
@@ -39,13 +40,13 @@ export class StateManager implements IStateManager {
     }
 
     public loadPersistentState(state: Record<string, Serializable>): void {
-        this._persistentState = structuredClone(state);
+        this._persistentState = deepClone(state);
     }
 
     public replaceState(state: Record<string, Serializable>, system?: SystemState): void {
-        this._state = structuredClone(state);
+        this._state = deepClone(state);
         this._system = system
-            ? structuredClone(system)
+            ? deepClone(system)
             : createDefaultSystemState();
 
         this._system.sprites ??= {};

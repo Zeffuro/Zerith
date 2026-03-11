@@ -1,9 +1,8 @@
+export { deepClone } from 'core';
+
 import type { EditorNode } from '../../types/EditorNode';
 import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
-export function deepClone<T>(value: T): T {
-    return structuredClone(value);
-}
 
 export function isRootIndexPath(p: ScriptPath): p is [number] {
     return p.length === 1 && typeof p[0] === 'number';

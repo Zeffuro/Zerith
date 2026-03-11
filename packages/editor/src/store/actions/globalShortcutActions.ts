@@ -1,5 +1,7 @@
 import type { Command } from 'core';
 
+import { deepClone } from 'core';
+
 import type { EditorNode } from '../../types/EditorNode';
 import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
@@ -74,7 +76,7 @@ export async function executeGlobalShortcutAction(action: GlobalShortcutAction):
 }
 
 function cloneValue<T>(value: T): T {
-    return structuredClone(value);
+    return deepClone(value);
 }
 
 function copySelectionToClipboard(): void {

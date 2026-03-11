@@ -1,9 +1,12 @@
-import { Container, type FederatedPointerEvent, Graphics, Sprite, Text } from 'pixi.js';
+import { Container, type FederatedPointerEvent, Graphics, Text } from 'pixi.js';
 
 import type { IEvidenceManager } from '../interfaces/managers';
+import type { EvidenceItem } from '../managers/EvidenceManager';
 import type { MenuPanel as Panel, PanelBuildDeps } from '../types';
 
-import { createButton, createPanelTitle, createSelectableList, registerFocusableButton } from './UIComponents';
+import { createItemCardList } from './ItemCard';
+import { ItemDetailView } from './ItemDetailView';
+import { createButton, createPanelTitle, registerFocusableButton } from './UIComponents';
 
 export class ItemBrowserPanel implements Panel {
     public id = 'evidence';
@@ -64,68 +67,16 @@ export class ItemBrowserPanel implements Panel {
         const profiles = this.itemsManager.getProfiles();
         const activeTab: 'evidence' | 'profiles' = evidence.length > 0 ? 'evidence' : 'profiles';
 
-        // Detail panel
         const detailContainer = new Container();
         detailContainer.position.set(detailX, 60);
         root.addChild(detailContainer);
 
-        const detailSprite = new Sprite();
-        detailSprite.anchor.set(0.5, 0);
-        detailSprite.position.set(detailWidth / 2, 10);
-        detailSprite.visible = false;
-        detailContainer.addChild(detailSprite);
+        const detailView = new ItemDetailView(cfg, theme, detailWidth, h, this.loadAsset);
+        detailContainer.addChild(detailView.container);
 
-        const detailName = new Text({
-            style: { fill: theme.accentColor, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize, fontWeight: 'bold' },
-            text: ''
-        });
-        detailContainer.addChild(detailName);
-
-        const detailDesc = new Text({
-            style: { fill: cfg.textColor, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize - 4, wordWrap: true, wordWrapWidth: detailWidth - 20 },
-            text: ''
-        });
-        detailContainer.addChild(detailDesc);
-
-        const detailType = new Text({
-            style: { fill: 0x88_88_88, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize - 6 },
-            text: ''
-        });
-        detailContainer.addChild(detailType);
-
-        const updateDetail = async (itemList: typeof items, index: number) => {
+        const updateDetail = async (itemList: EvidenceItem[], index: number) => {
             if (index < 0 || index >= itemList.length) return;
-            const item = itemList[index];
-
-            detailName.text = item.name;
-            detailDesc.text = item.description;
-            detailType.text = item.type === 'evidence' ? '[ Evidence ]' : '[ Profile ]';
-
-            if (item.imageUrl) {
-                try {
-                    const texture = await this.loadAsset<import('pixi.js').Texture>(item.imageUrl);
-                    detailSprite.texture = texture;
-                    detailSprite.visible = true;
-                    const maxImgW = detailWidth * 0.6;
-                    const maxImgH = (h - 170) * 0.4;
-                    const scale = Math.min(maxImgW / texture.width, maxImgH / texture.height, 1);
-                    detailSprite.scale.set(scale);
-                    const imgBottom = 10 + texture.height * scale + 15;
-                    detailType.position.set(0, imgBottom);
-                    detailName.position.set(0, imgBottom + 22);
-                    detailDesc.position.set(0, imgBottom + 50);
-                } catch {
-                    detailSprite.visible = false;
-                    detailType.position.set(0, 10);
-                    detailName.position.set(0, 32);
-                    detailDesc.position.set(0, 60);
-                }
-            } else {
-                detailSprite.visible = false;
-                detailType.position.set(0, 10);
-                detailName.position.set(0, 32);
-                detailDesc.position.set(0, 60);
-            }
+            await detailView.update(itemList[index]);
         };
 
         const currentList = activeTab === 'evidence' ? evidence : profiles;
@@ -138,35 +89,21 @@ export class ItemBrowserPanel implements Panel {
         root.addChild(listMask);
         listContainer.mask = listMask;
 
-        if (currentList.length > 0) {
-            const { container: listContent, select: selectList } = createSelectableList(theme, cfg, {
-                initialSelected: 0,
-                items: currentList.map((item) => ({
-                    label: item.name,
-                    onSelect: (index) => void updateDetail(currentList, index),
-                })),
-                width: listWidth - 10,
-            });
-            listContainer.addChild(listContent);
-            void updateDetail(currentList, 0);
+        const listContent = createItemCardList({
+            emptyText: activeTab === 'evidence' ? 'No evidence yet.' : 'No profiles yet.',
+            focus,
+            items: currentList,
+            listWidth,
+            onSelect: (index) => {
+                void updateDetail(currentList, index);
+            },
+            overlayConfig: cfg,
+            theme,
+        });
+        listContainer.addChild(listContent);
 
-            for (const [index] of currentList.entries()) {
-                focus.register({
-                    activate: () => { void updateDetail(currentList, index); },
-                    blur: () => {},
-                    focus: () => {
-                        selectList(index);
-                        void updateDetail(currentList, index);
-                    },
-                });
-            }
-        } else {
-            const emptyTab = new Text({
-                style: { fill: 0x88_88_88, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize - 4 },
-                text: activeTab === 'evidence' ? 'No evidence yet.' : 'No profiles yet.'
-            });
-            emptyTab.position.set(0, 10);
-            listContainer.addChild(emptyTab);
+        if (currentList.length > 0) {
+            void updateDetail(currentList, 0);
         }
 
         // Tabs

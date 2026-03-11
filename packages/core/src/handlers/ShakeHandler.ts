@@ -26,7 +26,7 @@ export class ShakeHandler implements CommandHandler<ShakeCommand> {
 
         const tl = this.animations.timeline() as {
             eventCallback(name: 'onComplete', callback: () => void): void;
-            to(targets: unknown, vars: unknown): void;
+            to(targets: unknown, variables: unknown): void;
         };
 
         tl.to(targets, {

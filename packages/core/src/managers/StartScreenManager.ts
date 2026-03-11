@@ -44,6 +44,13 @@ export class StartScreenManager {
         };
     }
 
+    public destroy(): void {
+        if (this.onKeyStart) {
+            this.deps.events.off('input:start', this.onKeyStart);
+            this.onKeyStart = undefined;
+        }
+    }
+
     /**
      * Shows a "click to start" overlay, waits for user interaction,
      * then jumps to the given scene.
@@ -109,10 +116,4 @@ export class StartScreenManager {
         });
     }
 
-    public destroy(): void {
-        if (this.onKeyStart) {
-            this.deps.events.off('input:start', this.onKeyStart);
-            this.onKeyStart = undefined;
-        }
-    }
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { type FsDirectoryEntry, fsReadDirectory } from '../services/fs';
 import { useProjectStore } from '../store/useProjectStore';
@@ -21,11 +21,17 @@ export function useAssetOptions(kind: AssetKind = 'all') {
     const [assets, setAssets] = useState<AssetOption[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | undefined>();
+    const requestVersionReference = useRef(0);
 
     const reload = useCallback(async () => {
+        const requestVersion = ++requestVersionReference.current;
+
         if (!projectPath) {
-            setAssets([]);
-            setError(undefined);
+            if (requestVersion === requestVersionReference.current) {
+                setAssets([]);
+                setError(undefined);
+                setLoading(false);
+            }
             return;
         }
 
@@ -45,13 +51,19 @@ export function useAssetOptions(kind: AssetKind = 'all') {
                 })
                 .toSorted((a, b) => a.label.localeCompare(b.label));
 
-            setAssets(next);
+            if (requestVersion === requestVersionReference.current) {
+                setAssets(next);
+            }
         } catch (error_) {
-            setAssets([]);
-            const message = error_ instanceof Error ? error_.message : 'Failed to load assets';
-            setError(message);
+            if (requestVersion === requestVersionReference.current) {
+                setAssets([]);
+                const message = error_ instanceof Error ? error_.message : 'Failed to load assets';
+                setError(message);
+            }
         } finally {
-            setLoading(false);
+            if (requestVersion === requestVersionReference.current) {
+                setLoading(false);
+            }
         }
     }, [kind, projectPath]);
 

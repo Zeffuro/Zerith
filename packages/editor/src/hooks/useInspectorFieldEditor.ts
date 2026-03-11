@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { executeInspectorFieldPatchAction } from '../store/actions/inspectorFieldActions';
 import { useEditorStore } from '../store/useEditorStore';
@@ -6,20 +6,19 @@ import { useProjectStore } from '../store/useProjectStore';
 import { useScriptStore } from '../store/useScriptStore';
 
 export function useInspectorFieldEditor(index?: null | number) {
-    const { uiScale, validationErrors } = useEditorStore();
+    const uiScale = useEditorStore((state) => state.uiScale);
+    const validationErrors = useEditorStore((state) => state.validationErrors);
     const editingAllMacrosFile = useProjectStore((s) => s.editingAllMacrosFile);
 
-    const {
-        selectedNodePath,
-    } = useScriptStore();
+    const selectedNodePath = useScriptStore((state) => state.selectedNodePath);
 
-    const applyNodePatch = (patch: Record<string, unknown>) => {
+    const applyNodePatch = useCallback((patch: Record<string, unknown>) => {
         executeInspectorFieldPatchAction({ index, patch });
-    };
+    }, [index]);
 
-    const handleChange = (field: string, value: unknown) => {
+    const handleChange = useCallback((field: string, value: unknown) => {
         applyNodePatch({ [field]: value });
-    };
+    }, [applyNodePatch]);
 
     const labelStyle = useMemo(
         () => ({
@@ -45,7 +44,7 @@ export function useInspectorFieldEditor(index?: null | number) {
         [uiScale]
     );
 
-    const getFieldErrors = (field: string): string[] => {
+    const getFieldErrors = useCallback((field: string): string[] => {
         if (!selectedNodePath) return [];
 
         if (!editingAllMacrosFile) {
@@ -57,12 +56,20 @@ export function useInspectorFieldEditor(index?: null | number) {
         if (typeof macroIndex !== 'number') return [];
         const key = `macro.${macroIndex}.${[...rest, field].join('.')}`;
         return validationErrors[key] ?? [];
-    };
+    }, [editingAllMacrosFile, selectedNodePath, validationErrors]);
 
-    const getFieldInputStyle = (field: string) => {
+    const getFieldInputStyle = useCallback((field: string) => {
         const errs = getFieldErrors(field);
         return errs.length > 0 ? { ...inputStyle, border: '1px solid #ef4444' } : inputStyle;
-    };
+    }, [getFieldErrors, inputStyle]);
 
-    return { applyNodePatch, getFieldErrors, getFieldInputStyle, handleChange, inputStyle, labelStyle, uiScale };
+    return useMemo(() => ({
+        applyNodePatch,
+        getFieldErrors,
+        getFieldInputStyle,
+        handleChange,
+        inputStyle,
+        labelStyle,
+        uiScale,
+    }), [applyNodePatch, getFieldErrors, getFieldInputStyle, handleChange, inputStyle, labelStyle, uiScale]);
 }

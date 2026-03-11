@@ -9,7 +9,7 @@ import { editorTheme as t } from '../../theme/editorTheme';
 import { FieldError } from './FieldError';
 
 export function DialogueInspector({ index, node }: { index?: null | number; node: DialogueCommand, }) {
-    const { getFieldErrors, getFieldInputStyle, handleChange, uiScale } = useInspectorFieldEditor(index);
+    const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle, uiScale } = useInspectorFieldEditor(index);
     const speakerErrors = getFieldErrors('speaker');
     const textErrors = getFieldErrors('text');
     const textareaReference = useRef<HTMLTextAreaElement>(null);
@@ -49,7 +49,6 @@ export function DialogueInspector({ index, node }: { index?: null | number; node
         return <div dangerouslySetInnerHTML={{ __html: html }} />;
     };
 
-    const labelStyle = { color: '#888', display: 'block', fontSize: `${11 * uiScale}px`, marginBottom: `${6 * uiScale}px` };
     const buttonStyle = { alignItems: 'center', background: t.bg.panel, border: `1px solid ${t.border.subtle}`, borderRadius: '3px', color: t.text.normal, cursor: 'pointer', display: 'flex', padding: `${4 * uiScale}px` };
 
     return (

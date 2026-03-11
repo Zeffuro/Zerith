@@ -1,3 +1,5 @@
+import { deepClone } from 'core';
+
 import { useEditorStore } from '../useEditorStore';
 import { useProjectStore } from '../useProjectStore';
 
@@ -27,7 +29,7 @@ export function executeMacroTimelineAction(action: MacroTimelineAction): void {
 
         const next = [...projectState.macroEntries];
         next.splice(selectedMacroIndex + 1, 0, {
-            commands: structuredClone(selectedMacro.commands),
+            commands: deepClone(selectedMacro.commands),
             name: nextName,
         });
 

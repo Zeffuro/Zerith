@@ -6,7 +6,7 @@ import { DockLayoutHost } from './components/layout/DockLayoutHost';
 import { useGlobalEditorShortcuts } from './hooks/useGlobalEditorShortcuts';
 import './App.css';
 import { useLiveScriptValidation } from './hooks/useLiveScriptValidation';
-import { useConsoleStore } from './store/useConsoleStore';
+import { setupConsoleInterceptor } from './services/consoleInterceptor';
 import { useEditorStore } from './store/useEditorStore';
 import { useScriptStore } from './store/useScriptStore';
 import { applyTheme } from './theme/applyTheme';
@@ -20,23 +20,7 @@ function App() {
     useLiveScriptValidation(rootScript);
 
     useEffect(() => {
-        const store = useConsoleStore.getState();
-        const origLog = console.log.bind(console) as (...arguments_: unknown[]) => void;
-        const origInfo = console.info.bind(console) as (...arguments_: unknown[]) => void;
-        const origWarn = console.warn.bind(console) as (...arguments_: unknown[]) => void;
-        const origError = console.error.bind(console) as (...arguments_: unknown[]) => void;
-
-        console.log = (...arguments_: unknown[]) => { origLog(...arguments_); store.addMessage('editor', 'log', ...arguments_); };
-        console.info = (...arguments_: unknown[]) => { origInfo(...arguments_); store.addMessage('editor', 'info', ...arguments_); };
-        console.warn = (...arguments_: unknown[]) => { origWarn(...arguments_); store.addMessage('editor', 'warn', ...arguments_); };
-        console.error = (...arguments_: unknown[]) => { origError(...arguments_); store.addMessage('editor', 'error', ...arguments_); };
-
-        return () => {
-            console.log = origLog;
-            console.info = origInfo;
-            console.warn = origWarn;
-            console.error = origError;
-        };
+        return setupConsoleInterceptor();
     }, []);
 
     useEffect(() => {

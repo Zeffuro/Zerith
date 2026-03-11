@@ -10,8 +10,14 @@ import { applyChromaKey } from '../utils/ChromaKey';
 export class SpritesheetManager {
     private loading: Map<string, Promise<Spritesheet>> = new Map();
     private sheets: Map<string, Spritesheet> = new Map();
+
     public clear() {
         this.sheets.clear();
+    }
+
+    public destroy() {
+        this.clear();
+        this.loading.clear();
     }
 
     public getFrame(atlasUrl: string, frameName: string): Texture | undefined {
@@ -20,19 +26,16 @@ export class SpritesheetManager {
         return sheet.textures[frameName];
     }
 
+
     public getFrameNames(atlasUrl: string): string[] {
         const sheet = this.sheets.get(atlasUrl);
         if (!sheet) return [];
         return Object.keys(sheet.textures);
     }
 
+
     public has(atlasUrl: string): boolean {
         return this.sheets.has(atlasUrl);
-    }
-
-    public destroy() {
-        this.clear();
-        this.loading.clear();
     }
 
     public async load(config: SpritesheetConfig): Promise<Spritesheet> {

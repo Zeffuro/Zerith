@@ -9,10 +9,6 @@ export class AnimationManager implements IAnimationManager {
     private readonly timelines: Set<GsapTimeline> = new Set();
     private readonly tweens: Set<GsapTween> = new Set();
 
-    public destroy() {
-        this.clear();
-    }
-
     public clear(): void {
         for (const timeline of this.timelines) {
             timeline.kill();
@@ -25,12 +21,16 @@ export class AnimationManager implements IAnimationManager {
         this.tweens.clear();
     }
 
+    public destroy() {
+        this.clear();
+    }
+
     public killTweensOf(target: unknown): void {
         gsap.killTweensOf(target as gsap.TweenTarget);
     }
 
-    public set(target: unknown, vars: unknown): void {
-        gsap.set(target as gsap.TweenTarget, vars as gsap.TweenVars);
+    public set(target: unknown, variables: unknown): void {
+        gsap.set(target as gsap.TweenTarget, variables as gsap.TweenVars);
     }
 
     public timeline(): GsapTimeline {
@@ -44,26 +44,18 @@ export class AnimationManager implements IAnimationManager {
         return timeline;
     }
 
-    public to(target: unknown, vars: unknown): Promise<void> {
+    public to(target: unknown, variables: unknown): Promise<void> {
         return new Promise((resolve) => {
-            const inputVars = typeof vars === 'object' && vars !== null
-                ? vars as Record<string, unknown>
+            const inputVariables = typeof variables === 'object' && variables !== null
+                ? variables as Record<string, unknown>
                 : {};
 
-            const originalComplete = inputVars.onComplete as (() => void) | undefined;
-            const originalInterrupt = inputVars.onInterrupt as (() => void) | undefined;
+            const originalComplete = inputVariables.onComplete as (() => void) | undefined;
+            const originalInterrupt = inputVariables.onInterrupt as (() => void) | undefined;
 
-            let tween!: GsapTween;
             let settled = false;
-            const settle = () => {
-                if (settled) return;
-                settled = true;
-                this.tweens.delete(tween);
-                resolve();
-            };
-
-            tween = gsap.to(target as gsap.TweenTarget, {
-                ...inputVars,
+            const tween = gsap.to(target as gsap.TweenTarget, {
+                ...inputVariables,
                 onComplete: () => {
                     originalComplete?.();
                     settle();
@@ -73,6 +65,13 @@ export class AnimationManager implements IAnimationManager {
                     settle();
                 },
             });
+
+            const settle = () => {
+                if (settled) return;
+                settled = true;
+                this.tweens.delete(tween);
+                resolve();
+            };
 
             this.tweens.add(tween);
         });

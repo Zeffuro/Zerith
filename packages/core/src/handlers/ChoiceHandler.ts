@@ -1,22 +1,11 @@
-import { Container, FederatedPointerEvent, Graphics, Text, type TextStyleOptions } from 'pixi.js';
-
 import type { IDisplayManager, IEventBus, IFlowManager, NavigationDirection } from '../interfaces/managers';
 import type { BaseCommand, CommandHandler } from '../types';
+
+import { type ChoiceConfig, ChoiceRenderer } from './choice/ChoiceRenderer';
 
 export interface ChoiceCommand extends BaseCommand {
     options: ChoiceOption[];
     type: 'choice';
-}
-
-export interface ChoiceConfig {
-    backgroundAlpha?: number;
-    backgroundColor?: number;
-    borderColor?: number;
-    borderWidth?: number;
-    selectedBackgroundAlpha?: number;
-    selectedBackgroundColor?: number;
-    selectedBorderColor?: number;
-    textStyle?: Partial<TextStyleOptions>;
 }
 
 export interface ChoiceOption {
@@ -24,16 +13,15 @@ export interface ChoiceOption {
     label: string;
 }
 
+
 export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
     public autoNext = true;
     public type = 'choice' as const;
-    private config: Required<ChoiceConfig>;
-    private readonly display: IDisplayManager;
     private readonly events: IEventBus;
     private readonly flow: IFlowManager;
-    private activeChoiceContainer: Container | undefined;
     private onConfirm: (() => void) | undefined;
     private onNavigate: ((direction: NavigationDirection) => void) | undefined;
+    private readonly renderer: ChoiceRenderer;
 
     constructor(
         display: IDisplayManager,
@@ -41,10 +29,9 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
         flow: IFlowManager,
         config: ChoiceConfig = {},
     ) {
-        this.display = display;
         this.events = events;
         this.flow = flow;
-        this.config = {
+        const resolvedConfig: Required<ChoiceConfig> = {
             backgroundAlpha: 0.8,
             backgroundColor: 0x00_00_00,
             borderColor: 0xFF_FF_FF,
@@ -55,42 +42,29 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
             textStyle: {},
             ...config
         };
+        this.renderer = new ChoiceRenderer(display, resolvedConfig);
+    }
+
+    public destroy(): void {
+        this.reset();
     }
 
     execute = (command: ChoiceCommand): Promise<void> => {
         return new Promise((resolve) => {
             this.reset();
-            const choiceContainer = new Container();
-            this.activeChoiceContainer = choiceContainer;
-
-            const w = this.display.width;
-            const h = this.display.height;
-
-            const buttonWidth = Math.min(600, w * 0.75);
-            const buttonHeight = 60;
-            const spacing = 15;
-            const totalHeight = command.options.length * (buttonHeight + spacing);
-            let currentY = (h / 2) - (totalHeight / 2);
 
             let selectedIndex = 0;
-            const buttons: Container[] = [];
-            const backgrounds: Graphics[] = [];
 
             const updateSelection = (newIndex: number) => {
                 if (newIndex < 0) newIndex = command.options.length - 1;
                 if (newIndex >= command.options.length) newIndex = 0;
-
-                this.styleButton(backgrounds[selectedIndex], buttonWidth, buttonHeight, false);
-                buttons[selectedIndex].alpha = 1;
-
                 selectedIndex = newIndex;
-                this.styleButton(backgrounds[selectedIndex], buttonWidth, buttonHeight, true);
-                buttons[selectedIndex].alpha = 1;
+                this.renderer.setSelected(selectedIndex);
             };
 
             const confirmSelection = () => {
-                cleanup();
-                choiceContainer.destroy({ children: true });
+                this.clearChoiceBindings();
+                this.renderer.destroy();
 
                 const option = command.options[selectedIndex];
                 if (option.commands) {
@@ -102,45 +76,15 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
                 });
             };
 
-            for (const [index, option] of command.options.entries()) {
-                const button = new Container();
-                button.eventMode = 'static';
-                button.cursor = 'pointer';
-
-                const bg = new Graphics();
-                this.styleButton(bg, buttonWidth, buttonHeight, index === 0);
-                backgrounds.push(bg);
-
-                const text = new Text({
-                    style: {
-                        align: 'center',
-                        fill: 0xFF_FF_FF,
-                        fontFamily: 'Arial',
-                        fontSize: 28,
-                        ...this.config.textStyle
-                    },
-                    text: option.label
-                });
-                text.anchor.set(0.5);
-                text.position.set(buttonWidth / 2, buttonHeight / 2);
-
-                button.addChild(bg, text);
-                button.position.set((w / 2) - (buttonWidth / 2), currentY);
-
-                button.on('pointerover', () => {
-                    updateSelection(index);
-                });
-
-                button.on('pointerdown', (event: FederatedPointerEvent) => {
-                    event.stopPropagation();
+            this.renderer.create(
+                command.options,
+                (index) => updateSelection(index),
+                (index) => {
                     selectedIndex = index;
                     confirmSelection();
-                });
-
-                buttons.push(button);
-                choiceContainer.addChild(button);
-                currentY += buttonHeight + spacing;
-            }
+                },
+            );
+            this.renderer.setSelected(selectedIndex);
 
             // Subscribe to InputManager events
             this.onNavigate = (direction: NavigationDirection) => {
@@ -154,28 +98,15 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
 
             this.events.on('input:navigate', this.onNavigate);
             this.events.on('input:confirm', this.onConfirm);
-
-            const cleanup = () => {
-                if (this.onNavigate) {
-                    this.events.off('input:navigate', this.onNavigate);
-                    this.onNavigate = undefined;
-                }
-                if (this.onConfirm) {
-                    this.events.off('input:confirm', this.onConfirm);
-                    this.onConfirm = undefined;
-                }
-                this.activeChoiceContainer = undefined;
-            };
-
-            this.display.getLayer('ui').addChild(choiceContainer);
         });
     };
 
-    public destroy(): void {
-        this.reset();
+    public reset(): void {
+        this.clearChoiceBindings();
+        this.renderer.destroy();
     }
 
-    public reset(): void {
+    private clearChoiceBindings(): void {
         if (this.onNavigate) {
             this.events.off('input:navigate', this.onNavigate);
             this.onNavigate = undefined;
@@ -183,25 +114,6 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
         if (this.onConfirm) {
             this.events.off('input:confirm', this.onConfirm);
             this.onConfirm = undefined;
-        }
-        if (this.activeChoiceContainer && !this.activeChoiceContainer.destroyed) {
-            this.activeChoiceContainer.destroy({ children: true });
-        }
-        this.activeChoiceContainer = undefined;
-    }
-
-    private styleButton(bg: Graphics, w: number, h: number, selected: boolean) {
-        bg.clear();
-        bg.roundRect(0, 0, w, h, 10);
-        bg.fill({
-            alpha: selected ? this.config.selectedBackgroundAlpha : this.config.backgroundAlpha,
-            color: selected ? this.config.selectedBackgroundColor : this.config.backgroundColor
-        });
-        if (this.config.borderWidth > 0) {
-            bg.stroke({
-                color: selected ? this.config.selectedBorderColor : this.config.borderColor,
-                width: this.config.borderWidth
-            });
         }
     }
 }

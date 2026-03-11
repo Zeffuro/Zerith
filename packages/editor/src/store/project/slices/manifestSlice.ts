@@ -36,7 +36,7 @@ export function createProjectManifestSlice(set: ProjectSet, get: ProjectGet): Pr
                         : Promise.resolve<Record<string, Command[]>>({}),
                 ]);
 
-                set({ characters, items, macros, manifest: manifest as ProjectManifestSlice['manifest'], scenes });
+                set({ characters, items, macros, manifest, scenes });
             } catch (error) {
                 console.error('Failed to load manifest:', error);
             }
@@ -70,7 +70,11 @@ async function resolveScenesDisk(
     const resolved: Record<string, Command[]> = {};
     await Promise.all(
         Object.entries(scenes).map(async ([name, value]) => {
-            resolved[name] = await resolveManifestValueFromDisk<Command[]>(value as Command[] | string, projectPath);
+            if (typeof value !== 'string' && !Array.isArray(value)) {
+                resolved[name] = [];
+                return;
+            }
+            resolved[name] = await resolveManifestValueFromDisk<Command[]>(value, projectPath);
         })
     );
     return resolved;

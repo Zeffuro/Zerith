@@ -14,12 +14,12 @@ export interface EngineEventMap {
     'menu:toggle': [];
     'scene:loaded': [string];
     'scene:loading': [string];
-    'script:command_executed': [string];
     'state:loaded': [SaveState];
     'state:persistent_changed': [Record<string, Serializable>];
 }
 
 export interface IEventBus extends IBaseManager {
+    destroy(): void;
     emit<K extends keyof EngineEventMap>(event: K, ...arguments_: EngineEventMap[K]): void;
     off<K extends keyof EngineEventMap>(event: K, listener: (...arguments_: EngineEventMap[K]) => void): void;
     on<K extends keyof EngineEventMap>(event: K, listener: (...arguments_: EngineEventMap[K]) => void): void;

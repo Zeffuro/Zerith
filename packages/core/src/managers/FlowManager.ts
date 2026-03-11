@@ -22,7 +22,7 @@ export class FlowManager implements IFlowManager {
     }
 
     private _lastSavePoint = 0;
-    private readonly events: IEventBus;
+    private destroyed = false;
     private readonly handlers: CommandHandlerRegistry;
     private injectedCommands: BaseCommand[] = [];
     private isExecuting = false;
@@ -33,7 +33,6 @@ export class FlowManager implements IFlowManager {
     private started = false;
 
     constructor(deps: FlowManagerDeps) {
-        this.events = deps.events;
         this.handlers = deps.handlers;
         this.logger = deps.logger;
         this.onSceneNavigation = deps.onSceneNavigation;
@@ -49,6 +48,7 @@ export class FlowManager implements IFlowManager {
     }
 
     public destroy() {
+        this.destroyed = true;
         this.started = false;
         this.destroyHandlers();
         this.reset();
@@ -70,12 +70,13 @@ export class FlowManager implements IFlowManager {
     }
 
     public async playNext() {
-        if (this.isExecuting || !this.started) return;
+        if (this.destroyed || this.isExecuting || !this.started) return;
         this.isExecuting = true;
 
         try {
             while (
                 (this.injectedCommands.length > 0 || this.scenes.currentIndex < this.scenes.scriptLength)
+                && !this.destroyed
                 && this.started
                 && this.isExecuting
             ) {
@@ -88,7 +89,7 @@ export class FlowManager implements IFlowManager {
                 if (!command) continue;
                 await this.runCommand(command);
 
-                if (!this.isExecuting || !this.started) return;
+                if (this.destroyed || !this.isExecuting || !this.started) return;
 
                 if (this.shouldSkipSceneNavigation(command)) {
                     return;
@@ -144,6 +145,7 @@ export class FlowManager implements IFlowManager {
 
 
     public async runCommand(command: BaseCommand) {
+        if (this.destroyed) return;
         const handler = this.getHandler(command.type);
         if (!handler) {
             this.logger.warn(`No handler registered for command type '${command.type}'`);
@@ -152,7 +154,7 @@ export class FlowManager implements IFlowManager {
 
         try {
             await handler.execute(command);
-            this.events.emit('script:command_executed', command.type);
+            if (this.destroyed) return;
         } catch (error) {
             this.logger.error(
                 `Handler '${command.type}' threw during execute: ${String(error)}`
@@ -161,6 +163,7 @@ export class FlowManager implements IFlowManager {
     }
 
     public start() {
+        if (this.destroyed) return;
         this.started = true;
         void this.playNext();
     }

@@ -1,5 +1,4 @@
-import type { CharacterDefinition } from 'core';
-import type { EvidenceItem } from 'core';
+import type { EvidenceItem, ItemManifestEntry } from 'core';
 
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { bootstrapEngine, Engine, type Script } from 'core';
@@ -19,6 +18,7 @@ export function GamePreview({ script }: { script: Script }) {
     const engineReference = useRef<Engine | undefined>(undefined);
     const [isFocused, setIsFocused] = useState(false);
     const isStarted = playTrigger > stopTrigger;
+    const playIntentReference = useRef(isStarted);
     const scriptReference = useRef(script);
     const playFromIndexReference = useRef(playFromIndex);
     const charactersReference = useRef(characters);
@@ -47,6 +47,10 @@ export function GamePreview({ script }: { script: Script }) {
     }, [playFromIndex]);
 
     useEffect(() => {
+        playIntentReference.current = isStarted;
+    }, [isStarted]);
+
+    useEffect(() => {
         charactersReference.current = characters;
         itemsReference.current = items;
         macrosReference.current = macros;
@@ -56,9 +60,9 @@ export function GamePreview({ script }: { script: Script }) {
     useEffect(() => {
         if (!canvasReference.current || !projectPath || !manifest) return;
         let destroyed = false;
-        const bootstrapCharacters = charactersReference.current as Record<string, CharacterDefinition>;
-        const bootstrapItems = itemsReference.current as Record<string, Omit<EvidenceItem, 'id'>>;
-        const bootstrapMacros = macrosReference.current as Record<string, Script>;
+        const bootstrapCharacters = charactersReference.current;
+        const bootstrapItems = toEvidenceDefinitions(itemsReference.current);
+        const bootstrapMacros = macrosReference.current;
         const bootstrapScenes = scenesReference.current;
         void bootstrapEngine({
             assetResolver: (url: string) => {
@@ -79,9 +83,16 @@ export function GamePreview({ script }: { script: Script }) {
             engine.stateManager.setPersistent('projectPath', projectPath);
             engineReference.current = engine;
             engine.setInputEnabled(false);
-            const scenes = engine.scenes;
-            scenes.addScene('preview', scriptReference.current);
-            void scenes.jumpToScene('preview');
+
+            if (playIntentReference.current) {
+                startPreviewPlayback(engine, scriptReference.current, playFromIndexReference.current);
+                containerReference.current?.focus();
+                return;
+            }
+
+            const sceneManager = engine.scenes;
+            sceneManager.addScene('preview', scriptReference.current);
+            void sceneManager.jumpToScene('preview');
         });
         return () => { destroyed = true; engineReference.current?.destroy(); engineReference.current = undefined; };
     }, [projectPath, manifest]);
@@ -89,13 +100,7 @@ export function GamePreview({ script }: { script: Script }) {
     // Play
     useEffect(() => {
         if (engineReference.current && playTrigger > 0) {
-            const startIndex = typeof playFromIndexReference.current === 'number' ? playFromIndexReference.current : 0;
-            engineReference.current.clear();
-            const scenes = engineReference.current.scenes;
-             
-            scenes.addScene('preview', scriptReference.current);
-            void scenes.jumpToScene('preview', startIndex);
-            void engineReference.current.start();
+            startPreviewPlayback(engineReference.current, scriptReference.current, playFromIndexReference.current);
             containerReference.current?.focus();
         }
     }, [playTrigger]);
@@ -103,10 +108,9 @@ export function GamePreview({ script }: { script: Script }) {
     useEffect(() => {
         if (engineReference.current && stopTrigger > 0) {
             engineReference.current.clear();
-            const scenes = engineReference.current.scenes;
-             
-            scenes.addScene('preview', scriptReference.current);
-            void scenes.jumpToScene('preview', 0);
+            const sceneManager = engineReference.current.scenes;
+            sceneManager.addScene('preview', scriptReference.current);
+            void sceneManager.jumpToScene('preview', 0);
             containerReference.current?.blur();
         }
     }, [stopTrigger]);
@@ -139,4 +143,26 @@ export function GamePreview({ script }: { script: Script }) {
             )}
         </div>
     );
+}
+
+function startPreviewPlayback(engine: Engine, script: Script, playFromIndex: number | undefined): void {
+    const startIndex = typeof playFromIndex === 'number' ? playFromIndex : 0;
+    engine.clear();
+    const sceneManager = engine.scenes;
+    sceneManager.addScene('preview', script);
+    void sceneManager.jumpToScene('preview', startIndex);
+    void engine.start();
+}
+
+function toEvidenceDefinitions(
+    items: Record<string, ItemManifestEntry>
+): Record<string, Omit<EvidenceItem, 'id'>> {
+    const next: Record<string, Omit<EvidenceItem, 'id'>> = {};
+    for (const [key, item] of Object.entries(items)) {
+        next[key] = {
+            ...item,
+            type: item.type === 'profile' ? 'profile' : 'evidence',
+        };
+    }
+    return next;
 }

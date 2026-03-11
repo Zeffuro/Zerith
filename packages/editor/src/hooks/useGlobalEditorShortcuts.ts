@@ -14,6 +14,8 @@ export function useGlobalEditorShortcuts() {
 }
 
 async function handleGlobalShortcut(event: KeyboardEvent): Promise<void> {
+    if (event.defaultPrevented || event.isComposing || event.key === 'Process') return;
+
     const module_ = event.ctrlKey || event.metaKey;
     const key = event.key.toLowerCase();
 

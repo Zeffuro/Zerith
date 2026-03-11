@@ -1,3 +1,5 @@
+import { deepClone } from 'core';
+
 import type { EditorNode } from '../../types/EditorNode';
 import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
@@ -39,8 +41,7 @@ export function executeTimelineContextAction(options: ExecuteTimelineContextActi
         case 'copy': {
             const node = scriptState.getNodeAtPath(path);
             if (node !== undefined) {
-                if (typeof structuredClone !== 'function') break;
-                editorState.setClipboardNode(structuredClone(node));
+                editorState.setClipboardNode(deepClone(node));
             }
             break;
         }

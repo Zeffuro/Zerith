@@ -1,3 +1,5 @@
+import { deepClone } from 'core';
+
 import type { MacroEntry, ProjectGet, ProjectMacrosSlice, ProjectSet } from '../types';
 
 export function createProjectMacrosSlice(set: ProjectSet, get: ProjectGet): ProjectMacrosSlice {
@@ -34,7 +36,7 @@ export function createProjectMacrosSlice(set: ProjectSet, get: ProjectGet): Proj
                     let index_ = 2;
                     while (taken.has(copyName)) copyName = `${source.name}_copy_${index_++}`;
 
-                    const clone = structuredClone(source.commands);
+                    const clone = deepClone(source.commands);
 
                     next.splice(sourceIndex + 1, 0, { commands: clone, name: copyName });
                     inserted += 1;

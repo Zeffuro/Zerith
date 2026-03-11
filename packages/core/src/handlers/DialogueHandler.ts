@@ -75,6 +75,10 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         this.typewriter = new TypewriterController();
     }
 
+    public destroy(): void {
+        this.reset();
+    }
+
     execute = async (command: DialogueCommand) => {
         this.activeAbortController?.abort();
         const abortController = new AbortController();
@@ -180,19 +184,17 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         }
     };
 
+
     public getAutoAdvanceDelay(): number | undefined {
         return this.autoAdvanceDelay;
     }
 
-    reset = () => {
+    public reset = () => {
         this.activeAbortController?.abort();
         this.activeAbortController = undefined;
         this.renderer.reset();
     };
 
-    public destroy(): void {
-        this.reset();
-    }
 
     public setAutoAdvanceDelay(delay: number | undefined) {
         this.autoAdvanceDelay = delay;

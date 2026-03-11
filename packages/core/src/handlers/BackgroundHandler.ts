@@ -33,6 +33,7 @@ export class BackgroundHandler implements CommandHandler<BackgroundCommand> {
 
     public destroy() {
         this.events.off('state:loaded', this.handleStateLoaded);
+        this.reset();
     }
 
     execute = async (command: BackgroundCommand) => {
@@ -51,6 +52,12 @@ export class BackgroundHandler implements CommandHandler<BackgroundCommand> {
 
         this.state.system.background = command.assetUrl;
     };
+
+    public reset(): void {
+        this.sprite?.removeFromParent();
+        this.sprite?.destroy();
+        this.sprite = undefined;
+    }
 
     private readonly handleStateLoaded = (...arguments_: unknown[]) => {
         const saveData = arguments_[0] as SaveState;
