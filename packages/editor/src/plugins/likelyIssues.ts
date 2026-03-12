@@ -1,5 +1,7 @@
+import { toRecordOrUndefined } from '../utils/typeGuards';
+
 export function hasLikelyIssue(node: unknown): boolean {
-    const object = asObject(node);
+    const object = toRecordOrUndefined(node);
     if (!object || typeof object.type !== 'string') return true;
 
     switch (object.type) {
@@ -39,6 +41,3 @@ export function hasLikelyIssue(node: unknown): boolean {
     }
 }
 
-function asObject(value: unknown): Record<string, unknown> | undefined {
-    return value && typeof value === 'object' ? (value as Record<string, unknown>) : undefined;
-}

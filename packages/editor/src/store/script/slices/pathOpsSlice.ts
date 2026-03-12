@@ -1,7 +1,7 @@
 import { deepClone } from 'core';
 
 import type { EditorNode } from '../../../types/EditorNode';
-import type { PathOpsProjectBridge } from '../bridges/pathOpsProjectBridge';
+import type { GetPathOpsProjectBridge } from '../bridges/pathOpsProjectBridge';
 import type { ScriptGet, ScriptSet, ScriptState } from '../types';
 
 import {
@@ -38,7 +38,7 @@ const isRootNodePath = (p: ScriptPath) => p.length === 1 && typeof p[0] === 'num
 export const createPathOpsSlice = (
     set: ScriptSet,
     get: ScriptGet,
-    getProjectBridge: () => PathOpsProjectBridge | undefined,
+    getProjectBridge: GetPathOpsProjectBridge,
 ): PathOpsSlice => ({
     addNodeAtPath: (arrayPath, node, index) =>
         set((state) => {

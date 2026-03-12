@@ -4,14 +4,15 @@ import { Gamepad2 } from 'lucide-react';
 
 import type { CommandPlugin, EditorCommandType, PluginInspectorProperties } from '../types';
 
+import { toRecordOrUndefined } from '../../utils/typeGuards';
+
 export type CommandPluginOverrides = Partial<Record<EditorCommandType, Partial<CommandPlugin>>>;
 
 export const FALLBACK_ICON = (size: number) => <Gamepad2 color="#94a3b8" size={size} />;
 
 export const titleCase = (value: string) => value.replaceAll('_', ' ').replaceAll(/\b\w/g, (char) => char.toUpperCase());
 
-export const asRecord = (value: unknown): Record<string, unknown> | undefined =>
-    value && typeof value === 'object' ? (value as Record<string, unknown>) : undefined;
+export const asRecord = toRecordOrUndefined;
 
 export function asInspector<TProperties>(
     component: ComponentType<TProperties>

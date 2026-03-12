@@ -11,6 +11,7 @@ import { useProjectStore } from '../../../store/useProjectStore';
 import { useScriptStore } from '../../../store/useScriptStore';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
+import { isRecord } from '../../../utils/typeGuards';
 
 type ApplyResult = {
     content?: string;
@@ -342,9 +343,6 @@ function helperTextForMode(mode: EditorMode): string {
     return 'No editable file selected.';
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
 
 function languageForMode(mode: EditorMode, path: string | undefined): string {
     if (mode === 'file-text') {

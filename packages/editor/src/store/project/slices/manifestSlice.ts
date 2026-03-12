@@ -3,6 +3,7 @@ import type { CharacterDefinition, Command, GameManifest, ItemManifestEntry } fr
 import type { ProjectGet, ProjectManifestSlice, ProjectSet } from '../types';
 
 import { fsReadTextFile } from '../../../services/fs';
+import { isRecord } from '../../../utils/typeGuards';
 
 export function createProjectManifestSlice(set: ProjectSet, get: ProjectGet): ProjectManifestSlice {
     return {
@@ -48,9 +49,6 @@ export function createProjectManifestSlice(set: ProjectSet, get: ProjectGet): Pr
     };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return Boolean(value) && typeof value === 'object';
-}
 
 async function resolveManifestValueFromDisk<T>(value: string | T, projectPath: string): Promise<T> {
     if (typeof value === 'string') {

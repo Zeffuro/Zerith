@@ -1,6 +1,7 @@
 import { validateScript } from 'core/schemas';
 
 import { executeProjectOpenAction } from '../store/actions/projectOpenActions';
+import { isRecord } from '../utils/typeGuards';
 
 export function applyAssetSelection(assetPath: string) {
     executeProjectOpenAction({ action: 'applyAssetSelection', assetPath });
@@ -21,8 +22,8 @@ export function applyScriptFile(path: string, data: unknown[]) {
 }
 
 export function looksLikeMacrosObject(data: unknown): data is Record<string, unknown> {
-    if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
-    const entries = Object.entries(data as Record<string, unknown>);
+    if (!isRecord(data)) return false;
+    const entries = Object.entries(data);
     if (entries.length === 0) return false;
 
     const macroEntries = entries.filter(([key]) => !key.startsWith('$'));

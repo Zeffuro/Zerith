@@ -4,6 +4,8 @@ import { z } from 'zod';
 import type { EditorNode } from '../../types/EditorNode';
 import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
+import { isRecord } from '../../utils/typeGuards';
+
 
 export function isRootIndexPath(p: ScriptPath): p is [number] {
     return p.length === 1 && typeof p[0] === 'number';
@@ -130,6 +132,3 @@ function getZodObjectSchema(schema: z.ZodTypeAny): undefined | z.ZodObject<z.Zod
     }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return Boolean(value) && typeof value === 'object';
-}

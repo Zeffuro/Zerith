@@ -1,0 +1,100 @@
+import { describe, expect, it } from 'vitest';
+
+import { defaultSettings, extractPersistedSettings } from '../SettingsSchema';
+
+function mergeSettings(value: unknown) {
+    return {
+        ...defaultSettings,
+        ...extractPersistedSettings(value),
+    };
+}
+
+describe('SettingsSchema', () => {
+    it('returns defaults for invalid persisted values', () => {
+        expect(mergeSettings(undefined)).toEqual(defaultSettings);
+        expect(mergeSettings({ autosaveEnabled: 'yes' })).toEqual(defaultSettings);
+        expect(mergeSettings({ autosaveIntervalMs: 0 })).toEqual(defaultSettings);
+        expect(mergeSettings({ autosaveIntervalMs: Number.NaN })).toEqual(defaultSettings);
+        expect(mergeSettings({ isMuted: 'yes' })).toEqual(defaultSettings);
+        expect(mergeSettings({ recentProjects: 'invalid' })).toEqual(defaultSettings);
+        expect(mergeSettings({ themeKey: '' })).toEqual(defaultSettings);
+        expect(mergeSettings({ themeKey: '   ' })).toEqual(defaultSettings);
+        expect(mergeSettings({ uiScale: 0 })).toEqual(defaultSettings);
+        expect(mergeSettings({ uiScale: -1 })).toEqual(defaultSettings);
+        expect(mergeSettings({ uiScale: Number.NaN })).toEqual(defaultSettings);
+        expect(mergeSettings({ windowState: { height: 200, width: 300, x: 0, y: 0 } })).toEqual(defaultSettings);
+    });
+
+    it('accepts autosave settings and normalizes interval values', () => {
+        expect(mergeSettings({ autosaveEnabled: true })).toEqual({ ...defaultSettings, autosaveEnabled: true });
+        expect(mergeSettings({ autosaveIntervalMs: 1250.9 })).toEqual({ ...defaultSettings, autosaveIntervalMs: 5000 });
+        expect(mergeSettings({ autosaveIntervalMs: 9000.9 })).toEqual({ ...defaultSettings, autosaveIntervalMs: 9000 });
+    });
+
+    it('accepts valid theme keys and trims persisted input', () => {
+        expect(mergeSettings({ themeKey: 'classicSoft' })).toEqual({ ...defaultSettings, themeKey: 'classicSoft' });
+        expect(mergeSettings({ themeKey: '  classicSoft  ' })).toEqual({ ...defaultSettings, themeKey: 'classicSoft' });
+    });
+
+    it('accepts valid uiScale values', () => {
+        expect(mergeSettings({ uiScale: 1.25 })).toEqual({ ...defaultSettings, uiScale: 1.25 });
+    });
+
+    it('accepts valid isMuted values', () => {
+        expect(mergeSettings({ isMuted: true })).toEqual({ ...defaultSettings, isMuted: true });
+    });
+
+    it('accepts and sanitizes recentProjects', () => {
+        expect(mergeSettings({
+            recentProjects: [
+                { lastOpened: 3, name: 'A', path: '/a' },
+                { lastOpened: 7, name: 'A Latest', path: '/a' },
+                { lastOpened: 5, name: 'B', path: '/b' },
+                { lastOpened: 'oops', name: 'Bad', path: '/bad' },
+            ],
+        })).toEqual({
+            ...defaultSettings,
+            recentProjects: [
+                { lastOpened: 7, name: 'A Latest', path: '/a' },
+                { lastOpened: 5, name: 'B', path: '/b' },
+            ],
+        });
+    });
+
+    it('caps recentProjects to 12 after sanitization', () => {
+        const input = Array.from({ length: 15 }, (_, index) => ({
+            lastOpened: index,
+            name: `P${index}`,
+            path: `/p${index}`,
+        }));
+
+        const merged = mergeSettings({ recentProjects: input });
+
+        expect(merged.recentProjects).toHaveLength(12);
+        expect(merged.recentProjects[0]).toEqual({ lastOpened: 14, name: 'P14', path: '/p14' });
+    });
+
+    it('accepts valid windowState values', () => {
+        const windowState = { height: 700, maximized: true, width: 1200, x: 10, y: 20 };
+        expect(mergeSettings({ windowState })).toEqual({ ...defaultSettings, windowState });
+    });
+
+    it('extracts only valid persisted settings', () => {
+        expect(extractPersistedSettings({ autosaveEnabled: true })).toEqual({ autosaveEnabled: true });
+        expect(extractPersistedSettings({ autosaveIntervalMs: 4500.5 })).toEqual({ autosaveIntervalMs: 5000 });
+        expect(extractPersistedSettings({ autosaveIntervalMs: -1 })).toEqual({});
+        expect(extractPersistedSettings({ isMuted: true })).toEqual({ isMuted: true });
+        expect(extractPersistedSettings({ isMuted: 'yes' })).toEqual({});
+        expect(extractPersistedSettings({ recentProjects: [{ lastOpened: 1.9, name: 'A', path: '/a' }] }))
+            .toEqual({ recentProjects: [{ lastOpened: 1, name: 'A', path: '/a' }] });
+        expect(extractPersistedSettings({ recentProjects: 'invalid' })).toEqual({});
+        expect(extractPersistedSettings({ themeKey: 'classicSoft' })).toEqual({ themeKey: 'classicSoft' });
+        expect(extractPersistedSettings({ themeKey: '' })).toEqual({});
+        expect(extractPersistedSettings({ uiScale: 1.5 })).toEqual({ uiScale: 1.5 });
+        expect(extractPersistedSettings({ uiScale: 0 })).toEqual({});
+        expect(extractPersistedSettings({ windowState: { height: 700, maximized: false, width: 1200, x: 10, y: 20 } }))
+            .toEqual({ windowState: { height: 700, maximized: false, width: 1200, x: 10, y: 20 } });
+        expect(extractPersistedSettings({ windowState: { height: 200, width: 300, x: 0, y: 0 } })).toEqual({});
+    });
+});
+

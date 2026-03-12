@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "editor",
+        "title": "Zerith Editor",
         "width": 1280,
         "height": 720,
         "dragDropEnabled": false

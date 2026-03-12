@@ -5,6 +5,7 @@ import { deepClone } from 'core';
 import type { EditorNode } from '../../types/EditorNode';
 import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
+import { isRecord } from '../../utils/typeGuards';
 import { useEditorStore } from '../useEditorStore';
 import { useProjectStore } from '../useProjectStore';
 import { useScriptStore } from '../useScriptStore';
@@ -269,9 +270,6 @@ function isPlaybackRunning(editor: ReturnType<typeof useEditorStore.getState>): 
     return editor.playTrigger > editor.stopTrigger;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return !!value && typeof value === 'object';
-}
 
 function moveSelectionByArrow(direction: 'down' | 'up'): boolean {
     const editingAllMacrosFile = useProjectStore.getState().editingAllMacrosFile;

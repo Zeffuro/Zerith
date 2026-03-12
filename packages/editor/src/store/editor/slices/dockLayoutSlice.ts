@@ -1,6 +1,7 @@
 import type { DockLayoutSlice, EditorSet } from '../types';
 
 import { createDefaultDockLayout, DOCK_LAYOUT_VERSION } from '../../../components/layout/dock/defaultDockLayout';
+import { isRecord } from '../../../utils/typeGuards';
 
 export function createDockLayoutSlice(set: EditorSet): DockLayoutSlice {
     return {
@@ -48,7 +49,4 @@ function isLikelyDockLayoutJson(value: unknown): boolean {
     return hasGlobal && hasLayout;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return Boolean(value) && typeof value === 'object';
-}
 

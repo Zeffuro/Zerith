@@ -2,18 +2,16 @@ import type { SpriteCommand } from 'core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { useProjectStore } from '../../store/useProjectStore';
+import { toRecordOrUndefined } from '../../utils/typeGuards';
 import { FieldError } from './FieldError';
-
-const asRecord = (value: unknown): Record<string, unknown> | undefined =>
-    value && typeof value === 'object' ? (value as Record<string, unknown>) : undefined;
 
 export function SpriteInspector({ index, node }: { index?: null | number; node: SpriteCommand, }) {
     const { characters } = useProjectStore();
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle } = useInspectorFieldEditor(index);
 
-    const characterData = node.id ? asRecord(characters[node.id]) : undefined;
-    const poses = asRecord(characterData?.poses);
-    const animations = asRecord(characterData?.animations);
+    const characterData = node.id ? toRecordOrUndefined(characters[node.id]) : undefined;
+    const poses = toRecordOrUndefined(characterData?.poses);
+    const animations = toRecordOrUndefined(characterData?.animations);
     const poseNames = poses ? Object.keys(poses) : [];
     const animationNames = animations ? Object.keys(animations) : [];
 

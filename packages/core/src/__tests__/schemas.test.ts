@@ -2,12 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
 import { SchemaRegistry, validateScript } from '../schemas';
+import { waitCommand } from '../test-utils/scriptBuilders';
 
 describe('schemas', () => {
     it('validateScript keeps valid commands and tolerates invalid ones', () => {
         const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-        const valid = { duration: 10, type: 'wait' };
+        const valid = waitCommand({ duration: 10 });
         const invalid = { type: 'wait' };
         const output = validateScript([valid, invalid]);
 
@@ -38,4 +39,3 @@ describe('schemas', () => {
         expect(parsedUnknown.success).toBe(true);
     });
 });
-

@@ -1,26 +1,16 @@
 import type { EvidenceItem, Serializable } from 'core';
 import type { CSSProperties } from 'react';
+import type { ReactElement } from 'react';
 
 import { Plus, RefreshCcw, Save, Trash2, Zap } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useEditorStore } from '../../store/useEditorStore';
 import { useEngineBridgeStore } from '../../store/useEngineBridgeStore';
 import { useProjectStore } from '../../store/useProjectStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 
-type ObserverSnapshot = {
-    items: EvidenceItem[];
-    state: Record<string, Serializable>;
-};
-
 type DraftValueKind = 'boolean' | 'json' | 'null' | 'number' | 'string';
-
-type StateDraftRow = {
-    id: string;
-    key: string;
-    valueText: string;
-};
 
 type ItemDraftRow = {
     customJson: string;
@@ -30,6 +20,17 @@ type ItemDraftRow = {
     itemId: string;
     name: string;
     type: string;
+};
+
+type ObserverSnapshot = {
+    items: EvidenceItem[];
+    state: Record<string, Serializable>;
+};
+
+type StateDraftRow = {
+    id: string;
+    key: string;
+    valueText: string;
 };
 
 const EMPTY_SNAPSHOT: ObserverSnapshot = {
@@ -54,12 +55,12 @@ export function StateObserverPanel() {
     const snapshotSignatureReference = useRef('');
     const rowCounterReference = useRef(0);
 
-    const nextRowId = () => {
+    const nextRowId = useCallback(() => {
         rowCounterReference.current += 1;
         return `row-${rowCounterReference.current}`;
-    };
+    }, []);
 
-    const applySnapshotToDrafts = (nextSnapshot: ObserverSnapshot) => {
+    const applySnapshotToDrafts = useCallback((nextSnapshot: ObserverSnapshot) => {
         setStateDraftRows(
             Object.entries(nextSnapshot.state).map(([key, value]) => ({
                 id: nextRowId(),
@@ -69,15 +70,10 @@ export function StateObserverPanel() {
         );
 
         setItemDraftRows(nextSnapshot.items.map((item) => toItemDraftRow(item, nextRowId())));
-    };
+    }, [nextRowId]);
 
     useEffect(() => {
         if (!engine) {
-            setSnapshot(EMPTY_SNAPSHOT);
-            setStateDraftRows([]);
-            setItemDraftRows([]);
-            setHasDraftChanges(false);
-            setStatusMessage(undefined);
             hasDraftChangesReference.current = false;
             snapshotSignatureReference.current = '';
             return;
@@ -105,7 +101,7 @@ export function StateObserverPanel() {
         return () => {
             globalThis.clearInterval(interval);
         };
-    }, [engine]);
+    }, [applySnapshotToDrafts, engine]);
 
     if (!engine) {
         return <div style={{ color: t.text.faint, fontStyle: 'italic', padding: `${12 * uiScale}px` }}>Game preview not running.</div>;
@@ -503,15 +499,151 @@ export function StateObserverPanel() {
                 ))}
 
                 <datalist id="state-observer-item-ids">
-                    {Array.from(knownItemIds).map((itemId) => <option key={itemId} value={itemId} />)}
+                    {[...knownItemIds].map((itemId) => <option key={itemId} value={itemId} />)}
                 </datalist>
             </section>
         </div>
     );
 }
 
+function defaultValueForKind(kind: DraftValueKind): string {
+    switch (kind) {
+        case 'boolean': {
+            return 'false';
+        }
+        case 'json': {
+            return '{}';
+        }
+        case 'null': {
+            return 'null';
+        }
+        case 'number': {
+            return '0';
+        }
+        case 'string': {
+            return '""';
+        }
+    }
+}
+
+function detectDraftValueKind(valueText: string): DraftValueKind {
+    const parsed = parseJsonUnknown(valueText);
+    if (parsed === undefined) return 'json';
+    if (parsed === null) return 'null';
+    if (typeof parsed === 'boolean') return 'boolean';
+    if (typeof parsed === 'number') return 'number';
+    if (typeof parsed === 'string') return 'string';
+    return 'json';
+}
+
+function inputStyle(uiScale: number): CSSProperties {
+    return {
+        background: t.bg.input,
+        border: `1px solid ${t.border.input}`,
+        borderRadius: t.radius.sm,
+        color: t.text.primary,
+        fontSize: `${11 * uiScale}px`,
+        minWidth: 0,
+        padding: `${4 * uiScale}px ${6 * uiScale}px`,
+        width: '100%',
+    };
+}
+
+function isSerializable(value: unknown): value is Serializable {
+    if (value === null) return true;
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return true;
+    if (Array.isArray(value)) return value.every((entry) => isSerializable(entry));
+    if (typeof value === 'object') {
+        return Object.values(value as Record<string, unknown>).every((entry) => isSerializable(entry));
+    }
+    return false;
+}
+
+function parseJsonObject(raw: string): Record<string, unknown> | undefined {
+    try {
+        const parsed: unknown = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            return undefined;
+        }
+        return parsed as Record<string, unknown>;
+    } catch {
+        return undefined;
+    }
+}
+
+function parseJsonUnknown(raw: string): unknown {
+    try {
+        return JSON.parse(raw);
+    } catch {
+        return undefined;
+    }
+}
+
+function parseJsonValue(raw: string): Serializable | undefined {
+    try {
+        const parsed: unknown = JSON.parse(raw);
+        return isSerializable(parsed) ? parsed : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+function safeStringValue(valueText: string): string {
+    const parsed = parseJsonUnknown(valueText);
+    return typeof parsed === 'string' ? parsed : '';
+}
+
+function sectionStyle(uiScale: number): CSSProperties {
+    return {
+        border: `1px solid ${t.border.subtle}`,
+        borderRadius: t.radius.md,
+        marginBottom: `${10 * uiScale}px`,
+        padding: `${8 * uiScale}px`,
+    };
+}
+
 function StateValueEditor({ onChange, uiScale, valueText }: { onChange: (next: string) => void; uiScale: number; valueText: string; }) {
     const kind = detectDraftValueKind(valueText);
+    let valueEditor: ReactElement;
+
+    switch (kind) {
+        case 'boolean': {
+            valueEditor = (
+                <select
+                    onChange={(event) => onChange(event.target.value === 'true' ? 'true' : 'false')}
+                    style={inputStyle(uiScale)}
+                    value={valueText === 'true' ? 'true' : 'false'}
+                >
+                    <option value="true">true</option>
+                    <option value="false">false</option>
+                </select>
+            );
+            break;
+        }
+        case 'json': {
+            valueEditor = <textarea onChange={(event) => onChange(event.target.value)} rows={2} style={textareaStyle(uiScale)} value={valueText} />;
+            break;
+        }
+        case 'null': {
+            valueEditor = <div style={{ color: t.text.faint, fontStyle: 'italic', padding: `${4 * uiScale}px 0` }}>null</div>;
+            break;
+        }
+        case 'number': {
+            valueEditor = <input onChange={(event) => onChange(event.target.value)} style={inputStyle(uiScale)} type="number" value={valueText} />;
+            break;
+        }
+        case 'string': {
+            valueEditor = (
+                <input
+                    onChange={(event) => onChange(JSON.stringify(event.target.value))}
+                    style={inputStyle(uiScale)}
+                    type="text"
+                    value={safeStringValue(valueText)}
+                />
+            );
+            break;
+        }
+    }
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: `${4 * uiScale}px` }}>
@@ -530,41 +662,17 @@ function StateValueEditor({ onChange, uiScale, valueText }: { onChange: (next: s
                 </select>
             </div>
 
-            {kind === 'boolean' ? (
-                <select
-                    onChange={(event) => onChange(event.target.value === 'true' ? 'true' : 'false')}
-                    style={inputStyle(uiScale)}
-                    value={valueText === 'true' ? 'true' : 'false'}
-                >
-                    <option value="true">true</option>
-                    <option value="false">false</option>
-                </select>
-            ) : kind === 'number' ? (
-                <input
-                    onChange={(event) => onChange(event.target.value)}
-                    style={inputStyle(uiScale)}
-                    type="number"
-                    value={valueText}
-                />
-            ) : kind === 'string' ? (
-                <input
-                    onChange={(event) => onChange(JSON.stringify(event.target.value))}
-                    style={inputStyle(uiScale)}
-                    type="text"
-                    value={safeStringValue(valueText)}
-                />
-            ) : kind === 'null' ? (
-                <div style={{ color: t.text.faint, fontStyle: 'italic', padding: `${4 * uiScale}px 0` }}>null</div>
-            ) : (
-                <textarea
-                    onChange={(event) => onChange(event.target.value)}
-                    rows={2}
-                    style={textareaStyle(uiScale)}
-                    value={valueText}
-                />
-            )}
+            {valueEditor}
         </div>
     );
+}
+
+function textareaStyle(uiScale: number): CSSProperties {
+    return {
+        ...inputStyle(uiScale),
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+        resize: 'vertical',
+    };
 }
 
 function toItemDraftRow(item: EvidenceItem, rowId: string): ItemDraftRow {
@@ -578,103 +686,4 @@ function toItemDraftRow(item: EvidenceItem, rowId: string): ItemDraftRow {
         name,
         type: type === 'profile' ? 'profile' : 'evidence',
     };
-}
-
-function sectionStyle(uiScale: number): CSSProperties {
-    return {
-        border: `1px solid ${t.border.subtle}`,
-        borderRadius: t.radius.md,
-        marginBottom: `${10 * uiScale}px`,
-        padding: `${8 * uiScale}px`,
-    };
-}
-
-function inputStyle(uiScale: number): CSSProperties {
-    return {
-        background: t.bg.input,
-        border: `1px solid ${t.border.input}`,
-        borderRadius: t.radius.sm,
-        color: t.text.primary,
-        fontSize: `${11 * uiScale}px`,
-        minWidth: 0,
-        padding: `${4 * uiScale}px ${6 * uiScale}px`,
-        width: '100%',
-    };
-}
-
-function textareaStyle(uiScale: number): CSSProperties {
-    return {
-        ...inputStyle(uiScale),
-        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-        resize: 'vertical',
-    };
-}
-
-function parseJsonObject(raw: string): Record<string, unknown> | undefined {
-    try {
-        const parsed: unknown = JSON.parse(raw);
-        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-            return undefined;
-        }
-        return parsed as Record<string, unknown>;
-    } catch {
-        return undefined;
-    }
-}
-
-function parseJsonValue(raw: string): Serializable | undefined {
-    try {
-        const parsed: unknown = JSON.parse(raw);
-        return isSerializable(parsed) ? parsed : undefined;
-    } catch {
-        return undefined;
-    }
-}
-
-function isSerializable(value: unknown): value is Serializable {
-    if (value === null) return true;
-    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return true;
-    if (Array.isArray(value)) return value.every((entry) => isSerializable(entry));
-    if (typeof value === 'object') {
-        return Object.values(value as Record<string, unknown>).every((entry) => isSerializable(entry));
-    }
-    return false;
-}
-
-function detectDraftValueKind(valueText: string): DraftValueKind {
-    const parsed = parseJsonUnknown(valueText);
-    if (parsed === undefined) return 'json';
-    if (parsed === null) return 'null';
-    if (typeof parsed === 'boolean') return 'boolean';
-    if (typeof parsed === 'number') return 'number';
-    if (typeof parsed === 'string') return 'string';
-    return 'json';
-}
-
-function defaultValueForKind(kind: DraftValueKind): string {
-    switch (kind) {
-        case 'boolean':
-            return 'false';
-        case 'null':
-            return 'null';
-        case 'number':
-            return '0';
-        case 'string':
-            return '""';
-        case 'json':
-            return '{}';
-    }
-}
-
-function parseJsonUnknown(raw: string): unknown {
-    try {
-        return JSON.parse(raw);
-    } catch {
-        return undefined;
-    }
-}
-
-function safeStringValue(valueText: string): string {
-    const parsed = parseJsonUnknown(valueText);
-    return typeof parsed === 'string' ? parsed : '';
 }

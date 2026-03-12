@@ -5,7 +5,7 @@ import type {
     GlobalSearchMatch,
     GlobalSearchProjectData,
     GlobalSearchReplacementFile,
-} from '../../services/globalSearch';
+} from '../../services/globalSearch/contracts';
 
 import { fsWriteTextFile } from '../../services/fs';
 import { replaceProjectContent, searchProjectContent } from '../../services/globalSearch';

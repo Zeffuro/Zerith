@@ -7,6 +7,7 @@ import { useScriptStore } from '../../store/useScriptStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { styles } from '../../theme/styleHelpers';
 import { getAtPath } from '../../utils/scriptPathUtilities';
+import { isRecord } from '../../utils/typeGuards';
 import { SchemaFallbackInspector } from './SchemaFallbackInspector';
 
 export function Inspector() {
@@ -94,9 +95,7 @@ export function Inspector() {
 }
 
 function isPluginNode(value: unknown): value is PluginNode {
-    if (!value || typeof value !== 'object') return false;
-    const record = value as Record<string, unknown>;
-    return typeof record.type === 'string';
+    return isRecord(value) && typeof value.type === 'string';
 }
 
 

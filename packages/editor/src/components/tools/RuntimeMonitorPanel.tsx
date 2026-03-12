@@ -30,8 +30,6 @@ type RuntimeSnapshot = {
     };
 };
 
-type TimelineKind = 'engine' | 'input' | 'scene' | 'state';
-
 type TimelineEntry = {
     id: number;
     kind: TimelineKind;
@@ -39,17 +37,19 @@ type TimelineEntry = {
     timestamp: number;
 };
 
+type TimelineKind = 'engine' | 'input' | 'scene' | 'state';
+
 const MAX_TIMELINE_ENTRIES = 120;
 
 export function RuntimeMonitorPanel() {
     const uiScale = useEditorStore((state) => state.uiScale);
     const engine = useEngineBridgeStore((state) => state.engine);
-    const [snapshot, setSnapshot] = useState<RuntimeSnapshot | undefined>(undefined);
+    const [snapshot, setSnapshot] = useState<RuntimeSnapshot | undefined>();
     const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
 
     const signatureReference = useRef('');
     const timelineIdReference = useRef(0);
-    const previousSnapshotReference = useRef<RuntimeSnapshot | undefined>(undefined);
+    const previousSnapshotReference = useRef<RuntimeSnapshot | undefined>(snapshot);
 
     const appendTimeline = (kind: TimelineKind, text: string) => {
         timelineIdReference.current += 1;
@@ -67,8 +67,6 @@ export function RuntimeMonitorPanel() {
 
     useEffect(() => {
         if (!engine) {
-            setSnapshot(undefined);
-            setTimeline([]);
             signatureReference.current = '';
             previousSnapshotReference.current = undefined;
             return;
@@ -252,15 +250,6 @@ export function RuntimeMonitorPanel() {
     );
 }
 
-function InfoRow({ label, value }: { label: string; value: string; }) {
-    return (
-        <div style={{ display: 'grid', gap: 8, gridTemplateColumns: '140px 1fr' }}>
-            <span style={{ color: t.text.muted }}>{label}</span>
-            <span style={{ wordBreak: 'break-word' }}>{value}</span>
-        </div>
-    );
-}
-
 function CodeBlock({ uiScale, value }: { uiScale: number; value: string; }) {
     return (
         <pre
@@ -283,6 +272,22 @@ function CodeBlock({ uiScale, value }: { uiScale: number; value: string; }) {
     );
 }
 
+function InfoRow({ label, value }: { label: string; value: string; }) {
+    return (
+        <div style={{ display: 'grid', gap: 8, gridTemplateColumns: '140px 1fr' }}>
+            <span style={{ color: t.text.muted }}>{label}</span>
+            <span style={{ wordBreak: 'break-word' }}>{value}</span>
+        </div>
+    );
+}
+
+function kindColor(kind: TimelineKind): string {
+    if (kind === 'scene') return '#60a5fa';
+    if (kind === 'input') return '#fbbf24';
+    if (kind === 'state') return '#4ade80';
+    return '#d1d5db';
+}
+
 function sectionStyle(uiScale: number): CSSProperties {
     return {
         border: `1px solid ${t.border.subtle}`,
@@ -292,11 +297,4 @@ function sectionStyle(uiScale: number): CSSProperties {
         gap: `${4 * uiScale}px`,
         padding: `${8 * uiScale}px`,
     };
-}
-
-function kindColor(kind: TimelineKind): string {
-    if (kind === 'scene') return '#60a5fa';
-    if (kind === 'input') return '#fbbf24';
-    if (kind === 'state') return '#4ade80';
-    return '#d1d5db';
 }

@@ -1,53 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-vi.mock('../../plugins/commandPlugins', () => ({
-    getPlugin: () => ({}),
-}));
+import { createGlobalSearchProjectData } from '../../test-utils/projectDataBuilder';
+import '../../test-utils/registerEditorServiceMocks';
+import { replaceProjectContent, searchProjectContent } from '../globalSearch';
 
-vi.mock('../../store/useProjectStore', () => ({
-    useProjectStore: {
-        getState: () => ({
-            characters: {},
-            items: {},
-            macros: {},
-            manifest: {},
-            projectPath: undefined,
-            scenes: {},
-        }),
-    },
-}));
-
-import { type GlobalSearchProjectData, replaceProjectContent, searchProjectContent } from '../globalSearch';
-
-const projectData: GlobalSearchProjectData = {
-    characters: {
-        hero: {
-            displayName: 'Hero',
-            name: 'hero',
-        },
-    },
-    items: {
-        badge: {
-            description: 'hero item',
-            name: 'Hero Badge',
-        },
-    },
-    macros: {
-        greet: [{ speaker: 'Guide', text: 'hello hero', type: 'dialogue' }],
-    },
-    manifest: {
-        characters: 'data/characters.json',
-        items: 'data/items.json',
-        macros: 'data/macros.json',
-        scenes: {
-            intro: 'scripts/intro.json',
-        },
-    },
-    projectPath: '/project',
-    scenes: {
-        intro: [{ speaker: 'Narrator', text: 'hero appears', type: 'dialogue' }],
-    },
-};
+const projectData = createGlobalSearchProjectData();
 
 describe('globalSearch', () => {
     it('searchProjectContent finds matches across scene/macro/character/item sources', () => {
@@ -72,5 +29,60 @@ describe('globalSearch', () => {
         const mergedContent = files.map((file) => file.content).join('\n');
         expect(mergedContent.includes('champion')).toBe(true);
     });
-});
 
+    it('replaceProjectContent supports regex text options', () => {
+        const matches = searchProjectContent('hero', projectData);
+        const files = replaceProjectContent('h[a-z]+', 'alias', matches, projectData, { regex: true });
+
+        expect(files.length).toBeGreaterThan(0);
+        expect(files.some((file) => file.content.includes('alias'))).toBe(true);
+    });
+
+    it('returns no results for invalid regex search queries', () => {
+        const results = searchProjectContent('(', projectData, { regex: true });
+
+        expect(results).toEqual([]);
+    });
+
+    it('returns no replacement files when project path is missing', () => {
+        const matches = searchProjectContent('hero', projectData);
+        const files = replaceProjectContent('hero', 'champion', matches, {
+            ...projectData,
+            projectPath: undefined,
+        });
+
+        expect(files).toEqual([]);
+    });
+
+    it('ignores matches that are not replaceable or have empty value paths', () => {
+        const files = replaceProjectContent(
+            'hero',
+            'champion',
+            [
+                {
+                    filePath: '/project/scripts/intro.json',
+                    kind: 'scene',
+                    label: 'Scene: intro',
+                    matchedValue: 'hero appears',
+                    path: [0, 'text'],
+                    preview: 'hero appears',
+                    replaceable: false,
+                    valuePath: [0, 'text'],
+                },
+                {
+                    filePath: '/project/scripts/intro.json',
+                    kind: 'scene',
+                    label: 'Scene: intro',
+                    matchedValue: 'hero appears',
+                    path: [0, 'text'],
+                    preview: 'hero appears',
+                    replaceable: true,
+                    valuePath: [],
+                },
+            ],
+            projectData,
+        );
+
+        expect(files).toEqual([]);
+    });
+});

@@ -4,6 +4,7 @@ import type { ProjectGet, ProjectIoSlice, ProjectScriptBridge } from '../types';
 
 import { fsReadDirectory, fsReadTextFile, fsWriteTextFile } from '../../../services/fs';
 import { saveAllFiles } from '../../../services/saveAllFiles';
+import { isRecord } from '../../../utils/typeGuards';
 
 export function createProjectIoSlice(get: ProjectGet, scriptBridge: ProjectScriptBridge): ProjectIoSlice {
     return {
@@ -67,7 +68,4 @@ export function createProjectIoSlice(get: ProjectGet, scriptBridge: ProjectScrip
     };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return Boolean(value) && typeof value === 'object';
-}
 
