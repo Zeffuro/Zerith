@@ -13,6 +13,10 @@ export interface FlowManagerDeps {
 }
 
 export class FlowManager implements IFlowManager {
+    public get isPaused(): boolean {
+        return this.paused;
+    }
+
     public get isStarted(): boolean {
         return this.started;
     }
@@ -23,16 +27,20 @@ export class FlowManager implements IFlowManager {
 
     private _lastSavePoint = 0;
     private destroyed = false;
+    private readonly events: IEventBus;
     private readonly handlers: CommandHandlerRegistry;
     private injectedCommands: BaseCommand[] = [];
     private isExecuting = false;
     private readonly logger: Logger;
     private readonly onSceneNavigation?: EngineConfig['onSceneNavigation'];
+    private paused = false;
     private readonly scenes: ISceneManager;
     private skipRequested = false;
     private started = false;
+    private stepRemaining = 0;
 
     constructor(deps: FlowManagerDeps) {
+        this.events = deps.events;
         this.handlers = deps.handlers;
         this.logger = deps.logger;
         this.onSceneNavigation = deps.onSceneNavigation;
@@ -50,6 +58,7 @@ export class FlowManager implements IFlowManager {
     public destroy() {
         this.destroyed = true;
         this.started = false;
+        this.paused = false;
         this.destroyHandlers();
         this.reset();
     }
@@ -69,11 +78,25 @@ export class FlowManager implements IFlowManager {
         this.injectedCommands = [...commands, ...this.injectedCommands];
     }
 
+    public pause() {
+        if (this.destroyed || !this.started) return;
+        this.stepRemaining = 0;
+        this.paused = true;
+        if (!this.isExecuting) {
+            this.emitPaused();
+        }
+    }
+
     public async playNext() {
         if (this.destroyed || this.isExecuting || !this.started) return;
         this.isExecuting = true;
 
         try {
+            if (this.paused) {
+                this.emitPaused();
+                return;
+            }
+
             while (
                 (this.injectedCommands.length > 0 || this.scenes.currentIndex < this.scenes.scriptLength)
                 && !this.destroyed
@@ -87,6 +110,13 @@ export class FlowManager implements IFlowManager {
                     : this.scenes.getCommandAt(this.scenes.currentIndex++);
 
                 if (!command) continue;
+                if (!hasInjected) {
+                    this.events.emit('flow:command', this.scenes.currentSceneName, index);
+                    if (this.paused) {
+                        this.emitPaused();
+                        return;
+                    }
+                }
                 await this.runCommand(command);
 
                 if (this.destroyed || !this.isExecuting || !this.started) return;
@@ -101,6 +131,20 @@ export class FlowManager implements IFlowManager {
                     this.isExecuting = false;
                     return;
                 }
+
+                if (this.stepRemaining > 0) {
+                    this.stepRemaining -= 1;
+                    if (this.stepRemaining === 0) {
+                        this.paused = true;
+                        this.emitPaused();
+                        return;
+                    }
+                }
+
+                if (this.paused) {
+                    this.emitPaused();
+                    return;
+                }
             }
         } catch (error) {
             const index = this.scenes.currentIndex - 1;
@@ -113,6 +157,7 @@ export class FlowManager implements IFlowManager {
             this.isExecuting = false;
         }
     }
+
 
     public registerHandler(handler: RegisteredCommandHandler) {
         this.handlers.set(handler.type, handler);
@@ -133,7 +178,9 @@ export class FlowManager implements IFlowManager {
     public reset() {
         this.injectedCommands = [];
         this.isExecuting = false;
+        this.paused = false;
         this.skipRequested = false;
+        this.stepRemaining = 0;
     }
 
 
@@ -141,6 +188,14 @@ export class FlowManager implements IFlowManager {
         for (const handler of this.handlers.values()) {
             handler.reset?.();
         }
+    }
+
+    public resume() {
+        if (this.destroyed || !this.started || !this.paused) return;
+        this.paused = false;
+        this.stepRemaining = 0;
+        this.events.emit('flow:resumed', this.scenes.currentSceneName, this.scenes.currentIndex);
+        void this.playNext();
     }
 
 
@@ -165,12 +220,31 @@ export class FlowManager implements IFlowManager {
     public start() {
         if (this.destroyed) return;
         this.started = true;
+        this.paused = false;
+        this.stepRemaining = 0;
+        void this.playNext();
+    }
+
+    public step() {
+        if (this.destroyed || !this.started) return;
+
+        if (!this.paused && !this.isExecuting) {
+            this.pause();
+        }
+
+        this.paused = false;
+        this.stepRemaining = 1;
+        this.events.emit('flow:stepped', this.scenes.currentSceneName, this.scenes.currentIndex);
         void this.playNext();
     }
 
     public stop() {
         this.started = false;
         this.reset();
+    }
+
+    private emitPaused() {
+        this.events.emit('flow:paused', this.scenes.currentSceneName, this.scenes.currentIndex);
     }
 
     private shouldSkipSceneNavigation(command: BaseCommand): boolean {

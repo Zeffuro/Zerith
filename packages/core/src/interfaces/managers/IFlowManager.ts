@@ -7,16 +7,20 @@ export interface IFlowManager extends IBaseManager {
     destroyHandlers(): void;
     getHandler(type: BaseCommand['type']): RegisteredCommandHandler | undefined;
     injectCommands(commands: BaseCommand[]): void;
+    readonly isPaused: boolean;
     readonly isStarted: boolean;
     readonly lastSavePoint: number;
+    pause(): void;
     playNext(): Promise<void>;
     registerHandler(handler: RegisteredCommandHandler): void;
     registerHandlers(handlers: RegisteredCommandHandler[]): void;
     requestSkip(): void;
     reset(): void;
     resetHandlers(): void;
+    resume(): void;
     runCommand(command: BaseCommand): Promise<void>;
     start(): void;
+    step(): void;
     stop(): void;
 }
 

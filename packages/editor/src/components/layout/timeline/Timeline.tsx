@@ -26,6 +26,9 @@ import { useTimelineSelection } from './useTimelineSelection';
 
 export function Timeline() {
     const uiScale = useEditorStore((state) => state.uiScale);
+    const activeExecutionPath = useEditorStore((state) => state.activeExecutionPath);
+    const breakpoints = useEditorStore((state) => state.breakpoints);
+    const toggleBreakpoint = useEditorStore((state) => state.toggleBreakpoint);
     const quickCommandTypes = useEditorStore((state) => state.quickCommandTypes);
     const triggerPlayFrom = useEditorStore((state) => state.triggerPlayFrom);
     const validationErrors = useEditorStore((state) => state.validationErrors);
@@ -36,6 +39,7 @@ export function Timeline() {
     const selectedNodePaths = useEditorStore((s) => s.selectedNodePaths);
 
     const editingAllMacrosFile = useProjectStore((s) => s.editingAllMacrosFile);
+    const activeFile = useProjectStore((s) => s.activeFile);
     const setLastScriptView = useWorkbenchStore((s) => s.setLastScriptView);
     const setLastMacrosView = useWorkbenchStore((s) => s.setLastMacrosView);
     const macroEntries = useProjectStore((s) => s.macroEntries);
@@ -158,6 +162,19 @@ export function Timeline() {
         if (editingAllMacrosFile) setLastMacrosView('timeline');
         else setLastScriptView('timeline');
     }, [editingAllMacrosFile, setLastMacrosView, setLastScriptView]);
+
+    useEffect(() => {
+        const firstSelectedPath = selectedNodePaths[0];
+        if (!firstSelectedPath) return;
+
+        const key = firstSelectedPath.join('.');
+        const root = timelineRootReference.current;
+        if (!root) return;
+
+        const nodes = root.querySelectorAll<HTMLElement>('[data-node-path]');
+        const target = [...nodes].find((node) => node.dataset.nodePath === key);
+        target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, [selectedNodePaths]);
 
     useEffect(() => {
         if (!contextMenu) return;
@@ -289,15 +306,24 @@ export function Timeline() {
             : Object.keys(validationErrors).some((k) => k === nodePrefix || k.startsWith(nodePrefix + '.'));
 
         const dragDisabled = isSearching || typeFilter !== 'all';
+        const hasBreakpoint = Boolean(
+            activeFile
+            && nodePath.length === 1
+            && typeof nodePath[0] === 'number'
+            && breakpoints[activeFile]?.includes(nodePath[0])
+        );
+        const isActiveExecution = samePath(nodePath, activeExecutionPath ?? []);
 
         return (
             <TimelineNode
                 depth={depth}
                 dragDisabled={dragDisabled}
                 dropIndicator={dropIndicator}
+                hasBreakpoint={hasBreakpoint}
                 hasLikelyIssue={!editingAllMacrosFile && hasLikelyIssue(node)}
                 hasValidationError={hasValidationError}
                 indexInParent={indexInParent}
+                isActiveExecution={isActiveExecution}
                 isCollapsed={isSearching ? false : collapsed[pathKey(nodePath)]}
                 key={nodePrefix}
                 node={node}
@@ -310,6 +336,10 @@ export function Timeline() {
                 onDragStart={handleNodeDragStart}
                 onDrop={handleNodeDrop}
                 onPlayFrom={triggerPlayFrom}
+                onToggleBreakpoint={(index: number) => {
+                    if (!activeFile) return;
+                    toggleBreakpoint(activeFile, index);
+                }}
                 onToggleCollapse={toggleCollapse}
                 parentArrayPath={parentArrayPath}
                 renderChild={renderNode}
@@ -467,4 +497,13 @@ function macroNode(name: string, commands: PluginNode[]) {
 function pathKey(path: ScriptPath) {
     return path.join('.');
 }
+
+function samePath(a: ScriptPath, b: ScriptPath): boolean {
+    if (a.length !== b.length) return false;
+    for (const [index, value] of a.entries()) {
+        if (value !== b[index]) return false;
+    }
+    return true;
+}
+
 

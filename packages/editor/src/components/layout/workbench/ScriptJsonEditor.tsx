@@ -50,7 +50,12 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
         if (!activeTab) return 'readonly';
         if (activeTab.kind === 'script') return 'script';
         if (activeTab.kind === 'macros') return 'macros';
-        if (activeTab.kind === 'manifest' || activeTab.kind === 'json') return 'file-json';
+        if (
+            activeTab.kind === 'characters'
+            || activeTab.kind === 'items'
+            || activeTab.kind === 'manifest'
+            || activeTab.kind === 'json'
+        ) return 'file-json';
         if (activeTab.kind === 'text') return 'file-text';
         return 'readonly';
     }, [activeTab]);

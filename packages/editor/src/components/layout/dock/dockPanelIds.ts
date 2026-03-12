@@ -3,6 +3,7 @@ export const DOCK_PANELS = {
     console: 'console',
     editor: 'editor',
     explorer: 'explorer',
+    globalSearch: 'global_search',
     inspector: 'inspector',
     preview: 'preview',
     runtimeMonitor: 'runtime_monitor',

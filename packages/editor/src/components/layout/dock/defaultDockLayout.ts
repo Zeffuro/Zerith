@@ -1,6 +1,6 @@
 import { deepClone } from 'core';
 
-export const DOCK_LAYOUT_VERSION = 2 as const;
+export const DOCK_LAYOUT_VERSION = 3 as const;
 
 export const DEFAULT_DOCK_LAYOUT = {
     global: { splitterSize: 4, tabEnableClose: false },
@@ -48,7 +48,8 @@ export const DEFAULT_DOCK_LAYOUT = {
                     },
                     {
                         children:[
-                            { component: 'console', id: 'console', name: 'Console', type: 'tab' }
+                            { component: 'console', id: 'console', name: 'Console', type: 'tab' },
+                            { component: 'global_search', id: 'global_search', name: 'Search', type: 'tab' }
                         ],
                         type: 'tabset',
                         weight: 25,

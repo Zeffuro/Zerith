@@ -1,4 +1,5 @@
 {
+  "$schema": "zerith/characters",
   "judge": {
     "displayName": "The Judge",
     "nameColor": "#ffffff"

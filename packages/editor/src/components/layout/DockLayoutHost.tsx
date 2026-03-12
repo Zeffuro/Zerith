@@ -5,11 +5,13 @@ import { Actions, Layout, Model, TabNode } from 'flexlayout-react';
 import { Component, lazy, Suspense, useEffect, useRef, useState } from 'react';
 import 'flexlayout-react/style/dark.css';
 
+import { useDismissiblePopup } from '../../hooks/useDismissiblePopup';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useScriptStore } from '../../store/useScriptStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { Inspector } from '../inspector/Inspector';
 import { ConsolePanel } from '../tools/ConsolePanel';
+import { GlobalSearchContent, GlobalSearchPanel } from '../tools/GlobalSearchPanel';
 import { RuntimeMonitorPanel } from '../tools/RuntimeMonitorPanel';
 import { StateObserverPanel } from '../tools/StateObserverPanel';
 import { createDefaultDockLayout } from './dock/defaultDockLayout';
@@ -36,6 +38,11 @@ type LayoutErrorBoundaryState = {
     hasError: boolean;
 };
 
+type PopupPosition = {
+    x: number;
+    y: number;
+};
+
 class LayoutErrorBoundary extends Component<LayoutErrorBoundaryProperties, LayoutErrorBoundaryState> {
     public override state: LayoutErrorBoundaryState = { hasError: false };
 
@@ -58,15 +65,22 @@ class LayoutErrorBoundary extends Component<LayoutErrorBoundaryProperties, Layou
 
 
 export function DockLayoutHost() {
+    const closeGlobalSearchPopup = useEditorStore((s) => s.closeGlobalSearchPopup);
     const dockLayoutJson = useEditorStore((s) => s.dockLayoutJson);
+    const isGlobalSearchPopupOpen = useEditorStore((s) => s.isGlobalSearchPopupOpen);
     const setDockLayoutJson = useEditorStore((s) => s.setDockLayoutJson);
+    const uiScale = useEditorStore((s) => s.uiScale);
     const rootScript = useScriptStore((s) => s.rootScript);
     const activeWorkbenchTabId = useWorkbenchStore((s) => s.activeTabId);
 
     const [initialModelState] = useState(() => createInitialModelState(dockLayoutJson));
+    const [globalSearchPopupPosition, setGlobalSearchPopupPosition] = useState<PopupPosition>();
     const [model, setModel] = useState<Model>(initialModelState.model);
     const [layoutRecoveryKey, setLayoutRecoveryKey] = useState(0);
     const lastJsonReference = useRef<string>(initialModelState.jsonSig);
+    const globalSearchPopupReference = useRef<HTMLDivElement>(null);
+
+    useDismissiblePopup(isGlobalSearchPopupOpen, globalSearchPopupReference, closeGlobalSearchPopup);
 
     useEffect(() => {
         if (!initialModelState.recoveryLayout) return;
@@ -104,6 +118,47 @@ export function DockLayoutHost() {
     }, [dockLayoutJson, setDockLayoutJson]);
 
     const saveTimerReference = useRef<ReturnType<typeof globalThis.setTimeout> | undefined>(undefined);
+
+    const handleGlobalSearchPopupDragStart = (event: React.MouseEvent<HTMLDivElement>) => {
+        if (event.button !== 0) return;
+
+        const popupElement = globalSearchPopupReference.current;
+        const containerElement = popupElement?.parentElement;
+        if (!popupElement || !containerElement) return;
+
+        event.preventDefault();
+
+        const popupBounds = popupElement.getBoundingClientRect();
+        const containerBounds = containerElement.getBoundingClientRect();
+        const pointerOffsetX = event.clientX - popupBounds.left;
+        const pointerOffsetY = event.clientY - popupBounds.top;
+
+        const onPointerMove = (moveEvent: MouseEvent) => {
+            const maxX = Math.max(0, containerBounds.width - popupBounds.width);
+            const maxY = Math.max(0, containerBounds.height - popupBounds.height);
+
+            const nextX = clamp(
+                moveEvent.clientX - containerBounds.left - pointerOffsetX,
+                0,
+                maxX
+            );
+            const nextY = clamp(
+                moveEvent.clientY - containerBounds.top - pointerOffsetY,
+                0,
+                maxY
+            );
+
+            setGlobalSearchPopupPosition({ x: nextX, y: nextY });
+        };
+
+        const onPointerUp = () => {
+            document.removeEventListener('mousemove', onPointerMove);
+            document.removeEventListener('mouseup', onPointerUp);
+        };
+
+        document.addEventListener('mousemove', onPointerMove);
+        document.addEventListener('mouseup', onPointerUp);
+    };
 
     const recoverLayout = () => {
         const fallbackLayout = createDefaultDockLayout() as IJsonModel;
@@ -151,6 +206,9 @@ export function DockLayoutHost() {
             case DOCK_PANELS.explorer: {
                 return <Explorer />;
             }
+            case DOCK_PANELS.globalSearch: {
+                return <GlobalSearchPanel />;
+            }
             case DOCK_PANELS.inspector: {
                 return <Inspector />;
             }
@@ -192,12 +250,42 @@ export function DockLayoutHost() {
                     <LayoutErrorBoundary key={layoutRecoveryKey} onRecover={recoverLayout}>
                         <Layout factory={factory} model={model} onModelChange={onModelChange} />
                     </LayoutErrorBoundary>
+
+                    {isGlobalSearchPopupOpen && (
+                        <div
+                            ref={globalSearchPopupReference}
+                            style={{
+                                height: `min(70%, ${540 * uiScale}px)`,
+                                left: globalSearchPopupPosition ? `${globalSearchPopupPosition.x}px` : '50%',
+                                maxWidth: `min(90%, ${960 * uiScale}px)`,
+                                minHeight: `${260 * uiScale}px`,
+                                minWidth: `min(90%, ${560 * uiScale}px)`,
+                                position: 'absolute',
+                                top: globalSearchPopupPosition
+                                    ? `${globalSearchPopupPosition.y}px`
+                                    : `${18 * uiScale}px`,
+                                transform: globalSearchPopupPosition ? undefined : 'translateX(-50%)',
+                                width: '70%',
+                                zIndex: 5000,
+                            }}
+                        >
+                            <GlobalSearchContent
+                                mode="popup"
+                                onBeginDrag={handleGlobalSearchPopupDragStart}
+                                onRequestClose={closeGlobalSearchPopup}
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
     );
 }
 
+
+function clamp(value: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, value));
+}
 
 function createInitialModelState(layoutJson: unknown): InitialModelState {
     const fallbackLayout = createDefaultDockLayout() as IJsonModel;
@@ -219,6 +307,7 @@ function createInitialModelState(layoutJson: unknown): InitialModelState {
     }
 }
 
+
 function safeJsonSignature(value: unknown): string | undefined {
     try {
         return JSON.stringify(value);
@@ -226,4 +315,5 @@ function safeJsonSignature(value: unknown): string | undefined {
         return undefined;
     }
 }
+
 

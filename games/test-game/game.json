@@ -1,4 +1,5 @@
 {
+  "$schema": "zerith/manifest",
   "title": "My Awesome Test Game",
   "startScene": "intro",
   "characters": "/data/characters.json",

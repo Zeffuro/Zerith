@@ -1,23 +1,40 @@
 import type { SetCommand } from 'core';
 
+import { useMemo } from 'react';
+
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
+import { useProjectStore } from '../../store/useProjectStore';
 import { FieldError } from './FieldError';
 import { getEditableValue } from './utilities';
 
 export function SetInspector({ index, node }: { index?: null | number; node: SetCommand; }) {
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle } = useInspectorFieldEditor(index);
+    const manifestVariables = useProjectStore((state) => state.manifest?.variables);
+    const variableKeys = useMemo(() => {
+        if (!manifestVariables || typeof manifestVariables !== 'object' || Array.isArray(manifestVariables)) {
+            return [];
+        }
+        return Object.keys(manifestVariables);
+    }, [manifestVariables]);
+    const listId = 'manifest-variable-keys';
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
                 <label style={labelStyle}>Variable Key</label>
                 <input
+                    list={listId}
                     onChange={(event) => handleChange('key', event.target.value)}
                     placeholder="e.g. has_met_bob"
                     style={getFieldInputStyle('key')}
                     type="text"
                     value={node.key || ''}
                 />
+                <datalist id={listId}>
+                    {variableKeys.map((key) => (
+                        <option key={key} value={key} />
+                    ))}
+                </datalist>
                 <FieldError errors={getFieldErrors('key')} />
             </div>
 

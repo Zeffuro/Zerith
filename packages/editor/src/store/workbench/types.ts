@@ -4,6 +4,8 @@ export type WorkbenchGet = () => WorkbenchState;
 
 export type WorkbenchResourceKind =
     | 'asset'
+    | 'characters'
+    | 'items'
     | 'json'
     | 'macros'
     | 'manifest'
@@ -45,8 +47,14 @@ export interface WorkbenchTabsSlice {
 }
 
 export interface WorkbenchViewPrefsSlice {
+    lastCharactersView: ScriptViewMode;
+    lastItemsView: ScriptViewMode;
     lastMacrosView: ScriptViewMode;
+    lastManifestView: ScriptViewMode;
     lastScriptView: ScriptViewMode;
+    setLastCharactersView: (view: ScriptViewMode) => void;
+    setLastItemsView: (view: ScriptViewMode) => void;
     setLastMacrosView: (view: ScriptViewMode) => void;
+    setLastManifestView: (view: ScriptViewMode) => void;
     setLastScriptView: (view: ScriptViewMode) => void;
 }

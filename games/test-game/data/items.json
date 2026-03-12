@@ -1,4 +1,5 @@
 {
+  "$schema": "zerith/items",
   "autopsy_report": {
     "name": "Autopsy Report",
     "description": "Time of death: between 4PM and 5PM.",

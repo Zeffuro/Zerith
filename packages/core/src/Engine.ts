@@ -91,6 +91,10 @@ export class Engine {
         return this.scenes.currentSceneName;
     }
 
+    public get isPaused(): boolean {
+        return this.flow.isPaused;
+    }
+
     public get isStarted(): boolean {
         return this.flow.isStarted;
     }
@@ -208,6 +212,10 @@ export class Engine {
         return await this.assets.load<T>(url);
     }
 
+    public pause() {
+        this.flow.pause();
+    }
+
     public async playNext() {
         await this.flow.playNext();
     }
@@ -239,6 +247,10 @@ export class Engine {
         });
     }
 
+    public resume() {
+        this.flow.resume();
+    }
+
     public async runCommand(command: BaseCommand) {
         await this.flow.runCommand(command);
     }
@@ -267,6 +279,14 @@ export class Engine {
 
     public start() {
         this.flow.start();
+    }
+
+    public step() {
+        this.flow.step();
+    }
+
+    public stop() {
+        this.flow.stop();
     }
 
     private _assetResolver: AssetResolver = (url) => url;

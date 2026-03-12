@@ -4,10 +4,19 @@ import { useWorkbenchStore } from '../useWorkbenchStore';
 
 export type ExecuteWorkbenchOpenActionOptions =
     | { action: 'openTab'; tab: WorkbenchTab }
+    | { action: 'setCharactersView'; view: ScriptViewMode }
+    | { action: 'setItemsView'; view: ScriptViewMode }
     | { action: 'setMacrosView'; view: ScriptViewMode }
+    | { action: 'setManifestView'; view: ScriptViewMode }
     | { action: 'setScriptView'; view: ScriptViewMode };
 
-export type WorkbenchOpenAction = 'openTab' | 'setMacrosView' | 'setScriptView';
+export type WorkbenchOpenAction =
+    | 'openTab'
+    | 'setCharactersView'
+    | 'setItemsView'
+    | 'setMacrosView'
+    | 'setManifestView'
+    | 'setScriptView';
 
 export function executeWorkbenchOpenAction(options: ExecuteWorkbenchOpenActionOptions): void {
     const workbench = useWorkbenchStore.getState();
@@ -22,7 +31,32 @@ export function executeWorkbenchOpenAction(options: ExecuteWorkbenchOpenActionOp
         return;
     }
 
-    workbench.setLastMacrosView(options.view);
+    if (options.action === 'setManifestView') {
+        workbench.setLastManifestView(options.view);
+        return;
+    }
+
+    if (options.action === 'setMacrosView') {
+        workbench.setLastMacrosView(options.view);
+        return;
+    }
+
+    if (options.action === 'setItemsView') {
+        workbench.setLastItemsView(options.view);
+        return;
+    }
+
+    workbench.setLastCharactersView(options.view);
+}
+
+export function getPreferredCharactersView(fallback?: ScriptViewMode): ScriptViewMode {
+    const workbench = useWorkbenchStore.getState();
+    return fallback ?? workbench.lastCharactersView;
+}
+
+export function getPreferredItemsView(fallback?: ScriptViewMode): ScriptViewMode {
+    const workbench = useWorkbenchStore.getState();
+    return fallback ?? workbench.lastItemsView;
 }
 
 export function getPreferredMacrosView(fallback?: ScriptViewMode): ScriptViewMode {
@@ -30,8 +64,12 @@ export function getPreferredMacrosView(fallback?: ScriptViewMode): ScriptViewMod
     return fallback ?? workbench.lastMacrosView;
 }
 
+export function getPreferredManifestView(fallback?: ScriptViewMode): ScriptViewMode {
+    const workbench = useWorkbenchStore.getState();
+    return fallback ?? workbench.lastManifestView;
+}
+
 export function getPreferredScriptView(fallback?: ScriptViewMode): ScriptViewMode {
     const workbench = useWorkbenchStore.getState();
     return fallback ?? workbench.lastScriptView;
 }
-

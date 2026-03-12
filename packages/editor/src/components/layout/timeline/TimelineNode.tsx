@@ -12,9 +12,11 @@ type Properties = {
     depth: number;
     dragDisabled: boolean;
     dropIndicator: DropIndicator;
+    hasBreakpoint: boolean;
     hasLikelyIssue: boolean;
     hasValidationError: boolean;
     indexInParent: number;
+    isActiveExecution: boolean;
 
     isCollapsed: boolean;
     node: PluginNode;
@@ -30,6 +32,7 @@ type Properties = {
     onDragStart: (event: React.DragEvent, path: ScriptPath) => void;
     onDrop: (event: React.DragEvent, arrayPath: ScriptPath, index: number) => void;
     onPlayFrom: (index: number) => void;
+    onToggleBreakpoint: (index: number) => void;
     onToggleCollapse: (path: ScriptPath) => void;
     parentArrayPath: ScriptPath;
     renderChild: (
@@ -88,9 +91,11 @@ function TimelineNodeInner({
                                  depth,
                                  dragDisabled,
                                  dropIndicator,
+                                 hasBreakpoint,
                                  hasLikelyIssue,
                                  hasValidationError,
                                  indexInParent,
+                                 isActiveExecution,
                                  isCollapsed,
                                  node,
                                  nodePath,
@@ -102,6 +107,7 @@ function TimelineNodeInner({
                                  onDragStart,
                                  onDrop,
                                  onPlayFrom,
+                                 onToggleBreakpoint,
                                  onToggleCollapse,
                                  parentArrayPath,
                                  renderChild,
@@ -144,8 +150,9 @@ function TimelineNodeInner({
                 }}
                 style={{
                     ...ROW_BASE_STYLE,
-                    backgroundColor: selected ? t.bg.selected : t.bg.panel,
-                    borderLeft: `${3 * uiScale}px solid ${selected ? t.border.accent : 'transparent'}`,
+                    backgroundColor: isActiveExecution ? '#1f2f1f' : (selected ? t.bg.selected : t.bg.panel),
+                    border: isActiveExecution ? `1px solid ${t.accent.green}` : '1px solid transparent',
+                    borderLeft: `${3 * uiScale}px solid ${isActiveExecution ? t.accent.green : (selected ? t.border.accent : 'transparent')}`,
                     borderTop:
                         !dragDisabled &&
                         dropIndicator &&
@@ -153,6 +160,7 @@ function TimelineNodeInner({
                         dropIndicator.index === indexInParent
                             ? `2px solid ${t.border.accent}`
                             : '2px solid transparent',
+                    boxShadow: isActiveExecution ? `0 0 ${6 * uiScale}px rgba(74, 222, 128, 0.45)` : 'none',
                     cursor: dragDisabled ? 'default' : 'grab',
                     marginLeft: `${depth * 16 * uiScale}px`,
                     padding: `${6 * uiScale}px ${10 * uiScale}px`,
@@ -164,6 +172,39 @@ function TimelineNodeInner({
                         gap: `${8 * uiScale}px`,
                     }}
                 >
+                    {depth === 0 ? (
+                        <button
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                const rootIndex = nodePath[0];
+                                if (typeof rootIndex !== 'number') return;
+                                onToggleBreakpoint(rootIndex);
+                            }}
+                            style={{
+                                ...TRANSPARENT_ICON_BUTTON_STYLE,
+                                borderRadius: '50%',
+                                flexShrink: 0,
+                                height: `${10 * uiScale}px`,
+                                padding: 0,
+                                width: `${10 * uiScale}px`,
+                            }}
+                            title={hasBreakpoint ? 'Remove breakpoint' : 'Add breakpoint'}
+                        >
+                            <span
+                                style={{
+                                    background: hasBreakpoint ? t.accent.red : 'transparent',
+                                    border: `1px solid ${hasBreakpoint ? t.accent.red : t.border.subtle}`,
+                                    borderRadius: '50%',
+                                    display: 'inline-block',
+                                    height: `${8 * uiScale}px`,
+                                    width: `${8 * uiScale}px`,
+                                }}
+                            />
+                        </button>
+                    ) : (
+                        <span style={{ width: `${10 * uiScale}px` }} />
+                    )}
+
                     {hasBranches ? (
                         <button
                             onClick={(event) => {
@@ -308,15 +349,20 @@ function TimelineNodeInner({
     );
 }
 
-export const TimelineNode = React.memo(TimelineNodeInner, areTimelineNodePropertiesEqual);
+export const TimelineNode: React.NamedExoticComponent<Properties> = React.memo(
+    TimelineNodeInner,
+    areTimelineNodePropertiesEqual
+);
 
 function areTimelineNodePropertiesEqual(previous: Properties, next: Properties): boolean {
     return previous.depth === next.depth
         && previous.dragDisabled === next.dragDisabled
         && sameDropIndicator(previous.dropIndicator, next.dropIndicator)
+        && previous.hasBreakpoint === next.hasBreakpoint
         && previous.hasLikelyIssue === next.hasLikelyIssue
         && previous.hasValidationError === next.hasValidationError
         && previous.indexInParent === next.indexInParent
+        && previous.isActiveExecution === next.isActiveExecution
         && previous.isCollapsed === next.isCollapsed
         && previous.node === next.node
         && samePath(previous.nodePath, next.nodePath)
@@ -333,6 +379,7 @@ function areTimelineNodePropertiesEqual(previous: Properties, next: Properties):
         && previous.onDragStart === next.onDragStart
         && previous.onDrop === next.onDrop
         && previous.onPlayFrom === next.onPlayFrom
+        && previous.onToggleBreakpoint === next.onToggleBreakpoint
         && previous.onToggleCollapse === next.onToggleCollapse
         && previous.sameArrayPath === next.sameArrayPath;
 }
@@ -409,5 +456,3 @@ function samePath(a: ScriptPath, b: ScriptPath): boolean {
     }
     return true;
 }
-
-

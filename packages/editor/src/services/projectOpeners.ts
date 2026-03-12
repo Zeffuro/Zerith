@@ -22,7 +22,11 @@ export function applyScriptFile(path: string, data: unknown[]) {
 
 export function looksLikeMacrosObject(data: unknown): data is Record<string, unknown> {
     if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
-    const keys = Object.keys(data);
-    if (keys.length === 0) return false;
-    return keys.every((key) => Array.isArray((data as Record<string, unknown>)[key]));
+    const entries = Object.entries(data as Record<string, unknown>);
+    if (entries.length === 0) return false;
+
+    const macroEntries = entries.filter(([key]) => !key.startsWith('$'));
+    if (macroEntries.length === 0) return false;
+
+    return macroEntries.every(([, value]) => Array.isArray(value));
 }

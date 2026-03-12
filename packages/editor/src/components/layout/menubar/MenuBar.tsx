@@ -16,6 +16,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
     const [openMenu, setOpenMenu] = useState<MenuKey | undefined>();
 
     const {
+        openGlobalSearchPopup,
         resetDockLayout,
         setThemeKey,
         setUiScale,
@@ -73,6 +74,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
 
     const viewItems = useMemo<MenuItem[]>(
         () =>[
+            { label: 'Find in Project…', onClick: openGlobalSearchPopup, shortcut: 'Ctrl+Shift+F' },
             { label: 'sep-3', separator: true },
             { label: 'Zoom In', onClick: () => setUiScale(Math.min(1.5, currentScale + 0.1)), shortcut: 'Ctrl+=' },
             { label: 'Zoom Out', onClick: () => setUiScale(Math.max(0.8, currentScale - 0.1)), shortcut: 'Ctrl+-' },
@@ -82,7 +84,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
             { label: 'Classic', onClick: () => setThemeKey('classic') },
             { label: 'Classic Soft', onClick: () => setThemeKey('classicSoft') },
         ],
-        [currentScale, themeKey, setUiScale, setThemeKey]
+        [currentScale, openGlobalSearchPopup, setThemeKey, setUiScale, themeKey]
     );
 
     const runItems = useMemo<MenuItem[]>(
@@ -139,25 +141,28 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
     );
 }
 
+function basename(path: string): string {
+    return path.split(/[\\/]/).pop() || path;
+}
+
 async function openInitialProjectEntry(): Promise<void> {
-    const { manifest, projectPath } = useProjectStore.getState();
+    const { expandToPath, manifest, projectPath } = useProjectStore.getState();
     if (!projectPath) return;
 
     const startSceneName = manifest?.startScene;
     const sceneEntry = startSceneName ? manifest?.scenes?.[startSceneName] : undefined;
     if (typeof sceneEntry === 'string') {
         const scenePath = resolveProjectPath(projectPath, sceneEntry);
+        expandToPath(scenePath);
         await openProjectEntry(scenePath, basename(scenePath));
         return;
     }
 
     const gameManifestPath = `${projectPath}/game.json`;
+    expandToPath(gameManifestPath);
     await openProjectEntry(gameManifestPath, 'game.json');
 }
 
-function basename(path: string): string {
-    return path.split(/[\\/]/).pop() || path;
-}
 
 function resolveProjectPath(projectPath: string, targetPath: string): string {
     if (targetPath.startsWith('/') || targetPath.startsWith('\\')) {

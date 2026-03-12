@@ -7,6 +7,25 @@ export function createProjectSessionSlice(set: ProjectSet, scriptBridge: Project
         activeFile: undefined,
         bumpTreeRevision: () => set((s) => ({ treeRevision: s.treeRevision + 1 })),
         expandedPaths: [],
+        expandToPath: (targetPath: string) =>
+            set((state) => {
+                const normalized = targetPath.replaceAll('\\', '/');
+                const pieces = normalized.split('/').filter((piece) => piece.length > 0);
+
+                if (pieces.length <= 1) return {};
+
+                const nextExpanded = new Set(state.expandedPaths);
+                const prefix = normalized.startsWith('/') ? '/' : '';
+
+                for (let index = 0; index < pieces.length - 1; index += 1) {
+                    const candidate = `${prefix}${pieces.slice(0, index + 1).join('/')}`;
+                    nextExpanded.add(candidate);
+                }
+
+                const expandedPaths = [...nextExpanded];
+                if (expandedPaths.length === state.expandedPaths.length) return {};
+                return { expandedPaths };
+            }),
         files: [],
         projectPath: undefined,
 

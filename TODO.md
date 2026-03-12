@@ -1,12 +1,14 @@
-TODO: Add "kind" metadata to files.
-TODO: Opening a project should go to the entry point file, if it exists OR if we have a way to properly edit/adjust manifests (other than JSON editor), to that screen.
-TODO: Better data between scenes and inspector.
-TODO: Have some kind of state observer.
-TODO: If useful/doable, have breakpoints and a debugger.
-TODO: A spritesheet editor.
-TODO: Support for audiosheets.
-TODO: Possibly automatic generation of spritesheets and audiosheets.
-TODO: Item editor for inventory systems, possibly show items in the item command inspector.
-TODO: "Unsupported JSON files" are not highlighted when opened in the explorer.
-
-TODO: Have a build process that compiles the game. Not sure yet if using Tauri or something else. Would be nice if it "just works". Also on itch.io and mobile.
+TODO: Implement a graphical Spritesheet Editor.  
+TODO: Implement an Audiosheet Editor (if useful).  
+TODO: Automatic generation/packing of spritesheets and audiosheets from raw images/audio.  
+TODO: Have a build process that compiles the game. Not sure yet if using Tauri or something else. Would be nice if it "just works" (desktop, mobile, itch.io).  
+TODO: Add global search/replace across all project files.  
+TODO: Allow to continiously follow script jumps (in other files/jump files).  
+TODO: Being able to reset all breakpoints at once.  
+TODO: Allow hovering over the top menu bar to open other context menus (e.g., File, Edit, View) while one is already open.
+TODO: Add a "Debug" menu with options like "Continue", "Step Over", "Step Into", "Step Out", and "Toggle Breakpoint".
+TODO: Variables autoscan not taking correct type.
+TODO: CTRL-S saving in monaco. (or somehow keep json and visual in sync).
+TODO: Ask to save when closing the editor with unsaved changes.
+TODO: Add a "Save All" button to the toolbar to save all open files at once.
+TODO: Option to autosave?

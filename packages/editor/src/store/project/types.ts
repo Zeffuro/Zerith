@@ -47,6 +47,7 @@ export interface ProjectSessionSlice {
     activeFile: string | undefined;
     bumpTreeRevision: () => void;
     expandedPaths: string[];
+    expandToPath: (targetPath: string) => void;
     files: FsDirectoryEntry[];
     projectPath: string | undefined;
     setActiveFile: (file: string, content: EditorNode[]) => void;

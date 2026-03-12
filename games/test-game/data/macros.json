@@ -1,4 +1,5 @@
 {
+  "$schema": "zerith/macros",
   "court_entry": [
     { "type": "transition", "action": "fade_out", "duration": 400 },
     { "type": "background", "assetUrl": "/assets/bg/courtroom.png" },

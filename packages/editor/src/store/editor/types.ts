@@ -45,15 +45,28 @@ export type PendingDeleteRequest = {
 } | undefined;
 
 export interface PlaybackQuickCommandsSlice {
+    activeExecutionPath: ScriptPath | undefined;
+    breakpoints: Record<string, number[]>;
+    clearActiveExecutionPath: () => void;
+    isPlaybackPaused: boolean;
     moveQuickCommandType: (type: NonMacroEditorCommandType, direction: 'left' | 'right') => void;
+    pauseTrigger: number;
     playFromIndex: number | undefined;
     playTrigger: number;
     quickCommandTypes: NonMacroEditorCommandType[];
+    resumeTrigger: number;
+    setActiveExecutionPath: (path: ScriptPath | undefined) => void;
+    setPlaybackPaused: (paused: boolean) => void;
     setQuickCommandTypes: (types: NonMacroEditorCommandType[]) => void;
+    stepTrigger: number;
     stopTrigger: number;
+    toggleBreakpoint: (filePath: string, index: number) => void;
     toggleQuickCommandType: (type: NonMacroEditorCommandType) => void;
+    triggerPause: () => void;
     triggerPlay: () => void;
     triggerPlayFrom: (index: number) => void;
+    triggerResume: () => void;
+    triggerStep: () => void;
     triggerStop: () => void;
 }
 
@@ -70,11 +83,15 @@ export interface SelectionSlice {
 }
 
 export interface UiPrefsSlice {
+    closeGlobalSearchPopup: () => void;
+    isGlobalSearchPopupOpen: boolean;
     isMuted: boolean;
+    openGlobalSearchPopup: () => void;
     setThemeKey: (key: string) => void;
     setUiScale: (scale: number) => void;
     setWindowState: (state: EditorWindowState) => void;
     themeKey: string;
+    toggleGlobalSearchPopup: () => void;
     toggleMute: () => void;
     uiScale: number;
     windowState: EditorWindowState;

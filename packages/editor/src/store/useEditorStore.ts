@@ -33,6 +33,7 @@ export const useEditorStore = create<EditorState>()(
             },
             name: 'zerith-editor-prefs',
             partialize: (state) => ({
+                breakpoints: state.breakpoints,
                 dockLayoutJson: state.dockLayoutJson,
                 dockLayoutVersion: state.dockLayoutVersion,
                 isMuted: state.isMuted,

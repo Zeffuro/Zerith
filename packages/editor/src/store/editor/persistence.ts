@@ -2,10 +2,11 @@ import type { EditorState, EditorWindowState } from './types';
 
 export type PersistedEditorState = Pick<
     EditorState,
-    'dockLayoutJson' | 'dockLayoutVersion' | 'isMuted' | 'quickCommandTypes' | 'themeKey' | 'uiScale' | 'windowState'
+    'breakpoints' | 'dockLayoutJson' | 'dockLayoutVersion' | 'isMuted' | 'quickCommandTypes' | 'themeKey' | 'uiScale' | 'windowState'
 >;
 
 const persistedEditorStateKeys: (keyof PersistedEditorState)[] = [
+    'breakpoints',
     'dockLayoutJson',
     'dockLayoutVersion',
     'isMuted',

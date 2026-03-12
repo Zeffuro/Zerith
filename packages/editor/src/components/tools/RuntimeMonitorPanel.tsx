@@ -299,3 +299,4 @@ function kindColor(kind: TimelineKind): string {
     if (kind === 'input') return '#fbbf24';
     if (kind === 'state') return '#4ade80';
     return '#d1d5db';
+}

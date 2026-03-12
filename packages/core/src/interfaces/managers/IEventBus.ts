@@ -3,6 +3,10 @@ import type { Serializable } from '../../types';
 import type { IBaseManager } from './IBaseManager';
 
 export interface EngineEventMap {
+    'flow:command': [sceneName: string, index: number];
+    'flow:paused': [sceneName: string, index: number];
+    'flow:resumed': [sceneName: string, index: number];
+    'flow:stepped': [sceneName: string, index: number];
     'input:back': [];
     'input:confirm': [];
     'input:load': [slot: number];

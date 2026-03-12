@@ -6,15 +6,23 @@ import { useEffect, useRef, useState } from 'react';
 
 import { createGamePreviewLogger } from '../services/gamePreviewLoggerBridge';
 import { useConsoleStore } from '../store/useConsoleStore';
-import { useEngineBridgeStore } from '../store/useEngineBridgeStore';
 import { useEditorStore } from '../store/useEditorStore';
+import { useEngineBridgeStore } from '../store/useEngineBridgeStore';
 import { useProjectStore } from '../store/useProjectStore';
 
 export function GamePreview({ script }: { script: Script }) {
     // Manifest data
-    const { characters, items, macros, manifest, projectPath, scenes } = useProjectStore();
+    const { activeFile, characters, items, macros, manifest, projectPath, scenes } = useProjectStore();
     // Triggers
-    const { isMuted, playFromIndex, playTrigger, stopTrigger } = useEditorStore();
+    const {
+        isMuted,
+        pauseTrigger,
+        playFromIndex,
+        playTrigger,
+        resumeTrigger,
+        stepTrigger,
+        stopTrigger,
+    } = useEditorStore();
     const setPreviewLogCaptureEnabled = useConsoleStore((state) => state.setPreviewLogCaptureEnabled);
 
     const canvasReference = useRef<HTMLCanvasElement>(null);
@@ -22,9 +30,11 @@ export function GamePreview({ script }: { script: Script }) {
     const engineReference = useRef<Engine | undefined>(undefined);
     const [isFocused, setIsFocused] = useState(false);
     const isStarted = playTrigger > stopTrigger;
+    const detachFlowListenersReference = useRef<(() => void) | undefined>(undefined);
     const playbackRequestIdReference = useRef(0);
     const scriptReference = useRef(script);
     const projectDataReference = useRef({ characters, items, macros, scenes });
+    const activeFileReference = useRef(activeFile);
 
     const handleFocus = () => {
         setIsFocused(true);
@@ -45,6 +55,10 @@ export function GamePreview({ script }: { script: Script }) {
     useEffect(() => {
         projectDataReference.current = { characters, items, macros, scenes };
     }, [characters, items, macros, scenes]);
+
+    useEffect(() => {
+        activeFileReference.current = activeFile;
+    }, [activeFile]);
 
     useEffect(() => {
         if (!canvasReference.current || !projectPath || !manifest) return;
@@ -78,6 +92,37 @@ export function GamePreview({ script }: { script: Script }) {
             useEngineBridgeStore.getState().setEngine(engine);
             engine.setInputEnabled(false);
 
+            const onFlowCommand = (sceneName: string, index: number) => {
+                if (sceneName !== 'preview') return;
+                const editorState = useEditorStore.getState();
+                editorState.setActiveExecutionPath([index]);
+                const currentFile = activeFileReference.current;
+                if (currentFile && editorState.breakpoints[currentFile]?.includes(index)) {
+                    engine.pause();
+                }
+            };
+            const onFlowPaused = (sceneName: string, index: number) => {
+                if (sceneName === 'preview') {
+                    useEditorStore.getState().setActiveExecutionPath([index]);
+                }
+                useEditorStore.getState().setPlaybackPaused(true);
+            };
+            const onFlowResumed = (sceneName: string, index: number) => {
+                if (sceneName === 'preview') {
+                    useEditorStore.getState().setActiveExecutionPath([index]);
+                }
+                useEditorStore.getState().setPlaybackPaused(false);
+            };
+
+            engine.events.on('flow:command', onFlowCommand);
+            engine.events.on('flow:paused', onFlowPaused);
+            engine.events.on('flow:resumed', onFlowResumed);
+            detachFlowListenersReference.current = () => {
+                engine.events.off('flow:command', onFlowCommand);
+                engine.events.off('flow:paused', onFlowPaused);
+                engine.events.off('flow:resumed', onFlowResumed);
+            };
+
             const playbackState = useEditorStore.getState();
             const shouldAutoplay = playbackState.playTrigger > playbackState.stopTrigger;
             if (shouldAutoplay) {
@@ -94,6 +139,10 @@ export function GamePreview({ script }: { script: Script }) {
         return () => {
             destroyed = true;
             setPreviewLogCaptureEnabled(false);
+            detachFlowListenersReference.current?.();
+            detachFlowListenersReference.current = undefined;
+            useEditorStore.getState().clearActiveExecutionPath();
+            useEditorStore.getState().setPlaybackPaused(false);
             engineReference.current?.destroy();
             engineReference.current = undefined;
             useEngineBridgeStore.getState().setEngine(undefined);
@@ -122,6 +171,24 @@ export function GamePreview({ script }: { script: Script }) {
             containerReference.current?.blur();
         }
     }, [stopTrigger]);
+
+    useEffect(() => {
+        if (engineReference.current && pauseTrigger > 0) {
+            engineReference.current.pause();
+        }
+    }, [pauseTrigger]);
+
+    useEffect(() => {
+        if (engineReference.current && resumeTrigger > 0) {
+            engineReference.current.resume();
+        }
+    }, [resumeTrigger]);
+
+    useEffect(() => {
+        if (engineReference.current && stepTrigger > 0) {
+            engineReference.current.step();
+        }
+    }, [stepTrigger]);
 
     // Mute
     useEffect(() => {

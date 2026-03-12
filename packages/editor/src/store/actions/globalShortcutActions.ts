@@ -18,6 +18,7 @@ export type GlobalShortcutAction =
     | 'redo'
     | 'requestDelete'
     | 'save'
+    | 'toggleGlobalSearch'
     | 'undo';
 
 type MacroClipboardNode = {
@@ -65,6 +66,11 @@ export async function executeGlobalShortcutAction(action: GlobalShortcutAction):
 
         case 'save': {
             await useProjectStore.getState().saveActiveFileFromCurrentScript();
+            return true;
+        }
+
+        case 'toggleGlobalSearch': {
+            useEditorStore.getState().toggleGlobalSearchPopup();
             return true;
         }
 

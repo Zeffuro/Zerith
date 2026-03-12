@@ -1,11 +1,22 @@
 import type { WhileCommand } from 'core';
 
+import { useMemo } from 'react';
+
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
+import { useProjectStore } from '../../store/useProjectStore';
 import { FieldError } from './FieldError';
 import { getEditableValue } from './utilities';
 
 export function WhileInspector({ index, node }: { index?: null | number; node: WhileCommand; }) {
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle, uiScale } = useInspectorFieldEditor(index);
+    const manifestVariables = useProjectStore((state) => state.manifest?.variables);
+    const variableKeys = useMemo(() => {
+        if (!manifestVariables || typeof manifestVariables !== 'object' || Array.isArray(manifestVariables)) {
+            return [];
+        }
+        return Object.keys(manifestVariables);
+    }, [manifestVariables]);
+    const listId = 'manifest-variable-keys';
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: `${12 * uiScale}px` }}>
@@ -25,12 +36,18 @@ export function WhileInspector({ index, node }: { index?: null | number; node: W
             <div>
                 <label style={labelStyle}>Key / ID</label>
                 <input
+                    list={node.source === 'variable' ? listId : undefined}
                     onChange={(event) => handleChange('key', event.target.value)}
                     placeholder="e.g. has_met_bob"
                     style={getFieldInputStyle('key')}
                     type="text"
                     value={node.key || ''}
                 />
+                <datalist id={listId}>
+                    {variableKeys.map((key) => (
+                        <option key={key} value={key} />
+                    ))}
+                </datalist>
                 <FieldError errors={getFieldErrors('key')} />
             </div>
 

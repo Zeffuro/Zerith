@@ -1,5 +1,5 @@
 import { open } from '@tauri-apps/plugin-dialog';
-import { FolderOpen, MonitorDot, Play, Save, Square, Star, Volume2, VolumeX, ZoomIn, ZoomOut } from 'lucide-react';
+import { FolderOpen, MonitorDot, Pause, Play, Save, SkipForward, Square, Star, Volume2, VolumeX, ZoomIn, ZoomOut } from 'lucide-react';
 import { useState } from 'react';
 
 import { openProjectEntry } from '../../services/openProjectEntry';
@@ -12,9 +12,24 @@ import { ThemeMenu } from './menus/ThemeMenu';
 export function Toolbar() {
     const { activeFile, openProjectFromManifest, saveActiveFileFromCurrentScript } = useProjectStore();
     const {
-        isMuted, moveQuickCommandType, quickCommandTypes, resetDockLayout, setThemeKey, setUiScale,
-        themeKey, toggleMute, toggleQuickCommandType,
-        triggerPlay, triggerStop, uiScale
+        isMuted,
+        isPlaybackPaused,
+        moveQuickCommandType,
+        playTrigger,
+        quickCommandTypes,
+        resetDockLayout,
+        setThemeKey,
+        setUiScale,
+        stopTrigger,
+        themeKey,
+        toggleMute,
+        toggleQuickCommandType,
+        triggerPause,
+        triggerPlay,
+        triggerResume,
+        triggerStep,
+        triggerStop,
+        uiScale,
     } = useEditorStore();
 
     const [quickOpen, setQuickOpen] = useState(false);
@@ -44,6 +59,7 @@ export function Toolbar() {
 
     const pad = `${6 * uiScale}px`;
     const iconSize = 16 * uiScale;
+    const isRunning = playTrigger > stopTrigger;
 
     return (
         <div
@@ -96,6 +112,33 @@ export function Toolbar() {
                 <button className="toolbar-btn" onClick={toggleMute} style={{ padding: pad }} title={isMuted ? 'Unmute Audio' : 'Mute Audio'}>
                     {isMuted ? <VolumeX color={t.accent.red} size={iconSize} /> : <Volume2 size={iconSize} />}
                 </button>
+                <button
+                    className="toolbar-btn"
+                    disabled={!isRunning || isPlaybackPaused}
+                    onClick={triggerPause}
+                    style={{ padding: pad }}
+                    title="Pause Preview"
+                >
+                    <Pause size={iconSize} />
+                </button>
+                <button
+                    className="toolbar-btn"
+                    disabled={!isRunning || !isPlaybackPaused}
+                    onClick={triggerResume}
+                    style={{ padding: pad }}
+                    title="Resume Preview"
+                >
+                    <Play size={iconSize} />
+                </button>
+                <button
+                    className="toolbar-btn"
+                    disabled={!isRunning || !isPlaybackPaused}
+                    onClick={triggerStep}
+                    style={{ padding: pad }}
+                    title="Step Over"
+                >
+                    <SkipForward size={iconSize} />
+                </button>
                 <button className="toolbar-btn danger" onClick={triggerStop} style={{ padding: pad }} title="Stop Preview">
                     <Square fill="currentColor" size={iconSize} />
                 </button>
@@ -128,25 +171,28 @@ export function Toolbar() {
     );
 }
 
+function basename(path: string): string {
+    return path.split(/[\\/]/).pop() || path;
+}
+
 async function openInitialProjectEntry(): Promise<void> {
-    const { manifest, projectPath } = useProjectStore.getState();
+    const { expandToPath, manifest, projectPath } = useProjectStore.getState();
     if (!projectPath) return;
 
     const startSceneName = manifest?.startScene;
     const sceneEntry = startSceneName ? manifest?.scenes?.[startSceneName] : undefined;
     if (typeof sceneEntry === 'string') {
         const scenePath = resolveProjectPath(projectPath, sceneEntry);
+        expandToPath(scenePath);
         await openProjectEntry(scenePath, basename(scenePath));
         return;
     }
 
     const gameManifestPath = `${projectPath}/game.json`;
+    expandToPath(gameManifestPath);
     await openProjectEntry(gameManifestPath, 'game.json');
 }
 
-function basename(path: string): string {
-    return path.split(/[\\/]/).pop() || path;
-}
 
 function resolveProjectPath(projectPath: string, targetPath: string): string {
     if (targetPath.startsWith('/') || targetPath.startsWith('\\')) {

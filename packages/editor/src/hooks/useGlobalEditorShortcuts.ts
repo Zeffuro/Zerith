@@ -25,6 +25,12 @@ async function handleGlobalShortcut(event: KeyboardEvent): Promise<void> {
         return;
     }
 
+    if (module_ && event.shiftKey && key === 'f') {
+        event.preventDefault();
+        await executeGlobalShortcutAction('toggleGlobalSearch');
+        return;
+    }
+
     if (isTypingTarget(event.target)) return;
 
     if (module_ && key === 'z' && !event.shiftKey) {
