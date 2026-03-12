@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 
 import { BuiltInCommandTypes } from 'core';
-import { CommandSchemaRegistry } from 'core/schemas';
+import { SchemaRegistry } from 'core/schemas';
 
 import type {
     CommandPlugin,
@@ -32,7 +32,7 @@ function isEditorCommandType(type: string): type is EditorCommandType {
 }
 
 export const COMMAND_TYPES: EditorCommandType[] = [...new Set([
-    ...Object.keys(CommandSchemaRegistry),
+    ...SchemaRegistry.getTypes(),
     'macro_header',
 ])].filter((type) => isEditorCommandType(type));
 

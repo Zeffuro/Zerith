@@ -1,32 +1,33 @@
-import { Wand2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { fsWriteTextFile } from '../../../services/fs';
 import { useProjectStore } from '../../../store/useProjectStore';
+import { useReferenceStore } from '../../../store/useReferenceStore';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
+import { DOCK_PANELS } from '../dock/dockPanelIds';
 import { Field, isRecord, sharedStyles } from './EditorSharedUI';
 
 type ActiveTab = ReturnType<typeof useWorkbenchStore.getState>['tabs'][number] | undefined;
-type SettingsSection = 'general' | 'paths' | 'scenes' | 'variables';
-type VariableType = 'boolean' | 'number' | 'string';
-type VariableValue = boolean | number | string;
 
 type ParsedManifestTab = {
     error?: string;
     manifest: Record<string, unknown>;
 };
 
+type SettingsSection = 'general' | 'paths' | 'scenes' | 'variables';
+
 const SECTION_LABELS: Record<SettingsSection, string> = {
     general: 'General',
     paths: 'Paths',
     scenes: 'Scenes',
-    variables: 'Variables',
+    variables: 'Discovered Variables',
 };
 
 export function ManifestEditor({ uiScale }: { uiScale: number }) {
     const activeTab = useWorkbenchStore((state) => state.activeTab());
     const updateTabContent = useWorkbenchStore((state) => state.updateTabContent);
+    const clearFileDirty = useProjectStore((state) => state.clearFileDirty);
 
     const [activeSection, setActiveSection] = useState<SettingsSection>('general');
     const [runtimeError, setRuntimeError] = useState<string>();
@@ -34,24 +35,25 @@ export function ManifestEditor({ uiScale }: { uiScale: number }) {
 
     const [newSceneKey, setNewSceneKey] = useState('');
     const[newScenePath, setNewScenePath] = useState('');
-    const [newVariableKey, setNewVariableKey] = useState('');
-    const[newVariableType, setNewVariableType] = useState<VariableType>('string');
-    const [newVariableValue, setNewVariableValue] = useState('');
+    const discoveredVariables = useReferenceStore((state) => state.result.variables);
 
     const parsedTab = useMemo(() => parseActiveTab(activeTab), [activeTab]);
     const tabId = activeTab?.id;
     const manifest = parsedTab.manifest;
 
     const sceneEntries = useMemo(() => getSceneEntries(manifest), [manifest]);
-    const variableEntries = useMemo(() => getVariableEntries(manifest), [manifest]);
+    const discoveredVariableEntries = useMemo(
+        () => Object.entries(discoveredVariables).toSorted(([left], [right]) => left.localeCompare(right)),
+        [discoveredVariables],
+    );
 
     const updateManifest = (updater: (current: Record<string, unknown>) => Record<string, unknown>) => {
         if (!tabId || !activeTab || activeTab.kind !== 'manifest') return;
         const current = parsedTab.manifest;
-        const nextManifest = updater(current);
-        if (typeof nextManifest.$schema !== 'string') {
-            nextManifest.$schema = 'zerith/manifest';
-        }
+        const nextManifestSource = updater(current);
+        const nextManifest = typeof nextManifestSource.$schema === 'string'
+            ? nextManifestSource
+            : { ...nextManifestSource, $schema: 'zerith/manifest' };
         const nextText = JSON.stringify(nextManifest, undefined, 2);
         updateTabContent(tabId, nextText);
         setRuntimeError(undefined);
@@ -69,10 +71,10 @@ export function ManifestEditor({ uiScale }: { uiScale: number }) {
     const setSceneEntry = (sceneKey: string, nextKey: string, nextPath: string) => {
         updateManifest((current) => {
             const next = { ...current };
-            const scenes = { ...readRecord(current.scenes) };
-            delete scenes[sceneKey];
-            scenes[nextKey] = nextPath;
-            next.scenes = scenes;
+            const scenes = readRecord(current.scenes);
+            const { [sceneKey]: _removed, ...rest } = scenes;
+            void _removed;
+            next.scenes = { ...rest, [nextKey]: nextPath };
             return next;
         });
     };
@@ -80,9 +82,10 @@ export function ManifestEditor({ uiScale }: { uiScale: number }) {
     const removeScene = (sceneKey: string) => {
         updateManifest((current) => {
             const next = { ...current };
-            const scenes = { ...readRecord(current.scenes) };
-            delete scenes[sceneKey];
-            next.scenes = scenes;
+            const scenes = readRecord(current.scenes);
+            const { [sceneKey]: _removed, ...rest } = scenes;
+            void _removed;
+            next.scenes = rest;
             return next;
         });
     };
@@ -91,119 +94,12 @@ export function ManifestEditor({ uiScale }: { uiScale: number }) {
         const key = newSceneKey.trim();
         const path = newScenePath.trim();
         if (!key || !path) return;
-        updateManifest((current) => {
-            const next = { ...current };
-            const scenes = { ...readRecord(current.scenes) };
-            scenes[key] = path;
-            next.scenes = scenes;
-            return next;
-        });
+        updateManifest((current) => ({
+            ...current,
+            scenes: { ...readRecord(current.scenes), [key]: path },
+        }));
         setNewSceneKey('');
         setNewScenePath('');
-    };
-
-    const renameVariable = (oldKey: string, nextKey: string) => {
-        updateManifest((current) => {
-            const next = { ...current };
-            const variables = { ...readRecord(current.variables) };
-            const value = variables[oldKey];
-            delete variables[oldKey];
-            variables[nextKey] = toVariableValue(value);
-            next.variables = variables;
-            return next;
-        });
-    };
-
-    const updateVariableValue = (key: string, value: VariableValue) => {
-        updateManifest((current) => {
-            const next = { ...current };
-            const variables = { ...readRecord(current.variables) };
-            variables[key] = value;
-            next.variables = variables;
-            return next;
-        });
-    };
-
-    const removeVariable = (key: string) => {
-        updateManifest((current) => {
-            const next = { ...current };
-            const variables = { ...readRecord(current.variables) };
-            delete variables[key];
-            next.variables = variables;
-            return next;
-        });
-    };
-
-    const addVariable = () => {
-        const key = newVariableKey.trim();
-        if (!key) return;
-        updateManifest((current) => {
-            const next = { ...current };
-            const variables = { ...readRecord(current.variables) };
-            variables[key] = coerceValueByType(newVariableValue, newVariableType);
-            next.variables = variables;
-            return next;
-        });
-        setNewVariableKey('');
-        setNewVariableType('string');
-        setNewVariableValue('');
-    };
-
-    const scanScriptsForVariables = () => {
-        const foundKeys = new Set<string>();
-
-        const walk = (nodes: unknown[]) => {
-            if (!Array.isArray(nodes)) return;
-            for (const node of nodes) {
-                if (!node || typeof node !== 'object') continue;
-                const rec = node as Record<string, unknown>;
-
-                if (rec.type === 'set' && typeof rec.key === 'string') foundKeys.add(rec.key);
-                if (rec.type === 'if' && typeof rec.key === 'string' && rec.source !== 'items') foundKeys.add(rec.key);
-                if (rec.type === 'while' && typeof rec.key === 'string' && rec.source !== 'items') foundKeys.add(rec.key);
-                if (rec.type === 'for' && typeof rec.iterator === 'string') foundKeys.add(rec.iterator);
-
-                if (Array.isArray(rec.body)) walk(rec.body);
-                if (Array.isArray(rec.onTrue)) walk(rec.onTrue);
-                if (Array.isArray(rec.onFalse)) walk(rec.onFalse);
-                if (Array.isArray(rec.commands)) walk(rec.commands);
-                if (Array.isArray(rec.options)) {
-                    for (const opt of rec.options) {
-                        if (opt && typeof opt === 'object' && Array.isArray((opt as Record<string, unknown>).commands)) {
-                            walk((opt as Record<string, unknown>).commands as unknown[]);
-                        }
-                    }
-                }
-            }
-        };
-
-        const { macros, scenes } = useProjectStore.getState();
-        for (const script of Object.values(scenes)) walk(script);
-        for (const script of Object.values(macros)) walk(script);
-
-        if (foundKeys.size === 0) {
-            setStatus('No variables found in any scripts.');
-            return;
-        }
-
-        updateManifest((current) => {
-            const next = { ...current };
-            const variables = { ...readRecord(current.variables) };
-            let added = 0;
-            for (const key of foundKeys) {
-                if (!(key in variables)) {
-                    variables[key] = '';
-                    added++;
-                }
-            }
-            if (added > 0) {
-                next.variables = variables;
-                setStatus(`Scanned scripts: auto-registered ${added} new variables.`);
-            } else {
-                setStatus('Scanned scripts: all variables are already registered.');
-            }
-            return next;
-        });
     };
 
     const apply = async () => {
@@ -211,6 +107,8 @@ export function ManifestEditor({ uiScale }: { uiScale: number }) {
         try {
             const nextText = activeTab.textContent ?? '{}';
             await fsWriteTextFile(activeTab.path, nextText);
+            updateTabContent(activeTab.id, nextText, { markDirty: false });
+            clearFileDirty(activeTab.path);
             setStatus('Saved project settings.');
             setRuntimeError(undefined);
         } catch (caughtError: unknown) {
@@ -297,62 +195,39 @@ export function ManifestEditor({ uiScale }: { uiScale: number }) {
 
                     {activeSection === 'variables' && (
                         <div style={{ display: 'grid', gap: `${10 * uiScale}px` }}>
-                            <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: t.text.muted }}>Global Game Variables</span>
-                                <button onClick={scanScriptsForVariables} style={{ ...sharedStyles.secondaryButton(uiScale), alignItems: 'center', display: 'flex', gap: '6px' }} title="Scan scripts and automatically register any missing variables">
-                                    <Wand2 size={14 * uiScale} /> Auto-Scan Scripts
-                                </button>
+                            <div style={{ color: t.text.muted }}>
+                                Variables are now discovered automatically from scripts and macros.
                             </div>
 
-                            {variableEntries.length === 0 && <span style={{ color: t.text.muted }}>No global variables configured yet.</span>}
-                            {variableEntries.map(([key, value]) => {
-                                const type = inferVariableType(value);
-                                return (
-                                    <div key={key} style={{ display: 'grid', gap: `${8 * uiScale}px`, gridTemplateColumns: '1fr 120px 1fr auto' }}>
-                                        <input onChange={(event) => renameVariable(key, event.target.value)} style={sharedStyles.input(uiScale)} value={key} />
-                                        <select onChange={(event) => updateVariableValue(key, coerceValueByType(String(value), event.target.value as VariableType))} style={sharedStyles.input(uiScale)} value={type}>
-                                            <option value="string">string</option>
-                                            <option value="number">number</option>
-                                            <option value="boolean">boolean</option>
-                                        </select>
-                                        {type === 'boolean' ? (
-                                            <select onChange={(event) => updateVariableValue(key, event.target.value === 'true')} style={sharedStyles.input(uiScale)} value={value ? 'true' : 'false'}>
-                                                <option value="true">true</option>
-                                                <option value="false">false</option>
-                                            </select>
-                                        ) : (
-                                            <input
-                                                onChange={(event) => updateVariableValue(key, coerceValueByType(event.target.value, type))}
-                                                style={sharedStyles.input(uiScale)}
-                                                type={type === 'number' ? 'number' : 'text'}
-                                                value={String(value)}
-                                            />
-                                        )}
-                                        <button onClick={() => removeVariable(key)} style={sharedStyles.secondaryButton(uiScale)} type="button">Delete</button>
-                                    </div>
-                                );
-                            })}
+                            <button
+                                onClick={openReferenceTracker}
+                                style={{ ...sharedStyles.secondaryButton(uiScale), justifySelf: 'start' }}
+                                type="button"
+                            >
+                                Open Reference Tracker
+                            </button>
 
-                            <div style={{ borderTop: `1px solid ${t.border.subtle}`, paddingTop: `${10 * uiScale}px` }}>
-                                <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px`, marginBottom: `${8 * uiScale}px` }}>Add Variable</div>
-                                <div style={{ display: 'grid', gap: `${8 * uiScale}px`, gridTemplateColumns: '1fr 120px 1fr auto' }}>
-                                    <input onChange={(event) => setNewVariableKey(event.target.value)} placeholder="variable_key" style={sharedStyles.input(uiScale)} value={newVariableKey} />
-                                    <select onChange={(event) => setNewVariableType(event.target.value as VariableType)} style={sharedStyles.input(uiScale)} value={newVariableType}>
-                                        <option value="string">string</option>
-                                        <option value="number">number</option>
-                                        <option value="boolean">boolean</option>
-                                    </select>
-                                    {newVariableType === 'boolean' ? (
-                                        <select onChange={(event) => setNewVariableValue(event.target.value)} style={sharedStyles.input(uiScale)} value={newVariableValue || 'false'}>
-                                            <option value="true">true</option>
-                                            <option value="false">false</option>
-                                        </select>
-                                    ) : (
-                                        <input onChange={(event) => setNewVariableValue(event.target.value)} placeholder={newVariableType === 'number' ? '0' : 'default value'} style={sharedStyles.input(uiScale)} type={newVariableType === 'number' ? 'number' : 'text'} value={newVariableValue} />
-                                    )}
-                                    <button onClick={addVariable} style={sharedStyles.secondaryButton(uiScale)} type="button">Add</button>
+                            {discoveredVariableEntries.length === 0 && (
+                                <span style={{ color: t.text.muted }}>No discovered variables yet.</span>
+                            )}
+
+                            {discoveredVariableEntries.map(([key, stats]) => (
+                                <div
+                                    key={key}
+                                    style={{
+                                        border: `1px solid ${t.border.subtle}`,
+                                        borderRadius: t.radius.sm,
+                                        display: 'grid',
+                                        gap: `${4 * uiScale}px`,
+                                        padding: `${8 * uiScale}px`,
+                                    }}
+                                >
+                                    <strong style={{ color: t.text.primary }}>{key}</strong>
+                                    <span style={{ color: t.text.faint, fontSize: `${12 * uiScale}px` }}>
+                                        type: {stats.inferredType} | reads: {stats.reads.length} | writes: {stats.writes.length}
+                                    </span>
                                 </div>
-                            </div>
+                            ))}
                         </div>
                     )}
                 </div>
@@ -370,15 +245,6 @@ export function ManifestEditor({ uiScale }: { uiScale: number }) {
     );
 }
 
-function coerceValueByType(value: string, type: VariableType): VariableValue {
-    if (type === 'boolean') return value === 'true';
-    if (type === 'number') {
-        const parsed = Number(value);
-        return Number.isFinite(parsed) ? parsed : 0;
-    }
-    return value;
-}
-
 function getSceneEntries(manifest: Record<string, unknown>): Array<[string, string]> {
     const scenes = readRecord(manifest.scenes);
     const entries: Array<[string, string]> = [];
@@ -388,19 +254,9 @@ function getSceneEntries(manifest: Record<string, unknown>): Array<[string, stri
     return entries;
 }
 
-function getVariableEntries(manifest: Record<string, unknown>): Array<[string, VariableValue]> {
-    const variables = readRecord(manifest.variables);
-    const entries: Array<[string, VariableValue]> = [];
-    for (const [key, value] of Object.entries(variables)) {
-        entries.push([key, toVariableValue(value)]);
-    }
-    return entries;
-}
 
-function inferVariableType(value: VariableValue): VariableType {
-    if (typeof value === 'boolean') return 'boolean';
-    if (typeof value === 'number') return 'number';
-    return 'string';
+function openReferenceTracker() {
+    globalThis.dispatchEvent(new CustomEvent('zerith:dock-select', { detail: DOCK_PANELS.referenceTracker }));
 }
 
 function parseActiveTab(activeTab: ActiveTab): ParsedManifestTab {
@@ -416,6 +272,7 @@ function parseActiveTab(activeTab: ActiveTab): ParsedManifestTab {
     }
 }
 
+
 function readRecord(value: unknown): Record<string, unknown> {
     return isRecord(value) ? value : {};
 }
@@ -424,13 +281,9 @@ function readString(value: unknown): string {
     return typeof value === 'string' ? value : '';
 }
 
-function toVariableValue(value: unknown): VariableValue {
-    if (typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string') return value;
-    return '';
-}
-
 function writeOptionalString(target: Record<string, unknown>, key: string, value: string) {
     const normalized = value.trim();
     if (normalized.length === 0) { delete target[key]; return; }
     target[key] = normalized;
 }
+

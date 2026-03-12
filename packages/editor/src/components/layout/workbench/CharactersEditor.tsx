@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 
 import { ColorPickerField } from '../../inspector/fields/ColorPickerField';
 import { fsWriteTextFile } from '../../../services/fs';
+import { useProjectStore } from '../../../store/useProjectStore';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
 import { Field, isRecord, sharedStyles } from './EditorSharedUI';
@@ -22,6 +23,7 @@ type ParsedCharactersTab = {
 export function CharactersEditor({ uiScale }: { uiScale: number }) {
     const activeTab = useWorkbenchStore((state) => state.activeTab());
     const updateTabContent = useWorkbenchStore((state) => state.updateTabContent);
+    const clearFileDirty = useProjectStore((state) => state.clearFileDirty);
 
     const[selectedByTab, setSelectedByTab] = useState<Record<string, string>>({});
     const[runtimeError, setRuntimeError] = useState<string>();
@@ -82,6 +84,8 @@ export function CharactersEditor({ uiScale }: { uiScale: number }) {
         try {
             const nextText = activeTab.textContent ?? '{}';
             await fsWriteTextFile(activeTab.path, nextText);
+            updateTabContent(activeTab.id, nextText, { markDirty: false });
+            clearFileDirty(activeTab.path);
             setStatus('Saved characters.');
             setRuntimeError(undefined);
         } catch (caughtError: unknown) {

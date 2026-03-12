@@ -119,6 +119,8 @@ export class FlowManager implements IFlowManager {
                 }
                 await this.runCommand(command);
 
+                this.emitSceneEnteredForNavigation(command);
+
                 if (this.destroyed || !this.isExecuting || !this.started) return;
 
                 if (this.shouldSkipSceneNavigation(command)) {
@@ -245,6 +247,27 @@ export class FlowManager implements IFlowManager {
 
     private emitPaused() {
         this.events.emit('flow:paused', this.scenes.currentSceneName, this.scenes.currentIndex);
+    }
+
+    private emitSceneEnteredForNavigation(command: BaseCommand): void {
+        if (command.type === 'jump') {
+            const sceneName =
+                'to' in command && typeof command.to === 'string'
+                    ? command.to
+                    : '';
+            if (!sceneName) return;
+            this.events.emit('flow:scene_entered', sceneName, this.scenes.currentIndex);
+            return;
+        }
+
+        if (command.type === 'scene_change') {
+            const sceneName =
+                'assetUrl' in command && typeof command.assetUrl === 'string'
+                    ? command.assetUrl
+                    : '';
+            if (!sceneName) return;
+            this.events.emit('flow:scene_entered', sceneName, this.scenes.currentIndex);
+        }
     }
 
     private shouldSkipSceneNavigation(command: BaseCommand): boolean {

@@ -10,14 +10,26 @@ import { useProjectStore } from '../useProjectStore';
 import { useScriptStore } from '../useScriptStore';
 
 export type GlobalShortcutAction =
+    | 'clearAllBreakpoints'
+    | 'continueOrPlay'
     | 'copySelection'
     | 'duplicate'
     | 'moveSelectionDown'
     | 'moveSelectionUp'
+    | 'openGlobalSearchFind'
+    | 'openGlobalSearchReplace'
     | 'pasteSelection'
+    | 'pausePlayback'
     | 'redo'
     | 'requestDelete'
     | 'save'
+    | 'saveAll'
+    | 'stepIntoPlayback'
+    | 'stepOutPlayback'
+    | 'stepPlayback'
+    | 'stopPlayback'
+    | 'toggleBreakpoint'
+    | 'toggleCommandPalette'
     | 'toggleGlobalSearch'
     | 'undo';
 
@@ -33,6 +45,23 @@ type MacroClipboardPayload = {
 
 export async function executeGlobalShortcutAction(action: GlobalShortcutAction): Promise<boolean> {
     switch (action) {
+        case 'clearAllBreakpoints': {
+            useEditorStore.getState().clearAllBreakpoints();
+            return true;
+        }
+
+        case 'continueOrPlay': {
+            const editor = useEditorStore.getState();
+            if (isPlaybackRunning(editor)) {
+                if (editor.isPlaybackPaused) {
+                    editor.triggerResume();
+                }
+                return true;
+            }
+            editor.triggerPlay();
+            return true;
+        }
+
         case 'copySelection': {
             copySelectionToClipboard();
             return true;
@@ -51,8 +80,25 @@ export async function executeGlobalShortcutAction(action: GlobalShortcutAction):
             return moveSelectionByArrow('up');
         }
 
+        case 'openGlobalSearchFind': {
+            useEditorStore.getState().openGlobalSearchPopup('find');
+            return true;
+        }
+
+        case 'openGlobalSearchReplace': {
+            useEditorStore.getState().openGlobalSearchPopup('replace');
+            return true;
+        }
+
         case 'pasteSelection': {
             return pasteClipboardSelection();
+        }
+
+        case 'pausePlayback': {
+            const editor = useEditorStore.getState();
+            if (!isPlaybackRunning(editor) || editor.isPlaybackPaused) return false;
+            editor.triggerPause();
+            return true;
         }
 
         case 'redo': {
@@ -65,12 +111,54 @@ export async function executeGlobalShortcutAction(action: GlobalShortcutAction):
         }
 
         case 'save': {
+            useEditorStore.getState().markManualSave();
             await useProjectStore.getState().saveActiveFileFromCurrentScript();
             return true;
         }
 
+        case 'saveAll': {
+            useEditorStore.getState().markManualSave();
+            await useProjectStore.getState().saveAllDirtyFiles();
+            return true;
+        }
+
+        case 'stepIntoPlayback': {
+            const editor = useEditorStore.getState();
+            if (!isPlaybackRunning(editor) || !editor.isPlaybackPaused) return false;
+            return false;
+        }
+
+        case 'stepOutPlayback': {
+            const editor = useEditorStore.getState();
+            if (!isPlaybackRunning(editor) || !editor.isPlaybackPaused) return false;
+            return false;
+        }
+
+        case 'stepPlayback': {
+            const editor = useEditorStore.getState();
+            if (!isPlaybackRunning(editor) || !editor.isPlaybackPaused) return false;
+            editor.triggerStep();
+            return true;
+        }
+
+        case 'stopPlayback': {
+            const editor = useEditorStore.getState();
+            if (!isPlaybackRunning(editor)) return false;
+            editor.triggerStop();
+            return true;
+        }
+
+        case 'toggleBreakpoint': {
+            return toggleBreakpointAtSelection();
+        }
+
+        case 'toggleCommandPalette': {
+            useEditorStore.getState().toggleCommandPalette();
+            return true;
+        }
+
         case 'toggleGlobalSearch': {
-            useEditorStore.getState().toggleGlobalSearchPopup();
+            useEditorStore.getState().openGlobalSearchPopup('find');
             return true;
         }
 
@@ -175,6 +263,10 @@ function isMacroClipboardNode(value: unknown): value is MacroClipboardNode {
     if (!isRecord(value)) return false;
     if (value.__kind !== 'macro_header') return false;
     return isRecord(value.payload);
+}
+
+function isPlaybackRunning(editor: ReturnType<typeof useEditorStore.getState>): boolean {
+    return editor.playTrigger > editor.stopTrigger;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -295,6 +387,19 @@ function requestDeleteSelection(): boolean {
     }
 
     return false;
+}
+
+function toggleBreakpointAtSelection(): boolean {
+    const { activeFile } = useProjectStore.getState();
+    if (!activeFile) return false;
+
+    const selectedPath = useEditorStore.getState().selectedNodePaths[0];
+    if (!selectedPath || selectedPath.length !== 1 || typeof selectedPath[0] !== 'number') {
+        return false;
+    }
+
+    useEditorStore.getState().toggleBreakpoint(activeFile, selectedPath[0]);
+    return true;
 }
 
 

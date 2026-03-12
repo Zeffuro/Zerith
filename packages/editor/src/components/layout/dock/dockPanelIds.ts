@@ -6,6 +6,7 @@ export const DOCK_PANELS = {
     globalSearch: 'global_search',
     inspector: 'inspector',
     preview: 'preview',
+    referenceTracker: 'reference_tracker',
     runtimeMonitor: 'runtime_monitor',
     stateObserver: 'state_observer',
     toolbar: 'toolbar',

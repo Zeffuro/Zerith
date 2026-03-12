@@ -12,6 +12,7 @@ import { ThemeMenu } from './menus/ThemeMenu';
 export function Toolbar() {
     const { activeFile, openProjectFromManifest, saveActiveFileFromCurrentScript } = useProjectStore();
     const {
+        addRecentProject,
         isMuted,
         isPlaybackPaused,
         moveQuickCommandType,
@@ -45,6 +46,7 @@ export function Toolbar() {
 
             if (selectedFile) {
                 await openProjectFromManifest(selectedFile);
+                addRecentProject(selectedFile);
                 await openInitialProjectEntry();
             }
         } catch (error) {

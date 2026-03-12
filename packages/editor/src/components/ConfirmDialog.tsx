@@ -7,15 +7,18 @@ import { styles } from '../theme/styleHelpers';
 type Properties = {
     cancelText?: string;
     confirmText?: string;
+    extraActionDanger?: boolean;
+    extraActionText?: string;
     danger?: boolean;
     message: string;
     onCancel: () => void;
     onConfirm: () => void;
+    onExtraAction?: () => void;
     open: boolean;
     title?: string;
 };
 
-export function ConfirmDialog({ cancelText = 'Cancel', confirmText = 'Confirm', danger = false, message, onCancel, onConfirm, open, title = 'Confirm' }: Properties) {
+export function ConfirmDialog({ cancelText = 'Cancel', confirmText = 'Confirm', extraActionDanger = false, extraActionText, danger = false, message, onCancel, onConfirm, onExtraAction, open, title = 'Confirm' }: Properties) {
     const uiScale = useEditorStore(s => s.uiScale);
 
     useEffect(() => {
@@ -36,6 +39,14 @@ export function ConfirmDialog({ cancelText = 'Cancel', confirmText = 'Confirm', 
                 <div style={{ fontSize: `${14 * uiScale}px`, fontWeight: 700, marginBottom: `${8 * uiScale}px` }}>{title}</div>
                 <div style={{ color: t.text.normal, fontSize: `${13 * uiScale}px`, marginBottom: `${16 * uiScale}px`, opacity: .9 }}>{message}</div>
                 <div style={{ display: 'flex', gap: `${8 * uiScale}px`, justifyContent: 'flex-end' }}>
+                    {extraActionText && onExtraAction ? (
+                        <button
+                            onClick={onExtraAction}
+                            style={{ ...styles.buttonBase(uiScale), background: extraActionDanger ? t.accent.red : undefined, border: extraActionDanger ? 'none' : undefined, color: extraActionDanger ? '#fff' : undefined }}
+                        >
+                            {extraActionText}
+                        </button>
+                    ) : undefined}
                     <button onClick={onCancel} style={{ ...styles.buttonBase(uiScale) }}>{cancelText}</button>
                     <button onClick={onConfirm} style={{ ...styles.buttonBase(uiScale), background: danger ? t.accent.red : t.accent.primary, border: 'none', color: '#fff' }}>
                         {confirmText}

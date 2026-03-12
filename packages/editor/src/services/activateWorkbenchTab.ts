@@ -32,6 +32,6 @@ export async function activateWorkbenchTab(tabId: string) {
 
     if (tab.kind === 'manifest' || tab.kind === 'json' || tab.kind === 'text') {
         const text = await fsReadTextFile(tab.path);
-        ws.updateTabContent(tab.id, text);
+        ws.updateTabContent(tab.id, text, { markDirty: false });
     }
 }

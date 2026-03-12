@@ -27,17 +27,23 @@ export const useEditorStore = create<EditorState>()(
                 return {
                     ...current,
                     ...persistedState,
+                    autosaveIntervalMs: persistedState.autosaveIntervalMs ?? current.autosaveIntervalMs,
                     dockLayoutJson: normalized.dockLayoutJson,
                     dockLayoutVersion: normalized.dockLayoutVersion,
+                    recentProjects: persistedState.recentProjects ?? current.recentProjects,
+                    windowState: persistedState.windowState ?? current.windowState,
                 };
             },
             name: 'zerith-editor-prefs',
             partialize: (state) => ({
+                autosaveEnabled: state.autosaveEnabled,
+                autosaveIntervalMs: state.autosaveIntervalMs,
                 breakpoints: state.breakpoints,
                 dockLayoutJson: state.dockLayoutJson,
                 dockLayoutVersion: state.dockLayoutVersion,
                 isMuted: state.isMuted,
                 quickCommandTypes: state.quickCommandTypes,
+                recentProjects: state.recentProjects,
                 themeKey: state.themeKey,
                 uiScale: state.uiScale,
                 windowState: state.windowState,

@@ -10,7 +10,9 @@ export type ProjectGet = () => ProjectState;
 export interface ProjectIoSlice {
     openProjectFromManifest: (manifestPath: string) => Promise<void>;
     saveActiveFileFromCurrentScript: () => Promise<void>;
+    saveAllDirtyFiles: () => Promise<SaveAllResult>;
 }
+
 
 export interface ProjectMacrosSlice {
     activeMacroName: string | undefined;
@@ -46,9 +48,14 @@ export interface ProjectScriptBridge {
 export interface ProjectSessionSlice {
     activeFile: string | undefined;
     bumpTreeRevision: () => void;
+    clearAllDirtyFiles: () => void;
+    clearFileDirty: (filePath: string) => void;
+    dirtyFiles: Set<string>;
     expandedPaths: string[];
     expandToPath: (targetPath: string) => void;
     files: FsDirectoryEntry[];
+    isFileDirty: (filePath: string) => boolean;
+    markFileDirty: (filePath: string) => void;
     projectPath: string | undefined;
     setActiveFile: (file: string, content: EditorNode[]) => void;
     setPathExpanded: (path: string, expanded: boolean) => void;
@@ -62,3 +69,9 @@ export type ProjectSet = (
 ) => void;
 
 export interface ProjectState extends ProjectIoSlice, ProjectMacrosSlice, ProjectManifestSlice, ProjectSessionSlice {}
+
+export type SaveAllResult = {
+    failed: string[];
+    saved: string[];
+    skipped: string[];
+};

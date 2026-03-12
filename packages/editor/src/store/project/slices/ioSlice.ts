@@ -3,6 +3,7 @@ import type { Command } from 'core';
 import type { ProjectGet, ProjectIoSlice, ProjectScriptBridge } from '../types';
 
 import { fsReadDirectory, fsReadTextFile, fsWriteTextFile } from '../../../services/fs';
+import { saveAllFiles } from '../../../services/saveAllFiles';
 
 export function createProjectIoSlice(get: ProjectGet, scriptBridge: ProjectScriptBridge): ProjectIoSlice {
     return {
@@ -38,6 +39,7 @@ export function createProjectIoSlice(get: ProjectGet, scriptBridge: ProjectScrip
                     const out: Record<string, Command[]> = {};
                     for (const m of macroEntries) out[m.name] = Array.isArray(m.commands) ? m.commands : [];
                     await fsWriteTextFile(activeFile, JSON.stringify(out, undefined, 4));
+                    get().clearFileDirty(activeFile);
                     return;
                 }
 
@@ -52,9 +54,15 @@ export function createProjectIoSlice(get: ProjectGet, scriptBridge: ProjectScrip
                 } else {
                     await fsWriteTextFile(activeFile, JSON.stringify(rootScript, undefined, 4));
                 }
+
+                get().clearFileDirty(activeFile);
             } catch (error) {
                 console.error('Failed to save active file:', error);
             }
+        },
+
+        saveAllDirtyFiles: async () => {
+            return saveAllFiles(get);
         },
     };
 }

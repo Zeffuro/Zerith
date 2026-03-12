@@ -2,7 +2,7 @@ import type { Command } from 'core';
 import type * as Monaco from 'monaco-editor';
 
 import Editor, { type OnMount } from '@monaco-editor/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { EditorNode } from '../../../types/EditorNode';
 
@@ -30,6 +30,11 @@ type MonacoThemeApi = {
     KeyMod: {
         CtrlCmd: number;
     };
+};
+
+type SyncPayload = {
+    canonical: string;
+    pretty: string;
 };
 
 export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
@@ -79,19 +84,83 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
     }, [activeTab, macroEntries, mode, rootScript]);
 
     const editorReference = useRef<Monaco.editor.IStandaloneCodeEditor | undefined>(undefined);
+    const suppressNextMonacoChangeBySessionReference = useRef<Record<string, boolean>>({});
+    const syncedCanonicalBySessionReference = useRef<Record<string, string>>({});
+    const saveNowReference = useRef<() => Promise<void>>(async () => {});
     const sessionKey = activeTab?.id ?? mode;
     const [draftBySession, setDraftBySession] = useState<Record<string, string>>({});
     const [errorBySession, setErrorBySession] = useState<Record<string, string | undefined>>({});
     const value = draftBySession[sessionKey] ?? initial;
     const error = errorBySession[sessionKey];
 
-    const setDraft = (nextValue: string) => {
+    const setDraft = useCallback((nextValue: string) => {
         setDraftBySession((previous) => ({ ...previous, [sessionKey]: nextValue }));
-    };
+    }, [sessionKey]);
 
-    const setError = (nextError: string | undefined) => {
+    const setError = useCallback((nextError: string | undefined) => {
         setErrorBySession((previous) => ({ ...previous, [sessionKey]: nextError }));
-    };
+    }, [sessionKey]);
+
+    const visualSyncPayload = useMemo(() => {
+        if (mode === 'script') {
+            return toSyncPayload(rootScript);
+        }
+
+        if (mode === 'macros') {
+            const macrosByName: Record<string, Command[]> = {};
+            for (const macroEntry of macroEntries) {
+                macrosByName[macroEntry.name] = macroEntry.commands;
+            }
+            return toSyncPayload(macrosByName);
+        }
+
+        return;
+    }, [macroEntries, mode, rootScript]);
+
+    useEffect(() => {
+        if (!visualSyncPayload) return;
+
+        const previousCanonical = syncedCanonicalBySessionReference.current[sessionKey];
+        if (previousCanonical === visualSyncPayload.canonical) return;
+
+        syncedCanonicalBySessionReference.current[sessionKey] = visualSyncPayload.canonical;
+        if (value === visualSyncPayload.pretty) return;
+
+        const editor = editorReference.current;
+        if (!editor) return;
+
+        suppressNextMonacoChangeBySessionReference.current[sessionKey] = true;
+        editor.getModel()?.setValue(visualSyncPayload.pretty);
+    }, [sessionKey, value, visualSyncPayload]);
+
+    const syncJsonToVisual = useCallback((sourceText: string) => {
+        if (mode !== 'script' && mode !== 'macros') return;
+
+        let parsed: unknown;
+        try {
+            parsed = JSON.parse(sourceText);
+        } catch {
+            return;
+        }
+
+        if (mode === 'script') {
+            if (!Array.isArray(parsed)) return;
+
+            const canonical = JSON.stringify(parsed);
+            if (syncedCanonicalBySessionReference.current[sessionKey] === canonical) return;
+            syncedCanonicalBySessionReference.current[sessionKey] = canonical;
+            setScript(parsed as EditorNode[]);
+            return;
+        }
+
+        const entries = toMacroEntries(parsed);
+        if (!entries) return;
+
+        const canonical = JSON.stringify(parsed);
+        if (syncedCanonicalBySessionReference.current[sessionKey] === canonical) return;
+        syncedCanonicalBySessionReference.current[sessionKey] = canonical;
+        setMacroEntries(entries);
+    }, [mode, sessionKey, setMacroEntries, setScript]);
 
     useEffect(() => {
         if (mode === 'macros' || editingAllMacrosFile) {
@@ -104,12 +173,12 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
         }
     }, [editingAllMacrosFile, mode, setLastMacrosView, setLastScriptView]);
 
-    const apply = (): ApplyResult => {
+    const apply = useCallback((sourceText = value): ApplyResult => {
         if (!activeTab) return { ok: false };
 
         try {
             if (mode === 'script' || mode === 'macros' || mode === 'file-json') {
-                const parsed: unknown = JSON.parse(value);
+                const parsed: unknown = JSON.parse(sourceText);
 
                 if (mode === 'macros') {
                     const entries = toMacroEntries(parsed);
@@ -140,9 +209,10 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
             }
 
             if (mode === 'file-text') {
-                updateTabContent(activeTab.id, value);
+                updateTabContent(activeTab.id, sourceText);
+                setDraft(sourceText);
                 setError(undefined);
-                return { content: value, ok: true };
+                return { content: sourceText, ok: true };
             }
 
             setError(undefined);
@@ -151,7 +221,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
             setError(caughtError instanceof Error ? caughtError.message : 'Invalid JSON');
             return { ok: false };
         }
-    };
+    }, [activeTab, mode, setError, setMacroEntries, setScript, setDraft, updateTabContent, value]);
 
     const formatDocument = () => {
         const editor = editorReference.current;
@@ -159,8 +229,9 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
         void runFormatDocument(editor);
     };
 
-    const saveNow = async () => {
-        const result = apply();
+    const saveNow = useCallback(async () => {
+        const sourceText = editorReference.current?.getModel()?.getValue() ?? value;
+        const result = apply(sourceText);
         if (!result.ok) return;
 
         if (mode === 'script' || mode === 'macros') {
@@ -172,11 +243,15 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
 
         try {
             await fsWriteTextFile(activeTab.path, result.content);
-            updateTabContent(activeTab.id, result.content);
+            updateTabContent(activeTab.id, result.content, { markDirty: false });
         } catch (caughtError: unknown) {
             setError(caughtError instanceof Error ? caughtError.message : 'Failed to save file');
         }
-    };
+    }, [activeTab, apply, mode, saveActiveFileFromCurrentScript, setError, updateTabContent, value]);
+
+    useEffect(() => {
+        saveNowReference.current = saveNow;
+    }, [saveNow]);
 
     const title = titleForMode(mode, activeTab?.title);
     const language = languageForMode(mode, activeTab?.path);
@@ -199,8 +274,13 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
         });
         monacoApi.editor.setTheme('zerith-json-dark');
 
-        editor.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.KeyS, () => {
-            void saveNow();
+        editor.addAction({
+            id: 'zerith-save-current-editor',
+            keybindings: [monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.KeyS],
+            label: 'Save Current File',
+            run: async () => {
+                await saveNowReference.current();
+            },
         });
     };
 
@@ -210,7 +290,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
                 <strong style={{ color: t.text.primary }}>{title}</strong>
                 <div style={{ display: 'flex', gap: `${6 * uiScale}px`, marginLeft: 'auto' }}>
                     <button onClick={formatDocument} style={{ background: t.bg.panel, border: `1px solid ${t.border.button}`, borderRadius: t.radius.md, color: t.text.normal, cursor: 'pointer', padding: `${5 * uiScale}px ${10 * uiScale}px` }}>Format</button>
-                    <button onClick={apply} style={{ background: t.bg.selected, border: `1px solid ${t.border.accent}`, borderRadius: t.radius.md, color: t.text.primary, cursor: 'pointer', fontWeight: 600, padding: `${5 * uiScale}px ${10 * uiScale}px` }}>Apply</button>
+                    <button onClick={() => apply()} style={{ background: t.bg.selected, border: `1px solid ${t.border.accent}`, borderRadius: t.radius.md, color: t.text.primary, cursor: 'pointer', fontWeight: 600, padding: `${5 * uiScale}px ${10 * uiScale}px` }}>Apply</button>
                 </div>
             </div>
 
@@ -218,8 +298,17 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
                 <Editor
                     defaultLanguage={language}
                     height="100%"
-                    onChange={(v) => {
-                        setDraft(v ?? '');
+                    onChange={(v = '') => {
+                        const nextValue = v;
+                        setDraft(nextValue);
+
+                        if (suppressNextMonacoChangeBySessionReference.current[sessionKey]) {
+                            suppressNextMonacoChangeBySessionReference.current[sessionKey] = false;
+                            setError(undefined);
+                            return;
+                        }
+
+                        syncJsonToVisual(nextValue);
                         setError(undefined);
                     }}
                     onMount={onMount}
@@ -242,6 +331,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
         </div>
     );
 }
+
 
 
 function helperTextForMode(mode: EditorMode): string {
@@ -289,5 +379,12 @@ function toMacroEntries(value: unknown): { commands: Command[]; name: string; }[
         commands: Array.isArray(commands) ? (commands as Command[]) : [],
         name,
     }));
+}
+
+function toSyncPayload(value: unknown): SyncPayload {
+    return {
+        canonical: JSON.stringify(value),
+        pretty: JSON.stringify(value, undefined, 2),
+    };
 }
 

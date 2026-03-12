@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 
 import { executeGlobalShortcutAction } from '../store/actions/globalShortcutActions';
+import { useEditorStore } from '../store/useEditorStore';
 
 export function useGlobalEditorShortcuts() {
     useEffect(() => {
@@ -18,6 +19,60 @@ async function handleGlobalShortcut(event: KeyboardEvent): Promise<void> {
 
     const module_ = event.ctrlKey || event.metaKey;
     const key = event.key.toLowerCase();
+    const isPlaybackRunning = useEditorStore.getState().playTrigger > useEditorStore.getState().stopTrigger;
+
+    if (event.key === 'F5' && event.shiftKey) {
+        const handled = await executeGlobalShortcutAction('stopPlayback');
+        if (handled) event.preventDefault();
+        return;
+    }
+
+    if (event.key === 'F5') {
+        const handled = await executeGlobalShortcutAction('continueOrPlay');
+        if (handled) event.preventDefault();
+        return;
+    }
+
+    if (event.key === 'F6') {
+        if (!isPlaybackRunning) return;
+        const handled = await executeGlobalShortcutAction('pausePlayback');
+        if (handled) event.preventDefault();
+        return;
+    }
+
+    if (event.key === 'F9') {
+        if (!isPlaybackRunning) return;
+        const handled = await executeGlobalShortcutAction('toggleBreakpoint');
+        if (handled) event.preventDefault();
+        return;
+    }
+
+    if (event.key === 'F10') {
+        if (!isPlaybackRunning) return;
+        const handled = await executeGlobalShortcutAction('stepPlayback');
+        if (handled) event.preventDefault();
+        return;
+    }
+
+    if (event.key === 'F11' && event.shiftKey) {
+        if (!isPlaybackRunning) return;
+        const handled = await executeGlobalShortcutAction('stepOutPlayback');
+        if (handled) event.preventDefault();
+        return;
+    }
+
+    if (event.key === 'F11') {
+        if (!isPlaybackRunning) return;
+        const handled = await executeGlobalShortcutAction('stepIntoPlayback');
+        if (handled) event.preventDefault();
+        return;
+    }
+
+    if (module_ && event.shiftKey && key === 's') {
+        event.preventDefault();
+        await executeGlobalShortcutAction('saveAll');
+        return;
+    }
 
     if (module_ && key === 's') {
         event.preventDefault();
@@ -27,7 +82,19 @@ async function handleGlobalShortcut(event: KeyboardEvent): Promise<void> {
 
     if (module_ && event.shiftKey && key === 'f') {
         event.preventDefault();
-        await executeGlobalShortcutAction('toggleGlobalSearch');
+        await executeGlobalShortcutAction('openGlobalSearchFind');
+        return;
+    }
+
+    if (module_ && event.shiftKey && key === 'g') {
+        event.preventDefault();
+        await executeGlobalShortcutAction('openGlobalSearchReplace');
+        return;
+    }
+
+    if (module_ && event.shiftKey && key === 'p') {
+        event.preventDefault();
+        await executeGlobalShortcutAction('toggleCommandPalette');
         return;
     }
 

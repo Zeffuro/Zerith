@@ -50,6 +50,7 @@ type Properties = {
     selectedNodeIndex: number | undefined;
 
     uiScale: number;
+    validationMessage?: string;
 };
 
 type TimelineBranch = { label: string; nodes: PluginNode[]; path: ScriptPath; };
@@ -116,6 +117,7 @@ function TimelineNodeInner({
                                  selected,
                                  selectedNodeIndex,
                                  uiScale,
+                                 validationMessage,
                              }: Properties) {
     const plugin = getPlugin(node.type) as unknown as TimelinePluginView;
     const branches: TimelineBranch[] = plugin.getBranches?.(node) ?? [];
@@ -125,6 +127,9 @@ function TimelineNodeInner({
     const summary = isMacroHeader
         ? getStringField(node, 'name')
         : (plugin.getSummary?.(node) ?? getNodeSummaryFallback(node));
+    const indicatorTitle = hasValidationError
+        ? (validationMessage ?? 'Schema validation errors found')
+        : 'This node looks incomplete/invalid';
 
     return (
         <div style={{ ...CONTAINER_STYLE, gap: `${2 * uiScale}px` }}>
@@ -151,15 +156,24 @@ function TimelineNodeInner({
                 style={{
                     ...ROW_BASE_STYLE,
                     backgroundColor: isActiveExecution ? '#1f2f1f' : (selected ? t.bg.selected : t.bg.panel),
-                    border: isActiveExecution ? `1px solid ${t.accent.green}` : '1px solid transparent',
-                    borderLeft: `${3 * uiScale}px solid ${isActiveExecution ? t.accent.green : (selected ? t.border.accent : 'transparent')}`,
-                    borderTop:
+                    borderBottomColor: isActiveExecution ? t.accent.green : 'transparent',
+                    borderBottomStyle: 'solid',
+                    borderBottomWidth: '1px',
+                    borderLeftColor: isActiveExecution ? t.accent.green : (selected ? t.border.accent : 'transparent'),
+                    borderLeftStyle: 'solid',
+                    borderLeftWidth: `${3 * uiScale}px`,
+                    borderRightColor: isActiveExecution ? t.accent.green : 'transparent',
+                    borderRightStyle: 'solid',
+                    borderRightWidth: '1px',
+                    borderTopColor:
                         !dragDisabled &&
                         dropIndicator &&
                         sameArrayPath(dropIndicator.arrayPath, parentArrayPath) &&
                         dropIndicator.index === indexInParent
-                            ? `2px solid ${t.border.accent}`
-                            : '2px solid transparent',
+                            ? t.border.accent
+                            : 'transparent',
+                    borderTopStyle: 'solid',
+                    borderTopWidth: '2px',
                     boxShadow: isActiveExecution ? `0 0 ${6 * uiScale}px rgba(74, 222, 128, 0.45)` : 'none',
                     cursor: dragDisabled ? 'default' : 'grab',
                     marginLeft: `${depth * 16 * uiScale}px`,
@@ -205,6 +219,17 @@ function TimelineNodeInner({
                         <span style={{ width: `${10 * uiScale}px` }} />
                     )}
 
+                    {(hasLikelyIssue || hasValidationError) ? (
+                        <span
+                            style={{ alignItems: 'center', display: 'flex', width: `${12 * uiScale}px` }}
+                            title={indicatorTitle}
+                        >
+                            <AlertTriangle color={hasValidationError ? t.accent.red : t.syntax.flow} size={12 * uiScale} />
+                        </span>
+                    ) : (
+                        <span style={{ width: `${12 * uiScale}px` }} />
+                    )}
+
                     {hasBranches ? (
                         <button
                             onClick={(event) => {
@@ -243,15 +268,6 @@ function TimelineNodeInner({
                         {highlightText(isMacroHeader ? `Macro: ${summary}` : summary, searchQuery, uiScale)}
                     </span>
                 </div>
-
-                {(hasLikelyIssue || hasValidationError) && (
-                    <span
-                        style={{ alignItems: 'center', display: 'flex' }}
-                        title={hasValidationError ? 'Schema validation errors found' : 'This node looks incomplete/invalid'}
-                    >
-                        <AlertTriangle color={hasValidationError ? t.accent.red : t.syntax.flow} size={12 * uiScale} />
-                    </span>
-                )}
 
                 {depth === 0 && (
                     <div
@@ -371,6 +387,7 @@ function areTimelineNodePropertiesEqual(previous: Properties, next: Properties):
         && previous.selected === next.selected
         && previous.selectedNodeIndex === next.selectedNodeIndex
         && previous.uiScale === next.uiScale
+        && previous.validationMessage === next.validationMessage
         && previous.onClickNode === next.onClickNode
         && previous.onContextMenuNode === next.onContextMenuNode
         && previous.onDeleteRoot === next.onDeleteRoot

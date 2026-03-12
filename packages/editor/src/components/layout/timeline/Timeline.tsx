@@ -16,12 +16,28 @@ import { TimelineCommandBar } from './TimelineCommandBar';
 import { type CommandContextMenuState, TimelineCommandContextMenu } from './TimelineCommandContextMenu';
 import { TimelineDropZone } from './TimelineDropZone';
 import { TimelineEmptyState } from './TimelineEmptyState';
+import { TimelineMinimap, type TimelineMinimapRow } from './TimelineMinimap';
 import { TimelineNode } from './TimelineNode';
 import { TimelineSearchBar } from './TimelineSearchBar';
 import { TimelineTypeFilterChips } from './TimelineTypeFilterChips';
 import { useTimelineDragDrop } from './useTimelineDragDrop';
 import { useTimelineSearch } from './useTimelineSearch';
 import { useTimelineSelection } from './useTimelineSelection';
+
+type FlattenContext = {
+    collapsed: Record<string, boolean>;
+    isSearching: boolean;
+};
+
+type FlattenNode = {
+    node: PluginNode;
+    path: ScriptPath;
+};
+
+type TimelineBranch = {
+    nodes: PluginNode[];
+    path: ScriptPath;
+};
 
 
 export function Timeline() {
@@ -79,6 +95,7 @@ export function Timeline() {
     const [typeFilter, setTypeFilter] = useState('all');
 
     const timelineRootReference = useRef<HTMLDivElement | null>(null);
+    const timelineScrollReference = useRef<HTMLDivElement | null>(null);
     const searchInputId = 'timeline-search-input';
 
     const rootNodes = useMemo(() => {
@@ -108,9 +125,104 @@ export function Timeline() {
         visibleRoot,
     } = useTimelineSearch(rootNodes, typeFilter);
 
+    const validationEntries = useMemo(() => Object.entries(validationErrors), [validationErrors]);
+
+    const minimapRows = useMemo<TimelineMinimapRow[]>(() => {
+        const renderedNodes = flattenRenderedNodes(visibleRoot, {
+            collapsed,
+            isSearching,
+        });
+
+        const activeBreakpointSet = new Set<number>(activeFile ? (breakpoints[activeFile] ?? []) : []);
+
+        return renderedNodes.map(({ node, path }, index) => {
+            const plugin = getPlugin(node.type);
+            const commandIndex = path.length === 1 && typeof path[0] === 'number' ? path[0] : undefined;
+
+            return {
+                color: plugin.quickColor?.bg ?? t.bg.panelAlt,
+                hasBreakpoint: commandIndex !== undefined && activeBreakpointSet.has(commandIndex),
+                index,
+                isActiveExecution: samePath(path, activeExecutionPath ?? []),
+                pathKey: path.join('.'),
+                typeLabel: plugin.label,
+            };
+        });
+    }, [activeExecutionPath, activeFile, breakpoints, collapsed, isSearching, visibleRoot]);
+
+    const [scrollMetrics, setScrollMetrics] = useState({
+        clientHeight: 1,
+        scrollHeight: 1,
+        scrollTop: 0,
+    });
+    const maxScrollTop = Math.max(1, scrollMetrics.scrollHeight - scrollMetrics.clientHeight);
+
+    const refreshScrollMetrics = useCallback(() => {
+        const element = timelineScrollReference.current;
+        if (!element) return;
+
+        const next = {
+            clientHeight: Math.max(1, element.clientHeight),
+            scrollHeight: Math.max(1, element.scrollHeight),
+            scrollTop: Math.max(0, element.scrollTop),
+        };
+
+        setScrollMetrics((previous) => {
+            if (
+                previous.clientHeight === next.clientHeight
+                && previous.scrollHeight === next.scrollHeight
+                && previous.scrollTop === next.scrollTop
+            ) {
+                return previous;
+            }
+            return next;
+        });
+    }, []);
+
+    const resolveValidationDetails = useCallback((nodePath: ScriptPath) => {
+        if (validationEntries.length === 0) {
+            return { hasValidationError: false };
+        }
+
+        const prefix = editingAllMacrosFile
+            ? (() => {
+                const [macroIndex, ...rest] = nodePath;
+                if (typeof macroIndex !== 'number') return '';
+                return `macro.${macroIndex}.${rest.join('.')}`;
+            })()
+            : nodePath.join('.');
+
+        if (!prefix) {
+            return { hasValidationError: false };
+        }
+
+        const matchedMessages: string[] = [];
+
+        for (const [key, messages] of validationEntries) {
+            if (key !== prefix && !key.startsWith(`${prefix}.`)) continue;
+
+            const relativeKey = key === prefix ? '' : key.slice(prefix.length + 1);
+            for (const message of messages) {
+                matchedMessages.push(relativeKey ? `${relativeKey}: ${message}` : message);
+            }
+        }
+
+        if (matchedMessages.length === 0) {
+            return { hasValidationError: false };
+        }
+
+        const visibleMessages = matchedMessages.slice(0, 5);
+        const remainingCount = matchedMessages.length - visibleMessages.length;
+        const validationMessage = remainingCount > 0
+            ? `${visibleMessages.join('\n')}\n(+${remainingCount} more)`
+            : visibleMessages.join('\n');
+
+        return { hasValidationError: true, validationMessage };
+    }, [editingAllMacrosFile, validationEntries]);
+
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
-            const isFind = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f';
+            const isFind = (event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'f';
             if (!isFind) return;
 
             const rootElement = timelineRootReference.current;
@@ -189,6 +301,25 @@ export function Timeline() {
             document.removeEventListener('keydown', onKey);
         };
     }, [contextMenu]);
+
+    useEffect(() => {
+        const element = timelineScrollReference.current;
+        if (!element) return;
+
+        const onScroll = () => refreshScrollMetrics();
+        element.addEventListener('scroll', onScroll, { passive: true });
+        globalThis.addEventListener('resize', onScroll);
+        queueMicrotask(onScroll);
+
+        return () => {
+            element.removeEventListener('scroll', onScroll);
+            globalThis.removeEventListener('resize', onScroll);
+        };
+    }, [refreshScrollMetrics]);
+
+    useEffect(() => {
+        queueMicrotask(() => refreshScrollMetrics());
+    }, [refreshScrollMetrics, visibleRoot]);
 
     const toggleCollapse = useCallback((path: ScriptPath) => {
         const key = pathKey(path);
@@ -296,14 +427,7 @@ export function Timeline() {
     ): ReactNode => {
         const nodePrefix = nodePath.join('.');
 
-        const hasValidationError = editingAllMacrosFile
-            ? (() => {
-                const [macroIndex, ...rest] = nodePath;
-                if (typeof macroIndex !== 'number') return false;
-                const prefix = `macro.${macroIndex}.${rest.join('.')}`;
-                return Object.keys(validationErrors).some((k) => k === prefix || k.startsWith(prefix + '.'));
-            })()
-            : Object.keys(validationErrors).some((k) => k === nodePrefix || k.startsWith(nodePrefix + '.'));
+        const { hasValidationError, validationMessage } = resolveValidationDetails(nodePath);
 
         const dragDisabled = isSearching || typeFilter !== 'all';
         const hasBreakpoint = Boolean(
@@ -348,6 +472,7 @@ export function Timeline() {
                 selected={selectedKeys.has(nodePrefix)}
                 selectedNodeIndex={selectedNodeIndex}
                 uiScale={uiScale}
+                validationMessage={validationMessage}
             />
         );
     };
@@ -444,34 +569,51 @@ export function Timeline() {
                     )}
             </div>
 
-            <div
-                className="zerith-scrollbar"
-                style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    flexGrow: 1,
-                    gap: `${2 * uiScale}px`,
-                    minHeight: 0,
-                    overflowY: 'auto',
-                    userSelect: 'none',
-                    WebkitUserSelect: 'none',
-                }}
-            >
-                {visibleRoot.map(({ index, node }) => renderNode(node, [index], [], index, 0))}
+            <div style={{ display: 'flex', flex: 1, gap: `${8 * uiScale}px`, minHeight: 0 }}>
+                <div
+                    className="zerith-scrollbar"
+                    ref={timelineScrollReference}
+                    style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        flexGrow: 1,
+                        gap: `${2 * uiScale}px`,
+                        minHeight: 0,
+                        overflowY: 'auto',
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                    }}
+                >
+                    {visibleRoot.map(({ index, node }) => renderNode(node, [index], [], index, 0))}
 
-                {!isSearching && typeFilter === 'all' && (
-                    <TimelineDropZone
-                        borderAccent={t.border.accent}
-                        dropIndicator={dropIndicator}
-                        onDragOver={handleNodeDragOver}
-                        onDrop={handleNodeDrop}
-                        rootCount={rootNodes.length}
-                        sameArrayPath={sameArrayPath}
-                        uiScale={uiScale}
-                    />
-                )}
+                    {!isSearching && typeFilter === 'all' && (
+                        <TimelineDropZone
+                            borderAccent={t.border.accent}
+                            dropIndicator={dropIndicator}
+                            onDragOver={handleNodeDragOver}
+                            onDrop={handleNodeDrop}
+                            rootCount={rootNodes.length}
+                            sameArrayPath={sameArrayPath}
+                            uiScale={uiScale}
+                        />
+                    )}
 
-                {visibleRoot.length === 0 && <TimelineEmptyState />}
+                    {visibleRoot.length === 0 && <TimelineEmptyState />}
+                </div>
+
+                <TimelineMinimap
+                    onSeek={(ratio) => {
+                        const element = timelineScrollReference.current;
+                        if (!element) return;
+                        const maxScroll = Math.max(0, element.scrollHeight - element.clientHeight);
+                        element.scrollTop = maxScroll * ratio;
+                        refreshScrollMetrics();
+                    }}
+                    rows={minimapRows}
+                    uiScale={uiScale}
+                    viewportHeightRatio={scrollMetrics.clientHeight / scrollMetrics.scrollHeight}
+                    viewportStartRatio={scrollMetrics.scrollTop / maxScrollTop}
+                />
             </div>
 
             <ConfirmDialog
@@ -488,6 +630,38 @@ export function Timeline() {
             <TimelineCommandContextMenu menu={contextMenu} uiScale={uiScale} />
         </div>
     );
+}
+
+
+function flattenRenderedNodes(
+    root: { index: number; node: PluginNode }[],
+    context: FlattenContext
+): FlattenNode[] {
+    const output: FlattenNode[] = [];
+
+    const visit = (node: PluginNode, nodePath: ScriptPath) => {
+        output.push({ node, path: nodePath });
+
+        const plugin = getPlugin(node.type) as { getBranches?: (node_: PluginNode) => TimelineBranch[] };
+        const branches = plugin.getBranches?.(node) ?? [];
+        if (branches.length === 0) return;
+
+        const isCollapsed = !context.isSearching && context.collapsed[pathKey(nodePath)];
+        if (isCollapsed) return;
+
+        for (const branch of branches) {
+            const branchArrayPath = [...nodePath, ...branch.path];
+            for (const [index, childNode] of branch.nodes.entries()) {
+                visit(childNode, [...branchArrayPath, index]);
+            }
+        }
+    };
+
+    for (const { index, node } of root) {
+        visit(node, [index]);
+    }
+
+    return output;
 }
 
 function macroNode(name: string, commands: PluginNode[]) {

@@ -5,28 +5,52 @@ import { useDismissiblePopup } from '../../../hooks/useDismissiblePopup';
 import { openProjectEntry } from '../../../services/openProjectEntry';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useProjectStore } from '../../../store/useProjectStore';
+import { useScriptStore } from '../../../store/useScriptStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
 import { MenuButton } from './MenuButton';
 import { MenuDropdown, type MenuItem } from './MenuDropdown';
 
-type MenuKey = 'Edit' | 'File' | 'Help' | 'Run' | 'View';
+type MenuKey = 'Debug' | 'Edit' | 'File' | 'Help' | 'Run' | 'View';
 
 export function MenuBar({ uiScale }: { uiScale: number }) {
     const rootReference = useRef<HTMLDivElement>(null);
     const [openMenu, setOpenMenu] = useState<MenuKey | undefined>();
 
     const {
+        addRecentProject,
+        autosaveEnabled,
+        autosaveIntervalMs,
+        clearAllBreakpoints,
+        clearRecentProjects,
+        isPlaybackPaused,
+        markManualSave,
+        openCommandPalette,
         openGlobalSearchPopup,
+        openGlobalSearchReplacePopup,
+        playTrigger,
+        recentProjects,
         resetDockLayout,
+        setAutosaveEnabled,
+        setAutosaveIntervalMs,
         setThemeKey,
         setUiScale,
+        stopTrigger,
         themeKey,
+        toggleBreakpoint,
+        triggerPause,
         triggerPlay,
+        triggerResume,
+        triggerStep,
         triggerStop,
         uiScale: currentScale,
     } = useEditorStore();
 
-    const { activeFile, openProjectFromManifest, saveActiveFileFromCurrentScript } = useProjectStore();
+    const { activeFile, dirtyFiles, openProjectFromManifest, saveActiveFileFromCurrentScript, saveAllDirtyFiles } = useProjectStore();
+    const selectedNodePaths = useEditorStore((state) => state.selectedNodePaths);
+    const canRedo = useScriptStore((state) => state.future.length > 0);
+    const canUndo = useScriptStore((state) => state.past.length > 0);
+    const redo = useScriptStore((state) => state.redo);
+    const undo = useScriptStore((state) => state.undo);
 
     useDismissiblePopup(!!openMenu, rootReference, () => setOpenMenu(undefined));
 
@@ -41,59 +65,162 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
 
             if (selectedFile) {
                 await openProjectFromManifest(selectedFile);
+                addRecentProject(selectedFile);
                 await openInitialProjectEntry();
             }
         } catch (error) {
             console.error('Failed to open project dialog:', error);
         }
-    }, [openProjectFromManifest]);
+    }, [addRecentProject, openProjectFromManifest]);
+
+    const handleOpenRecentProject = useCallback(async (manifestPath: string) => {
+        try {
+            await openProjectFromManifest(manifestPath);
+            addRecentProject(manifestPath);
+            await openInitialProjectEntry();
+        } catch (error) {
+            console.error('Failed to open recent project:', error);
+        }
+    }, [addRecentProject, openProjectFromManifest]);
 
     const handleSave = useCallback(async () => {
         if (!activeFile) return;
+        markManualSave();
         await saveActiveFileFromCurrentScript();
-    }, [activeFile, saveActiveFileFromCurrentScript]);
+    }, [activeFile, markManualSave, saveActiveFileFromCurrentScript]);
 
-    const fileItems = useMemo<MenuItem[]>(
-        () =>[
+    const handleSaveAll = useCallback(async () => {
+        markManualSave();
+        await saveAllDirtyFiles();
+    }, [markManualSave, saveAllDirtyFiles]);
+
+    const isRunning = playTrigger > stopTrigger;
+    const hasDirtyFiles = dirtyFiles.size > 0;
+    const safeRecentProjects = useMemo(() => recentProjects ?? [], [recentProjects]);
+    const selectedRootIndex = selectedNodePaths[0]?.length === 1
+        && typeof selectedNodePaths[0][0] === 'number'
+        ? selectedNodePaths[0][0]
+        : undefined;
+
+    const fileItems = useMemo<MenuItem[]>(() => {
+        const openRecentItems: MenuItem[] = safeRecentProjects.length === 0
+            ? [{ disabled: true, label: 'No recent projects' }]
+            : safeRecentProjects.map((project) => ({
+                label: `${project.name} - ${project.path}`,
+                onClick: () => { void handleOpenRecentProject(project.path); },
+            }));
+
+        const openRecentChildren: MenuItem[] = safeRecentProjects.length === 0
+            ? openRecentItems
+            : [
+                ...openRecentItems,
+                { label: 'sep-recent-clear', separator: true },
+                { label: 'Clear Recent Projects', onClick: clearRecentProjects },
+            ];
+
+        return [
             { label: 'Open Project…', onClick: () => { void handleOpenProject(); }, shortcut: 'Ctrl+O' },
+            { children: openRecentChildren, label: `Open Recent (${safeRecentProjects.length})` },
+            { label: 'sep-0', separator: true },
             { disabled: !activeFile, label: 'Save', onClick: () => { void handleSave(); }, shortcut: 'Ctrl+S' },
+            { disabled: !hasDirtyFiles, label: 'Save All', onClick: () => { void handleSaveAll(); }, shortcut: 'Ctrl+Shift+S' },
             { label: 'sep-1', separator: true },
             { label: 'Reset Layout', onClick: resetDockLayout },
-        ],[activeFile, handleOpenProject, handleSave, resetDockLayout]
-    );
+        ];
+    }, [activeFile, clearRecentProjects, handleOpenProject, handleOpenRecentProject, handleSave, handleSaveAll, hasDirtyFiles, resetDockLayout, safeRecentProjects]);
 
     const editItems = useMemo<MenuItem[]>(
         () =>[
-            { disabled: false, label: 'Undo', shortcut: 'Ctrl+Z' },
-            { disabled: false, label: 'Redo', shortcut: 'Ctrl+Y' },
+            { disabled: !canUndo, label: 'Undo', onClick: undo, shortcut: 'Ctrl+Z' },
+            { disabled: !canRedo, label: 'Redo', onClick: redo, shortcut: 'Ctrl+Y' },
             { label: 'sep-2', separator: true },
             { disabled: false, label: 'Copy', shortcut: 'Ctrl+C' },
             { disabled: false, label: 'Paste', shortcut: 'Ctrl+V' },
-        ],[]
+        ],[canRedo, canUndo, redo, undo]
     );
 
     const viewItems = useMemo<MenuItem[]>(
         () =>[
             { label: 'Find in Project…', onClick: openGlobalSearchPopup, shortcut: 'Ctrl+Shift+F' },
+            { label: 'Find and Replace in Project…', onClick: openGlobalSearchReplacePopup, shortcut: 'Ctrl+Shift+G' },
+            { label: 'Command Palette…', onClick: openCommandPalette, shortcut: 'Ctrl+Shift+P' },
             { label: 'sep-3', separator: true },
             { label: 'Zoom In', onClick: () => setUiScale(Math.min(1.5, currentScale + 0.1)), shortcut: 'Ctrl+=' },
             { label: 'Zoom Out', onClick: () => setUiScale(Math.max(0.8, currentScale - 0.1)), shortcut: 'Ctrl+-' },
             { label: 'Reset Zoom', onClick: () => setUiScale(1), shortcut: 'Ctrl+0' },
             { label: 'sep-4', separator: true },
-            { label: `Theme: ${themeKey}`, submenuLabel: 'Select' },
-            { label: 'Classic', onClick: () => setThemeKey('classic') },
-            { label: 'Classic Soft', onClick: () => setThemeKey('classicSoft') },
+            {
+                children: [
+                    { label: 'Classic', onClick: () => setThemeKey('classic') },
+                    { label: 'Classic Soft', onClick: () => setThemeKey('classicSoft') },
+                ],
+                label: `Theme: ${themeKey}`,
+            },
+            { label: 'sep-4b', separator: true },
+            { label: `Autosave: ${autosaveEnabled ? 'On' : 'Off'}`, onClick: () => setAutosaveEnabled(!autosaveEnabled) },
+            {
+                children: [
+                    { label: '15 seconds', onClick: () => setAutosaveIntervalMs(15 * 1000) },
+                    { label: '30 seconds', onClick: () => setAutosaveIntervalMs(30 * 1000) },
+                    { label: '60 seconds', onClick: () => setAutosaveIntervalMs(60 * 1000) },
+                ],
+                label: `Autosave interval: ${Math.round(autosaveIntervalMs / 1000)}s`,
+            },
         ],
-        [currentScale, openGlobalSearchPopup, setThemeKey, setUiScale, themeKey]
+        [autosaveEnabled, autosaveIntervalMs, currentScale, openCommandPalette, openGlobalSearchPopup, openGlobalSearchReplacePopup, setAutosaveEnabled, setAutosaveIntervalMs, setThemeKey, setUiScale, themeKey]
     );
 
     const runItems = useMemo<MenuItem[]>(
         () =>[
-            { label: 'Play', onClick: triggerPlay, shortcut: 'F5' },
+            { label: 'Play', onClick: triggerPlay },
             { label: 'Stop', onClick: triggerStop, shortcut: 'Shift+F5' },
         ],
         [triggerPlay, triggerStop]
     );
+
+    const debugItems: MenuItem[] = [
+        {
+            disabled: !isRunning || !isPlaybackPaused,
+            label: 'Continue',
+            onClick: triggerResume,
+            shortcut: 'F5',
+        },
+        {
+            disabled: !isRunning || isPlaybackPaused,
+            label: 'Pause',
+            onClick: triggerPause,
+            shortcut: 'F6',
+        },
+        {
+            disabled: !isRunning || !isPlaybackPaused,
+            label: 'Step Over',
+            onClick: triggerStep,
+            shortcut: 'F10',
+        },
+        {
+            disabled: true,
+            label: 'Step Into',
+            shortcut: 'F11',
+        },
+        {
+            disabled: true,
+            label: 'Step Out',
+            shortcut: 'Shift+F11',
+        },
+        {
+            disabled: !activeFile || selectedRootIndex === undefined,
+            label: 'Toggle Breakpoint',
+            onClick: () => {
+                if (!activeFile || selectedRootIndex === undefined) return;
+                toggleBreakpoint(activeFile, selectedRootIndex);
+            },
+            shortcut: 'F9',
+        },
+        { label: 'Clear All Breakpoints', onClick: clearAllBreakpoints },
+        { label: 'sep-debug-1', separator: true },
+        { label: 'Start Playback', onClick: triggerPlay },
+        { disabled: !isRunning, label: 'Stop Playback', onClick: triggerStop, shortcut: 'Shift+F5' },
+    ];
 
     const helpItems = useMemo<MenuItem[]>(
         () =>[{ disabled: true, label: 'About Zerith Editor' }],
@@ -101,6 +228,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
     );
 
     const menuMap: Record<MenuKey, MenuItem[]> = {
+        Debug: debugItems,
         Edit: editItems,
         File: fileItems,
         Help: helpItems,
@@ -108,7 +236,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         View: viewItems,
     };
 
-    const keys: MenuKey[] =['File', 'Edit', 'View', 'Run', 'Help'];
+    const keys: MenuKey[] =['File', 'Edit', 'View', 'Run', 'Debug', 'Help'];
 
     return (
         <div
@@ -132,9 +260,16 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
                     key={k}
                     label={k}
                     onClick={() => setOpenMenu((previous) => (previous === k ? undefined : k))}
+                    onMouseEnter={() => {
+                        setOpenMenu((current) => (current && current !== k ? k : current));
+                    }}
                     uiScale={uiScale}
                 >
-                    <MenuDropdown items={menuMap[k]} uiScale={uiScale} />
+                    <MenuDropdown
+                        items={menuMap[k]}
+                        onItemSelected={() => setOpenMenu(undefined)}
+                        uiScale={uiScale}
+                    />
                 </MenuButton>
             ))}
         </div>

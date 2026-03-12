@@ -3,6 +3,7 @@ import type { ItemManifestEntry } from 'core';
 import { useMemo, useState } from 'react';
 
 import { fsWriteTextFile } from '../../../services/fs';
+import { useProjectStore } from '../../../store/useProjectStore';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
 import { Field, isRecord, sharedStyles } from './EditorSharedUI';
@@ -20,6 +21,7 @@ type ParsedItemsTab = {
 export function ItemsEditor({ uiScale }: { uiScale: number }) {
     const activeTab = useWorkbenchStore((state) => state.activeTab());
     const updateTabContent = useWorkbenchStore((state) => state.updateTabContent);
+    const clearFileDirty = useProjectStore((state) => state.clearFileDirty);
 
     const [selectedByTab, setSelectedByTab] = useState<Record<string, string>>({});
     const[runtimeError, setRuntimeError] = useState<string>();
@@ -78,6 +80,8 @@ export function ItemsEditor({ uiScale }: { uiScale: number }) {
         try {
             const nextText = activeTab.textContent ?? '{}';
             await fsWriteTextFile(activeTab.path, nextText);
+            updateTabContent(activeTab.id, nextText, { markDirty: false });
+            clearFileDirty(activeTab.path);
             setStatus('Saved items.');
             setRuntimeError(undefined);
         } catch (caughtError: unknown) {

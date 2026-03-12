@@ -1,10 +1,16 @@
 export interface ConsoleMessage {
     id: number;
-    source: 'editor' | 'preview';
+    source: 'editor' | 'preview' | 'react';
     text: string;
-    timestamp: Date;
+    timestampText: string;
     type: 'error' | 'info' | 'log' | 'warn';
 }
+
+export type ConsoleMessageInput = {
+    arguments_: unknown[];
+    source: ConsoleMessage['source'];
+    type: ConsoleMessage['type'];
+};
 
 export interface ConsoleMessagesSlice {
     addMessage: (
@@ -12,6 +18,7 @@ export interface ConsoleMessagesSlice {
         type: ConsoleMessage['type'],
         ...arguments_: unknown[]
     ) => void;
+    addMessagesBatch: (entries: ConsoleMessageInput[]) => void;
     clear: () => void;
     messages: ConsoleMessage[];
     previewLogCaptureEnabled: boolean;

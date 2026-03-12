@@ -13,7 +13,7 @@ export type { MacroEntry } from './project/types';
 
 
 export const useProjectStore = create<ProjectState>()((set, get) => ({
-    ...createProjectSessionSlice(set, {
+    ...createProjectSessionSlice(set, get, {
         getRootScript: () => useScriptStore.getState().rootScript,
         setScript: (content) => useScriptStore.getState().setScript(content),
     }),

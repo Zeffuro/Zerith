@@ -1,4 +1,4 @@
-import { CommandSchemaRegistry } from 'core/schemas';
+import { SchemaRegistry } from 'core/schemas';
 import { z } from 'zod';
 
 export type FieldInfo = {
@@ -16,7 +16,7 @@ type UnwrapResult = {
 };
 
 export function inferCommandFields(type: string): FieldInfo[] {
-    const rawSchema = CommandSchemaRegistry[type] as undefined | z.ZodTypeAny;
+    const rawSchema = SchemaRegistry.get(type);
     if (!rawSchema) return [];
 
     const { schema } = unwrapSchema(rawSchema);

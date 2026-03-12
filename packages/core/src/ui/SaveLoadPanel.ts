@@ -86,9 +86,9 @@ export class SaveLoadPanel implements MenuPanel {
             let label: string;
             if (meta) {
                 const date = new Date(meta.savedAt);
-                label = `Slot ${slotNumber}  —  ${meta.sceneName || 'Unknown'}  (${date.toLocaleString()})`;
+                label = `Slot ${slotNumber} - ${meta.sceneName || 'Unknown'}  (${date.toLocaleString()})`;
             } else {
-                label = `Slot ${slotNumber}  —  Empty`;
+                label = `Slot ${slotNumber} - Empty`;
             }
 
             const slotText = new Text({

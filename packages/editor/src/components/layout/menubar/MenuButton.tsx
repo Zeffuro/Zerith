@@ -7,18 +7,21 @@ export function MenuButton({
                                children,
                                label,
                                onClick,
+                               onMouseEnter,
                                uiScale,
                            }: {
     active: boolean;
     children?: ReactNode;
     label: string;
     onClick: () => void;
+    onMouseEnter?: () => void;
     uiScale: number;
 }) {
     return (
         <div style={{ position: 'relative' }}>
             <button
                 onClick={onClick}
+                onMouseEnter={onMouseEnter}
                 style={{
                     background: active ? t.bg.hover : 'transparent',
                     border: 'none',

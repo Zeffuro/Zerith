@@ -10,8 +10,10 @@ import { useEditorStore } from '../../store/useEditorStore';
 import { useScriptStore } from '../../store/useScriptStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { Inspector } from '../inspector/Inspector';
+import { CommandPalette } from '../tools/CommandPalette';
 import { ConsolePanel } from '../tools/ConsolePanel';
 import { GlobalSearchContent, GlobalSearchPanel } from '../tools/GlobalSearchPanel';
+import { ReferenceTrackerPanel } from '../tools/ReferenceTrackerPanel';
 import { RuntimeMonitorPanel } from '../tools/RuntimeMonitorPanel';
 import { StateObserverPanel } from '../tools/StateObserverPanel';
 import { createDefaultDockLayout } from './dock/defaultDockLayout';
@@ -65,8 +67,10 @@ class LayoutErrorBoundary extends Component<LayoutErrorBoundaryProperties, Layou
 
 
 export function DockLayoutHost() {
+    const closeCommandPalette = useEditorStore((s) => s.closeCommandPalette);
     const closeGlobalSearchPopup = useEditorStore((s) => s.closeGlobalSearchPopup);
     const dockLayoutJson = useEditorStore((s) => s.dockLayoutJson);
+    const isCommandPaletteOpen = useEditorStore((s) => s.isCommandPaletteOpen);
     const isGlobalSearchPopupOpen = useEditorStore((s) => s.isGlobalSearchPopupOpen);
     const setDockLayoutJson = useEditorStore((s) => s.setDockLayoutJson);
     const uiScale = useEditorStore((s) => s.uiScale);
@@ -193,6 +197,19 @@ export function DockLayoutHost() {
         model.doAction(Actions.selectTab(DOCK_PANELS.editor));
     }, [activeWorkbenchTabId, model]);
 
+    useEffect(() => {
+        const onDockSelect = (event: Event) => {
+            const detail = (event as CustomEvent<unknown>).detail;
+            if (typeof detail !== 'string') return;
+            const tabNode = model.getNodeById(detail) as TabNode | undefined;
+            if (!tabNode) return;
+            model.doAction(Actions.selectTab(detail));
+        };
+
+        globalThis.addEventListener('zerith:dock-select', onDockSelect);
+        return () => globalThis.removeEventListener('zerith:dock-select', onDockSelect);
+    }, [model]);
+
     const factory = (node: TabNode) => {
         const comp = node.getComponent() as string;
 
@@ -218,6 +235,9 @@ export function DockLayoutHost() {
                         <GamePreview script={rootScript} />
                     </Suspense>
                 );
+            }
+            case DOCK_PANELS.referenceTracker: {
+                return <ReferenceTrackerPanel />;
             }
             case DOCK_PANELS.runtimeMonitor: {
                 return <RuntimeMonitorPanel />;
@@ -275,6 +295,10 @@ export function DockLayoutHost() {
                                 onRequestClose={closeGlobalSearchPopup}
                             />
                         </div>
+                    )}
+
+                    {isCommandPaletteOpen && (
+                        <CommandPalette onRequestClose={closeCommandPalette} uiScale={uiScale} />
                     )}
                 </div>
             </div>

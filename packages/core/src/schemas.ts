@@ -278,11 +278,12 @@ class SchemaRegistrySingleton {
         this.schemas = { ...initialSchemas };
     }
 
-    /*
+    /**
+     * Returns a schema by command type when registered.
+     */
     public get(type: string): undefined | z.ZodType {
         return this.schemas[type];
     }
-    */
 
     public getCommandSchema(): z.ZodType {
         const options = Object.values(this.schemas) as DiscriminatedOption[];
@@ -307,18 +308,29 @@ class SchemaRegistrySingleton {
         return this.schemas;
     }
 
-    /*
+    /**
+     * Returns all registered command type keys.
+     */
+    public getTypes(): string[] {
+        return Object.keys(this.schemas);
+    }
+
+    /**
+     * Registers or replaces a schema for a command type.
+     */
     public register(type: string, schema: z.ZodType): void {
         this.schemas[type] = schema;
     }
-    */
 }
 
+/**
+ * Mutable command schema registry used by validation and editor introspection.
+ */
 export const SchemaRegistry = new SchemaRegistrySingleton(BuiltInCommandSchemaRegistry);
 
-/* Backward-compatible alias used by editor introspection */
-export const CommandSchemaRegistry = SchemaRegistry.getRegistry();
-
+/**
+ * Script-level schema built from the currently registered command schemas.
+ */
 export const ScriptSchema = z.array(z.lazy(() => SchemaRegistry.getCommandSchema()));
 
 /**

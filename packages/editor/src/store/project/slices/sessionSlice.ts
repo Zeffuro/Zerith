@@ -1,11 +1,24 @@
 import type { FsDirectoryEntry } from '../../../services/fs';
 import type { EditorNode } from '../../../types/EditorNode';
-import type { ProjectScriptBridge, ProjectSessionSlice, ProjectSet } from '../types';
+import type { ProjectGet, ProjectScriptBridge, ProjectSessionSlice, ProjectSet } from '../types';
 
-export function createProjectSessionSlice(set: ProjectSet, scriptBridge: ProjectScriptBridge): ProjectSessionSlice {
+export function createProjectSessionSlice(
+    set: ProjectSet,
+    get: ProjectGet,
+    scriptBridge: ProjectScriptBridge,
+): ProjectSessionSlice {
     return {
         activeFile: undefined,
         bumpTreeRevision: () => set((s) => ({ treeRevision: s.treeRevision + 1 })),
+        clearAllDirtyFiles: () => set({ dirtyFiles: new Set<string>() }),
+        clearFileDirty: (filePath: string) =>
+            set((state) => {
+                if (!state.dirtyFiles.has(filePath)) return {};
+                const nextDirty = new Set(state.dirtyFiles);
+                nextDirty.delete(filePath);
+                return { dirtyFiles: nextDirty };
+            }),
+        dirtyFiles: new Set<string>(),
         expandedPaths: [],
         expandToPath: (targetPath: string) =>
             set((state) => {
@@ -27,6 +40,12 @@ export function createProjectSessionSlice(set: ProjectSet, scriptBridge: Project
                 return { expandedPaths };
             }),
         files: [],
+        isFileDirty: (filePath: string) => get().dirtyFiles.has(filePath),
+        markFileDirty: (filePath: string) =>
+            set((state) => {
+                if (!filePath || state.dirtyFiles.has(filePath)) return {};
+                return { dirtyFiles: new Set([...state.dirtyFiles, filePath]) };
+            }),
         projectPath: undefined,
 
         setActiveFile: (file: string, content: EditorNode[]) => {
@@ -54,6 +73,7 @@ export function createProjectSessionSlice(set: ProjectSet, scriptBridge: Project
                 activeFile: undefined,
                 activeMacroName: undefined,
                 characters: {},
+                dirtyFiles: new Set<string>(),
                 editingAllMacrosFile: false,
                 expandedPaths: [],
                 files,

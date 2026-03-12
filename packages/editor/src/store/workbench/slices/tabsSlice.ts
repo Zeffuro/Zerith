@@ -1,5 +1,7 @@
 import type { WorkbenchGet, WorkbenchSet, WorkbenchTab, WorkbenchTabsSlice } from '../types';
 
+import { useProjectStore } from '../../useProjectStore';
+
 export function createWorkbenchTabsSlice(set: WorkbenchSet, get: WorkbenchGet): WorkbenchTabsSlice {
     return {
         activeTab: () => {
@@ -82,10 +84,26 @@ export function createWorkbenchTabsSlice(set: WorkbenchSet, get: WorkbenchGet): 
 
         tabs: [],
 
-        updateTabContent: (tabId, textContent) =>
-            set((state) => ({
-                tabs: state.tabs.map((tab) => (tab.id === tabId ? { ...tab, textContent } : tab)),
-            })),
+        updateTabContent: (tabId, textContent, options) =>
+            set((state) => {
+                const markDirty = options?.markDirty !== false;
+                const targetTab = state.tabs.find((tab) => tab.id === tabId);
+                if (targetTab?.path) {
+                    if (markDirty) {
+                        useProjectStore.getState().markFileDirty(targetTab.path);
+                    } else {
+                        useProjectStore.getState().clearFileDirty(targetTab.path);
+                    }
+                }
+
+                return {
+                    tabs: state.tabs.map((tab) => (
+                        tab.id === tabId
+                            ? { ...tab, dirty: markDirty, textContent }
+                            : tab
+                    )),
+                };
+            }),
     };
 }
 

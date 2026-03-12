@@ -43,7 +43,11 @@ export interface WorkbenchTabsSlice {
     renameTabPath: (nextPath: string, oldPath: string) => void;
     setActiveTab: (tabId: string | undefined) => void;
     tabs: WorkbenchTab[];
-    updateTabContent: (tabId: string, textContent: string) => void;
+    updateTabContent: (
+        tabId: string,
+        textContent: string,
+        options?: { markDirty?: boolean },
+    ) => void;
 }
 
 export interface WorkbenchViewPrefsSlice {

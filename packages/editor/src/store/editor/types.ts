@@ -39,6 +39,8 @@ export type EditorWindowState = {
     y: number;
 } | undefined;
 
+export type GlobalSearchLaunchMode = 'find' | 'replace';
+
 export type PendingDeleteRequest = {
     paths: ScriptPath[];
     source: DeleteRequestSource;
@@ -48,6 +50,7 @@ export interface PlaybackQuickCommandsSlice {
     activeExecutionPath: ScriptPath | undefined;
     breakpoints: Record<string, number[]>;
     clearActiveExecutionPath: () => void;
+    clearAllBreakpoints: () => void;
     isPlaybackPaused: boolean;
     moveQuickCommandType: (type: NonMacroEditorCommandType, direction: 'left' | 'right') => void;
     pauseTrigger: number;
@@ -70,6 +73,12 @@ export interface PlaybackQuickCommandsSlice {
     triggerStop: () => void;
 }
 
+export type RecentProject = {
+    lastOpened: number;
+    name: string;
+    path: string;
+};
+
 export interface SelectionSlice {
     clearDeleteRequest: () => void;
     clearSelection: () => void;
@@ -83,14 +92,29 @@ export interface SelectionSlice {
 }
 
 export interface UiPrefsSlice {
+    addRecentProject: (manifestPath: string) => void;
+    autosaveEnabled: boolean;
+    autosaveIntervalMs: number;
+    clearRecentProjects: () => void;
+    closeCommandPalette: () => void;
     closeGlobalSearchPopup: () => void;
+    globalSearchLaunchMode: GlobalSearchLaunchMode;
+    isCommandPaletteOpen: boolean;
     isGlobalSearchPopupOpen: boolean;
     isMuted: boolean;
-    openGlobalSearchPopup: () => void;
+    lastManualSaveAt: number;
+    markManualSave: () => void;
+    openCommandPalette: () => void;
+    openGlobalSearchPopup: (mode?: GlobalSearchLaunchMode) => void;
+    openGlobalSearchReplacePopup: () => void;
+    recentProjects: RecentProject[];
+    setAutosaveEnabled: (enabled: boolean) => void;
+    setAutosaveIntervalMs: (intervalMs: number) => void;
     setThemeKey: (key: string) => void;
     setUiScale: (scale: number) => void;
     setWindowState: (state: EditorWindowState) => void;
     themeKey: string;
+    toggleCommandPalette: () => void;
     toggleGlobalSearchPopup: () => void;
     toggleMute: () => void;
     uiScale: number;

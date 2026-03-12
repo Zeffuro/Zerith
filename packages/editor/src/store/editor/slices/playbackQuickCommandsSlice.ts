@@ -19,6 +19,7 @@ export function createPlaybackQuickCommandsSlice(set: EditorSet): PlaybackQuickC
         activeExecutionPath: undefined,
         breakpoints: {},
         clearActiveExecutionPath: () => set({ activeExecutionPath: undefined }),
+        clearAllBreakpoints: () => set({ breakpoints: {} }),
         isPlaybackPaused: false,
         moveQuickCommandType: (type, direction) =>
             set((state) => {

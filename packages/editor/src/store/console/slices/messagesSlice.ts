@@ -1,26 +1,26 @@
-import type { ConsoleMessage, ConsoleMessagesSlice, ConsoleSet } from '../types';
+import type { ConsoleMessage, ConsoleMessageInput, ConsoleMessagesSlice, ConsoleSet } from '../types';
 
+const MAX_CONSOLE_MESSAGES = 1000;
 let nextId = 0;
 
 export function createConsoleMessagesSlice(set: ConsoleSet): ConsoleMessagesSlice {
     return {
         addMessage: (source, type, ...arguments_) =>
-            set((state) => {
-                const text = formatArguments(arguments_);
-                const newMessage: ConsoleMessage = {
-                    id: nextId++,
-                    source,
-                    text,
-                    timestamp: new Date(),
-                    type,
-                };
-                return { messages: [...state.messages, newMessage].slice(-1000) };
-            }),
+            set((state) => appendMessages(state.messages, [{ arguments_, source, type }])),
+        addMessagesBatch: (entries) =>
+            set((state) => appendMessages(state.messages, entries)),
         clear: () => set({ messages: [] }),
         messages: [],
         previewLogCaptureEnabled: false,
         setPreviewLogCaptureEnabled: (enabled) => set({ previewLogCaptureEnabled: enabled }),
     };
+}
+
+function appendMessages(current: ConsoleMessage[], entries: ConsoleMessageInput[]): { messages: ConsoleMessage[] } {
+    if (entries.length === 0) return { messages: current };
+
+    const next = entries.map((entry) => toConsoleMessage(entry));
+    return { messages: [...current, ...next].slice(-MAX_CONSOLE_MESSAGES) };
 }
 
 function formatArgument(argument: unknown): string {
@@ -63,4 +63,17 @@ function safeJson(value: unknown): string {
         return String(value);
     }
 }
+
+function toConsoleMessage(entry: ConsoleMessageInput): ConsoleMessage {
+    const timestamp = new Date();
+
+    return {
+        id: nextId++,
+        source: entry.source,
+        text: formatArguments(entry.arguments_),
+        timestampText: timestamp.toLocaleTimeString(),
+        type: entry.type,
+    };
+}
+
 

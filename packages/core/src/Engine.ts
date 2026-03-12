@@ -175,23 +175,51 @@ export class Engine {
     public destroy() {
         this.flow.stop();
         this.input.detach();
-        void this.animations.destroy?.();
         this.clear();
         this.flow.destroyHandlers();
-        void this.overlay.destroy?.();
-        void this.startScreen.destroy?.();
-        void this.notifications.destroy?.();
-        void this.saves.destroy?.();
-        void this.scenes.destroy?.();
-        void this.events.destroy?.();
-        void this.stateManager.destroy?.();
-        void this.history.destroy?.();
-        void this.items.destroy?.();
-        void this.spritesheets.destroy?.();
-        void this.assets.destroy?.();
-        void this.input.destroy?.();
-        void this.display.destroy?.();
-        void this.audio.destroy?.();
+
+        const destroyTasks: Array<{
+            name: string;
+            run: () => Promise<void> | void;
+        }> = [
+            { name: 'animations', run: () => this.animations.destroy?.() },
+            { name: 'overlay', run: () => this.overlay.destroy?.() },
+            { name: 'startScreen', run: () => this.startScreen.destroy?.() },
+            { name: 'notifications', run: () => this.notifications.destroy?.() },
+            { name: 'saves', run: () => this.saves.destroy?.() },
+            { name: 'scenes', run: () => this.scenes.destroy?.() },
+            { name: 'events', run: () => this.events.destroy?.() },
+            { name: 'stateManager', run: () => this.stateManager.destroy?.() },
+            { name: 'history', run: () => this.history.destroy?.() },
+            { name: 'items', run: () => this.items.destroy?.() },
+            { name: 'spritesheets', run: () => this.spritesheets.destroy?.() },
+            { name: 'assets', run: () => this.assets.destroy?.() },
+            { name: 'input', run: () => this.input.destroy?.() },
+            { name: 'display', run: () => this.display.destroy?.() },
+            { name: 'audio', run: () => this.audio.destroy?.() },
+        ];
+
+        const destroyPromises = destroyTasks.map(({ run }) => {
+            try {
+                return Promise.resolve(run());
+            } catch (error) {
+                return Promise.reject(
+                    error instanceof Error
+                        ? error
+                        : new Error(String(error))
+                );
+            }
+        });
+
+        void Promise.allSettled(destroyPromises).then((results) => {
+            for (const [index, result] of results.entries()) {
+                if (result.status === 'rejected') {
+                    this.logger.error(
+                        `Manager destroy failed (${destroyTasks[index].name}): ${String(result.reason)}`
+                    );
+                }
+            }
+        });
     }
 
     public getHandler(type: BaseCommand['type']): RegisteredCommandHandler | undefined {

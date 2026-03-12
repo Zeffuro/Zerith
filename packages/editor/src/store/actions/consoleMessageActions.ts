@@ -1,4 +1,4 @@
-import type { ConsoleMessage } from '../useConsoleStore';
+import type { ConsoleMessage, ConsoleMessageInput } from '../useConsoleStore';
 
 import { useConsoleStore } from '../useConsoleStore';
 
@@ -8,5 +8,9 @@ export function executeConsoleMessageAction(
     ...arguments_: unknown[]
 ): void {
     useConsoleStore.getState().addMessage(source, type, ...arguments_);
+}
+
+export function executeConsoleMessageBatchAction(entries: ConsoleMessageInput[]): void {
+    useConsoleStore.getState().addMessagesBatch(entries);
 }
 
