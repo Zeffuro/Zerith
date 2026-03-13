@@ -1,4 +1,8 @@
-import type { GlobalSearchProjectData, GlobalSearchReplacementFile } from './contracts';
+import type {
+    GlobalSearchProjectData,
+    GlobalSearchReplacementFile,
+    ReplacementTarget,
+} from './contracts';
 
 import { resolveReplacementTarget } from './replacementTargetResolver';
 
@@ -10,27 +14,26 @@ export function toReplacementFilePayload(
     nextScenes: GlobalSearchProjectData['scenes'],
     projectData: GlobalSearchProjectData,
 ): GlobalSearchReplacementFile | undefined {
-    const target = resolveReplacementTarget(filePath, nextScenes, projectData);
+    const target: ReplacementTarget | undefined = resolveReplacementTarget(filePath, nextScenes, projectData);
     if (!target) return undefined;
 
-    if (target.kind === 'character') {
-        return { content: JSON.stringify(nextCharacters, undefined, 2), filePath, kind: 'character' };
+    switch (target.kind) {
+        case 'character': {
+            return { content: JSON.stringify(nextCharacters, undefined, 2), filePath, kind: 'character' };
+        }
+        case 'item': {
+            return { content: JSON.stringify(nextItems, undefined, 2), filePath, kind: 'item' };
+        }
+        case 'macro': {
+            return { content: JSON.stringify(nextMacros, undefined, 2), filePath, kind: 'macro' };
+        }
+        case 'scene': {
+            return {
+                content: JSON.stringify(nextScenes[target.sceneName], undefined, 2),
+                filePath,
+                kind: 'scene',
+            };
+        }
     }
-
-    if (target.kind === 'item') {
-        return { content: JSON.stringify(nextItems, undefined, 2), filePath, kind: 'item' };
-    }
-
-    if (target.kind === 'macro') {
-        return { content: JSON.stringify(nextMacros, undefined, 2), filePath, kind: 'macro' };
-    }
-
-    if (target.kind !== 'scene') return undefined;
-
-    return {
-        content: JSON.stringify(nextScenes[target.sceneName], undefined, 2),
-        filePath,
-        kind: 'scene',
-    };
 }
 

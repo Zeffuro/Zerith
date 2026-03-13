@@ -74,6 +74,12 @@ async function handleGlobalShortcut(event: KeyboardEvent): Promise<void> {
         return;
     }
 
+    if (module_ && event.altKey && key === 's') {
+        event.preventDefault();
+        useEditorStore.getState().openSettingsModal();
+        return;
+    }
+
     if (module_ && key === 's') {
         event.preventDefault();
         await executeGlobalShortcutAction('save');

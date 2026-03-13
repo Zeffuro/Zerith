@@ -4,6 +4,16 @@ import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
 export type GlobalSearchKind = 'character' | 'item' | 'macro' | 'scene';
 
+export type ScriptSearchKind = Extract<GlobalSearchKind, 'macro' | 'scene'>;
+
+export type RecordSearchKind = Extract<GlobalSearchKind, 'character' | 'item'>;
+
+export type ReplacementManifestKind = Exclude<GlobalSearchKind, 'scene'>;
+
+export type ReplacementTarget =
+    | { kind: ReplacementManifestKind }
+    | { kind: 'scene'; sceneName: string };
+
 export type GlobalSearchMatch = {
     filePath: string;
     kind: GlobalSearchKind;
@@ -27,7 +37,7 @@ export type GlobalSearchProjectData = {
 export type GlobalSearchReplacementFile = {
     content: string;
     filePath: string;
-    kind: GlobalSearchKind;
+    kind: ReplacementTarget['kind'];
 };
 
 export type GlobalSearchTextOptions = {

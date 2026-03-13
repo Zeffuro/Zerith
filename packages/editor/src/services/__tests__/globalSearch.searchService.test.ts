@@ -18,5 +18,11 @@ describe('globalSearch searchService facade', () => {
 
         expect(searchProjectContent('(', projectData, { regex: true })).toEqual([]);
     });
+
+    it('returns no matches for whitespace-only queries', () => {
+        const projectData = createGlobalSearchProjectData();
+
+        expect(searchProjectContent('   ', projectData)).toEqual([]);
+    });
 });
 

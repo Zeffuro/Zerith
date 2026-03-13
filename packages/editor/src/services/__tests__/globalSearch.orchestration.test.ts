@@ -35,5 +35,13 @@ describe('globalSearch orchestration helpers', () => {
         expect(macroMatches.some((match) => match.valuePath?.[0] === 0)).toBe(true);
         expect(macroMatches.some((match) => match.valuePath?.[0] === 1)).toBe(true);
     });
+
+    it('returns an empty result when orchestration request is invalid', () => {
+        const projectData = createGlobalSearchProjectData({ projectPath: undefined });
+
+        const matches = collectSearchMatches('hero', projectData, resolveGlobalSearchTextOptions({}));
+
+        expect(matches).toEqual([]);
+    });
 });
 

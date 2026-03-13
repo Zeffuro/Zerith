@@ -27,6 +27,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         openCommandPalette,
         openGlobalSearchPopup,
         openGlobalSearchReplacePopup,
+        openSettingsModal,
         playTrigger,
         recentProjects,
         resetDockLayout,
@@ -95,14 +96,14 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
     }, [markManualSave, saveAllDirtyFiles]);
 
     const isRunning = playTrigger > stopTrigger;
-    const hasDirtyFiles = dirtyFiles.size > 0;
-    const safeRecentProjects = useMemo(() => recentProjects ?? [], [recentProjects]);
     const selectedRootIndex = selectedNodePaths[0]?.length === 1
         && typeof selectedNodePaths[0][0] === 'number'
         ? selectedNodePaths[0][0]
         : undefined;
 
-    const fileItems = useMemo<MenuItem[]>(() => {
+    const fileItems: MenuItem[] = (() => {
+        const hasDirtyFiles = dirtyFiles.size > 0;
+        const safeRecentProjects = recentProjects ?? [];
         const openRecentItems: MenuItem[] = safeRecentProjects.length === 0
             ? [{ disabled: true, label: 'No recent projects' }]
             : safeRecentProjects.map((project) => ({
@@ -127,7 +128,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
             { label: 'sep-1', separator: true },
             { label: 'Reset Layout', onClick: resetDockLayout },
         ];
-    }, [activeFile, clearRecentProjects, handleOpenProject, handleOpenRecentProject, handleSave, handleSaveAll, hasDirtyFiles, resetDockLayout, safeRecentProjects]);
+    })();
 
     const editItems = useMemo<MenuItem[]>(
         () =>[
@@ -144,6 +145,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
             { label: 'Find in Project…', onClick: openGlobalSearchPopup, shortcut: 'Ctrl+Shift+F' },
             { label: 'Find and Replace in Project…', onClick: openGlobalSearchReplacePopup, shortcut: 'Ctrl+Shift+G' },
             { label: 'Command Palette…', onClick: openCommandPalette, shortcut: 'Ctrl+Shift+P' },
+            { label: 'Settings…', onClick: openSettingsModal, shortcut: 'Ctrl+Alt+S' },
             { label: 'sep-3', separator: true },
             { label: 'Zoom In', onClick: () => setUiScale(Math.min(1.5, currentScale + 0.1)), shortcut: 'Ctrl+=' },
             { label: 'Zoom Out', onClick: () => setUiScale(Math.max(0.8, currentScale - 0.1)), shortcut: 'Ctrl+-' },
@@ -167,7 +169,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
                 label: `Autosave interval: ${Math.round(autosaveIntervalMs / 1000)}s`,
             },
         ],
-        [autosaveEnabled, autosaveIntervalMs, currentScale, openCommandPalette, openGlobalSearchPopup, openGlobalSearchReplacePopup, setAutosaveEnabled, setAutosaveIntervalMs, setThemeKey, setUiScale, themeKey]
+        [autosaveEnabled, autosaveIntervalMs, currentScale, openCommandPalette, openGlobalSearchPopup, openGlobalSearchReplacePopup, openSettingsModal, setAutosaveEnabled, setAutosaveIntervalMs, setThemeKey, setUiScale, themeKey]
     );
 
     const runItems = useMemo<MenuItem[]>(

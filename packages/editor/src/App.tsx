@@ -4,6 +4,7 @@ import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState }
 
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { DockLayoutHost } from './components/layout/DockLayoutHost';
+import { SettingsModal } from './components/settings/SettingsModal';
 import './App.css';
 import { useAutosave } from './hooks/useAutosave';
 import { useGlobalEditorShortcuts } from './hooks/useGlobalEditorShortcuts';
@@ -177,6 +178,7 @@ function App() {
     return (
         <div style={{ '--ui-scale': uiScale, inset: 0, overflow: 'hidden', position: 'fixed' } as CSSProperties}>
             <DockLayoutHost />
+            <SettingsModal />
             <ConfirmDialog
                 cancelText="Cancel"
                 confirmText={isClosingWithSave ? 'Saving...' : 'Save All'}

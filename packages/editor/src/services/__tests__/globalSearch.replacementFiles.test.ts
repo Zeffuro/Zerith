@@ -39,6 +39,40 @@ describe('globalSearch replacement file helpers', () => {
         expect(payload?.content.includes('champion appears')).toBe(true);
     });
 
+    it('builds payload for item and macro manifest paths', () => {
+        const projectData = createGlobalSearchProjectData();
+
+        const itemPayload = toReplacementFilePayload(
+            '/project/data/items.json',
+            projectData.characters,
+            {
+                badge: {
+                    description: 'refined item',
+                    name: 'Refined Badge',
+                },
+            },
+            projectData.macros,
+            projectData.scenes,
+            projectData,
+        );
+
+        const macroPayload = toReplacementFilePayload(
+            '/project/data/macros.json',
+            projectData.characters,
+            projectData.items,
+            {
+                greet: [{ speaker: 'Guide', text: 'macro refined', type: 'dialogue' }],
+            },
+            projectData.scenes,
+            projectData,
+        );
+
+        expect(itemPayload?.kind).toBe('item');
+        expect(itemPayload?.content.includes('Refined Badge')).toBe(true);
+        expect(macroPayload?.kind).toBe('macro');
+        expect(macroPayload?.content.includes('macro refined')).toBe(true);
+    });
+
     it('returns undefined for unmatched file path', () => {
         const projectData = createGlobalSearchProjectData();
 

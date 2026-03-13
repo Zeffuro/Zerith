@@ -2,41 +2,29 @@ import type { CharacterDefinition, ItemManifestEntry, Script } from 'core';
 
 import type { PluginNode } from '../../plugins/types';
 import type { ScriptPath } from '../../utils/scriptPathUtilities';
-import type { GlobalSearchKind, GlobalSearchMatch } from './contracts';
+import type { GlobalSearchMatch, RecordSearchKind, ScriptSearchKind } from './contracts';
 
 import { getPlugin } from '../../plugins/commandPlugins';
 import { formatScriptBranchLabel } from './branchLabels';
-import { formatRecordSourceLabel, type RecordLabelKind } from './recordLabels';
-import {
-    matchesSearchValue,
-    summarizeMatchedText,
-    type ResolvedGlobalSearchTextOptions,
-} from './textSearch';
+import { formatRecordSourceLabel } from './recordLabels';
+import { scanLeafStrings } from './scanLeafStrings';
+import { type ResolvedGlobalSearchTextOptions } from './textSearch';
+
+export { scanLeafStrings };
 
 type ScanBranchOptions = {
     basePath: ScriptPath;
     filePath: string;
-    kind: 'macro' | 'scene';
+    kind: ScriptSearchKind;
     label: string;
     nodes: PluginNode[];
     query: string;
     textOptions: ResolvedGlobalSearchTextOptions;
 };
 
-type ScanLeafOptions = {
-    basePath: ScriptPath;
-    filePath: string;
-    kind: GlobalSearchKind;
-    label: string;
-    navigationPath: ScriptPath | undefined;
-    query: string;
-    textOptions: ResolvedGlobalSearchTextOptions;
-    value: unknown;
-};
-
 type ScanRecordOptions = {
     filePath: string;
-    kind: RecordLabelKind;
+    kind: RecordSearchKind;
     query: string;
     textOptions: ResolvedGlobalSearchTextOptions;
     values: Record<string, CharacterDefinition | ItemManifestEntry>;
@@ -44,7 +32,7 @@ type ScanRecordOptions = {
 
 type ScanScriptOptions = {
     filePath: string;
-    kind: 'macro' | 'scene';
+    kind: ScriptSearchKind;
     label: string;
     query: string;
     rootPath: ScriptPath;
@@ -65,47 +53,6 @@ function scanBranchNodes(matches: GlobalSearchMatch[], options: ScanBranchOption
     });
 }
 
-export function scanLeafStrings(matches: GlobalSearchMatch[], options: ScanLeafOptions): void {
-    if (typeof options.value === 'string') {
-        const text = options.value;
-        if (!matchesSearchValue(text, options.query, options.textOptions)) return;
-
-        matches.push({
-            filePath: options.filePath,
-            kind: options.kind,
-            label: options.label,
-            matchedValue: text,
-            path: options.navigationPath,
-            preview: summarizeMatchedText(text, options.query, options.textOptions),
-            replaceable: true,
-            valuePath: options.basePath,
-        });
-        return;
-    }
-
-    if (Array.isArray(options.value)) {
-        for (const [index, value] of options.value.entries()) {
-            scanLeafStrings(matches, {
-                ...options,
-                basePath: [...options.basePath, index],
-                value,
-            });
-        }
-        return;
-    }
-
-    if (!options.value || typeof options.value !== 'object') {
-        return;
-    }
-
-    for (const [key, value] of Object.entries(options.value as Record<string, unknown>)) {
-        scanLeafStrings(matches, {
-            ...options,
-            basePath: [...options.basePath, key],
-            value,
-        });
-    }
-}
 
 export function scanRecordStringLeaves(matches: GlobalSearchMatch[], options: ScanRecordOptions): void {
     for (const [entryName, value] of Object.entries(options.values)) {

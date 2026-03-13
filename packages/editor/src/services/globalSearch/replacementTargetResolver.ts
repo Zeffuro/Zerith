@@ -1,10 +1,7 @@
-import type { GlobalSearchKind, GlobalSearchProjectData } from './contracts';
+import type { GlobalSearchProjectData, ReplacementTarget } from './contracts';
 
 import { deriveManifestFilePaths, deriveSceneFilePathMap } from './manifestPaths';
 
-type ReplacementTarget =
-    | { kind: Exclude<GlobalSearchKind, 'scene'> }
-    | { kind: 'scene'; sceneName: string };
 
 export function resolveReplacementTarget(
     filePath: string,

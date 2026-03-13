@@ -26,5 +26,11 @@ describe('globalSearch replaceService facade', () => {
             }),
         ).toEqual([]);
     });
+
+    it('returns no files for whitespace-only replacement queries', () => {
+        const projectData = createGlobalSearchProjectData();
+
+        expect(replaceProjectContent('   ', 'champion', [], projectData)).toEqual([]);
+    });
 });
 

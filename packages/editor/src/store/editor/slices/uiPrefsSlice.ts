@@ -38,15 +38,20 @@ export function createUiPrefsSlice(set: EditorSet): UiPrefsSlice {
         },
         closeCommandPalette: () => set({ isCommandPaletteOpen: false }),
         closeGlobalSearchPopup: () => set({ isGlobalSearchPopupOpen: false }),
+        closeSettingsModal: () => set({ isSettingsModalOpen: false }),
         globalSearchLaunchMode: 'find',
         isCommandPaletteOpen: false,
         isGlobalSearchPopupOpen: false,
+        isSettingsModalOpen: false,
         isMuted,
         lastManualSaveAt: 0,
         markManualSave: () => set({ lastManualSaveAt: Date.now() }),
         openCommandPalette: () => set({ isCommandPaletteOpen: true }),
-        openGlobalSearchPopup: (globalSearchLaunchMode = 'find') => set({ globalSearchLaunchMode, isGlobalSearchPopupOpen: true }),
-        openGlobalSearchReplacePopup: () => set({ globalSearchLaunchMode: 'replace', isGlobalSearchPopupOpen: true }),
+        openGlobalSearchPopup: (globalSearchLaunchMode = 'find') =>
+            set((state) => state.isSettingsModalOpen ? {} : { globalSearchLaunchMode, isGlobalSearchPopupOpen: true }),
+        openGlobalSearchReplacePopup: () =>
+            set((state) => state.isSettingsModalOpen ? {} : { globalSearchLaunchMode: 'replace', isGlobalSearchPopupOpen: true }),
+        openSettingsModal: () => set({ isGlobalSearchPopupOpen: false, isSettingsModalOpen: true }),
         recentProjects,
         setAutosaveEnabled: (nextAutosaveEnabled) => {
             getSettingsSnapshot().setAutosaveEnabled(nextAutosaveEnabled);
@@ -72,7 +77,8 @@ export function createUiPrefsSlice(set: EditorSet): UiPrefsSlice {
         themeKey,
         toggleCommandPalette: () => set((state) => ({ isCommandPaletteOpen: !state.isCommandPaletteOpen })),
         toggleGlobalSearchPopup: () =>
-            set((state) => ({ isGlobalSearchPopupOpen: !state.isGlobalSearchPopupOpen })),
+            set((state) => state.isSettingsModalOpen ? {} : ({ isGlobalSearchPopupOpen: !state.isGlobalSearchPopupOpen })),
+        toggleSettingsModal: () => set((state) => ({ isSettingsModalOpen: !state.isSettingsModalOpen })),
         toggleMute: () => set((state) => {
             const nextIsMuted = !state.isMuted;
             getSettingsSnapshot().setIsMuted(nextIsMuted);

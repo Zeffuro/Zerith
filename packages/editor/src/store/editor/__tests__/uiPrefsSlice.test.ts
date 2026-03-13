@@ -210,5 +210,73 @@ describe('createUiPrefsSlice', () => {
         expect(settingsState.setIsMuted).toHaveBeenCalledWith(true);
         expect(next).toEqual({ isMuted: true });
     });
+
+    it('opens and closes settings modal through direct actions', () => {
+        const set = vi.fn();
+        const slice = createUiPrefsSlice(set as never);
+
+        slice.openSettingsModal();
+        slice.closeSettingsModal();
+
+        expect(set).toHaveBeenNthCalledWith(1, { isGlobalSearchPopupOpen: false, isSettingsModalOpen: true });
+        expect(set).toHaveBeenNthCalledWith(2, { isSettingsModalOpen: false });
+    });
+
+    it('toggles settings modal visibility with a state updater', () => {
+        const set = vi.fn(
+            (
+                partial:
+                    | Partial<EditorState>
+                    | ((state: EditorState) => Partial<EditorState>),
+            ) => partial,
+        );
+
+        const slice = createUiPrefsSlice(set);
+        slice.toggleSettingsModal();
+
+        expect(set).toHaveBeenCalledTimes(1);
+        const updater = set.mock.calls[0]?.[0];
+        expect(typeof updater).toBe('function');
+        if (typeof updater !== 'function') throw new TypeError('Expected state updater function for toggleSettingsModal.');
+
+        const next = updater({ isSettingsModalOpen: false } as EditorState);
+        expect(next).toEqual({ isSettingsModalOpen: true });
+    });
+
+    it('does not open global search popups while settings modal is open', () => {
+        const set = vi.fn(
+            (
+                partial:
+                    | Partial<EditorState>
+                    | ((state: EditorState) => Partial<EditorState>),
+            ) => partial,
+        );
+
+        const slice = createUiPrefsSlice(set);
+        slice.openGlobalSearchPopup('find');
+        slice.openGlobalSearchReplacePopup();
+        slice.toggleGlobalSearchPopup();
+
+        const firstUpdater = set.mock.calls[0]?.[0];
+        const secondUpdater = set.mock.calls[1]?.[0];
+        const thirdUpdater = set.mock.calls[2]?.[0];
+        if (typeof firstUpdater !== 'function' || typeof secondUpdater !== 'function' || typeof thirdUpdater !== 'function') {
+            throw new TypeError('Expected state updater functions for guarded global search actions.');
+        }
+
+        const guardedState = { isGlobalSearchPopupOpen: false, isSettingsModalOpen: true } as EditorState;
+        expect(firstUpdater(guardedState)).toEqual({});
+        expect(secondUpdater(guardedState)).toEqual({});
+        expect(thirdUpdater(guardedState)).toEqual({});
+    });
+
+    it('closes global search when opening settings', () => {
+        const set = vi.fn();
+        const slice = createUiPrefsSlice(set as never);
+
+        slice.openSettingsModal();
+
+        expect(set).toHaveBeenCalledWith({ isGlobalSearchPopupOpen: false, isSettingsModalOpen: true });
+    });
 });
 

@@ -101,12 +101,14 @@ export interface UiPrefsSlice {
     globalSearchLaunchMode: GlobalSearchLaunchMode;
     isCommandPaletteOpen: boolean;
     isGlobalSearchPopupOpen: boolean;
+    isSettingsModalOpen: boolean;
     isMuted: boolean;
     lastManualSaveAt: number;
     markManualSave: () => void;
     openCommandPalette: () => void;
     openGlobalSearchPopup: (mode?: GlobalSearchLaunchMode) => void;
     openGlobalSearchReplacePopup: () => void;
+    openSettingsModal: () => void;
     recentProjects: RecentProject[];
     setAutosaveEnabled: (enabled: boolean) => void;
     setAutosaveIntervalMs: (intervalMs: number) => void;
@@ -116,9 +118,11 @@ export interface UiPrefsSlice {
     themeKey: string;
     toggleCommandPalette: () => void;
     toggleGlobalSearchPopup: () => void;
+    toggleSettingsModal: () => void;
     toggleMute: () => void;
     uiScale: number;
     windowState: EditorWindowState;
+    closeSettingsModal: () => void;
 }
 
 

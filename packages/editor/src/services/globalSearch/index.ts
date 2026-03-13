@@ -19,7 +19,11 @@ export type {
     GlobalSearchKind,
     GlobalSearchMatch,
     GlobalSearchProjectData,
+    ReplacementManifestKind,
+    ReplacementTarget,
+    RecordSearchKind,
     GlobalSearchReplacementFile,
+    ScriptSearchKind,
     GlobalSearchTextOptions,
 } from './contracts';
 export {
@@ -46,7 +50,6 @@ export {
     formatRecordLabel,
     formatRecordSourceLabel,
     ITEM_LABEL_PREFIX,
-    type RecordLabelKind,
     resolveRecordLabelPrefix,
 } from './recordLabels';
 export { collectMacroMatches, collectSceneMatches } from './scriptSourceSearch';

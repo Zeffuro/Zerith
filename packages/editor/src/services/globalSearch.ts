@@ -4,6 +4,10 @@ export type {
     GlobalSearchProjectData,
     GlobalSearchReplacementFile,
     GlobalSearchTextOptions,
+    RecordSearchKind,
+    ReplacementManifestKind,
+    ReplacementTarget,
+    ScriptSearchKind,
 } from './globalSearch/contracts';
 
 export { replaceProjectContent } from './globalSearch/replaceService';
