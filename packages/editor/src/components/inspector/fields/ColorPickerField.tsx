@@ -67,9 +67,9 @@ function normalizeColorNumber(value: number): number {
     return truncated;
 }
 
-function parseHexColor(value: string): null | string {
+function parseHexColor(value: string): string | undefined {
     const normalized = value.startsWith('#') ? value : `#${value}`;
-    if (!/^#[\dA-Fa-f]{6}$/.test(normalized)) return null;
+    if (!/^#[\dA-Fa-f]{6}$/.test(normalized)) return;
     return normalized.toUpperCase();
 }
 

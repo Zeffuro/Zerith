@@ -30,7 +30,7 @@ describe('settingsControlRegistry', () => {
     });
 
     it('derives panel ids from matched controls', () => {
-        expect([...getMatchedSettingsPanelIds('theme', state)].sort()).toEqual(['appearance', 'appearance-theme', 'general']);
+        expect([...getMatchedSettingsPanelIds('theme', state)].toSorted()).toEqual(['appearance', 'appearance-theme', 'general']);
     });
 
     it('returns panel-visible controls', () => {
@@ -70,7 +70,7 @@ describe('settingsControlRegistry', () => {
             state,
         );
 
-        expect([...changedIds].sort()).toEqual([
+        expect([...changedIds].toSorted()).toEqual([
             'audio',
             'autosaveEnabled',
             'autosaveIntervalMs',

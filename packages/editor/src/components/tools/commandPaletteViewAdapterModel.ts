@@ -1,7 +1,7 @@
 import type { KeyboardEventHandler } from 'react';
 
 import type { PaletteAction } from './commandPaletteActionsModel';
-import type { CommandPaletteViewProps as CommandPaletteViewProperties } from './CommandPaletteView';
+import type { CommandPaletteViewProperties } from './CommandPaletteView';
 
 import { clampRenderSelection, shouldShowEmptyActions, toRenderableActions } from './commandPalettePresentationModel';
 
@@ -17,7 +17,7 @@ type BuildCommandPaletteViewPropertiesArguments = {
     uiScale: number;
 };
 
-export function buildCommandPaletteViewProps({
+export function buildCommandPaletteViewProperties({
     filteredActions,
     onInputKeyDown,
     onRequestClose,

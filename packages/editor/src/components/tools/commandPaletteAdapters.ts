@@ -7,5 +7,5 @@ export { buildCommandPaletteInputKeyDownHandler } from './commandPaletteKeydownA
 export { buildCommandPaletteOpenProjectEntryServiceHandler } from './commandPaletteOpenProjectEntryServiceAdapterModel';
 export { buildCommandPaletteIsRunning } from './commandPaletteRunningStateAdapterModel';
 export { buildCommandPaletteSaveHandlers } from './commandPaletteSaveAdapterModel';
-export { buildCommandPaletteViewProps } from './commandPaletteViewAdapterModel';
+export { buildCommandPaletteViewProperties } from './commandPaletteViewAdapterModel';
 

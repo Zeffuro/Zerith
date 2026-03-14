@@ -10,7 +10,7 @@ import { createSliceHarness } from '../../../test-utils/createSliceHarness';
 import { createPathOpsSlice } from '../slices/pathOpsSlice';
 
 vi.mock('core', () => ({
-    deepClone: <Value>(value: Value): Value => JSON.parse(JSON.stringify(value)) as Value,
+    deepClone: <Value>(value: Value): Value => structuredClone(value),
 }));
 
 type PathOpsHarnessState = Pick<
@@ -117,7 +117,8 @@ describe('pathOps timeline actions', () => {
     });
 
     it('falls back to script multi-move when project bridge is unavailable', () => {
-        const harness = createPathOpsHarness(() => {});
+        const unavailableBridge: PathOpsProjectBridge | undefined = undefined;
+        const harness = createPathOpsHarness(() => unavailableBridge);
 
         harness.setState({
             rootScript: [createWait(1), createWait(2), createWait(3)],

@@ -6,9 +6,7 @@ export function hasSearchProjectPath(projectData: Pick<GlobalSearchProjectData, 
     return Boolean(projectData.projectPath);
 }
 
-export function hasSearchQuery(query: string): boolean {
-    return Boolean(query);
-}
+export const hasSearchQuery: (query: string) => boolean = Boolean;
 
 export function isOrchestrationRequestValid(
     query: string,

@@ -9,10 +9,10 @@ import {
     buildCommandPaletteFilteredActions,
     buildCommandPaletteInitialProjectEntryHandler,
     buildCommandPaletteInputKeyDownHandler,
-    buildCommandPaletteOpenProjectEntryServiceHandler,
     buildCommandPaletteIsRunning,
+    buildCommandPaletteOpenProjectEntryServiceHandler,
     buildCommandPaletteSaveHandlers,
-    buildCommandPaletteViewProps as buildCommandPaletteViewProperties,
+    buildCommandPaletteViewProperties,
 } from '../commandPaletteAdapters';
 import * as controllerInteractionAdapter from '../commandPaletteControllerInteractionAdapterModel';
 import * as filteredActionsAdapter from '../commandPaletteFilteredActionsAdapterModel';
@@ -34,7 +34,7 @@ describe('commandPaletteAdapters', () => {
         expect(buildCommandPaletteOpenProjectEntryServiceHandler).toBe(openProjectEntryServiceAdapter.buildCommandPaletteOpenProjectEntryServiceHandler);
         expect(buildCommandPaletteIsRunning).toBe(runningStateAdapter.buildCommandPaletteIsRunning);
         expect(buildCommandPaletteSaveHandlers).toBe(saveAdapter.buildCommandPaletteSaveHandlers);
-        expect(buildCommandPaletteViewProperties).toBe(viewAdapter.buildCommandPaletteViewProps);
+        expect(buildCommandPaletteViewProperties).toBe(viewAdapter.buildCommandPaletteViewProperties);
     });
 });
 

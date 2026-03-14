@@ -17,9 +17,7 @@ describe('commandPaletteSaveAdapterModel', () => {
     });
 
     it('delegates active-file save to the provided service', async () => {
-        const saveActiveFileFromCurrentScript = vi.fn(async () => {
-            return { wrote: true };
-        });
+        const saveActiveFileFromCurrentScript = vi.fn(() => Promise.resolve({ wrote: true }));
         const saveAllDirtyFiles = vi.fn(async () => {});
 
         const handlers = buildCommandPaletteSaveHandlers({

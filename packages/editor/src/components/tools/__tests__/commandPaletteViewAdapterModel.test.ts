@@ -2,7 +2,7 @@ import type { KeyboardEvent } from 'react';
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildCommandPaletteViewProps as buildCommandPaletteViewProperties } from '../commandPaletteViewAdapterModel';
+import { buildCommandPaletteViewProperties } from '../commandPaletteViewAdapterModel';
 
 describe('commandPaletteViewAdapterModel', () => {
     it('maps filtered actions to renderable rows and derived view flags', () => {

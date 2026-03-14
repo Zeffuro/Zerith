@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 
-import type { CommandPaletteViewProps as CommandPaletteViewProperties } from './CommandPaletteView';
+import type { CommandPaletteViewProperties } from './CommandPaletteView';
 
 import { openProjectEntry } from '../../services/openProjectEntry';
 import { useProjectStore } from '../../store/storeBootstrap';
@@ -10,10 +10,10 @@ import {
     buildCommandPaletteControllerInteractions,
     buildCommandPaletteFilteredActions,
     buildCommandPaletteInitialProjectEntryHandler,
-    buildCommandPaletteOpenProjectEntryServiceHandler,
     buildCommandPaletteIsRunning,
+    buildCommandPaletteOpenProjectEntryServiceHandler,
     buildCommandPaletteSaveHandlers,
-    buildCommandPaletteViewProps as buildCommandPaletteViewProperties,
+    buildCommandPaletteViewProperties,
 } from './commandPaletteAdapters';
 
 type UseCommandPaletteControllerArguments = {

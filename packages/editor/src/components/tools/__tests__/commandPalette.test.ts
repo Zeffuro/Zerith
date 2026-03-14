@@ -2,8 +2,10 @@ import type { ReactElement } from 'react';
 
 import { describe, expect, it, vi } from 'vitest';
 
+import type { CommandPaletteViewProperties } from '../CommandPaletteView';
+
 const { commandPaletteViewMock, useCommandPaletteControllerMock } = vi.hoisted(() => ({
-    commandPaletteViewMock: vi.fn((properties) => ({ props: properties, type: 'mock-view' })),
+    commandPaletteViewMock: vi.fn((properties: CommandPaletteViewProperties) => ({ props: properties, type: 'mock-view' })),
     useCommandPaletteControllerMock: vi.fn(() => ({
         actions: [] as Array<{ hintText: string; id: string; label: string }>,
         onActionClick: () => {},

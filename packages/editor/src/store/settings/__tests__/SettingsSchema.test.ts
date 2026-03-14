@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { defaultSettings, extractPersistedSettings } from '../SettingsSchema';
 
-function mergeSettings(value: unknown) {
+function mergeSettings(value?: unknown) {
     return {
         ...defaultSettings,
         ...extractPersistedSettings(value),

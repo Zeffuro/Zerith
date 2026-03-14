@@ -7,13 +7,13 @@ const settingsState = vi.hoisted(() => ({
     autosaveIntervalMs: 12_000,
     isMuted: true,
     recentProjects: [{ lastOpened: 5, name: 'Seed Project', path: '/seed/game.json' }],
-    setAutosaveEnabled: vi.fn(),
-    setAutosaveIntervalMs: vi.fn(),
-    setIsMuted: vi.fn(),
-    setRecentProjects: vi.fn(),
-    setThemeKey: vi.fn(),
-    setUiScale: vi.fn(),
-    setWindowState: vi.fn(),
+    setAutosaveEnabled: vi.fn<(value: boolean) => void>(),
+    setAutosaveIntervalMs: vi.fn<(value: number) => void>(),
+    setIsMuted: vi.fn<(value: boolean) => void>(),
+    setRecentProjects: vi.fn<(value: EditorState['recentProjects']) => void>(),
+    setThemeKey: vi.fn<(value: string) => void>(),
+    setUiScale: vi.fn<(value: number) => void>(),
+    setWindowState: vi.fn<(value: EditorState['windowState']) => void>(),
     themeKey: 'classicSoft',
     uiScale: 1.25,
     windowState: { height: 700, maximized: true, width: 1200, x: 10, y: 20 },
@@ -26,6 +26,19 @@ vi.mock('../../useSettingsStore', () => ({
 }));
 
 import { createUiPrefsSlice } from '../slices/uiPrefsSlice';
+
+function getRecentProjectsCall(index: number): EditorState['recentProjects'] {
+    const next = settingsState.setRecentProjects.mock.calls[index]?.[0] as EditorState['recentProjects'] | undefined;
+    if (!next) throw new TypeError(`Missing recentProjects call at index ${index}.`);
+    return next;
+}
+
+function getSetRecentProjectsCall(setMock: ReturnType<typeof vi.fn>, index: number): EditorState['recentProjects'] {
+    const partial = setMock.mock.calls[index]?.[0] as { recentProjects?: EditorState['recentProjects'] } | undefined;
+    const next = partial?.recentProjects;
+    if (!next) throw new TypeError(`Missing set recentProjects payload at index ${index}.`);
+    return next;
+}
 
 describe('createUiPrefsSlice', () => {
     beforeEach(() => {
@@ -119,16 +132,15 @@ describe('createUiPrefsSlice', () => {
         slice.addRecentProject('/project/game.json');
         slice.clearRecentProjects();
 
-        expect(settingsState.setRecentProjects).toHaveBeenNthCalledWith(1, [
-            { lastOpened: expect.any(Number), name: 'project', path: '/project/game.json' },
-            { lastOpened: 5, name: 'Seed Project', path: '/seed/game.json' },
-        ]);
-        expect(set).toHaveBeenNthCalledWith(1, {
-            recentProjects: [
-                { lastOpened: expect.any(Number), name: 'project', path: '/project/game.json' },
-                { lastOpened: 5, name: 'Seed Project', path: '/seed/game.json' },
-            ],
-        });
+        const firstSettingsRecentProjects = getRecentProjectsCall(0);
+        expect(firstSettingsRecentProjects[0]).toMatchObject({ name: 'project', path: '/project/game.json' });
+        expect(typeof firstSettingsRecentProjects[0]?.lastOpened).toBe('number');
+        expect(firstSettingsRecentProjects[1]).toEqual({ lastOpened: 5, name: 'Seed Project', path: '/seed/game.json' });
+
+        const firstSetRecentProjects = getSetRecentProjectsCall(set, 0);
+        expect(firstSetRecentProjects[0]).toMatchObject({ name: 'project', path: '/project/game.json' });
+        expect(typeof firstSetRecentProjects[0]?.lastOpened).toBe('number');
+        expect(firstSetRecentProjects[1]).toEqual({ lastOpened: 5, name: 'Seed Project', path: '/seed/game.json' });
 
         expect(settingsState.setRecentProjects).toHaveBeenNthCalledWith(2, []);
         expect(set).toHaveBeenNthCalledWith(2, { recentProjects: [] });
@@ -155,11 +167,10 @@ describe('createUiPrefsSlice', () => {
         slice.addRecentProject('/project/game.json');
 
         expect(settingsState.setRecentProjects).toHaveBeenCalledTimes(1);
-        const next = settingsState.setRecentProjects.mock.calls[0]?.[0];
-        expect(next).toEqual([
-            { lastOpened: expect.any(Number), name: 'project', path: '/project/game.json' },
-            { lastOpened: 2, name: 'Other', path: '/other/game.json' },
-        ]);
+        const next = getRecentProjectsCall(0);
+        expect(next[0]).toMatchObject({ name: 'project', path: '/project/game.json' });
+        expect(typeof next[0]?.lastOpened).toBe('number');
+        expect(next[1]).toEqual({ lastOpened: 2, name: 'Other', path: '/other/game.json' });
     });
 
     it('caps recent projects to 12 entries', () => {
@@ -173,8 +184,7 @@ describe('createUiPrefsSlice', () => {
 
         slice.addRecentProject('/new/game.json');
 
-        const next = settingsState.setRecentProjects.mock.calls[0]?.[0];
-        expect(Array.isArray(next)).toBe(true);
+        const next = getRecentProjectsCall(0);
         expect(next).toHaveLength(12);
         expect(next[0]).toMatchObject({ name: 'new', path: '/new/game.json' });
     });
@@ -185,7 +195,7 @@ describe('createUiPrefsSlice', () => {
 
         slice.addRecentProject(String.raw`C:\Games\CaseOne\game.json`);
 
-        const next = settingsState.setRecentProjects.mock.calls[0]?.[0];
+        const next = getRecentProjectsCall(0);
         expect(next[0]).toMatchObject({ name: 'CaseOne', path: String.raw`C:\Games\CaseOne\game.json` });
     });
 

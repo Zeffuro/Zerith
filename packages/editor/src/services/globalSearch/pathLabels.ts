@@ -18,7 +18,7 @@ export function formatSceneLabel(sceneName: string): string {
     return `${SCENE_LABEL_PREFIX}${sceneName}`;
 }
 
-export function resolveFilePath(projectPath: string, manifestPath: string | undefined): string {
+export function resolveFilePath(projectPath: string, manifestPath?: string): string {
     if (!manifestPath) return `${projectPath}/${GAME_MANIFEST_FILE}`;
     if (manifestPath.startsWith('/') || manifestPath.startsWith('\\')) {
         return `${projectPath}${manifestPath}`;

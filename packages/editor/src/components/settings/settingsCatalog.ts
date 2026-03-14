@@ -55,13 +55,52 @@ export function buildSettingsNodeCountMap(
     return counts;
 }
 
+export function buildSettingsTreeForMatchedIds(
+    nodes: readonly SettingsCategoryNode[],
+    matchedIds: ReadonlySet<string>,
+): SettingsCategoryNode[] {
+    return nodes
+        .map((node) => selectMatchedNode(node, matchedIds))
+        .filter((node): node is SettingsCategoryNode => node !== undefined);
+}
+
+export function collectNodeIds(nodes: readonly SettingsCategoryNode[]): string[] {
+    const ids: string[] = [];
+
+    for (const node of nodes) {
+        ids.push(node.id);
+        if (node.children?.length) {
+            ids.push(...collectNodeIds(node.children));
+        }
+    }
+
+    return ids;
+}
+
+export function containsNodeId(nodes: readonly SettingsCategoryNode[], targetId: string): boolean {
+    for (const node of nodes) {
+        if (node.id === targetId) return true;
+        if (node.children && containsNodeId(node.children, targetId)) return true;
+    }
+
+    return false;
+}
+
 export function filterSettingsTree(nodes: readonly SettingsCategoryNode[], rawQuery: string): SettingsCategoryNode[] {
     const query = rawQuery.trim().toLowerCase();
-    if (query.length === 0) return nodes.map(cloneNode);
+    if (query.length === 0) return nodes.map((node) => cloneNode(node));
 
     return nodes
         .map((node) => filterNode(node, query))
         .filter((node): node is SettingsCategoryNode => node !== undefined);
+}
+
+export function getFirstNodeId(nodes: readonly SettingsCategoryNode[]): string | undefined {
+    const firstNode = nodes[0];
+    if (!firstNode) return;
+    if (firstNode.id) return firstNode.id;
+    if (!firstNode.children?.length) return;
+    return getFirstNodeId(firstNode.children);
 }
 
 function assignLeafCounts(node: SettingsCategoryNode, counts: Record<string, number>): number {
@@ -100,7 +139,14 @@ function assignNodeCounts(
 function cloneNode(node: SettingsCategoryNode): SettingsCategoryNode {
     return {
         ...node,
-        children: node.children?.map(cloneNode),
+        children: node.children?.map((child) => cloneNode(child)),
+    };
+}
+
+function cloneSettingsNode(node: SettingsCategoryNode): SettingsCategoryNode {
+    return {
+        ...node,
+        children: node.children?.map((child) => cloneSettingsNode(child)),
     };
 }
 
@@ -117,6 +163,25 @@ function filterNode(node: SettingsCategoryNode, query: string): SettingsCategory
     return {
         ...node,
         children: filteredChildren,
+    };
+}
+
+function selectMatchedNode(
+    node: SettingsCategoryNode,
+    matchedIds: ReadonlySet<string>,
+): SettingsCategoryNode | undefined {
+    if (matchedIds.has(node.id)) {
+        return cloneSettingsNode(node);
+    }
+
+    const children = node.children
+        ?.map((child) => selectMatchedNode(child, matchedIds))
+        .filter((child): child is SettingsCategoryNode => child !== undefined);
+
+    if (!children || children.length === 0) return;
+    return {
+        ...node,
+        children,
     };
 }
 

@@ -7,7 +7,7 @@ import { CommandPaletteInput } from './CommandPaletteInput';
 import { CommandPaletteResultsList } from './CommandPaletteResultsList';
 import { CommandPaletteShell } from './CommandPaletteShell';
 
-export type CommandPaletteViewProps = {
+export type CommandPaletteViewProperties = {
     actions: RenderablePaletteAction[];
     onActionClick: (index: number) => void;
     onInputChange: (value: string) => void;
@@ -29,7 +29,7 @@ export function CommandPaletteView({
     selectedIndex,
     showEmptyState,
     uiScale,
-}: CommandPaletteViewProps) {
+}: CommandPaletteViewProperties) {
     return (
         <CommandPaletteShell onRequestClose={onRequestClose} uiScale={uiScale}>
             <CommandPaletteInput

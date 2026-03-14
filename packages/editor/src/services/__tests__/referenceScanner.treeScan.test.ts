@@ -61,7 +61,7 @@ describe('referenceScanner tree scan', () => {
     it('skips non-record values and records without a string type', () => {
         const scanCommand = vi.fn();
 
-        scanReferenceTree([null, 1, 'x', { type: 9 }, { type: 'wait' }], [], '/project/scripts/intro.json', 'intro', createResult(), scanCommand);
+        scanReferenceTree([undefined, 1, 'x', { type: 9 }, { type: 'wait' }], [], '/project/scripts/intro.json', 'intro', createResult(), scanCommand);
 
         expect(scanCommand).toHaveBeenCalledTimes(1);
         expect(scanCommand).toHaveBeenCalledWith(

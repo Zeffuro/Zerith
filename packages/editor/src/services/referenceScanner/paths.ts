@@ -1,4 +1,4 @@
-export function resolveFilePath(projectPath: string, manifestPath: string | undefined): string {
+export function resolveFilePath(projectPath: string, manifestPath?: string): string {
     if (!manifestPath) return `${projectPath}/game.json`;
     if (manifestPath.startsWith('/') || manifestPath.startsWith('\\')) {
         return `${projectPath}${manifestPath}`;

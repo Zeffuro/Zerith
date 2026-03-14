@@ -106,11 +106,13 @@ describe('commandPaletteActionsModel', () => {
             addRecentProject: vi.fn(() => {
                 calls.push('addRecentProject');
             }),
-            openInitialProjectEntry: vi.fn(async () => {
+            openInitialProjectEntry: vi.fn(() => {
                 calls.push('openInitialProjectEntry');
+                return Promise.resolve();
             }),
-            openProjectFromManifest: vi.fn(async () => {
+            openProjectFromManifest: vi.fn(() => {
                 calls.push('openProjectFromManifest');
+                return Promise.resolve();
             }),
             recentProjects: [{ name: 'Alpha', path: '/alpha/game.json' }],
         });
@@ -127,11 +129,13 @@ describe('commandPaletteActionsModel', () => {
             addRecentProject: (path: string) => {
                 calls.push(`add:${path}`);
             },
-            openInitialProjectEntry: async () => {
+            openInitialProjectEntry: () => {
                 calls.push('openInitial');
+                return Promise.resolve();
             },
-            openProjectFromManifest: async (path: string) => {
+            openProjectFromManifest: (path: string) => {
                 calls.push(`open:${path}`);
+                return Promise.resolve();
             },
         };
 

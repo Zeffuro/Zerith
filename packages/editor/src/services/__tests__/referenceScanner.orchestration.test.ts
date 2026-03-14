@@ -15,7 +15,13 @@ function createResult(): ReferenceScannerResult {
 
 describe('referenceScanner orchestration', () => {
     it('scans scene scripts with resolved or fallback file paths and skips invalid scenes', () => {
-        const scanTree = vi.fn();
+        const scanTree = vi.fn<(
+            script: unknown,
+            path: ScriptPath,
+            filePath: string,
+            label: string,
+            result: ReferenceScannerResult,
+        ) => void>();
 
         const scenes = {
             fallback: [{ type: 'wait' }],
@@ -32,22 +38,27 @@ describe('referenceScanner orchestration', () => {
         scanSceneReferences('/project', scenes, sceneSources, createResult(), scanTree);
 
         expect(scanTree).toHaveBeenCalledTimes(2);
-        expect(scanTree).toHaveBeenNthCalledWith(
-            1,
-            [{ type: 'wait' }],
-            [] as ScriptPath,
-            '/project/scripts/intro.json',
-            'intro',
-            expect.any(Object),
-        );
-        expect(scanTree).toHaveBeenNthCalledWith(
-            2,
-            [{ type: 'wait' }],
-            [] as ScriptPath,
-            '/project/game.json',
-            'fallback',
-            expect.any(Object),
-        );
+        const normalizedCalls = scanTree.mock.calls.map((call) => ({
+            filePath: call[2],
+            label: call[3],
+            path: call[1],
+            script: call[0],
+        }));
+
+        expect(normalizedCalls).toEqual(expect.arrayContaining([
+            {
+                filePath: '/project/scripts/intro.json',
+                label: 'intro',
+                path: [] as ScriptPath,
+                script: [{ type: 'wait' }],
+            },
+            {
+                filePath: '/project/game.json',
+                label: 'fallback',
+                path: [] as ScriptPath,
+                script: [{ type: 'wait' }],
+            },
+        ]));
     });
 
     it('scans macros in sorted order and uses indexed macro root paths', () => {

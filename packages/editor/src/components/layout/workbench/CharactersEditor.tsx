@@ -221,15 +221,14 @@ function parseActiveTab(activeTab: ActiveTab): ParsedCharactersTab {
     }
 }
 
-function serializeCharacters(characters: CharactersMap, baseRoot: Record<string, unknown>, schema: string | undefined) {
+function serializeCharacters(characters: CharactersMap, baseRoot: Record<string, unknown>, schema = 'zerith/characters') {
     const nextRoot: Record<string, unknown> = {};
-    const nextSchema = schema ?? 'zerith/characters';
     for (const[key, value] of Object.entries(baseRoot)) {
         if (key === '$schema') continue;
         if (isRecord(value)) continue;
         nextRoot[key] = value;
     }
-    nextRoot.$schema = nextSchema;
+    nextRoot.$schema = schema;
     for (const [key, value] of Object.entries(characters)) {
         nextRoot[key] = value;
     }
