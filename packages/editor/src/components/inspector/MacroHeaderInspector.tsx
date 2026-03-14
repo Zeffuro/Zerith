@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 
+import { useProjectStore } from '../../store/storeBootstrap';
+import { useScriptStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
-import { useProjectStore } from '../../store/useProjectStore';
-import { useScriptStore } from '../../store/useScriptStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 
 export function MacroHeaderInspector() {

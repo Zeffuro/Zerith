@@ -52,6 +52,4 @@ export interface ScriptState {
     updateNodeAtPath: (path: ScriptPath, patch: Record<string, unknown>) => void;
 }
 
-// Backward-compatible alias used by older slice modules.
-export type ScriptStoreCreator<T> = ScriptSlice<T>;
 

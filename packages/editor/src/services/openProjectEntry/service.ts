@@ -1,7 +1,8 @@
-import { AUDIO_EXT, getExtension, IMG_EXT, TEXT_EXT } from '../utils/assetTypes';
-import { type OpenProjectEntryOptions } from './openProjectEntry/contracts';
-import { openJsonEntry } from './openProjectEntry/jsonCoordinator';
-import { openAssetEntry, openTextEntry, openUnknownEntry } from './openProjectEntry/nonJsonHandlers';
+import type { OpenProjectEntryOptions } from './contracts';
+
+import { AUDIO_EXT, getExtension, IMG_EXT, TEXT_EXT } from '../../utils/assetTypes';
+import { openJsonEntry } from './jsonCoordinator';
+import { openAssetEntry, openTextEntry, openUnknownEntry } from './nonJsonHandlers';
 
 export async function openProjectEntry(fullPath: string, entryName: string, options?: OpenProjectEntryOptions) {
     const extension = getExtension(entryName);
@@ -29,11 +30,8 @@ export async function openProjectEntry(fullPath: string, entryName: string, opti
     }
 }
 
-
 function focusMainEditorFor(kind: 'asset' | 'scriptLike' | 'text') {
     // TODO: integrate with Dock model to select center tabset tab.
     void kind;
 }
-
-
 

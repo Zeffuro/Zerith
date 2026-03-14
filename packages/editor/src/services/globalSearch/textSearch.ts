@@ -3,15 +3,6 @@ export type ResolvedGlobalSearchTextOptions = {
     regex: boolean;
 };
 
-export function resolveGlobalSearchTextOptions(
-    textOptions: { caseSensitive?: boolean; regex?: boolean },
-): ResolvedGlobalSearchTextOptions {
-    return {
-        caseSensitive: Boolean(textOptions.caseSensitive),
-        regex: Boolean(textOptions.regex),
-    };
-}
-
 export function findSearchMatchStart(
     source: string,
     query: string,
@@ -49,6 +40,15 @@ export function replaceSearchValue(
     const expression = toSearchExpression(query, textOptions, true);
     if (!expression) return source;
     return source.replaceAll(expression, replacement);
+}
+
+export function resolveGlobalSearchTextOptions(
+    textOptions: { caseSensitive?: boolean; regex?: boolean },
+): ResolvedGlobalSearchTextOptions {
+    return {
+        caseSensitive: Boolean(textOptions.caseSensitive),
+        regex: Boolean(textOptions.regex),
+    };
 }
 
 export function summarizeMatchedText(

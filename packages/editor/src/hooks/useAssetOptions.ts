@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { type FsDirectoryEntry, fsReadDirectory } from '../services/fs';
-import { useProjectStore } from '../store/useProjectStore';
+import { useProjectStore } from '../store/storeBootstrap';
 import { AUDIO_EXT, getExtension, IMG_EXT } from '../utils/assetTypes';
 
 type AssetKind = 'all' | 'audio' | 'bg' | 'bgm' | 'sfx' | 'sprite';

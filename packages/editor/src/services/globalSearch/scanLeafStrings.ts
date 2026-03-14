@@ -3,8 +3,8 @@ import type { GlobalSearchKind, GlobalSearchMatch } from './contracts';
 
 import {
     matchesSearchValue,
-    summarizeMatchedText,
     type ResolvedGlobalSearchTextOptions,
+    summarizeMatchedText,
 } from './textSearch';
 
 export type ScanLeafOptions = {

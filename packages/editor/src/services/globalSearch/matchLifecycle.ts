@@ -1,9 +1,9 @@
 import type { GlobalSearchMatch, GlobalSearchProjectData } from './contracts';
+import type { ResolvedGlobalSearchTextOptions } from './textSearch';
 
 import { deriveManifestFilePaths } from './manifestPaths';
 import { collectCharacterMatches, collectItemMatches } from './recordSourceSearch';
 import { collectMacroMatches, collectSceneMatches } from './scriptSourceSearch';
-import type { ResolvedGlobalSearchTextOptions } from './textSearch';
 
 export function collectOrchestratedMatches(
     query: string,

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import '../../test-utils/registerEditorServiceMocks';
-import { scanRecordStringLeaves, scanScriptNodes, resolveGlobalSearchTextOptions } from '../globalSearch/index';
 import type { GlobalSearchMatch } from '../globalSearch/contracts';
+
+import { resolveGlobalSearchTextOptions, scanRecordStringLeaves, scanScriptNodes } from '../globalSearch/index';
 
 describe('globalSearch scan helpers', () => {
     it('scans script node string leaves with value paths', () => {

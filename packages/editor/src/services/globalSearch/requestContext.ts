@@ -1,7 +1,7 @@
 import type { GlobalSearchTextOptions } from './contracts';
 
-import { resolveGlobalSearchTextOptions, type ResolvedGlobalSearchTextOptions } from './textSearch';
 import { normalizeSearchQuery } from './searchValidation';
+import { type ResolvedGlobalSearchTextOptions, resolveGlobalSearchTextOptions } from './textSearch';
 
 export type SearchRequestContext = {
     normalizedQuery: string;

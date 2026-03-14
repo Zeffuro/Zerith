@@ -3,22 +3,20 @@ import { z } from 'zod';
 
 import type { ReferenceLocation, VariableReferenceStats } from '../referenceScanner';
 
+import { resolveFilePath, resolveScenePath } from '../referenceScanner/paths';
+import { getCommandFieldHints, unwrapObjectSchema } from '../referenceScanner/schemaHints';
 import {
     extractTemplateVariables,
-    getCommandFieldHints,
     mergeInferredType,
     pushVariableRead,
     pushVariableWrite,
-    resolveFilePath,
-    resolveScenePath,
-    unwrapObjectSchema,
-} from '../referenceScanner/index';
+} from '../referenceScanner/variables';
 
 describe('referenceScanner helpers', () => {
     it('resolves manifest file paths for relative and rooted values', () => {
         expect(resolveFilePath('/project', 'scripts/intro.json')).toBe('/project/scripts/intro.json');
         expect(resolveFilePath('/project', '/data/macros.json')).toBe('/project/data/macros.json');
-        expect(resolveFilePath('/project', undefined)).toBe('/project/game.json');
+        expect(resolveFilePath('/project')).toBe('/project/game.json');
     });
 
     it('resolves scene sources and falls back to game manifest path', () => {

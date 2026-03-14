@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import type { JsonRoute } from '../openProjectEntry/index';
+
 import {
     getOpenProjectEntryMocks,
     resetOpenProjectEntryMocks,
 } from '../../test-utils/registerOpenProjectEntryMocks';
-import type { JsonRoute } from '../openProjectEntry/index';
 import { handleJsonRoute } from '../openProjectEntry/index';
 
 const openProjectEntryMocks = getOpenProjectEntryMocks();

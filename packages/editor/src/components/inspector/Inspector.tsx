@@ -1,9 +1,9 @@
 import type { PluginNode } from '../../plugins/types';
 
 import { getPlugin } from '../../plugins/commandPlugins';
+import { useProjectStore } from '../../store/storeBootstrap';
+import { useScriptStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
-import { useProjectStore } from '../../store/useProjectStore';
-import { useScriptStore } from '../../store/useScriptStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { styles } from '../../theme/styleHelpers';
 import { getAtPath } from '../../utils/scriptPathUtilities';

@@ -1,6 +1,6 @@
 import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
-import { useScriptStore } from '../useScriptStore';
+import { useScriptStore } from '../storeBootstrap';
 import { executeSyncRootSelectionAfterMultiMoveAction } from './timelineSelectionActions';
 
 const isDescendantPath = (possibleDescendant: ScriptPath, ancestor: ScriptPath) =>

@@ -1,8 +1,7 @@
 import type { Command } from 'core';
 
 import { getAtPath, setAtPath } from '../../utils/scriptPathUtilities';
-import { useProjectStore } from '../useProjectStore';
-import { useScriptStore } from '../useScriptStore';
+import { useProjectStore, useScriptStore } from '../storeBootstrap';
 
 export interface ExecuteInspectorFieldPatchActionOptions {
     index?: null | number;

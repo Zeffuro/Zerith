@@ -1,7 +1,7 @@
 import { deepClone } from 'core';
 
+import { useProjectStore } from '../storeBootstrap';
 import { useEditorStore } from '../useEditorStore';
-import { useProjectStore } from '../useProjectStore';
 
 export type MacroTimelineAction = 'deleteSelected' | 'duplicateSelected';
 

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import '../../test-utils/registerEditorServiceMocks';
+import type { GlobalSearchMatch, GlobalSearchProjectData } from '../globalSearch/contracts';
+
 import { collectMacroMatches, collectSceneMatches } from '../globalSearch/scriptSourceSearch';
 import { resolveGlobalSearchTextOptions } from '../globalSearch/textSearch';
-import type { GlobalSearchMatch, GlobalSearchProjectData } from '../globalSearch/contracts';
 
 describe('globalSearch script source search helpers', () => {
     it('collects scene matches only for scenes with manifest locations and array scripts', () => {
@@ -30,8 +31,8 @@ describe('globalSearch script source search helpers', () => {
     it('collects macro matches in sorted name order with indexed body root paths', () => {
         const matches: GlobalSearchMatch[] = [];
         const macros: GlobalSearchProjectData['macros'] = {
-            beta: [{ speaker: 'Guide', text: 'hero beta', type: 'dialogue' }],
             alpha: [{ speaker: 'Guide', text: 'hero alpha', type: 'dialogue' }],
+            beta: [{ speaker: 'Guide', text: 'hero beta', type: 'dialogue' }],
         };
 
         collectMacroMatches(

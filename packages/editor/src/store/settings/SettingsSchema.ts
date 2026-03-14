@@ -1,7 +1,10 @@
 import { z } from 'zod';
 
+import type { KeymapOverrides } from '../../services/keymapRegistry';
 import type { EditorWindowState, RecentProject } from '../editor/types';
 
+import { isGlobalShortcutCommand } from '../../services/keymapRegistry';
+import { normalizeShortcutChord } from '../../services/shortcutChord';
 import { isRecord } from '../../utils/typeGuards';
 
 const MIN_AUTOSAVE_INTERVAL_MS = 5 * 1000;
@@ -9,6 +12,22 @@ const MAX_RECENT_PROJECTS = 12;
 
 function sanitizeAutosaveInterval(intervalMs: number): number {
     return Math.max(MIN_AUTOSAVE_INTERVAL_MS, Math.trunc(intervalMs));
+}
+
+function sanitizeKeymapOverrides(value: unknown): KeymapOverrides | undefined {
+    if (!isRecord(value)) return undefined;
+
+    const overrides: KeymapOverrides = {};
+
+    for (const [action, shortcutKey] of Object.entries(value)) {
+        if (!isGlobalShortcutCommand(action) || typeof shortcutKey !== 'string') continue;
+
+        const normalizedKey = normalizeShortcutChord(shortcutKey);
+        if (!normalizedKey) continue;
+        overrides[action] = normalizedKey;
+    }
+
+    return overrides;
 }
 
 function sanitizeRecentProjects(value: unknown): RecentProject[] | undefined {
@@ -51,10 +70,16 @@ const recentProjectsSchema = z.preprocess(
     })),
 ).optional();
 
+const keymapOverridesSchema = z.preprocess(
+    (value) => sanitizeKeymapOverrides(value),
+    z.record(z.string(), z.string().min(1)),
+).optional();
+
 const persistedSettingsSchema = z.object({
     autosaveEnabled: z.boolean().optional(),
     autosaveIntervalMs: z.number().finite().positive().transform(sanitizeAutosaveInterval).optional(),
     isMuted: z.boolean().optional(),
+    keymapOverrides: keymapOverridesSchema,
     recentProjects: recentProjectsSchema,
     themeKey: z.string().trim().min(1).optional(),
     uiScale: z.number().finite().positive().optional(),
@@ -75,6 +100,7 @@ export type SettingsState = {
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
     isMuted: boolean;
+    keymapOverrides: KeymapOverrides;
     recentProjects: RecentProject[];
     themeKey: string;
     uiScale: number;
@@ -85,6 +111,7 @@ export const defaultSettings: SettingsState = {
     autosaveEnabled: false,
     autosaveIntervalMs: 30 * 1000,
     isMuted: false,
+    keymapOverrides: {},
     recentProjects: [],
     themeKey: 'classic',
     uiScale: 1,

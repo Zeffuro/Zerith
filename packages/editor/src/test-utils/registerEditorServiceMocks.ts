@@ -4,7 +4,7 @@ vi.mock('../plugins/commandPlugins', () => ({
     getPlugin: () => ({}),
 }));
 
-vi.mock('../store/useProjectStore', () => ({
+vi.mock('../store/storeBootstrap', () => ({
     useProjectStore: {
         getState: () => ({
             characters: {},

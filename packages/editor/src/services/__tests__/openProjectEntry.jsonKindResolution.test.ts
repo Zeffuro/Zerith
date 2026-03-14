@@ -5,10 +5,9 @@ import { describe, expect, it } from 'vitest';
 import {
     resolveJsonKindFromManifest,
     resolveJsonKindFromSchema,
-    toProjectRelativePath,
-} from '../openProjectEntryKind';
+} from '../openProjectEntry/jsonKindResolution';
 
-describe('openProjectEntryKind', () => {
+describe('openProjectEntry jsonKindResolution', () => {
     describe('resolveJsonKindFromSchema', () => {
         it('maps known schema ids to JSON kinds', () => {
             expect(resolveJsonKindFromSchema({ $schema: 'zerith/manifest' })).toBe('manifest');
@@ -46,19 +45,10 @@ describe('openProjectEntryKind', () => {
                 macros: 'scripts/macros.json',
             } as unknown as GameManifest;
 
-            expect(resolveJsonKindFromManifest('C:\\project\\scripts\\macros.json', manifest, 'C:\\project')).toBe('macros');
+            expect(resolveJsonKindFromManifest(String.raw`C:\project\scripts\macros.json`, manifest, String.raw`C:\project`)).toBe('macros');
         });
     });
 
-    describe('toProjectRelativePath', () => {
-        it('returns project-relative slash path for in-project files', () => {
-            expect(toProjectRelativePath('/project/assets/bg/courtroom.png', '/project')).toBe('/assets/bg/courtroom.png');
-            expect(toProjectRelativePath('/project/scripts/intro.json', '/project/')).toBe('/scripts/intro.json');
-        });
-
-        it('returns the original path for files outside the project root', () => {
-            expect(toProjectRelativePath('/other/scripts/intro.json', '/project')).toBe('/other/scripts/intro.json');
-        });
-    });
 });
+
 

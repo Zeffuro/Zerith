@@ -1,14 +1,38 @@
 import type { GlobalSearchMatch, GlobalSearchProjectData } from './contracts';
+import type { ManifestFilePaths } from './manifestPaths';
+import type { ResolvedGlobalSearchTextOptions } from './textSearch';
 
 import { toRecord } from '../../utils/typeGuards';
-import type { ManifestFilePaths } from './manifestPaths';
 import {
     formatMacroLabel,
     resolveSceneLocation,
     SCRIPT_BODY_PATH_SEGMENT,
 } from './pathLabels';
 import { scanScriptNodes } from './scan';
-import type { ResolvedGlobalSearchTextOptions } from './textSearch';
+
+export function collectMacroMatches(
+    matches: GlobalSearchMatch[],
+    query: string,
+    macros: GlobalSearchProjectData['macros'],
+    filePaths: Pick<ManifestFilePaths, 'macrosPath'>,
+    textOptions: ResolvedGlobalSearchTextOptions,
+): void {
+    const macroNames = Object.keys(macros).toSorted((a, b) => a.localeCompare(b));
+    for (const [macroIndex, macroName] of macroNames.entries()) {
+        const macroScript = macros[macroName];
+        if (!Array.isArray(macroScript)) continue;
+
+        scanScriptNodes(matches, {
+            filePath: filePaths.macrosPath,
+            kind: 'macro',
+            label: formatMacroLabel(macroName),
+            query,
+            rootPath: [macroIndex, SCRIPT_BODY_PATH_SEGMENT],
+            script: macroScript,
+            textOptions,
+        });
+    }
+}
 
 export function collectSceneMatches(
     matches: GlobalSearchMatch[],
@@ -34,30 +58,6 @@ export function collectSceneMatches(
             query,
             rootPath: [],
             script: sceneScript,
-            textOptions,
-        });
-    }
-}
-
-export function collectMacroMatches(
-    matches: GlobalSearchMatch[],
-    query: string,
-    macros: GlobalSearchProjectData['macros'],
-    filePaths: Pick<ManifestFilePaths, 'macrosPath'>,
-    textOptions: ResolvedGlobalSearchTextOptions,
-): void {
-    const macroNames = Object.keys(macros).toSorted((a, b) => a.localeCompare(b));
-    for (const [macroIndex, macroName] of macroNames.entries()) {
-        const macroScript = macros[macroName];
-        if (!Array.isArray(macroScript)) continue;
-
-        scanScriptNodes(matches, {
-            filePath: filePaths.macrosPath,
-            kind: 'macro',
-            label: formatMacroLabel(macroName),
-            query,
-            rootPath: [macroIndex, SCRIPT_BODY_PATH_SEGMENT],
-            script: macroScript,
             textOptions,
         });
     }

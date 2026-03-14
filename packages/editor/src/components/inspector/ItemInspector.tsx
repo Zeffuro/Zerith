@@ -3,7 +3,7 @@ import type { ItemCommand } from 'core';
 import { useEffect, useMemo, useState } from 'react';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
-import { useProjectStore } from '../../store/useProjectStore';
+import { useProjectStore } from '../../store/storeBootstrap';
 import { FieldError } from './FieldError';
 
 export function ItemInspector({ index, node }: { index?: null | number; node: ItemCommand; }) {

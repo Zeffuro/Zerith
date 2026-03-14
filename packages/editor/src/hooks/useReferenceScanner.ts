@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 import { scanReferences } from '../services/referenceScanner';
-import { useProjectStore } from '../store/useProjectStore';
+import { useProjectStore } from '../store/storeBootstrap';
 import { useReferenceStore } from '../store/useReferenceStore';
 
 export function useReferenceScanner() {

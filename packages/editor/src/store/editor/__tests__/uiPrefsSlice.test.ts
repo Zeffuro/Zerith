@@ -40,7 +40,7 @@ describe('createUiPrefsSlice', () => {
     });
 
     it('hydrates autosave and theme prefs from settings store', () => {
-        const slice = createUiPrefsSlice(() => undefined);
+        const slice = createUiPrefsSlice(() => {});
 
         expect(slice.autosaveEnabled).toBe(true);
         expect(slice.autosaveIntervalMs).toBe(12_000);
@@ -55,8 +55,8 @@ describe('createUiPrefsSlice', () => {
         const set = vi.fn(
             (
                 partial:
-                    | Partial<EditorState>
-                    | ((state: EditorState) => Partial<EditorState>),
+                    | ((state: EditorState) => Partial<EditorState>)
+                    | Partial<EditorState>,
             ) => partial,
         );
 
@@ -74,8 +74,8 @@ describe('createUiPrefsSlice', () => {
         const set = vi.fn(
             (
                 partial:
-                    | Partial<EditorState>
-                    | ((state: EditorState) => Partial<EditorState>),
+                    | ((state: EditorState) => Partial<EditorState>)
+                    | Partial<EditorState>,
             ) => partial,
         );
 
@@ -93,8 +93,8 @@ describe('createUiPrefsSlice', () => {
         const set = vi.fn(
             (
                 partial:
-                    | Partial<EditorState>
-                    | ((state: EditorState) => Partial<EditorState>),
+                    | ((state: EditorState) => Partial<EditorState>)
+                    | Partial<EditorState>,
             ) => partial,
         );
 
@@ -110,8 +110,8 @@ describe('createUiPrefsSlice', () => {
         const set = vi.fn(
             (
                 partial:
-                    | Partial<EditorState>
-                    | ((state: EditorState) => Partial<EditorState>),
+                    | ((state: EditorState) => Partial<EditorState>)
+                    | Partial<EditorState>,
             ) => partial,
         );
 
@@ -183,18 +183,18 @@ describe('createUiPrefsSlice', () => {
         const set = vi.fn();
         const slice = createUiPrefsSlice(set as never);
 
-        slice.addRecentProject('C:\\Games\\CaseOne\\game.json');
+        slice.addRecentProject(String.raw`C:\Games\CaseOne\game.json`);
 
         const next = settingsState.setRecentProjects.mock.calls[0]?.[0];
-        expect(next[0]).toMatchObject({ name: 'CaseOne', path: 'C:\\Games\\CaseOne\\game.json' });
+        expect(next[0]).toMatchObject({ name: 'CaseOne', path: String.raw`C:\Games\CaseOne\game.json` });
     });
 
     it('writes mute toggles through to settings store', () => {
         const set = vi.fn(
             (
                 partial:
-                    | Partial<EditorState>
-                    | ((state: EditorState) => Partial<EditorState>),
+                    | ((state: EditorState) => Partial<EditorState>)
+                    | Partial<EditorState>,
             ) => partial,
         );
 
@@ -226,8 +226,8 @@ describe('createUiPrefsSlice', () => {
         const set = vi.fn(
             (
                 partial:
-                    | Partial<EditorState>
-                    | ((state: EditorState) => Partial<EditorState>),
+                    | ((state: EditorState) => Partial<EditorState>)
+                    | Partial<EditorState>,
             ) => partial,
         );
 
@@ -247,8 +247,8 @@ describe('createUiPrefsSlice', () => {
         const set = vi.fn(
             (
                 partial:
-                    | Partial<EditorState>
-                    | ((state: EditorState) => Partial<EditorState>),
+                    | ((state: EditorState) => Partial<EditorState>)
+                    | Partial<EditorState>,
             ) => partial,
         );
 

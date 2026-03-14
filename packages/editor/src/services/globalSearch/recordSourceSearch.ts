@@ -1,8 +1,8 @@
 import type { GlobalSearchMatch, GlobalSearchProjectData } from './contracts';
-
 import type { ManifestFilePaths } from './manifestPaths';
-import { scanRecordStringLeaves } from './scan';
 import type { ResolvedGlobalSearchTextOptions } from './textSearch';
+
+import { scanRecordStringLeaves } from './scan';
 
 export function collectCharacterMatches(
     matches: GlobalSearchMatch[],

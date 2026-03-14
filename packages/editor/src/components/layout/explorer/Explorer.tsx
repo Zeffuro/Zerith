@@ -11,8 +11,8 @@ import {
 } from '../../../services/explorerFileActions';
 import { type FsDirectoryEntry, fsDirname, fsJoin, fsReadDirectory } from '../../../services/fs';
 import { openProjectEntry } from '../../../services/openProjectEntry';
+import { useProjectStore } from '../../../store/storeBootstrap';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { useProjectStore } from '../../../store/useProjectStore';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
 import { ConfirmDialog } from '../../ConfirmDialog';
@@ -396,6 +396,11 @@ const IMAGE_EXTENSIONS = new Set(['.avif', '.jpeg', '.jpg', '.png', '.webp']);
 const AUDIO_EXTENSIONS = new Set(['.m4a', '.mp3', '.ogg', '.wav']);
 const TEXT_EXTENSIONS = new Set(['.md', '.ts', '.tsx', '.txt']);
 
+function getFileExtension(path: string): string {
+    const index = path.lastIndexOf('.');
+    return index === -1 ? '' : path.slice(index);
+}
+
 function getFileIcon(entryName: string, fullPath: string, iconSize: number) {
     const normalizedPath = fullPath.replaceAll('\\', '/').toLowerCase();
     const lowerName = entryName.toLowerCase();
@@ -426,10 +431,5 @@ function getFileIcon(entryName: string, fullPath: string, iconSize: number) {
     }
 
     return <FileText color="#9ca3af" size={iconSize} />;
-}
-
-function getFileExtension(path: string): string {
-    const index = path.lastIndexOf('.');
-    return index === -1 ? '' : path.slice(index);
 }
 

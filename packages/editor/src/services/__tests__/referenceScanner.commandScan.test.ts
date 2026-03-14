@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { ReferenceScannerResult } from '../referenceScanner';
 
-import { scanCommandReferences } from '../referenceScanner/index';
+import { scanCommandReferences } from '../referenceScanner/commandScan';
 
 function createResult(): ReferenceScannerResult {
     return {

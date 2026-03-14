@@ -1,21 +1,19 @@
 import type { GameManifest } from 'core';
 
-import { isRecord, toRecord } from '../utils/typeGuards';
-import { isManifestFilePath, normalizeFilePath } from './openProjectEntry/pathHelpers';
+import type { JsonHintKind } from './contracts';
 
-type JsonResourceKind = 'characters' | 'items' | 'manifest';
-
-type JsonManifestKind = JsonResourceKind | 'macros' | 'script';
+import { isRecord, toRecord } from '../../utils/typeGuards';
+import { isManifestFilePath, normalizeFilePath, toProjectRelativePath } from './pathHelpers';
 
 export function resolveJsonKindFromManifest(
     fullPath: string,
     manifest: GameManifest | undefined,
     projectPath: string | undefined,
-): JsonManifestKind | undefined {
+): JsonHintKind {
     const normalizedPath = normalizeFilePath(fullPath);
 
     if (isManifestFilePath(normalizedPath)) return 'manifest';
-    if (!manifest || !projectPath) return undefined;
+    if (!manifest || !projectPath) return;
 
     const normalizedProjectPath = normalizeFilePath(projectPath).replace(/\/+$/, '');
     const relativePath = toProjectRelativePath(normalizedPath, normalizedProjectPath);
@@ -33,7 +31,7 @@ export function resolveJsonKindFromManifest(
     if (macrosPath && relativePath === macrosPath) return 'macros';
 
     const scenes = manifest.scenes;
-    if (!isRecord(scenes)) return undefined;
+    if (!isRecord(scenes)) return;
 
     for (const sceneValue of Object.values(scenes)) {
         const scenePath = toManifestPath(sceneValue);
@@ -43,29 +41,20 @@ export function resolveJsonKindFromManifest(
         }
     }
 
-    return undefined;
+    return;
 }
 
-export function resolveJsonKindFromSchema(data: unknown): JsonResourceKind | 'macros' | undefined {
+export function resolveJsonKindFromSchema(data: unknown): JsonHintKind {
     const schema = toRecord(data).$schema;
     if (schema === 'zerith/manifest') return 'manifest';
     if (schema === 'zerith/characters') return 'characters';
     if (schema === 'zerith/items') return 'items';
     if (schema === 'zerith/macros') return 'macros';
-    return undefined;
+    return;
 }
 
 function toManifestPath(value: unknown): string | undefined {
-    if (typeof value !== 'string') return undefined;
+    if (typeof value !== 'string') return;
     return normalizeFilePath(value);
-}
-
-export function toProjectRelativePath(fullPath: string, projectPath: string | undefined): string {
-    if (!projectPath) return fullPath;
-    const base = normalizeFilePath(projectPath).replace(/\/+$/, '');
-    const abs = normalizeFilePath(fullPath);
-    if (!abs.startsWith(base)) return fullPath;
-    const rest = abs.slice(base.length);
-    return rest.startsWith('/') ? rest : `/${rest}`;
 }
 

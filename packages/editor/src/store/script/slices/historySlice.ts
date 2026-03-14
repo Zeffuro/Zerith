@@ -1,4 +1,4 @@
-import type { ScriptStoreCreator } from '../types';
+import type { ScriptSlice } from '../types';
 
 import { MAX_HISTORY } from '../constants';
 
@@ -7,7 +7,7 @@ type HistorySlice = Pick<
     'canRedo' | 'canUndo' | 'future' | 'past' | 'redo' | 'undo'
 >;
 
-export const createHistorySlice: ScriptStoreCreator<HistorySlice> = (set, get) => ({
+export const createHistorySlice: ScriptSlice<HistorySlice> = (set, get) => ({
     canRedo: () => get().future.length > 0,
     canUndo: () => get().past.length > 0,
 

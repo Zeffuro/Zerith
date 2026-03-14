@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ReferenceScannerResult } from '../referenceScanner';
 import type { ScriptPath } from '../../utils/scriptPathUtilities';
+import type { ReferenceScannerResult } from '../referenceScanner';
 
 import { scanMacroReferences, scanSceneReferences } from '../referenceScanner/orchestration';
 
@@ -18,15 +18,15 @@ describe('referenceScanner orchestration', () => {
         const scanTree = vi.fn();
 
         const scenes = {
-            intro: [{ type: 'wait' }],
             fallback: [{ type: 'wait' }],
-            missingPath: [{ type: 'wait' }],
+            intro: [{ type: 'wait' }],
             invalid: 'not-an-array',
+            missingPath: [{ type: 'wait' }],
         };
 
         const sceneSources = {
-            intro: 'scripts/intro.json',
             fallback: { file: 'unknown' },
+            intro: 'scripts/intro.json',
         };
 
         scanSceneReferences('/project', scenes, sceneSources, createResult(), scanTree);
@@ -53,9 +53,9 @@ describe('referenceScanner orchestration', () => {
     it('scans macros in sorted order and uses indexed macro root paths', () => {
         const scanTree = vi.fn();
         const macros = {
-            zeta: [{ type: 'wait' }],
             alpha: [{ type: 'wait' }],
             invalid: 'not-an-array',
+            zeta: [{ type: 'wait' }],
         };
 
         scanMacroReferences('/project', macros, 'data/macros.json', createResult(), scanTree);

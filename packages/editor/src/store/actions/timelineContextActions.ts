@@ -4,8 +4,8 @@ import type { EditorNode } from '../../types/EditorNode';
 import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
 import { createDefaultCommand } from '../../plugins/commandPlugins';
+import { useScriptStore } from '../storeBootstrap';
 import { useEditorStore } from '../useEditorStore';
-import { useScriptStore } from '../useScriptStore';
 
 export interface ExecuteTimelineContextActionOptions {
     action: TimelineContextAction;

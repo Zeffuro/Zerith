@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 type Properties = {
     inputMode?: 'number' | 'text';
     inputStyle?: CSSProperties;
-    onChange: (hexString: string, numValue: number) => void;
+    onChange: (hexString: string, numberValue: number) => void;
     uiScale: number;
     value: number | string;
 };
@@ -75,8 +75,8 @@ function parseHexColor(value: string): null | string {
 
 function resolveColorState(value: number | string) {
     if (typeof value === 'number' && Number.isFinite(value)) {
-        const numValue = normalizeColorNumber(value);
-        return { hexValue: toHexColor(numValue), numValue };
+        const numberValue = normalizeColorNumber(value);
+        return { hexValue: toHexColor(numberValue), numValue: numberValue };
     }
 
     if (typeof value === 'string') {

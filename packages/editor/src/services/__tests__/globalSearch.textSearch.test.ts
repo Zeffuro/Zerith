@@ -21,7 +21,7 @@ describe('globalSearch textSearch helpers', () => {
 
     it('supports regex matching and safely handles invalid regex patterns', () => {
         const regexOptions = resolveGlobalSearchTextOptions({ regex: true });
-        expect(findSearchMatchStart('value-42', 'value-\\d+', regexOptions)).toBe(0);
+        expect(findSearchMatchStart('value-42', String.raw`value-\d+`, regexOptions)).toBe(0);
 
         const invalidRegex = toSearchExpression('(', regexOptions, false);
         expect(invalidRegex).toBeUndefined();
@@ -33,7 +33,7 @@ describe('globalSearch textSearch helpers', () => {
         expect(replaceSearchValue('hero hero', 'hero', 'champion', literalOptions)).toBe('champion champion');
 
         const regexOptions = resolveGlobalSearchTextOptions({ regex: true });
-        expect(replaceSearchValue('v1 v2 v3', 'v\\d', 'token', regexOptions)).toBe('token token token');
+        expect(replaceSearchValue('v1 v2 v3', String.raw`v\d`, 'token', regexOptions)).toBe('token token token');
     });
 
     it('summarizes long values around match window with ellipses', () => {

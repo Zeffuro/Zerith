@@ -11,11 +11,12 @@ function mergeSettings(value: unknown) {
 
 describe('SettingsSchema', () => {
     it('returns defaults for invalid persisted values', () => {
-        expect(mergeSettings(undefined)).toEqual(defaultSettings);
+        expect(mergeSettings()).toEqual(defaultSettings);
         expect(mergeSettings({ autosaveEnabled: 'yes' })).toEqual(defaultSettings);
         expect(mergeSettings({ autosaveIntervalMs: 0 })).toEqual(defaultSettings);
         expect(mergeSettings({ autosaveIntervalMs: Number.NaN })).toEqual(defaultSettings);
         expect(mergeSettings({ isMuted: 'yes' })).toEqual(defaultSettings);
+        expect(mergeSettings({ keymapOverrides: 'invalid' })).toEqual(defaultSettings);
         expect(mergeSettings({ recentProjects: 'invalid' })).toEqual(defaultSettings);
         expect(mergeSettings({ themeKey: '' })).toEqual(defaultSettings);
         expect(mergeSettings({ themeKey: '   ' })).toEqual(defaultSettings);
@@ -42,6 +43,21 @@ describe('SettingsSchema', () => {
 
     it('accepts valid isMuted values', () => {
         expect(mergeSettings({ isMuted: true })).toEqual({ ...defaultSettings, isMuted: true });
+    });
+
+    it('accepts and sanitizes keymap overrides', () => {
+        expect(mergeSettings({
+            keymapOverrides: {
+                save: ' Ctrl + K ',
+                undo: '',
+                unknownAction: 'x',
+            },
+        })).toEqual({
+            ...defaultSettings,
+            keymapOverrides: {
+                save: 'mod+k',
+            },
+        });
     });
 
     it('accepts and sanitizes recentProjects', () => {
@@ -85,6 +101,9 @@ describe('SettingsSchema', () => {
         expect(extractPersistedSettings({ autosaveIntervalMs: -1 })).toEqual({});
         expect(extractPersistedSettings({ isMuted: true })).toEqual({ isMuted: true });
         expect(extractPersistedSettings({ isMuted: 'yes' })).toEqual({});
+        expect(extractPersistedSettings({ keymapOverrides: { save: 'ctrl+k', unknownAction: 'x' } }))
+            .toEqual({ keymapOverrides: { save: 'mod+k' } });
+        expect(extractPersistedSettings({ keymapOverrides: 'invalid' })).toEqual({});
         expect(extractPersistedSettings({ recentProjects: [{ lastOpened: 1.9, name: 'A', path: '/a' }] }))
             .toEqual({ recentProjects: [{ lastOpened: 1, name: 'A', path: '/a' }] });
         expect(extractPersistedSettings({ recentProjects: 'invalid' })).toEqual({});

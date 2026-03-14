@@ -1,15 +1,14 @@
+import type { ForceView } from './contracts';
+import type { JsonRoute } from './jsonRouting';
+
 import {
     executeWorkbenchOpenAction,
     getPreferredManifestView,
 } from '../../store/actions/workbenchOpenActions';
 import { makeTabId } from '../../store/useWorkbenchStore';
 import { applyMacrosFile, applyScriptFile } from '../projectOpeners';
-import { openMacrosTab, openScriptTab } from './tabOpeners';
 import { basenameFromPath } from './pathHelpers';
-
-import type { ForceView } from './contracts';
-import type { JsonRoute } from './jsonRouting';
-
+import { openMacrosTab, openScriptTab } from './tabOpeners';
 import { getPreferredViewForJsonResource, getViewActionForJsonResource } from './viewPrefs';
 
 type HandleJsonRouteOptions = {

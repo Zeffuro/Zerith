@@ -12,9 +12,9 @@ import { useLiveScriptValidation } from './hooks/useLiveScriptValidation';
 import { useReferenceScanner } from './hooks/useReferenceScanner';
 import { useScriptDirtyTracking } from './hooks/useScriptDirtyTracking';
 import { setupConsoleInterceptor } from './services/consoleInterceptor';
+import { useProjectStore } from './store/storeBootstrap';
+import { useScriptStore } from './store/storeBootstrap';
 import { useEditorStore } from './store/useEditorStore';
-import { useProjectStore } from './store/useProjectStore';
-import { useScriptStore } from './store/useScriptStore';
 import { applyTheme } from './theme/applyTheme';
 import { getThemeRegistry } from './theme/themeRegistry';
 

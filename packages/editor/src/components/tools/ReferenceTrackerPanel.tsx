@@ -3,8 +3,8 @@ import { useMemo, useState } from 'react';
 import type { ReferenceLocation } from '../../services/referenceScanner';
 
 import { openProjectEntry } from '../../services/openProjectEntry';
+import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
-import { useProjectStore } from '../../store/useProjectStore';
 import { useReferenceStore } from '../../store/useReferenceStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 

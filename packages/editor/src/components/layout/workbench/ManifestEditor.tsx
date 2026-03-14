@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 
 import { fsWriteTextFile } from '../../../services/fs';
-import { useProjectStore } from '../../../store/useProjectStore';
+import { useProjectStore } from '../../../store/storeBootstrap';
 import { useReferenceStore } from '../../../store/useReferenceStore';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';

@@ -1,7 +1,7 @@
 import type { JumpCommand } from 'core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
-import { useProjectStore } from '../../store/useProjectStore';
+import { useProjectStore } from '../../store/storeBootstrap';
 import { FieldError } from './FieldError';
 
 export function JumpInspector({ index, node }: { index?: null | number; node: JumpCommand; }) {

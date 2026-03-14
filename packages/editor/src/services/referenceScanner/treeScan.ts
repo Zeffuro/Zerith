@@ -1,10 +1,10 @@
 import type { ScriptPath } from '../../utils/scriptPathUtilities';
-import type { ReferenceScannerResult } from '../referenceScanner';
+import type { ReferenceScannerResult } from './types';
 
 import { isRecord } from '../../utils/typeGuards';
 import { scanCommandReferences } from './commandScan';
 
-type ScanCommandFn = (
+type ScanCommandFunction = (
     command: Record<string, unknown>,
     commandType: string,
     path: ScriptPath,
@@ -19,7 +19,7 @@ export function scanReferenceTree(
     filePath: string,
     sceneName: string,
     result: ReferenceScannerResult,
-    scanCommand: ScanCommandFn = scanCommandReferences,
+    scanCommand: ScanCommandFunction = scanCommandReferences,
 ): void {
     if (Array.isArray(value)) {
         for (const [index, entry] of value.entries()) {

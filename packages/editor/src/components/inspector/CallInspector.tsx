@@ -1,7 +1,7 @@
 import type { BaseCommand } from 'core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
-import { useProjectStore } from '../../store/useProjectStore';
+import { useProjectStore } from '../../store/storeBootstrap';
 import { FieldError } from './FieldError';
 
 export function CallInspector({ index, node }: { index?: null | number; node: BaseCommand; }) {

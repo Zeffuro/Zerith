@@ -1,6 +1,6 @@
 import type { FsDirectoryEntry } from '../../services/fs';
 
-import { useProjectStore } from '../useProjectStore';
+import { useProjectStore } from '../storeBootstrap';
 
 export function executeProjectTreeRefreshAction(path: string, entries: FsDirectoryEntry[]): void {
     const project = useProjectStore.getState();

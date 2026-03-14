@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import type { EditorNode } from '../types/EditorNode';
 
 import { executeValidationResultAction } from '../store/actions/validationActions';
-import { useProjectStore } from '../store/useProjectStore';
+import { useProjectStore } from '../store/storeBootstrap';
 import { zodIssuesToMap } from '../utils/validation';
 
 export function useLiveScriptValidation(rootScript: EditorNode[]) {

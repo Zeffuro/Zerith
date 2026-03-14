@@ -4,8 +4,8 @@ import type { PluginNode } from '../../../plugins/types';
 import type { ScriptPath } from '../../../utils/scriptPathUtilities';
 
 import { getPlugin } from '../../../plugins/commandPlugins';
+import { useScriptStore } from '../../../store/storeBootstrap';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { useScriptStore } from '../../../store/useScriptStore';
 
 type TimelineBranch = { label: string; nodes: PluginNode[]; path: ScriptPath; };
 

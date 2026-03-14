@@ -9,7 +9,7 @@ const projectStoreMocks = vi.hoisted(() => ({
     markFileDirty: vi.fn(),
 }));
 
-vi.mock('../../useProjectStore', () => ({
+vi.mock('../../storeBootstrap', () => ({
     useProjectStore: {
         getState: () => projectStoreMocks,
     },

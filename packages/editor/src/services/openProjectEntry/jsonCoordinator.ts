@@ -1,13 +1,14 @@
-import { useProjectStore } from '../../store/useProjectStore';
+import type { OpenProjectEntryOptions } from './contracts';
+
+import { useProjectStore } from '../../store/storeBootstrap';
 import { fsReadTextFile } from '../fs';
+import { looksLikeMacrosObject } from '../projectOpeners';
+import { handleJsonRoute } from './jsonHandlers';
 import {
     resolveJsonKindFromManifest,
     resolveJsonKindFromSchema,
-} from '../openProjectEntryKind';
-import { looksLikeMacrosObject } from '../projectOpeners';
-import { handleJsonRoute } from './jsonHandlers';
+} from './jsonKindResolution';
 import { routeJsonEntry } from './jsonRouting';
-import type { OpenProjectEntryOptions } from './contracts';
 
 export async function openJsonEntry(fullPath: string, options?: OpenProjectEntryOptions): Promise<void> {
     const contents = await fsReadTextFile(fullPath);

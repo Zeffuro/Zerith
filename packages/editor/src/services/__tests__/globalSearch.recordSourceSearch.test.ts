@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import '../../test-utils/registerEditorServiceMocks';
+import type { GlobalSearchMatch, GlobalSearchProjectData } from '../globalSearch/contracts';
+
 import { collectCharacterMatches, collectItemMatches } from '../globalSearch/recordSourceSearch';
 import { resolveGlobalSearchTextOptions } from '../globalSearch/textSearch';
-import type { GlobalSearchMatch, GlobalSearchProjectData } from '../globalSearch/contracts';
 
 describe('globalSearch record source search helpers', () => {
     it('collects character matches with expected kind, label, and file path', () => {

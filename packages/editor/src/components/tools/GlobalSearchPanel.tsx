@@ -5,16 +5,24 @@ import type {
     GlobalSearchMatch,
     GlobalSearchProjectData,
     GlobalSearchReplacementFile,
-} from '../../services/globalSearch/contracts';
+} from '../../services/globalSearch';
 
 import { fsWriteTextFile } from '../../services/fs';
 import { replaceProjectContent, searchProjectContent } from '../../services/globalSearch';
 import { openProjectEntry } from '../../services/openProjectEntry';
+import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
-import { useProjectStore } from '../../store/useProjectStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { ConfirmDialog } from '../ConfirmDialog';
+import {
+    cycleResultIndex,
+    kindColor,
+    makeMatchKey,
+    normalizeActiveResultIndex,
+    summarizeText,
+} from './globalSearchPanelModel';
+import { buildReplacePreviewMap, groupMatchesByFile, indexMatches } from './globalSearchResultsModel';
 
 export function GlobalSearchContent({
     mode,
@@ -86,39 +94,15 @@ export function GlobalSearchContent({
         [caseSensitive, projectData, query, useRegex],
     );
 
-    const grouped = useMemo(() => {
-        const groups = new Map<string, GlobalSearchMatch[]>();
-        for (const result of results) {
-            if (!groups.has(result.filePath)) {
-                groups.set(result.filePath, []);
-            }
-            groups.get(result.filePath)?.push(result);
-        }
-        return [...groups.entries()];
-    }, [results]);
+    const grouped = useMemo(() => groupMatchesByFile(results), [results]);
 
-    const resultIndexByMatch = useMemo(() => {
-        const map = new Map<GlobalSearchMatch, number>();
-        for (const [index, result] of results.entries()) {
-            map.set(result, index);
-        }
-        return map;
-    }, [results]);
+    const resultIndexByMatch = useMemo(() => indexMatches(results), [results]);
 
     const hasReplaceDraft = replaceText.length > 0;
-    const replacePreview = new Map<string, string>();
-    if (trimmedQuery && hasReplaceDraft && !regexError) {
-        for (const [index, match] of results.entries()) {
-            if (!match.replaceable) continue;
-            const replaced = previewReplaceValue(match.matchedValue, trimmedQuery, replaceText, {
-                caseSensitive,
-                regex: useRegex,
-            });
-            if (replaced !== match.matchedValue) {
-                replacePreview.set(makeMatchKey(match, index), replaced);
-            }
-        }
-    }
+    const replacePreview = useMemo(() => {
+        if (regexError) return new Map<string, string>();
+        return buildReplacePreviewMap(results, query, replaceText, { caseSensitive, regex: useRegex });
+    }, [caseSensitive, query, regexError, replaceText, results, useRegex]);
 
     const normalizedActiveResultIndex = useMemo(
         () => normalizeActiveResultIndex(activeResultIndex, results.length),
@@ -498,42 +482,6 @@ function basename(path: string): string {
     return path.split(/[\\/]/).pop() || path;
 }
 
-function cycleResultIndex(current: number, length: number, delta: -1 | 1): number {
-    if (length <= 0) return -1;
-    if (current < 0) return delta > 0 ? 0 : length - 1;
-    if (delta > 0) return (current + 1) % length;
-    return (current - 1 + length) % length;
-}
-
-function kindColor(kind: GlobalSearchMatch['kind']): string {
-    if (kind === 'scene') return '#60a5fa';
-    if (kind === 'macro') return '#a78bfa';
-    if (kind === 'character') return '#34d399';
-    return '#fbbf24';
-}
-
-function makeMatchKey(match: GlobalSearchMatch, index: number): string {
-    return `${match.filePath}-${match.valuePath?.join('.') ?? match.path?.join('.') ?? 'root'}-${index}`;
-}
-
-function normalizeActiveResultIndex(activeResultIndex: number, resultCount: number): number {
-    if (resultCount <= 0) return -1;
-    if (activeResultIndex < 0) return 0;
-    if (activeResultIndex >= resultCount) return resultCount - 1;
-    return activeResultIndex;
-}
-
-function previewReplaceValue(
-    source: string,
-    query: string,
-    replacement: string,
-    options: { caseSensitive: boolean; regex: boolean },
-): string {
-    const expression = toSearchExpression(query, options, true);
-    if (!expression) return source;
-    return source.replaceAll(expression, replacement);
-}
-
 function sectionStyle(uiScale: number) {
     return {
         border: `1px solid ${t.border.subtle}`,
@@ -545,29 +493,5 @@ function sectionStyle(uiScale: number) {
     };
 }
 
-function summarizeText(value: string): string {
-    if (value.length <= 120) return value;
-    return `${value.slice(0, 117)}...`;
-}
-
-function toSearchExpression(
-    query: string,
-    options: { caseSensitive: boolean; regex: boolean },
-    global: boolean,
-): RegExp | undefined {
-    if (!query) return undefined;
-    try {
-        if (options.regex) {
-            const flags = `${options.caseSensitive ? '' : 'i'}${global ? 'g' : ''}`;
-            return new RegExp(query, flags);
-        }
-
-        const escaped = query.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
-        const flags = `${options.caseSensitive ? '' : 'i'}${global ? 'g' : ''}`;
-        return new RegExp(escaped, flags);
-    } catch {
-        return undefined;
-    }
-}
 
 

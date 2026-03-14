@@ -3,8 +3,8 @@ import { FolderOpen, MonitorDot, Pause, Play, Save, SkipForward, Square, Star, V
 import { useState } from 'react';
 
 import { openProjectEntry } from '../../services/openProjectEntry';
+import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
-import { useProjectStore } from '../../store/useProjectStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { QuickCommandsMenu } from './menus/QuickCommandsMenu';
 import { ThemeMenu } from './menus/ThemeMenu';

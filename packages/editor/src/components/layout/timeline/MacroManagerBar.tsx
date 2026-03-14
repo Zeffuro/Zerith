@@ -2,8 +2,8 @@ import { Copy, Pencil, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { executeMacroTimelineAction } from '../../../store/actions/macroTimelineActions';
+import { useProjectStore } from '../../../store/storeBootstrap';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { useProjectStore } from '../../../store/useProjectStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
 
 const duplicateSelectedMacros = () => {

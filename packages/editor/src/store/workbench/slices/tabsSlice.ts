@@ -1,6 +1,6 @@
 import type { WorkbenchGet, WorkbenchSet, WorkbenchTab, WorkbenchTabsSlice } from '../types';
 
-import { useProjectStore } from '../../useProjectStore';
+import { useProjectStore } from '../../storeBootstrap';
 
 export function createWorkbenchTabsSlice(set: WorkbenchSet, get: WorkbenchGet): WorkbenchTabsSlice {
     return {

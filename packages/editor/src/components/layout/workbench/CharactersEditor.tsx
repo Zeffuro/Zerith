@@ -3,11 +3,11 @@ import type { CharacterDefinition } from 'core';
 import { Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-import { ColorPickerField } from '../../inspector/fields/ColorPickerField';
 import { fsWriteTextFile } from '../../../services/fs';
-import { useProjectStore } from '../../../store/useProjectStore';
+import { useProjectStore } from '../../../store/storeBootstrap';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
+import { ColorPickerField } from '../../inspector/fields/ColorPickerField';
 import { Field, isRecord, sharedStyles } from './EditorSharedUI';
 
 type ActiveTab = ReturnType<typeof useWorkbenchStore.getState>['tabs'][number] | undefined;
@@ -95,7 +95,7 @@ export function CharactersEditor({ uiScale }: { uiScale: number }) {
 
     const deleteSelectedCharacter = () => {
         if (!selectedCharacterId) return;
-        const remainingIds = characterIds.filter((id) => id !== selectedCharacterId);
+        const remainingId = characterIds.find((id) => id !== selectedCharacterId);
         setCharacters((current) => {
             const next = { ...current };
             delete next[selectedCharacterId];
@@ -104,7 +104,7 @@ export function CharactersEditor({ uiScale }: { uiScale: number }) {
         if (tabId) {
             setSelectedByTab((previous) => ({
                 ...previous,
-                [tabId]: remainingIds[0] ?? '',
+                [tabId]: remainingId ?? '',
             }));
         }
     };
@@ -187,6 +187,18 @@ function makeNextId(prefix: string, existingIds: string[]): string {
     return `${prefix}_${index}`;
 }
 
+function normalizeCharacterDefinition(id: string, value: unknown): CharacterDefinition | undefined {
+    if (!isRecord(value)) return;
+    if (typeof value.displayName !== 'string') return;
+
+    const source = value;
+    return {
+        ...source,
+        displayName: value.displayName,
+        name: typeof value.name === 'string' ? value.name : id,
+    } as unknown as CharacterDefinition;
+}
+
 function parseActiveTab(activeTab: ActiveTab): ParsedCharactersTab {
     if (!activeTab || activeTab.kind !== 'characters') {
         return { baseRoot: {}, characters: {}, error: 'Open a characters file to use the visual editor.' };
@@ -222,16 +234,4 @@ function serializeCharacters(characters: CharactersMap, baseRoot: Record<string,
         nextRoot[key] = value;
     }
     return JSON.stringify(nextRoot, undefined, 2);
-}
-
-function normalizeCharacterDefinition(id: string, value: unknown): CharacterDefinition | undefined {
-    if (!isRecord(value)) return;
-    if (typeof value.displayName !== 'string') return;
-
-    const source = value as Record<string, unknown>;
-    return {
-        ...source,
-        displayName: value.displayName,
-        name: typeof value.name === 'string' ? value.name : id,
-    } as unknown as CharacterDefinition;
 }

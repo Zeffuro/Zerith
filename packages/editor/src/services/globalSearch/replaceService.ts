@@ -1,11 +1,12 @@
-import { useProjectStore } from '../../store/useProjectStore';
-import { collectReplacementFiles } from './replacementOrchestration';
 import type {
     GlobalSearchMatch,
     GlobalSearchProjectData,
     GlobalSearchReplacementFile,
     GlobalSearchTextOptions,
 } from './contracts';
+
+import { useProjectStore } from '../../store/storeBootstrap';
+import { collectReplacementFiles } from './replacementOrchestration';
 import { createSearchRequestContext } from './requestContext';
 import { isReplacementRequestValid } from './searchValidation';
 

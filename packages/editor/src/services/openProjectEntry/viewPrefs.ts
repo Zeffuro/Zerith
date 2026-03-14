@@ -1,10 +1,10 @@
+import type { ForceView, JsonResourceKind } from './contracts';
+
 import {
     getPreferredCharactersView,
     getPreferredItemsView,
     getPreferredManifestView,
 } from '../../store/actions/workbenchOpenActions';
-
-import type { ForceView, JsonResourceKind } from './contracts';
 
 export function getPreferredViewForJsonResource(kind: JsonResourceKind, fallback?: ForceView) {
     if (kind === 'manifest') return getPreferredManifestView(fallback);

@@ -32,8 +32,8 @@ describe('globalSearch match lifecycle helpers', () => {
     it('preserves macro root path indexing from sorted macro names', () => {
         const projectData = createGlobalSearchProjectData({
             macros: {
-                beta: [{ speaker: 'Guide', text: 'hero beta', type: 'dialogue' }],
                 alpha: [{ speaker: 'Guide', text: 'hero alpha', type: 'dialogue' }],
+                beta: [{ speaker: 'Guide', text: 'hero beta', type: 'dialogue' }],
             },
         });
 

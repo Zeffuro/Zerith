@@ -6,16 +6,16 @@ export const SCENE_INLINE_LABEL_SUFFIX = ' (inline)';
 export const SCENE_LABEL_PREFIX = 'Scene: ';
 export const SCRIPT_BODY_PATH_SEGMENT = 'body';
 
+export function formatInlineSceneLabel(sceneName: string): string {
+    return `${formatSceneLabel(sceneName)}${SCENE_INLINE_LABEL_SUFFIX}`;
+}
+
 export function formatMacroLabel(macroName: string): string {
     return `${MACRO_LABEL_PREFIX}${macroName}`;
 }
 
 export function formatSceneLabel(sceneName: string): string {
     return `${SCENE_LABEL_PREFIX}${sceneName}`;
-}
-
-export function formatInlineSceneLabel(sceneName: string): string {
-    return `${formatSceneLabel(sceneName)}${SCENE_INLINE_LABEL_SUFFIX}`;
 }
 
 export function resolveFilePath(projectPath: string, manifestPath: string | undefined): string {
@@ -30,7 +30,7 @@ export function resolveSceneLocation(
     projectPath: string,
     sceneName: string,
     manifestScenes: Record<string, unknown>,
-): undefined | { filePath: string; label: string } {
+): { filePath: string; label: string } | undefined {
     if (!(sceneName in manifestScenes)) return undefined;
 
     const source = manifestScenes[sceneName];

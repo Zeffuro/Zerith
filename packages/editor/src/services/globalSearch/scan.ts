@@ -10,7 +10,7 @@ import { formatRecordSourceLabel } from './recordLabels';
 import { scanLeafStrings } from './scanLeafStrings';
 import { type ResolvedGlobalSearchTextOptions } from './textSearch';
 
-export { scanLeafStrings };
+
 
 type ScanBranchOptions = {
     basePath: ScriptPath;
@@ -40,20 +40,6 @@ type ScanScriptOptions = {
     textOptions: ResolvedGlobalSearchTextOptions;
 };
 
-function scanBranchNodes(matches: GlobalSearchMatch[], options: ScanBranchOptions): void {
-    const nested = options.nodes as Script;
-    scanScriptNodes(matches, {
-        filePath: options.filePath,
-        kind: options.kind,
-        label: options.label,
-        query: options.query,
-        rootPath: options.basePath,
-        script: nested,
-        textOptions: options.textOptions,
-    });
-}
-
-
 export function scanRecordStringLeaves(matches: GlobalSearchMatch[], options: ScanRecordOptions): void {
     for (const [entryName, value] of Object.entries(options.values)) {
         scanLeafStrings(matches, {
@@ -68,6 +54,7 @@ export function scanRecordStringLeaves(matches: GlobalSearchMatch[], options: Sc
         });
     }
 }
+
 
 export function scanScriptNodes(matches: GlobalSearchMatch[], options: ScanScriptOptions): void {
     for (const [index, node] of options.script.entries()) {
@@ -99,3 +86,18 @@ export function scanScriptNodes(matches: GlobalSearchMatch[], options: ScanScrip
     }
 }
 
+function scanBranchNodes(matches: GlobalSearchMatch[], options: ScanBranchOptions): void {
+    const nested = options.nodes as Script;
+    scanScriptNodes(matches, {
+        filePath: options.filePath,
+        kind: options.kind,
+        label: options.label,
+        query: options.query,
+        rootPath: options.basePath,
+        script: nested,
+        textOptions: options.textOptions,
+    });
+}
+
+
+export {scanLeafStrings} from './scanLeafStrings';

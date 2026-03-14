@@ -3,9 +3,9 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useDismissiblePopup } from '../../../hooks/useDismissiblePopup';
 import { openProjectEntry } from '../../../services/openProjectEntry';
+import { useProjectStore } from '../../../store/storeBootstrap';
+import { useScriptStore } from '../../../store/storeBootstrap';
 import { useEditorStore } from '../../../store/useEditorStore';
-import { useProjectStore } from '../../../store/useProjectStore';
-import { useScriptStore } from '../../../store/useScriptStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
 import { MenuButton } from './MenuButton';
 import { MenuDropdown, type MenuItem } from './MenuDropdown';
@@ -18,8 +18,6 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
 
     const {
         addRecentProject,
-        autosaveEnabled,
-        autosaveIntervalMs,
         clearAllBreakpoints,
         clearRecentProjects,
         isPlaybackPaused,
@@ -31,12 +29,8 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         playTrigger,
         recentProjects,
         resetDockLayout,
-        setAutosaveEnabled,
-        setAutosaveIntervalMs,
-        setThemeKey,
         setUiScale,
         stopTrigger,
-        themeKey,
         toggleBreakpoint,
         triggerPause,
         triggerPlay,
@@ -150,26 +144,8 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
             { label: 'Zoom In', onClick: () => setUiScale(Math.min(1.5, currentScale + 0.1)), shortcut: 'Ctrl+=' },
             { label: 'Zoom Out', onClick: () => setUiScale(Math.max(0.8, currentScale - 0.1)), shortcut: 'Ctrl+-' },
             { label: 'Reset Zoom', onClick: () => setUiScale(1), shortcut: 'Ctrl+0' },
-            { label: 'sep-4', separator: true },
-            {
-                children: [
-                    { label: 'Classic', onClick: () => setThemeKey('classic') },
-                    { label: 'Classic Soft', onClick: () => setThemeKey('classicSoft') },
-                ],
-                label: `Theme: ${themeKey}`,
-            },
-            { label: 'sep-4b', separator: true },
-            { label: `Autosave: ${autosaveEnabled ? 'On' : 'Off'}`, onClick: () => setAutosaveEnabled(!autosaveEnabled) },
-            {
-                children: [
-                    { label: '15 seconds', onClick: () => setAutosaveIntervalMs(15 * 1000) },
-                    { label: '30 seconds', onClick: () => setAutosaveIntervalMs(30 * 1000) },
-                    { label: '60 seconds', onClick: () => setAutosaveIntervalMs(60 * 1000) },
-                ],
-                label: `Autosave interval: ${Math.round(autosaveIntervalMs / 1000)}s`,
-            },
         ],
-        [autosaveEnabled, autosaveIntervalMs, currentScale, openCommandPalette, openGlobalSearchPopup, openGlobalSearchReplacePopup, openSettingsModal, setAutosaveEnabled, setAutosaveIntervalMs, setThemeKey, setUiScale, themeKey]
+        [currentScale, openCommandPalette, openGlobalSearchPopup, openGlobalSearchReplacePopup, openSettingsModal, setUiScale]
     );
 
     const runItems = useMemo<MenuItem[]>(

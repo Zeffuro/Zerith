@@ -1,47 +1,44 @@
+import type { Command } from 'core';
+
 import { describe, expect, it, vi } from 'vitest';
 
-import type { Command } from 'core';
-import type { GetPathOpsProjectBridge, PathOpsProjectBridge } from '../bridges/pathOpsProjectBridge';
 import type { ScriptPath } from '../../../utils/scriptPathUtilities';
+import type { GetPathOpsProjectBridge, PathOpsProjectBridge } from '../bridges/pathOpsProjectBridge';
 import type { ScriptState } from '../types';
 
 import { createSliceHarness } from '../../../test-utils/createSliceHarness';
 import { createPathOpsSlice } from '../slices/pathOpsSlice';
 
+vi.mock('core', () => ({
+    deepClone: <Value>(value: Value): Value => JSON.parse(JSON.stringify(value)) as Value,
+}));
+
 type PathOpsHarnessState = Pick<
     ScriptState,
     | 'future'
+    | 'moveNodeByPath'
+    | 'moveNodesByPathsToArray'
+    | 'moveTimelineNode'
+    | 'moveTimelineNodesToArray'
     | 'past'
     | 'rootScript'
     | 'scopePath'
     | 'selectedNodeIndex'
     | 'selectedNodePath'
-    | 'moveNodeByPath'
-    | 'moveNodesByPathsToArray'
-    | 'moveTimelineNode'
-    | 'moveTimelineNodesToArray'
 >;
-
-function createWait(duration: number): Command {
-    return { duration, type: 'wait' } as Command;
-}
-
-function readWaitDurations(commands: Command[]): number[] {
-    return commands.map((command) => (command as unknown as { duration: number; }).duration);
-}
 
 function createPathOpsHarness(getProjectBridge: GetPathOpsProjectBridge) {
     const harness = createSliceHarness<PathOpsHarnessState>({
         future: [],
+        moveNodeByPath: () => {},
+        moveNodesByPathsToArray: () => {},
+        moveTimelineNode: () => {},
+        moveTimelineNodesToArray: () => {},
         past: [],
         rootScript: [],
         scopePath: [],
         selectedNodeIndex: undefined,
         selectedNodePath: undefined,
-        moveNodeByPath: () => {},
-        moveNodesByPathsToArray: () => {},
-        moveTimelineNode: () => {},
-        moveTimelineNodesToArray: () => {},
     });
 
     const set = harness.set as never;
@@ -62,6 +59,14 @@ function createProjectBridge(overrides?: Partial<PathOpsProjectBridge>): PathOps
         updateMacroCommands: vi.fn(),
         ...overrides,
     };
+}
+
+function createWait(duration: number): Command {
+    return { duration, type: 'wait' } as Command;
+}
+
+function readWaitDurations(commands: Command[]): number[] {
+    return commands.map((command) => (command as unknown as { duration: number; }).duration);
 }
 
 describe('pathOps timeline actions', () => {
@@ -112,7 +117,7 @@ describe('pathOps timeline actions', () => {
     });
 
     it('falls back to script multi-move when project bridge is unavailable', () => {
-        const harness = createPathOpsHarness(() => undefined);
+        const harness = createPathOpsHarness(() => {});
 
         harness.setState({
             rootScript: [createWait(1), createWait(2), createWait(3)],

@@ -1,8 +1,8 @@
 import type { GlobalSearchMatch, GlobalSearchProjectData, GlobalSearchReplacementFile } from './contracts';
+import type { ResolvedGlobalSearchTextOptions } from './textSearch';
 
 import { applyMatchReplacement } from './replace';
 import { toReplacementFilePayload } from './replacementFiles';
-import type { ResolvedGlobalSearchTextOptions } from './textSearch';
 
 export function collectReplacementFiles(
     query: string,

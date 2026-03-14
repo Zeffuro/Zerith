@@ -6,9 +6,8 @@ import type { EditorNode } from '../../types/EditorNode';
 import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
 import { isRecord } from '../../utils/typeGuards';
+import { useProjectStore, useScriptStore } from '../storeBootstrap';
 import { useEditorStore } from '../useEditorStore';
-import { useProjectStore } from '../useProjectStore';
-import { useScriptStore } from '../useScriptStore';
 
 export type GlobalShortcutAction =
     | 'clearAllBreakpoints'

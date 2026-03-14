@@ -2,8 +2,8 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 import { useEffect, useMemo, useState } from 'react';
 
 import { useAssetOptions } from '../../hooks/useAssetOptions';
+import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
-import { useProjectStore } from '../../store/useProjectStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { AUDIO_EXT, getExtension, IMG_EXT } from '../../utils/assetTypes';
 

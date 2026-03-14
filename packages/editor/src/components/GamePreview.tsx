@@ -5,9 +5,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useEngineLifecycle } from '../hooks/useEngineLifecycle';
 import { useEngineMute } from '../hooks/useEngineMute';
 import { usePlaybackControl } from '../hooks/usePlaybackControl';
+import { useProjectStore } from '../store/storeBootstrap';
 import { useConsoleStore } from '../store/useConsoleStore';
 import { useEditorStore } from '../store/useEditorStore';
-import { useProjectStore } from '../store/useProjectStore';
 
 export function GamePreview({ script }: { script: Script }) {
     // Manifest data

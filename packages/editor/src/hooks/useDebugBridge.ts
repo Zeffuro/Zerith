@@ -4,8 +4,8 @@ import type { RefObject } from 'react';
 import { useCallback } from 'react';
 
 import { openProjectEntry } from '../services/openProjectEntry';
+import { useProjectStore } from '../store/storeBootstrap';
 import { useEditorStore } from '../store/useEditorStore';
-import { useProjectStore } from '../store/useProjectStore';
 
 export function useDebugBridge() {
     const attachDebugBridge = useCallback((engine: Engine, activeFileReference: RefObject<string | undefined>) => {

@@ -1,7 +1,7 @@
 import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
+import { useScriptStore } from '../storeBootstrap';
 import { useEditorStore } from '../useEditorStore';
-import { useScriptStore } from '../useScriptStore';
 
 const pathEq = (a: ScriptPath, b: ScriptPath) => a.length === b.length && a.every((v, index) => v === b[index]);
 

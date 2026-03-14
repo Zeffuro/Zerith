@@ -32,19 +32,19 @@ describe('globalSearch manifest path helpers', () => {
 
     it('resolves rooted and relative scene file paths for known scene keys', () => {
         const projectData = createGlobalSearchProjectData({
-            scenes: {
-                intro: [{ speaker: 'Narrator', text: 'intro', type: 'dialogue' }],
-                outro: [{ speaker: 'Narrator', text: 'outro', type: 'dialogue' }],
-            },
             manifest: {
                 characters: 'data/characters.json',
                 items: 'data/items.json',
                 macros: 'data/macros.json',
                 scenes: {
+                    inlineOnly: { inline: true },
                     intro: 'scripts/intro.json',
                     outro: '/scripts/outro.json',
-                    inlineOnly: { inline: true },
                 },
+            },
+            scenes: {
+                intro: [{ speaker: 'Narrator', text: 'intro', type: 'dialogue' }],
+                outro: [{ speaker: 'Narrator', text: 'outro', type: 'dialogue' }],
             },
         });
 

@@ -7,8 +7,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { EditorNode } from '../../../types/EditorNode';
 
 import { fsWriteTextFile } from '../../../services/fs';
-import { useProjectStore } from '../../../store/useProjectStore';
-import { useScriptStore } from '../../../store/useScriptStore';
+import { useProjectStore } from '../../../store/storeBootstrap';
+import { useScriptStore } from '../../../store/storeBootstrap';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
 import { isRecord } from '../../../utils/typeGuards';

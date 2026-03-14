@@ -2,7 +2,7 @@ import { CSSProperties, useMemo } from 'react';
 
 import { useAssetOptions } from '../../../hooks/useAssetOptions';
 import { openProjectEntry } from '../../../services/openProjectEntry';
-import { useProjectStore } from '../../../store/useProjectStore';
+import { useProjectStore } from '../../../store/storeBootstrap';
 import { editorTheme as t } from '../../../theme/editorTheme';
 
 type Properties = {

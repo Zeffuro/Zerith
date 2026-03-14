@@ -1,8 +1,8 @@
 import type { GlobalSearchMatch, GlobalSearchProjectData } from './contracts';
+import type { ResolvedGlobalSearchTextOptions } from './textSearch';
 
 import { collectOrchestratedMatches } from './matchLifecycle';
 import { isOrchestrationRequestValid } from './searchValidation';
-import type { ResolvedGlobalSearchTextOptions } from './textSearch';
 
 export function collectSearchMatches(
     query: string,

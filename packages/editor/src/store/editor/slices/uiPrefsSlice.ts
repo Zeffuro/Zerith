@@ -42,8 +42,8 @@ export function createUiPrefsSlice(set: EditorSet): UiPrefsSlice {
         globalSearchLaunchMode: 'find',
         isCommandPaletteOpen: false,
         isGlobalSearchPopupOpen: false,
-        isSettingsModalOpen: false,
         isMuted,
+        isSettingsModalOpen: false,
         lastManualSaveAt: 0,
         markManualSave: () => set({ lastManualSaveAt: Date.now() }),
         openCommandPalette: () => set({ isCommandPaletteOpen: true }),
@@ -78,12 +78,12 @@ export function createUiPrefsSlice(set: EditorSet): UiPrefsSlice {
         toggleCommandPalette: () => set((state) => ({ isCommandPaletteOpen: !state.isCommandPaletteOpen })),
         toggleGlobalSearchPopup: () =>
             set((state) => state.isSettingsModalOpen ? {} : ({ isGlobalSearchPopupOpen: !state.isGlobalSearchPopupOpen })),
-        toggleSettingsModal: () => set((state) => ({ isSettingsModalOpen: !state.isSettingsModalOpen })),
         toggleMute: () => set((state) => {
             const nextIsMuted = !state.isMuted;
             getSettingsSnapshot().setIsMuted(nextIsMuted);
             return { isMuted: nextIsMuted };
         }),
+        toggleSettingsModal: () => set((state) => ({ isSettingsModalOpen: !state.isSettingsModalOpen })),
         uiScale,
         windowState,
     };

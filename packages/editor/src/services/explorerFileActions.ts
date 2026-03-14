@@ -1,6 +1,6 @@
 import { executeConsoleMessageAction } from '../store/actions/consoleMessageActions';
 import { executeProjectTreeRefreshAction, getCurrentProjectPath } from '../store/actions/projectTreeActions';
-import { useProjectStore } from '../store/useProjectStore';
+import { useProjectStore } from '../store/storeBootstrap';
 import { useWorkbenchStore } from '../store/useWorkbenchStore';
 import { sanitizeFileName } from '../utils/sanitizeFileName';
 import {

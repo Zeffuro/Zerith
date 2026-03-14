@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import '../../test-utils/registerEditorServiceMocks';
+import type { GlobalSearchMatch } from '../globalSearch/contracts';
+
 import { scanLeafStrings } from '../globalSearch/scan';
 import { resolveGlobalSearchTextOptions } from '../globalSearch/textSearch';
-import type { GlobalSearchMatch } from '../globalSearch/contracts';
 
 describe('globalSearch scanLeafStrings helper', () => {
     it('recursively scans nested object/array leaves and records deep value paths', () => {

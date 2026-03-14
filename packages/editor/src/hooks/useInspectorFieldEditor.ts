@@ -1,9 +1,9 @@
 import { useCallback, useMemo } from 'react';
 
 import { executeInspectorFieldPatchAction } from '../store/actions/inspectorFieldActions';
+import { useProjectStore } from '../store/storeBootstrap';
+import { useScriptStore } from '../store/storeBootstrap';
 import { useEditorStore } from '../store/useEditorStore';
-import { useProjectStore } from '../store/useProjectStore';
-import { useScriptStore } from '../store/useScriptStore';
 
 export function useInspectorFieldEditor(index?: null | number) {
     const uiScale = useEditorStore((state) => state.uiScale);

@@ -1,4 +1,4 @@
-import type { ScriptState, ScriptStoreCreator } from '../types';
+import type { ScriptSlice, ScriptState } from '../types';
 
 type SelectionSlice = Pick<
     ScriptState,
@@ -12,7 +12,7 @@ type SelectionSlice = Pick<
     | 'setSelectedNodePath'
 >;
 
-export const createSelectionSlice: ScriptStoreCreator<SelectionSlice> = (set, get) => ({
+export const createSelectionSlice: ScriptSlice<SelectionSlice> = (set, get) => ({
     popScope: () =>
         set((state) => {
             const newPath = [...state.scopePath];

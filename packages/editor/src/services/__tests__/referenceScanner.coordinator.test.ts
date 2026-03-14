@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { ReferenceScannerResult } from '../referenceScanner';
 
-import { scanProjectScriptBranches } from '../referenceScanner/index';
+import { scanProjectScriptBranches } from '../referenceScanner/coordinator';
 
 function createResult(): ReferenceScannerResult {
     return {

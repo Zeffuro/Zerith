@@ -204,13 +204,13 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
 
 }
 
+function coerceSpeaker(value: unknown): string {
+    return typeof value === 'string' ? value.trim() : '';
+}
+
 function normalizeLower(value: string | undefined): string | undefined {
     if (!value) return undefined;
     const normalized = value.trim().toLowerCase();
     return normalized.length > 0 ? normalized : undefined;
-}
-
-function coerceSpeaker(value: unknown): string {
-    return typeof value === 'string' ? value.trim() : '';
 }
 

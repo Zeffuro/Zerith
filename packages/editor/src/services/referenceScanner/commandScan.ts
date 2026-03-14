@@ -1,9 +1,9 @@
+import type { ScriptPath } from '../../utils/scriptPathUtilities';
 import type {
     InferredVariableType,
     ReferenceLocation,
     ReferenceScannerResult,
-} from '../referenceScanner';
-import type { ScriptPath } from '../../utils/scriptPathUtilities';
+} from './types';
 
 import { isRecord } from '../../utils/typeGuards';
 import { getCommandFieldHints } from './schemaHints';

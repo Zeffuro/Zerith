@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ReferenceScannerResult } from '../referenceScanner';
 import type { ScriptPath } from '../../utils/scriptPathUtilities';
+import type { ReferenceScannerResult } from '../referenceScanner';
 
 import { scanReferenceTree } from '../referenceScanner/treeScan';
 

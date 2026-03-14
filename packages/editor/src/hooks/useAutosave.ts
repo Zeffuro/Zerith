@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 
+import { useProjectStore } from '../store/storeBootstrap';
 import { useEditorStore } from '../store/useEditorStore';
-import { useProjectStore } from '../store/useProjectStore';
 
 export function useAutosave() {
     const autosaveEnabled = useEditorStore((state) => state.autosaveEnabled);

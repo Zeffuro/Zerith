@@ -6,8 +6,8 @@ import { Component, lazy, Suspense, useEffect, useRef, useState } from 'react';
 import 'flexlayout-react/style/dark.css';
 
 import { useDismissiblePopup } from '../../hooks/useDismissiblePopup';
+import { useScriptStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
-import { useScriptStore } from '../../store/useScriptStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { Inspector } from '../inspector/Inspector';
 import { CommandPalette } from '../tools/CommandPalette';

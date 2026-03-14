@@ -3,9 +3,8 @@ import { getCurrentProjectPath } from '../../store/actions/projectTreeActions';
 import { executeWorkbenchOpenAction } from '../../store/actions/workbenchOpenActions';
 import { makeTabId } from '../../store/useWorkbenchStore';
 import { fsReadTextFile } from '../fs';
-import { toProjectRelativePath } from '../openProjectEntryKind';
 import { applyAssetSelection } from '../projectOpeners';
-import { basenameFromPath } from './pathHelpers';
+import { basenameFromPath, toProjectRelativePath } from './pathHelpers';
 
 export function openAssetEntry(fullPath: string): void {
     const projectPath = getCurrentProjectPath();

@@ -7,18 +7,19 @@ import { styles } from '../theme/styleHelpers';
 type Properties = {
     cancelText?: string;
     confirmText?: string;
+    danger?: boolean;
     extraActionDanger?: boolean;
     extraActionText?: string;
-    danger?: boolean;
     message: string;
     onCancel: () => void;
     onConfirm: () => void;
     onExtraAction?: () => void;
     open: boolean;
     title?: string;
+    zIndex?: number;
 };
 
-export function ConfirmDialog({ cancelText = 'Cancel', confirmText = 'Confirm', extraActionDanger = false, extraActionText, danger = false, message, onCancel, onConfirm, onExtraAction, open, title = 'Confirm' }: Properties) {
+export function ConfirmDialog({ cancelText = 'Cancel', confirmText = 'Confirm', danger = false, extraActionDanger = false, extraActionText, message, onCancel, onConfirm, onExtraAction, open, title = 'Confirm', zIndex = 2000 }: Properties) {
     const uiScale = useEditorStore(s => s.uiScale);
 
     useEffect(() => {
@@ -34,7 +35,7 @@ export function ConfirmDialog({ cancelText = 'Cancel', confirmText = 'Confirm', 
     if (!open) return;
 
     return (
-        <div onClick={onCancel} style={{ background: 'rgba(0,0,0,.45)', display: 'grid', inset: 0, placeItems: 'center', position: 'fixed', zIndex: 2000 }}>
+        <div onClick={onCancel} style={{ background: 'rgba(0,0,0,.45)', display: 'grid', inset: 0, placeItems: 'center', position: 'fixed', zIndex }}>
             <div onClick={(event) => event.stopPropagation()} style={{ background: t.bg.panel, border: `1px solid ${t.border.normal}`, borderRadius: t.radius.lg, boxShadow: t.shadow.popupStrong, color: t.text.primary, padding: `${16 * uiScale}px`, width: `${380 * uiScale}px` }}>
                 <div style={{ fontSize: `${14 * uiScale}px`, fontWeight: 700, marginBottom: `${8 * uiScale}px` }}>{title}</div>
                 <div style={{ color: t.text.normal, fontSize: `${13 * uiScale}px`, marginBottom: `${16 * uiScale}px`, opacity: .9 }}>{message}</div>

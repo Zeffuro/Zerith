@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
-import { useProjectStore } from '../store/useProjectStore';
-import { useScriptStore } from '../store/useScriptStore';
+import { useProjectStore } from '../store/storeBootstrap';
+import { useScriptStore } from '../store/storeBootstrap';
 
 export function useScriptDirtyTracking() {
     const activeFile = useProjectStore((state) => state.activeFile);

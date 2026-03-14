@@ -1,6 +1,7 @@
-import { useProjectStore } from '../../store/useProjectStore';
-import { collectSearchMatches } from './orchestration';
 import type { GlobalSearchMatch, GlobalSearchProjectData, GlobalSearchTextOptions } from './contracts';
+
+import { useProjectStore } from '../../store/storeBootstrap';
+import { collectSearchMatches } from './orchestration';
 import { createSearchRequestContext } from './requestContext';
 import { isSearchRequestValid } from './searchValidation';
 

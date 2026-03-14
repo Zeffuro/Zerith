@@ -15,8 +15,8 @@ describe('globalSearch pathLabels helpers', () => {
     it('resolves file paths for relative, rooted, and fallback sources', () => {
         expect(resolveFilePath('/project', 'scripts/intro.json')).toBe('/project/scripts/intro.json');
         expect(resolveFilePath('/project', '/data/macros.json')).toBe('/project/data/macros.json');
-        expect(resolveFilePath('/project', '\\data\\macros.json')).toBe('/project\\data\\macros.json');
-        expect(resolveFilePath('/project', undefined)).toBe('/project/game.json');
+        expect(resolveFilePath('/project', String.raw`\data\macros.json`)).toBe(String.raw`/project\data\macros.json`);
+        expect(resolveFilePath('/project')).toBe('/project/game.json');
     });
 
     it('resolves scene locations with scene and inline labels, or undefined when missing', () => {

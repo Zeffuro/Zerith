@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
+import type { GlobalSearchMatch } from '../globalSearch/contracts';
+
 import { createGlobalSearchProjectData } from '../../test-utils/projectDataBuilder';
 import { collectReplacementFiles } from '../globalSearch/replacementOrchestration';
 import { resolveGlobalSearchTextOptions } from '../globalSearch/textSearch';
-import type { GlobalSearchMatch } from '../globalSearch/contracts';
 
 describe('globalSearch replacement orchestration helpers', () => {
     it('returns deduplicated and sorted changed files', () => {

@@ -94,7 +94,7 @@ vi.mock('../store/actions/workbenchOpenActions', () => ({
     getPreferredScriptView: hoistedMocks.getPreferredScriptView,
 }));
 
-vi.mock('../store/useProjectStore', () => ({
+vi.mock('../store/storeBootstrap', () => ({
     useProjectStore: {
         getState: () => hoistedMocks.state,
     },

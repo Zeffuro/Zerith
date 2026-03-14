@@ -3,7 +3,7 @@ import type { IfCommand } from 'core';
 import { useMemo } from 'react';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
-import { useProjectStore } from '../../store/useProjectStore';
+import { useProjectStore } from '../../store/storeBootstrap';
 import { FieldError } from './FieldError';
 import { getEditableValue } from './utilities';
 

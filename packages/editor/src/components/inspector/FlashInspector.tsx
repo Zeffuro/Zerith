@@ -14,7 +14,7 @@ export function FlashInspector({ index, node }: { index?: null | number; node: F
                 <ColorPickerField
                     inputMode="number"
                     inputStyle={getFieldInputStyle('color')}
-                    onChange={(_hexValue, numValue) => handleChange('color', numValue)}
+                    onChange={(_hexValue, numberValue) => handleChange('color', numberValue)}
                     uiScale={uiScale}
                     value={node.color ?? 0xFF_FF_FF}
                 />

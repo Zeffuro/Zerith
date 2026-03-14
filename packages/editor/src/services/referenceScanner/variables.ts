@@ -2,7 +2,7 @@ import type {
     InferredVariableType,
     ReferenceLocation,
     VariableReferenceStats,
-} from '../referenceScanner';
+} from './types';
 
 export function extractTemplateVariables(value: string): string[] {
     const matches = value.matchAll(/\{([a-zA-Z_]\w*)}/g);

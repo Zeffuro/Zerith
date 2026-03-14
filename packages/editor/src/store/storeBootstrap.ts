@@ -13,14 +13,14 @@ import { createPathOpsSlice } from './script/slices/pathOpsSlice';
 import { createRootScriptSlice } from './script/slices/rootScriptSlice';
 import { createSelectionSlice } from './script/slices/selectionSlice';
 
-let scriptStoreRef: { getState: () => ScriptState; } | undefined;
+let scriptStoreReference: { getState: () => ScriptState; } | undefined;
 
 function getScriptStoreState(): ScriptState {
-    if (!scriptStoreRef) {
+    if (!scriptStoreReference) {
         throw new Error('Script store is not initialized.');
     }
 
-    return scriptStoreRef.getState();
+    return scriptStoreReference.getState();
 }
 
 export const useProjectStore = create<ProjectState>()((set, get) => ({
@@ -45,5 +45,5 @@ export const useScriptStore = create<ScriptState>((set, get) => ({
     ...createListOpsSlice(set, get),
 }));
 
-scriptStoreRef = useScriptStore;
+scriptStoreReference = useScriptStore;
 

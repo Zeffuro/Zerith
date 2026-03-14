@@ -4,7 +4,7 @@ import { Bold, Clock, FastForward, Italic, Palette, Underline } from 'lucide-rea
 import { useRef } from 'react';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
-import { useProjectStore } from '../../store/useProjectStore';
+import { useProjectStore } from '../../store/storeBootstrap';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { FieldError } from './FieldError';
 

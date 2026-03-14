@@ -1,3 +1,19 @@
+export { formatScriptBranchLabel, SCRIPT_BRANCH_LABEL_SEPARATOR } from './branchLabels';
+export type {
+    GlobalSearchKind,
+    GlobalSearchMatch,
+    GlobalSearchProjectData,
+    GlobalSearchReplacementFile,
+    GlobalSearchTextOptions,
+    RecordSearchKind,
+    ReplacementManifestKind,
+    ReplacementTarget,
+    ScriptSearchKind,
+} from './contracts';
+export { deriveManifestFilePaths, deriveSceneFilePathMap } from './manifestPaths';
+export { collectOrchestratedMatches } from './matchLifecycle';
+export { collectSearchMatches } from './orchestration';
+export { getAtPath, setAtPath } from './pathAccess';
 export {
     formatInlineSceneLabel,
     formatMacroLabel,
@@ -13,38 +29,6 @@ export {
     toMacroRelativePath,
     toSceneName,
 } from './pathLabels';
-export { deriveManifestFilePaths, deriveSceneFilePathMap } from './manifestPaths';
-export { collectOrchestratedMatches } from './matchLifecycle';
-export type {
-    GlobalSearchKind,
-    GlobalSearchMatch,
-    GlobalSearchProjectData,
-    ReplacementManifestKind,
-    ReplacementTarget,
-    RecordSearchKind,
-    GlobalSearchReplacementFile,
-    ScriptSearchKind,
-    GlobalSearchTextOptions,
-} from './contracts';
-export {
-    hasSearchProjectPath,
-    hasSearchQuery,
-    isSearchExpressionValid,
-    isOrchestrationRequestValid,
-    isReplacementRequestValid,
-    isSearchRequestValid,
-    normalizeSearchQuery,
-} from './searchValidation';
-export { createSearchRequestContext } from './requestContext';
-export { getAtPath, setAtPath } from './pathAccess';
-export { collectSearchMatches } from './orchestration';
-export { collectReplacementFiles } from './replacementOrchestration';
-export { replaceProjectContent } from './replaceService';
-export { searchProjectContent } from './searchService';
-export { applyMatchReplacement } from './replace';
-export { toReplacementFilePayload } from './replacementFiles';
-export { formatScriptBranchLabel, SCRIPT_BRANCH_LABEL_SEPARATOR } from './branchLabels';
-export { collectCharacterMatches, collectItemMatches } from './recordSourceSearch';
 export {
     CHARACTER_LABEL_PREFIX,
     formatRecordLabel,
@@ -52,8 +36,24 @@ export {
     ITEM_LABEL_PREFIX,
     resolveRecordLabelPrefix,
 } from './recordLabels';
-export { collectMacroMatches, collectSceneMatches } from './scriptSourceSearch';
+export { collectCharacterMatches, collectItemMatches } from './recordSourceSearch';
+export { applyMatchReplacement } from './replace';
+export { toReplacementFilePayload } from './replacementFiles';
+export { collectReplacementFiles } from './replacementOrchestration';
+export { replaceProjectContent } from './replaceService';
+export { createSearchRequestContext } from './requestContext';
 export { scanLeafStrings, scanRecordStringLeaves, scanScriptNodes } from './scan';
+export { collectMacroMatches, collectSceneMatches } from './scriptSourceSearch';
+export { searchProjectContent } from './searchService';
+export {
+    hasSearchProjectPath,
+    hasSearchQuery,
+    isOrchestrationRequestValid,
+    isReplacementRequestValid,
+    isSearchExpressionValid,
+    isSearchRequestValid,
+    normalizeSearchQuery,
+} from './searchValidation';
 export {
     findSearchMatchStart,
     matchesSearchValue,
