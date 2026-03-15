@@ -8,6 +8,7 @@ import { replaceProjectContent, searchProjectContent } from '../../services/glob
 import { openProjectEntry } from '../../services/openProjectEntry';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { ConfirmDialog } from '../ConfirmDialog';
@@ -25,7 +26,7 @@ export function GlobalSearchContent({
     onBeginDrag?: (event: React.MouseEvent<HTMLDivElement>) => void;
     onRequestClose?: () => void;
 }) {
-    const uiScale = useEditorStore((state) => state.uiScale);
+    const uiScale = useSettingsStore((state) => state.uiScale);
     const globalSearchLaunchMode = useEditorStore((state) => state.globalSearchLaunchMode);
     const projectPath = useProjectStore((state) => state.projectPath);
     const scenes = useProjectStore((state) => state.scenes);

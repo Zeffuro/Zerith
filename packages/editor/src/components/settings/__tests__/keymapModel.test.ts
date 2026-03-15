@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
     buildConflictActionSequence,
     buildEffectiveKeymapRows,
+    buildKeymapConflictEntries,
     filterKeymapBindings,
     filterKeymapRows,
     normalizeShortcutToken,
@@ -62,6 +63,19 @@ describe('keymapModel', () => {
         expect(rows[0]?.isCustomized).toBe(true);
     });
 
+    it('detects conflicts between a customized row and another row default shortcut', () => {
+        const rows = buildEffectiveKeymapRows(
+            [
+                { action: 'save', defaultShortcut: 'mod+s', key: 's' },
+                { action: 'saveAll', defaultShortcut: 'mod+shift+s', key: 's' },
+            ],
+            { saveAll: 'mod+s' },
+        );
+
+        const conflicts = buildKeymapConflictEntries(rows);
+        expect(conflicts).toEqual([{ actions: ['save', 'saveAll'], shortcut: 'mod+s' }]);
+    });
+
     it('filters rows by query and customized-only toggle', () => {
         const rows = buildEffectiveKeymapRows(
             [
@@ -97,6 +111,35 @@ describe('keymapModel', () => {
         });
     });
 
+    it('resolves conflicts by clearing only customized conflicting rows when one row is at default', () => {
+        const bindings = [
+            { action: 'save', defaultShortcut: 'mod+s', key: 's' },
+            { action: 'saveAll', defaultShortcut: 'mod+shift+s', key: 's' },
+        ] as const;
+
+        const next = resolveConflictsForAction(
+            bindings,
+            { save: 'mod+shift+s' },
+            'saveAll',
+        );
+
+        expect(next).toEqual({});
+    });
+
+    it('recalculates conflict state after restoring one row back to default', () => {
+        const bindings = [
+            { action: 'save', defaultShortcut: 'mod+s', key: 's' },
+            { action: 'saveAll', defaultShortcut: 'mod+shift+s', key: 's' },
+        ] as const;
+
+        const withConflict = { save: 'mod+k', saveAll: 'mod+k' };
+        const restoredSaveAll = setKeymapOverride(withConflict, 'saveAll', '');
+        const rows = buildEffectiveKeymapRows(bindings, restoredSaveAll);
+
+        expect(restoredSaveAll).toEqual({ save: 'mod+k' });
+        expect(rows.every((row) => row.conflictsWith.length === 0)).toBe(true);
+    });
+
     it('resolves all conflicts by keeping the first action per shortcut', () => {
         const bindings = [
             { action: 'save', defaultShortcut: 'mod+s', key: 's' },
@@ -120,6 +163,32 @@ describe('keymapModel', () => {
         });
     });
 
+    it('does not mutate overrides when resolving all conflicts', () => {
+        const bindings = [
+            { action: 'save', defaultShortcut: 'mod+s', key: 's' },
+            { action: 'saveAll', defaultShortcut: 'mod+shift+s', key: 's' },
+        ] as const;
+        const overrides = { save: 'mod+k', saveAll: 'mod+k' };
+
+        const next = resolveAllKeymapConflicts(bindings, overrides);
+
+        expect(next).toEqual({ save: 'mod+k' });
+        expect(overrides).toEqual({ save: 'mod+k', saveAll: 'mod+k' });
+    });
+
+    it('returns a cloned override map when conflict resolution is unnecessary', () => {
+        const bindings = [
+            { action: 'save', defaultShortcut: 'mod+s', key: 's' },
+            { action: 'saveAll', defaultShortcut: 'mod+shift+s', key: 's' },
+        ] as const;
+        const overrides = { save: 'mod+k' };
+
+        const next = resolveConflictsForAction(bindings, overrides, 'saveAll');
+
+        expect(next).toEqual(overrides);
+        expect(next).not.toBe(overrides);
+    });
+
     it('builds conflict action sequence in row order and steps with wrap-around', () => {
         const rows = buildEffectiveKeymapRows(
             [
@@ -137,5 +206,6 @@ describe('keymapModel', () => {
         expect(stepConflictAction(sequence, 'save', 'next')).toBe('saveAll');
         expect(stepConflictAction(sequence, 'saveAll', 'next')).toBe('save');
         expect(stepConflictAction(sequence, 'save', 'previous')).toBe('saveAll');
+        expect(stepConflictAction(sequence, 'redo', 'next')).toBe('save');
     });
 });

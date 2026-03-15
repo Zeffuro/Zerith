@@ -10,12 +10,14 @@
     "--editor-bg-hover": "#2a2a2a",
     "--editor-bg-selected": "#04395e",
     "--editor-bg-danger": "#882222",
+    "--editor-bg-preview": "#000",
 
     "--editor-border-subtle": "#333",
     "--editor-border-normal": "#3a3a3a",
     "--editor-border-input": "#3c3c3c",
     "--editor-border-button": "#555",
     "--editor-border-accent": "#007fd4",
+    "--editor-border-focus": "#007fd4",
     "--editor-border-primary-btn": "#1f7ab7",
 
     "--editor-text-primary": "#fff",
@@ -26,6 +28,18 @@
     "--editor-accent-primary": "#0e639c",
     "--editor-accent-red": "#f87171",
     "--editor-accent-green": "#22c55e",
+    "--editor-accent-yellow": "#fbbf24",
+    "--editor-accent-blue": "#60a5fa",
+    "--editor-accent-purple": "#a78bfa",
+    "--editor-accent-teal": "#34d399",
+    "--editor-accent-orange": "#f59e0b",
+
+    "--editor-icon-manifest": "#fbbf24",
+    "--editor-icon-image": "#4ec9b0",
+    "--editor-icon-audio": "#d8b4fe",
+    "--editor-icon-script": "#4ade80",
+    "--editor-icon-text": "#9ca3af",
+    "--editor-icon-data": "#ce9178",
 
     "--editor-shadow-popup": "0 8px 20px rgba(0,0,0,0.35)",
     "--editor-shadow-popup-strong": "0 10px 24px rgba(0,0,0,0.4)",

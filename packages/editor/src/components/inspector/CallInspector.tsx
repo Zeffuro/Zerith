@@ -2,6 +2,7 @@ import type { BaseCommand } from 'core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { useProjectStore } from '../../store/storeBootstrap';
+import { editorTheme as t } from '../../theme/editorTheme';
 import { FieldError } from './FieldError';
 
 export function CallInspector({ index, node }: { index?: null | number; node: BaseCommand; }) {
@@ -24,7 +25,7 @@ export function CallInspector({ index, node }: { index?: null | number; node: Ba
                 <datalist id="call-macro-names">
                     {macroNames.map((name) => <option key={name} value={name} />)}
                 </datalist>
-                <p style={{ color: '#666', fontSize: '0.8em', fontStyle: 'italic', marginTop: '4px' }}>
+                <p style={{ color: t.text.muted, fontSize: '0.8em', fontStyle: 'italic', marginTop: '4px' }}>
                     Available macros are loaded from <b>data/macros.json</b>
                 </p>
             </div>

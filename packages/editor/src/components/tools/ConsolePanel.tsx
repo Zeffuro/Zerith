@@ -65,8 +65,8 @@ export function ConsolePanel() {
 
     const getColor = (type: string) => {
         if (type === 'error') return t.accent.red;
-        if (type === 'warn') return '#fbbf24';
-        if (type === 'info') return '#60a5fa';
+        if (type === 'warn') return t.accent.yellow;
+        if (type === 'info') return t.accent.blue;
         return t.text.normal;
     };
 

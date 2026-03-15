@@ -59,7 +59,7 @@ export function SettingsKeymapPanel({
     uiScale,
 }: SettingsKeymapPanelProperties) {
     return (
-        <div style={{ display: 'grid', gap: `${10 * uiScale}px`, padding: `${16 * uiScale}px` }}>
+        <div style={{ display: 'flex', flex: 1, flexDirection: 'column', gap: `${10 * uiScale}px`, minHeight: 0, padding: `${16 * uiScale}px` }}>
             <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
                 Click a shortcut field and press the full key combination you want.
             </div>
@@ -185,7 +185,7 @@ export function SettingsKeymapPanel({
                     </div>
                 </div>
             ) : undefined}
-            <div className="zerith-scrollbar" ref={rowsContainerReference} style={{ display: 'grid', gap: `${8 * uiScale}px`, maxHeight: `${420 * uiScale}px`, overflow: 'auto', overscrollBehavior: 'contain' }}>
+            <div className="zerith-scrollbar" ref={rowsContainerReference} style={{ display: 'grid', flex: 1, gap: `${8 * uiScale}px`, minHeight: 0, overflow: 'auto', overscrollBehavior: 'contain' }}>
                 {filteredKeymapRows.length === 0 ? (
                     <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
                         No keymap shortcuts match this search.

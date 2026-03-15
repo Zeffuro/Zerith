@@ -6,10 +6,11 @@ import { openProjectEntry } from '../../services/openProjectEntry';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useReferenceStore } from '../../store/useReferenceStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 
 export function ReferenceTrackerPanel() {
-    const uiScale = useEditorStore((state) => state.uiScale);
+    const uiScale = useSettingsStore((state) => state.uiScale);
     const projectPath = useProjectStore((state) => state.projectPath);
     const scanned = useReferenceStore((state) => state.result);
 
@@ -40,17 +41,6 @@ export function ReferenceTrackerPanel() {
             .toSorted(([left], [right]) => left.localeCompare(right)),
         [normalizedQuery, scanned.characters],
     );
-
-    const handleOpenLocation = async (location: ReferenceLocation) => {
-        const options = location.sceneName.startsWith('macro:') || !location.sceneName.startsWith('macro:')
-            ? { forceView: 'timeline' as const }
-            : undefined;
-
-        await openProjectEntry(location.filePath, basename(location.filePath), options);
-        const editor = useEditorStore.getState();
-        editor.setSelectedNodePaths([location.path]);
-        editor.setSelectionAnchorPath(location.path);
-    };
 
     if (!projectPath) {
         return <div style={{ color: t.text.faint, fontStyle: 'italic', padding: `${12 * uiScale}px` }}>Open a project to scan references.</div>;
@@ -206,6 +196,17 @@ function entryHeaderStyle(uiScale: number) {
         gap: `${2 * uiScale}px`,
         width: '100%',
     };
+}
+
+async function handleOpenLocation(location: ReferenceLocation) {
+    const options = location.sceneName.startsWith('macro:') || !location.sceneName.startsWith('macro:')
+        ? { forceView: 'timeline' as const }
+        : undefined;
+
+    await openProjectEntry(location.filePath, basename(location.filePath), options);
+    const editor = useEditorStore.getState();
+    editor.setSelectedNodePaths([location.path]);
+    editor.setSelectionAnchorPath(location.path);
 }
 
 function LocationRow({

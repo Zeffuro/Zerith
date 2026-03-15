@@ -44,9 +44,9 @@ describe('settingsResetConfirmModel', () => {
     it('builds shortcut reset confirmation metadata with action label', () => {
         const confirmation = createResetShortcutConfirmation('Toggle Console', vi.fn());
 
-        expect(confirmation.title).toBe('Reset Shortcut');
-        expect(confirmation.confirmText).toBe('Reset Shortcut');
-        expect(confirmation.message).toBe('Reset shortcut for Toggle Console to default?');
+        expect(confirmation.title).toBe('Restore Shortcut Default');
+        expect(confirmation.confirmText).toBe('Restore Default');
+        expect(confirmation.message).toBe('Restore default shortcut for Toggle Console?');
         expect(confirmation.danger).toBe(true);
     });
 });

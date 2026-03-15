@@ -1,5 +1,6 @@
 export const DOCK_PANELS = {
     assets: 'assets',
+    audiosheetEditor: 'audiosheet_editor',
     console: 'console',
     editor: 'editor',
     explorer: 'explorer',
@@ -8,6 +9,7 @@ export const DOCK_PANELS = {
     preview: 'preview',
     referenceTracker: 'reference_tracker',
     runtimeMonitor: 'runtime_monitor',
+    spritesheetEditor: 'spritesheet_editor',
     stateObserver: 'state_observer',
     toolbar: 'toolbar',
 } as const;

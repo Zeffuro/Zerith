@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { useProjectStore } from '../../store/storeBootstrap';
+import { editorTheme as t } from '../../theme/editorTheme';
 import { FieldError } from './FieldError';
 
 export function ItemInspector({ index, node }: { index?: null | number; node: ItemCommand; }) {
@@ -84,9 +85,9 @@ export function ItemInspector({ index, node }: { index?: null | number; node: It
                     />
                     <FieldError errors={getFieldErrors('changes')} />
                     {jsonError ? (
-                        <div style={{ color: '#f87171', fontSize: '0.8em', marginTop: '4px' }}>{jsonError}</div>
+                        <div style={{ color: t.accent.red, fontSize: '0.8em', marginTop: '4px' }}>{jsonError}</div>
                     ) : (
-                        <div style={{ color: '#666', fontSize: '0.8em', marginTop: '4px' }}>
+                        <div style={{ color: t.text.muted, fontSize: '0.8em', marginTop: '4px' }}>
                             Parsed on blur. Example: {"{"}"evidenceLevel":2, "locked":false{"}"}
                         </div>
                     )}

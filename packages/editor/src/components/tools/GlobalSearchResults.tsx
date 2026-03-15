@@ -63,7 +63,7 @@ export function GlobalSearchResults({
                                     </span>
                                     <span style={{ color: t.text.normal, wordBreak: 'break-word' }}>{match.preview}</span>
                                     {replacedText && (
-                                        <span style={{ color: '#f59e0b', wordBreak: 'break-word' }}>
+                                        <span style={{ color: t.accent.orange, wordBreak: 'break-word' }}>
                                             Preview: {summarizeText(replacedText)}
                                         </span>
                                     )}

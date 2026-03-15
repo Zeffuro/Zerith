@@ -38,11 +38,11 @@ export function createResetCurrentPanelConfirmation(onConfirm: () => void): Pend
 
 export function createResetShortcutConfirmation(actionLabel: string, onConfirm: () => void): PendingSettingsReset {
     return {
-        confirmText: 'Reset Shortcut',
+        confirmText: 'Restore Default',
         danger: true,
-        message: `Reset shortcut for ${actionLabel} to default?`,
+        message: `Restore default shortcut for ${actionLabel}?`,
         onConfirm,
-        title: 'Reset Shortcut',
+        title: 'Restore Shortcut Default',
     };
 }
 

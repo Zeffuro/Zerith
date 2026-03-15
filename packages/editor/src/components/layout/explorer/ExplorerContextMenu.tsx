@@ -1,6 +1,8 @@
 import { editorTheme as t } from '../../../theme/editorTheme';
 
 export type ExplorerContextMenuState = {
+    canOpenAudiosheet: boolean;
+    canOpenSpritesheet: boolean;
     isDirectory: boolean;
     name: string;
     onAction: (action: ExplorerMenuAction) => void;
@@ -16,7 +18,9 @@ export type ExplorerMenuAction =
     | 'newFile'
     | 'newFolder'
     | 'open'
+    | 'openAudiosheet'
     | 'openJson'
+    | 'openSpritesheet'
     | 'openTimeline'
     | 'rename'
     | 'reveal';
@@ -63,8 +67,22 @@ export function ExplorerContextMenu({ menu, uiScale }: { menu: ExplorerContextMe
             <ActionRow action="open" disabled={menu.isDirectory} itemStyle={itemStyle} label="Open" menu={menu} />
             {!menu.isDirectory && (
                 <>
+                    <ActionRow
+                        action="openAudiosheet"
+                        disabled={!menu.canOpenAudiosheet}
+                        itemStyle={itemStyle}
+                        label="Open in Audiosheet Editor"
+                        menu={menu}
+                    />
                     <ActionRow action="openJson" itemStyle={itemStyle} label="Open in JSON View" menu={menu} />
                     <ActionRow action="openTimeline" itemStyle={itemStyle} label="Open in Timeline View" menu={menu} />
+                    <ActionRow
+                        action="openSpritesheet"
+                        disabled={!menu.canOpenSpritesheet}
+                        itemStyle={itemStyle}
+                        label="Open in Spritesheet Editor"
+                        menu={menu}
+                    />
                     <ActionRow action="duplicate" itemStyle={itemStyle} label="Duplicate" menu={menu} />
                 </>
             )}

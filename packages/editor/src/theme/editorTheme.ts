@@ -1,8 +1,13 @@
 export const editorTheme = {
     accent: {
+        blue: 'var(--editor-accent-blue)',
         green: 'var(--editor-accent-green)',
+        orange: 'var(--editor-accent-orange)',
         primary: 'var(--editor-accent-primary)',
+        purple: 'var(--editor-accent-purple)',
         red: 'var(--editor-accent-red)',
+        teal: 'var(--editor-accent-teal)',
+        yellow: 'var(--editor-accent-yellow)',
     },
     bg: {
         app: 'var(--editor-bg-app)',
@@ -12,15 +17,25 @@ export const editorTheme = {
         panel: 'var(--editor-bg-panel)',
         panelAlt: 'var(--editor-bg-panel-alt)',
         popup: 'var(--editor-bg-popup)',
+        preview: 'var(--editor-bg-preview)',
         selected: 'var(--editor-bg-selected)',
     },
     border: {
         accent: 'var(--editor-border-accent)',
         button: 'var(--editor-border-button)',
+        focus: 'var(--editor-border-focus)',
         input: 'var(--editor-border-input)',
         normal: 'var(--editor-border-normal)',
         primaryBtn: 'var(--editor-border-primary-btn)',
         subtle: 'var(--editor-border-subtle)',
+    },
+    icon: {
+        audio: 'var(--editor-icon-audio)',
+        data: 'var(--editor-icon-data)',
+        image: 'var(--editor-icon-image)',
+        manifest: 'var(--editor-icon-manifest)',
+        script: 'var(--editor-icon-script)',
+        text: 'var(--editor-icon-text)',
     },
     radius: {
         lg: 'var(--editor-radius-lg)',

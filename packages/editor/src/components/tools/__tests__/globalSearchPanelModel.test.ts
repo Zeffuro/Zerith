@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { GlobalSearchMatch } from '../../../services/globalSearch';
 
+import { editorTheme as t } from '../../../theme/editorTheme';
 import {
     cycleResultIndex,
     kindColor,
@@ -77,10 +78,9 @@ describe('globalSearchPanelModel', () => {
         expect(makeMatchKey(explicit, 1)).toBe('/project/scripts/intro.json-0.text-1');
         expect(makeMatchKey(fallback, 2)).toBe('/project/scripts/intro.json-root-2');
 
-        expect(kindColor('scene')).toBe('#60a5fa');
-        expect(kindColor('macro')).toBe('#a78bfa');
-        expect(kindColor('character')).toBe('#34d399');
-        expect(kindColor('item')).toBe('#fbbf24');
+        expect(kindColor('scene')).toBe(t.accent.blue);
+        expect(kindColor('macro')).toBe(t.accent.purple);
+        expect(kindColor('character')).toBe(t.accent.teal);
+        expect(kindColor('item')).toBe(t.accent.yellow);
     });
 });
-

@@ -8,6 +8,7 @@ import { useEffect, useRef } from 'react';
 import { createGamePreviewLogger } from '../services/gamePreviewLoggerBridge';
 import { useEditorStore } from '../store/useEditorStore';
 import { useEngineBridgeStore } from '../store/useEngineBridgeStore';
+import { useSettingsStore } from '../store/useSettingsStore';
 import { useDebugBridge } from './useDebugBridge';
 import { startPreviewPlayback } from './usePlaybackControl';
 
@@ -64,7 +65,7 @@ export function useEngineLifecycle({
             canvas: canvasReference.current,
             characters: bootstrapCharacters,
             config: {
-                audio: { muted: useEditorStore.getState().isMuted },
+                audio: { muted: useSettingsStore.getState().isMuted },
                 display: { height: 720, scaleMode: 'fit', width: 1280 },
                 onSceneNavigation: () => 'skip',
                 theme: { boxColor: 0x00_00_33, fontFamily: 'Courier New', fontSize: 24 },

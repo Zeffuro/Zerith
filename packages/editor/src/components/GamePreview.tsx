@@ -8,13 +8,15 @@ import { usePlaybackControl } from '../hooks/usePlaybackControl';
 import { useProjectStore } from '../store/storeBootstrap';
 import { useConsoleStore } from '../store/useConsoleStore';
 import { useEditorStore } from '../store/useEditorStore';
+import { useSettingsStore } from '../store/useSettingsStore';
+import { editorTheme as t } from '../theme/editorTheme';
 
 export function GamePreview({ script }: { script: Script }) {
     // Manifest data
     const { activeFile, characters, items, macros, manifest, projectPath, scenes } = useProjectStore();
+    const isMuted = useSettingsStore((state) => state.isMuted);
     // Triggers
     const {
-        isMuted,
         pauseTrigger,
         playFromIndex,
         playTrigger,
@@ -89,8 +91,8 @@ export function GamePreview({ script }: { script: Script }) {
             onFocus={handleFocus}
             ref={containerReference}
             style={{
-                backgroundColor: '#000',
-                border: isFocused ? '2px solid #007fd4' : '2px solid transparent',
+                backgroundColor: t.bg.preview,
+                border: isFocused ? `2px solid ${t.border.focus}` : '2px solid transparent',
                 height: '100%',
                 outline: 'none',
                 overflow: 'hidden',
@@ -107,7 +109,7 @@ export function GamePreview({ script }: { script: Script }) {
                         background: 'rgba(0,0,0,0.6)',
                         borderRadius: '4px',
                         bottom: 10,
-                        color: '#aaa',
+                        color: t.text.muted,
                         fontSize: '10px',
                         padding: '4px 8px',
                         pointerEvents: 'none',

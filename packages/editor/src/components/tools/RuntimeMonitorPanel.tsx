@@ -4,8 +4,8 @@ import type { CSSProperties } from 'react';
 import { Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-import { useEditorStore } from '../../store/useEditorStore';
 import { useEngineBridgeStore } from '../../store/useEngineBridgeStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 
 type RuntimeSnapshot = {
@@ -42,7 +42,7 @@ type TimelineKind = 'engine' | 'input' | 'scene' | 'state';
 const MAX_TIMELINE_ENTRIES = 120;
 
 export function RuntimeMonitorPanel() {
-    const uiScale = useEditorStore((state) => state.uiScale);
+    const uiScale = useSettingsStore((state) => state.uiScale);
     const engine = useEngineBridgeStore((state) => state.engine);
     const [snapshot, setSnapshot] = useState<RuntimeSnapshot | undefined>();
     const [timeline, setTimeline] = useState<TimelineEntry[]>([]);

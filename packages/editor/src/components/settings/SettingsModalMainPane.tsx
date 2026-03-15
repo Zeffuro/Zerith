@@ -114,7 +114,7 @@ export function SettingsModalMainPane({
     const selectedDescription = panelDescriptions[selectedPanelId] ?? 'Settings panel in progress.';
 
     return (
-        <section style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <section style={{ display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0 }}>
             <header
                 onMouseDown={onBeginDrag}
                 style={{
@@ -192,26 +192,28 @@ export function SettingsModalMainPane({
                 )}
             </div>
             {showKeymapPanel ? (
-                <SettingsKeymapPanel
-                    activeConflictIndex={activeConflictIndex}
-                    conflictActionSequenceLength={conflictActionSequenceLength}
-                    conflictCount={conflictCount}
-                    conflictEntries={conflictEntries}
-                    filteredKeymapRows={filteredKeymapRows}
-                    focusedRowAction={focusedRowAction}
-                    onFixAllConflicts={onFixAllConflicts}
-                    onFocusActionRow={onFocusActionRow}
-                    onJumpToConflict={onJumpToConflict}
-                    onRequestResetAllDefaults={onRequestResetAllDefaults}
-                    onRequestResetShortcut={onRequestResetShortcut}
-                    onResolveConflictForAction={onResolveConflictForAction}
-                    onSetRowReference={onSetRowReference}
-                    onSetShowCustomizedOnly={onSetShowCustomizedOnly}
-                    onUpdateShortcut={onUpdateShortcut}
-                    rowsContainerReference={rowsContainerReference}
-                    showCustomizedOnly={showCustomizedOnly}
-                    uiScale={uiScale}
-                />
+                <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+                    <SettingsKeymapPanel
+                        activeConflictIndex={activeConflictIndex}
+                        conflictActionSequenceLength={conflictActionSequenceLength}
+                        conflictCount={conflictCount}
+                        conflictEntries={conflictEntries}
+                        filteredKeymapRows={filteredKeymapRows}
+                        focusedRowAction={focusedRowAction}
+                        onFixAllConflicts={onFixAllConflicts}
+                        onFocusActionRow={onFocusActionRow}
+                        onJumpToConflict={onJumpToConflict}
+                        onRequestResetAllDefaults={onRequestResetAllDefaults}
+                        onRequestResetShortcut={onRequestResetShortcut}
+                        onResolveConflictForAction={onResolveConflictForAction}
+                        onSetRowReference={onSetRowReference}
+                        onSetShowCustomizedOnly={onSetShowCustomizedOnly}
+                        onUpdateShortcut={onUpdateShortcut}
+                        rowsContainerReference={rowsContainerReference}
+                        showCustomizedOnly={showCustomizedOnly}
+                        uiScale={uiScale}
+                    />
+                </div>
             ) : (
                 <SettingsDetailPanel
                     autosaveEnabled={autosaveEnabled}

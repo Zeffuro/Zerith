@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { defaultSettings, extractPersistedSettings } from '../SettingsSchema';
+import { defaultSettings, extractPersistedSettings, MIN_AUTOSAVE_INTERVAL_MS, sanitizeAutosaveInterval } from '../SettingsSchema';
 
 function mergeSettings(value?: unknown) {
     return {
@@ -10,6 +10,12 @@ function mergeSettings(value?: unknown) {
 }
 
 describe('SettingsSchema', () => {
+    it('returns empty settings for malformed top-level persisted values', () => {
+        expect(extractPersistedSettings('invalid')).toEqual({});
+        expect(extractPersistedSettings(42)).toEqual({});
+        expect(extractPersistedSettings(['autosaveEnabled'])).toEqual({});
+    });
+
     it('returns defaults for invalid persisted values', () => {
         expect(mergeSettings()).toEqual(defaultSettings);
         expect(mergeSettings({ autosaveEnabled: 'yes' })).toEqual(defaultSettings);
@@ -30,6 +36,12 @@ describe('SettingsSchema', () => {
         expect(mergeSettings({ autosaveEnabled: true })).toEqual({ ...defaultSettings, autosaveEnabled: true });
         expect(mergeSettings({ autosaveIntervalMs: 1250.9 })).toEqual({ ...defaultSettings, autosaveIntervalMs: 5000 });
         expect(mergeSettings({ autosaveIntervalMs: 9000.9 })).toEqual({ ...defaultSettings, autosaveIntervalMs: 9000 });
+    });
+
+    it('sanitizes autosave intervals by truncating and enforcing minimum', () => {
+        expect(sanitizeAutosaveInterval(7000.99)).toBe(7000);
+        expect(sanitizeAutosaveInterval(-100)).toBe(MIN_AUTOSAVE_INTERVAL_MS);
+        expect(sanitizeAutosaveInterval(1)).toBe(MIN_AUTOSAVE_INTERVAL_MS);
     });
 
     it('accepts valid theme keys and trims persisted input', () => {
@@ -58,6 +70,19 @@ describe('SettingsSchema', () => {
                 save: 'mod+k',
             },
         });
+
+        expect(mergeSettings({
+            keymapOverrides: {
+                openGlobalSearchFind: '  ',
+                save: 'Ctrl+K',
+                saveAll: 12,
+            },
+        })).toEqual({
+            ...defaultSettings,
+            keymapOverrides: {
+                save: 'mod+k',
+            },
+        });
     });
 
     it('accepts and sanitizes recentProjects', () => {
@@ -73,6 +98,19 @@ describe('SettingsSchema', () => {
             recentProjects: [
                 { lastOpened: 7, name: 'A Latest', path: '/a' },
                 { lastOpened: 5, name: 'B', path: '/b' },
+            ],
+        });
+
+        expect(mergeSettings({
+            recentProjects: [
+                { lastOpened: 2, name: '  Trimmed  ', path: ' /trim ' },
+                { lastOpened: 4, name: 'Latest', path: '/trim' },
+                { lastOpened: Number.POSITIVE_INFINITY, name: 'Bad', path: '/bad' },
+            ],
+        })).toEqual({
+            ...defaultSettings,
+            recentProjects: [
+                { lastOpened: 4, name: 'Latest', path: '/trim' },
             ],
         });
     });

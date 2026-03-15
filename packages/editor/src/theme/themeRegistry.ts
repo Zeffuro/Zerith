@@ -15,7 +15,7 @@ export function getThemeRegistry(): ThemeFile[] {
     return out.toSorted((a, b) => a.label.localeCompare(b.label));
 }
 
-function normalizeTheme(module_: unknown): ThemeFile | undefined {
+export function normalizeTheme(module_: unknown): ThemeFile | undefined {
     const data = (module_ && typeof module_ === 'object' && 'default' in module_)
         ? (module_ as { default: unknown }).default
         : module_;

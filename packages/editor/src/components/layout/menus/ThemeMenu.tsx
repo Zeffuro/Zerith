@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { editorTheme as t } from '../../../theme/editorTheme';
 import { getThemeRegistry } from '../../../theme/themeRegistry';
 
 export function ThemeMenu({
@@ -28,9 +29,9 @@ export function ThemeMenu({
             title="Editor Theme"
             value={selectedKey}
         >
-            {themes.map((t) => (
-                <option key={t.key} style={{ background: '#1f1f1f', color: '#fff' }} value={t.key}>
-                    {t.label}
+            {themes.map((theme) => (
+                <option key={theme.key} style={{ background: t.bg.popup, color: t.text.primary }} value={theme.key}>
+                    {theme.label}
                 </option>
             ))}
         </select>

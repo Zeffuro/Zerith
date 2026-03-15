@@ -2,6 +2,7 @@ import type { SpriteCommand } from 'core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { useProjectStore } from '../../store/storeBootstrap';
+import { editorTheme as t } from '../../theme/editorTheme';
 import { toRecordOrUndefined } from '../../utils/typeGuards';
 import { FieldError } from './FieldError';
 
@@ -88,7 +89,7 @@ export function SpriteInspector({ index, node }: { index?: null | number; node: 
                                 type="text"
                                 value={node.assetUrl ?? ''}
                             />
-                            <div style={{ color: '#666', fontSize: '0.8em', fontStyle: 'italic', marginTop: '2px' }}>
+                            <div style={{ color: t.text.muted, fontSize: '0.8em', fontStyle: 'italic', marginTop: '2px' }}>
                                 Optional: Override resolved asset.
                             </div>
                         </div>
@@ -117,7 +118,7 @@ export function SpriteInspector({ index, node }: { index?: null | number; node: 
                     </div>
                 </>
             ) : (
-                <div style={{ color: '#888', fontStyle: 'italic' }}> Character definition not found. </div>
+                <div style={{ color: t.text.faint, fontStyle: 'italic' }}> Character definition not found. </div>
             )}
         </div>
     );

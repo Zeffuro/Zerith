@@ -5,32 +5,33 @@ import { useState } from 'react';
 import { openProjectEntry } from '../../services/openProjectEntry';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { QuickCommandsMenu } from './menus/QuickCommandsMenu';
 import { ThemeMenu } from './menus/ThemeMenu';
 
 export function Toolbar() {
     const { activeFile, openProjectFromManifest, saveActiveFileFromCurrentScript } = useProjectStore();
+    const isMuted = useSettingsStore((state) => state.isMuted);
+    const setIsMuted = useSettingsStore((state) => state.setIsMuted);
+    const setThemeKey = useSettingsStore((state) => state.setThemeKey);
+    const setUiScale = useSettingsStore((state) => state.setUiScale);
+    const themeKey = useSettingsStore((state) => state.themeKey);
+    const uiScale = useSettingsStore((state) => state.uiScale);
     const {
         addRecentProject,
-        isMuted,
         isPlaybackPaused,
         moveQuickCommandType,
         playTrigger,
         quickCommandTypes,
         resetDockLayout,
-        setThemeKey,
-        setUiScale,
         stopTrigger,
-        themeKey,
-        toggleMute,
         toggleQuickCommandType,
         triggerPause,
         triggerPlay,
         triggerResume,
         triggerStep,
         triggerStop,
-        uiScale,
     } = useEditorStore();
 
     const [quickOpen, setQuickOpen] = useState(false);
@@ -62,6 +63,7 @@ export function Toolbar() {
     const pad = `${6 * uiScale}px`;
     const iconSize = 16 * uiScale;
     const isRunning = playTrigger > stopTrigger;
+    const toggleMute = () => setIsMuted(!isMuted);
 
     return (
         <div

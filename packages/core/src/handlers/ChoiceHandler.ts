@@ -60,6 +60,7 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
             const updateSelection = (newIndex: number) => {
                 if (newIndex < 0) newIndex = command.options.length - 1;
                 if (newIndex >= command.options.length) newIndex = 0;
+                if (newIndex === selectedIndex) return;
                 selectedIndex = newIndex;
                 this.renderer.setSelected(selectedIndex);
             };

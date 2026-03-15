@@ -15,7 +15,9 @@ import { useProjectStore } from '../../../store/storeBootstrap';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
+import { AUDIO_EXT, getExtension, IMG_EXT } from '../../../utils/assetTypes';
 import { ConfirmDialog } from '../../ConfirmDialog';
+import { DOCK_PANELS } from '../dock/dockPanelIds';
 import {
     ExplorerContextMenu,
     type ExplorerContextMenuState,
@@ -211,7 +213,12 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
         event.stopPropagation();
         if (!fullPath) return;
 
+        const canOpenAudiosheet = !entry.isDirectory && AUDIO_EXT.has(getExtension(entry.name));
+        const canOpenSpritesheet = !entry.isDirectory && IMG_EXT.has(getExtension(entry.name));
+
         setContext({
+            canOpenAudiosheet,
+            canOpenSpritesheet,
             isDirectory: entry.isDirectory,
             name: entry.name,
             onAction: (action) => {
@@ -237,8 +244,22 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
                             await openDefault();
                             break;
                         }
+                        case 'openAudiosheet': {
+                            await openProjectEntry(fullPath, entry.name);
+                            globalThis.dispatchEvent(
+                                new CustomEvent('zerith:dock-select', { detail: DOCK_PANELS.audiosheetEditor }),
+                            );
+                            break;
+                        }
                         case 'openJson': {
                             await openProjectEntry(fullPath, entry.name, { forceView: 'json' });
+                            break;
+                        }
+                        case 'openSpritesheet': {
+                            await openProjectEntry(fullPath, entry.name);
+                            globalThis.dispatchEvent(
+                                new CustomEvent('zerith:dock-select', { detail: DOCK_PANELS.spritesheetEditor }),
+                            );
                             break;
                         }
                         case 'openTimeline': {
@@ -299,7 +320,7 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
                     alignItems: 'center',
                     backgroundColor: isSelected ? t.bg.selected : 'transparent',
                     borderRadius: '3px',
-                    color: isSelected ? t.text.primary : (entry.isDirectory ? t.text.normal : '#aaa'),
+                    color: isSelected ? t.text.primary : (entry.isDirectory ? t.text.normal : t.text.muted),
                     cursor: 'pointer',
                     display: 'flex',
                     fontSize: 'inherit',
@@ -317,7 +338,7 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
                 )}
 
                 {entry.isDirectory ? (
-                    isOpen ? <FolderOpen color="#dcb67a" size={iconSize} /> : <FolderGit2 color="#dcb67a" size={iconSize} />
+                    isOpen ? <FolderOpen color={t.icon.manifest} size={iconSize} /> : <FolderGit2 color={t.icon.manifest} size={iconSize} />
                 ) : getFileIcon(entry.name, fullPath, iconSize)}
 
                 {isRenaming ? (
@@ -392,7 +413,6 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
     );
 }
 
-const IMAGE_EXTENSIONS = new Set(['.avif', '.jpeg', '.jpg', '.png', '.webp']);
 const AUDIO_EXTENSIONS = new Set(['.m4a', '.mp3', '.ogg', '.wav']);
 const TEXT_EXTENSIONS = new Set(['.md', '.ts', '.tsx', '.txt']);
 
@@ -407,29 +427,29 @@ function getFileIcon(entryName: string, fullPath: string, iconSize: number) {
     const extension = getFileExtension(lowerName);
 
     if (lowerName === 'game.json') {
-        return <Settings color="#fbbf24" size={iconSize} />;
+        return <Settings color={t.icon.manifest} size={iconSize} />;
     }
 
-    if (extension && IMAGE_EXTENSIONS.has(extension)) {
-        return <ImageIcon color="#4ec9b0" size={iconSize} />;
+    if (extension && IMG_EXT.has(extension)) {
+        return <ImageIcon color={t.icon.image} size={iconSize} />;
     }
 
     if (extension && AUDIO_EXTENSIONS.has(extension)) {
-        return <FileAudio color="#d8b4fe" size={iconSize} />;
+        return <FileAudio color={t.icon.audio} size={iconSize} />;
     }
 
     if (normalizedPath.includes('/scripts/') || normalizedPath.includes('/macros/')) {
-        return <FileCode color="#4ade80" size={iconSize} />;
+        return <FileCode color={t.icon.script} size={iconSize} />;
     }
 
     if (extension && TEXT_EXTENSIONS.has(extension)) {
-        return <FileText color="#9ca3af" size={iconSize} />;
+        return <FileText color={t.icon.text} size={iconSize} />;
     }
 
     if (extension === '.json') {
-        return <FileJson color="#ce9178" size={iconSize} />;
+        return <FileJson color={t.icon.data} size={iconSize} />;
     }
 
-    return <FileText color="#9ca3af" size={iconSize} />;
+    return <FileText color={t.icon.text} size={iconSize} />;
 }
 

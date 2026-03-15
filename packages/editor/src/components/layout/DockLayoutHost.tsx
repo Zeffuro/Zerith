@@ -10,11 +10,13 @@ import { useScriptStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { Inspector } from '../inspector/Inspector';
+import { AudiosheetEditorPanel } from '../tools/AudiosheetEditorPanel';
 import { CommandPalette } from '../tools/CommandPalette';
 import { ConsolePanel } from '../tools/ConsolePanel';
 import { GlobalSearchContent, GlobalSearchPanel } from '../tools/GlobalSearchPanel';
 import { ReferenceTrackerPanel } from '../tools/ReferenceTrackerPanel';
 import { RuntimeMonitorPanel } from '../tools/RuntimeMonitorPanel';
+import { SpritesheetEditorPanel } from '../tools/SpritesheetEditorPanel';
 import { StateObserverPanel } from '../tools/StateObserverPanel';
 import { createDefaultDockLayout } from './dock/defaultDockLayout';
 import { DOCK_PANELS } from './dock/dockPanelIds';
@@ -214,6 +216,9 @@ export function DockLayoutHost() {
         const comp = node.getComponent() as string;
 
         switch (comp) {
+            case DOCK_PANELS.audiosheetEditor: {
+                return <AudiosheetEditorPanel />;
+            }
             case DOCK_PANELS.console: {
                 return <ConsolePanel />;
             }
@@ -241,6 +246,9 @@ export function DockLayoutHost() {
             }
             case DOCK_PANELS.runtimeMonitor: {
                 return <RuntimeMonitorPanel />;
+            }
+            case DOCK_PANELS.spritesheetEditor: {
+                return <SpritesheetEditorPanel />;
             }
             case DOCK_PANELS.stateObserver: {
                 return <StateObserverPanel />;

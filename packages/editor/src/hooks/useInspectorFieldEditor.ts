@@ -4,9 +4,10 @@ import { executeInspectorFieldPatchAction } from '../store/actions/inspectorFiel
 import { useProjectStore } from '../store/storeBootstrap';
 import { useScriptStore } from '../store/storeBootstrap';
 import { useEditorStore } from '../store/useEditorStore';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 export function useInspectorFieldEditor(index?: null | number) {
-    const uiScale = useEditorStore((state) => state.uiScale);
+    const uiScale = useSettingsStore((state) => state.uiScale);
     const validationErrors = useEditorStore((state) => state.validationErrors);
     const editingAllMacrosFile = useProjectStore((s) => s.editingAllMacrosFile);
 

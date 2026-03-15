@@ -1,6 +1,8 @@
+import { editorTheme as t } from '../../../theme/editorTheme';
+
 export function TimelineEmptyState() {
     return (
-        <div style={{ color: '#444', fontSize: '0.9em', fontStyle: 'italic', padding: '20px', textAlign: 'center' }}>
+        <div style={{ color: t.text.faint, fontSize: '0.9em', fontStyle: 'italic', padding: '20px', textAlign: 'center' }}>
             Empty Block
         </div>
     );

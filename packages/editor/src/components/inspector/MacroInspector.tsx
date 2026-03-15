@@ -1,6 +1,7 @@
 import type { BaseCommand } from 'core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
+import { editorTheme as t } from '../../theme/editorTheme';
 import { FieldError } from './FieldError';
 
 export function MacroInspector({ index, node }: { index?: null | number; node: BaseCommand; }) {
@@ -18,7 +19,7 @@ export function MacroInspector({ index, node }: { index?: null | number; node: B
                     value={macroName}
                 />
                 <FieldError errors={getFieldErrors('name')} />
-                <p style={{ color: '#666', fontSize: '0.8em', fontStyle: 'italic', marginTop: '4px' }}>
+                <p style={{ color: t.text.muted, fontSize: '0.8em', fontStyle: 'italic', marginTop: '4px' }}>
                     Define macros in <b>data/macros.json</b>
                 </p>
             </div>

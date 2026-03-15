@@ -1,5 +1,7 @@
 import type { GlobalSearchMatch } from '../../services/globalSearch';
 
+import { editorTheme as t } from '../../theme/editorTheme';
+
 export function cycleResultIndex(current: number, length: number, delta: -1 | 1): number {
     if (length <= 0) return -1;
     if (current < 0) return delta > 0 ? 0 : length - 1;
@@ -8,10 +10,10 @@ export function cycleResultIndex(current: number, length: number, delta: -1 | 1)
 }
 
 export function kindColor(kind: GlobalSearchMatch['kind']): string {
-    if (kind === 'scene') return '#60a5fa';
-    if (kind === 'macro') return '#a78bfa';
-    if (kind === 'character') return '#34d399';
-    return '#fbbf24';
+    if (kind === 'scene') return t.accent.blue;
+    if (kind === 'macro') return t.accent.purple;
+    if (kind === 'character') return t.accent.teal;
+    return t.accent.yellow;
 }
 
 export function makeMatchKey(match: GlobalSearchMatch, index: number): string {

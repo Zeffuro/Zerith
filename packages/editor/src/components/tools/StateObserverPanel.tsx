@@ -4,8 +4,8 @@ import { RefreshCcw, Save } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useProjectStore } from '../../store/storeBootstrap';
-import { useEditorStore } from '../../store/useEditorStore';
 import { useEngineBridgeStore } from '../../store/useEngineBridgeStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { StateObserverItems } from './StateObserverItems';
 import {
@@ -23,7 +23,7 @@ import { StateObserverVariables } from './StateObserverVariables';
 type ObserverTab = 'items' | 'state';
 
 export function StateObserverPanel() {
-    const uiScale = useEditorStore((state) => state.uiScale);
+    const uiScale = useSettingsStore((state) => state.uiScale);
     const engine = useEngineBridgeStore((state) => state.engine);
     const projectItems = useProjectStore((state) => state.items);
 

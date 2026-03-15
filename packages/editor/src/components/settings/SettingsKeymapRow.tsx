@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { type GlobalShortcutCommand } from '../../services/keymapRegistry';
 import { parseShortcutChord, serializeShortcutChord, shortcutChordFromEvent } from '../../services/shortcutChord';
 import { editorTheme as t } from '../../theme/editorTheme';
@@ -49,6 +51,7 @@ export function SettingsKeymapRow({
     uiScale,
     value,
 }: SettingsKeymapRowProperties) {
+    const [isRecording, setIsRecording] = useState(false);
     const hasConflict = conflictsWith.length > 0;
 
     return (
@@ -62,7 +65,7 @@ export function SettingsKeymapRow({
                 boxShadow: isFocused ? `0 0 0 2px ${t.accent.primary}` : undefined,
                 display: 'grid',
                 gap: `${8 * uiScale}px`,
-                gridTemplateColumns: '1.4fr 72px 1fr 56px 56px',
+                gridTemplateColumns: 'minmax(120px, 1.2fr) 72px minmax(160px, 1.35fr) 124px 44px',
                 padding: `${8 * uiScale}px ${10 * uiScale}px`,
             }}
         >
@@ -93,6 +96,8 @@ export function SettingsKeymapRow({
                 Custom
             </span>
             <input
+                onBlur={() => setIsRecording(false)}
+                onFocus={() => setIsRecording(true)}
                 onKeyDown={(event) => {
                     if (event.key === 'Backspace' || event.key === 'Delete') {
                         event.preventDefault();
@@ -106,7 +111,7 @@ export function SettingsKeymapRow({
                     event.preventDefault();
                     onUpdate(serializeShortcutChord(chord));
                 }}
-                placeholder="Press shortcut"
+                placeholder={isRecording ? 'Press key combination...' : 'Press shortcut'}
                 readOnly
                 style={{
                     background: t.bg.input,
@@ -114,26 +119,30 @@ export function SettingsKeymapRow({
                     borderRadius: t.radius.md,
                     color: t.text.primary,
                     fontSize: `${12 * uiScale}px`,
+                    minWidth: 0,
                     padding: `${6 * uiScale}px ${8 * uiScale}px`,
                     width: '100%',
                 }}
+                title={formatShortcutChordLabel(value)}
                 value={formatShortcutChordLabel(value)}
             />
             <button
+                disabled={!isCustomized}
                 onClick={onReset}
                 style={{
                     background: t.bg.popup,
                     border: `1px solid ${t.border.normal}`,
                     borderRadius: t.radius.md,
-                    color: t.text.primary,
-                    cursor: 'pointer',
+                    color: isCustomized ? t.text.primary : t.text.muted,
+                    cursor: isCustomized ? 'pointer' : 'not-allowed',
                     fontSize: `${12 * uiScale}px`,
+                    opacity: isCustomized ? 1 : 0.65,
                     padding: `${5 * uiScale}px ${8 * uiScale}px`,
                     width: '100%',
                 }}
-                title={`Reset to default (${formatShortcutChordLabel(defaultKey)})`}
+                title={isCustomized ? `Restore default (${formatShortcutChordLabel(defaultKey)})` : 'Already using default shortcut'}
             >
-                Reset
+                Restore Default
             </button>
             <button
                 onClick={onResolveConflict}

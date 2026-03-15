@@ -1,6 +1,9 @@
-import { type CSSProperties, type ReactNode } from 'react';
+import { type CSSProperties, type ReactNode, useMemo } from 'react';
+
+import type { ThemeVariables } from '../../theme/themeTypes';
 
 import { editorTheme as t } from '../../theme/editorTheme';
+import { getThemeRegistry } from '../../theme/themeRegistry';
 import { getVisibleSettingsControls, type SettingsControlId } from './settingsControlRegistry';
 
 type SettingsAppearancePanelProperties = {
@@ -17,6 +20,23 @@ type SettingsAppearancePanelProperties = {
     uiScale: number;
 };
 
+type ThemeSwatch = {
+    label: string;
+    value: string;
+    variable: string;
+};
+
+const previewVariableOrder = [
+    '--editor-bg-app',
+    '--editor-bg-panel',
+    '--editor-bg-panel-alt',
+    '--editor-border-normal',
+    '--editor-text-primary',
+    '--editor-text-normal',
+    '--editor-accent-primary',
+    '--editor-accent-green',
+] as const;
+
 export function SettingsAppearancePanel({
     changedControlIds,
     focusedControlId,
@@ -30,6 +50,7 @@ export function SettingsAppearancePanel({
     themeKey,
     uiScale,
 }: SettingsAppearancePanelProperties) {
+    const themes = useMemo(() => getThemeRegistry(), []);
     const visibleControlIds = new Set(getVisibleSettingsControls(panelId));
 
     const themeChanged = changedControlIds.has('theme');
@@ -59,14 +80,93 @@ export function SettingsAppearancePanel({
                     onSetDetailRowReference={onSetDetailRowReference}
                     uiScale={uiScale}
                 >
-                    <select
-                        onChange={(event) => setThemeKey(event.currentTarget.value)}
-                        style={settingsInputStyle(uiScale)}
-                        value={themeKey}
-                    >
-                        <option value="classic">Classic</option>
-                        <option value="classicSoft">Classic Soft</option>
-                    </select>
+                    <div style={{ display: 'grid', gap: `${8 * uiScale}px` }}>
+                        <select
+                            onChange={(event) => setThemeKey(event.currentTarget.value)}
+                            style={settingsInputStyle(uiScale)}
+                            value={themeKey}
+                        >
+                            {themes.map((theme) => (
+                                <option key={theme.key} value={theme.key}>
+                                    {theme.label}
+                                </option>
+                            ))}
+                        </select>
+
+                        <div
+                            style={{
+                                display: 'grid',
+                                gap: `${8 * uiScale}px`,
+                                gridTemplateColumns: `repeat(auto-fit, minmax(${180 * uiScale}px, 1fr))`,
+                            }}
+                        >
+                            {themes.map((theme) => {
+                                const isSelected = themeKey === theme.key;
+                                const swatches = getThemeSwatches(theme.vars);
+
+                                return (
+                                    <button
+                                        key={theme.key}
+                                        onClick={() => setThemeKey(theme.key)}
+                                        style={{
+                                            alignItems: 'stretch',
+                                            background: t.bg.panelAlt,
+                                            border: `1px solid ${isSelected ? t.border.accent : t.border.normal}`,
+                                            borderRadius: t.radius.md,
+                                            color: t.text.primary,
+                                            cursor: 'pointer',
+                                            display: 'grid',
+                                            gap: `${8 * uiScale}px`,
+                                            padding: `${8 * uiScale}px`,
+                                            textAlign: 'left',
+                                        }}
+                                        type="button"
+                                    >
+                                        <div
+                                            style={{
+                                                alignItems: 'center',
+                                                display: 'flex',
+                                                fontSize: `${12 * uiScale}px`,
+                                                fontWeight: 600,
+                                                justifyContent: 'space-between',
+                                            }}
+                                        >
+                                            <span>{theme.label}</span>
+                                            <span
+                                                style={{
+                                                    background: isSelected ? t.accent.primary : 'transparent',
+                                                    border: `1px solid ${isSelected ? t.border.accent : t.border.subtle}`,
+                                                    borderRadius: t.radius.sm,
+                                                    color: isSelected ? '#fff' : t.text.muted,
+                                                    fontSize: `${10 * uiScale}px`,
+                                                    padding: `${2 * uiScale}px ${6 * uiScale}px`,
+                                                    textTransform: 'uppercase',
+                                                }}
+                                            >
+                                                {isSelected ? 'Current' : 'Select'}
+                                            </span>
+                                        </div>
+
+                                        <div style={{ display: 'grid', gap: `${4 * uiScale}px`, gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+                                            {swatches.map((swatch) => (
+                                                <span
+                                                    key={swatch.variable}
+                                                    style={{
+                                                        background: swatch.value,
+                                                        border: `1px solid ${t.border.subtle}`,
+                                                        borderRadius: t.radius.sm,
+                                                        display: 'block',
+                                                        height: `${16 * uiScale}px`,
+                                                    }}
+                                                    title={`${swatch.label}: ${swatch.value}`}
+                                                />
+                                            ))}
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </EditableSettingRow>
             ) : undefined}
 
@@ -160,6 +260,19 @@ function EditableSettingRow({
     );
 }
 
+function getThemeSwatches(variables: ThemeVariables): ThemeSwatch[] {
+    return previewVariableOrder.flatMap((variable) => {
+        const value = variables[variable];
+        return value
+            ? [{
+                label: variable.replace('--editor-', ''),
+                value,
+                variable,
+            }]
+            : [];
+    });
+}
+
 function settingsInputStyle(uiScale: number): CSSProperties {
     return {
         background: t.bg.input,
@@ -171,4 +284,5 @@ function settingsInputStyle(uiScale: number): CSSProperties {
         width: '100%',
     };
 }
+
 

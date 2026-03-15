@@ -2,10 +2,11 @@ import { useEffect, useMemo } from 'react';
 
 import { useProjectStore } from '../store/storeBootstrap';
 import { useEditorStore } from '../store/useEditorStore';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 export function useAutosave() {
-    const autosaveEnabled = useEditorStore((state) => state.autosaveEnabled);
-    const autosaveIntervalMs = useEditorStore((state) => state.autosaveIntervalMs);
+    const autosaveEnabled = useSettingsStore((state) => state.autosaveEnabled);
+    const autosaveIntervalMs = useSettingsStore((state) => state.autosaveIntervalMs);
     const lastManualSaveAt = useEditorStore((state) => state.lastManualSaveAt);
 
     const dirtyFiles = useProjectStore((state) => state.dirtyFiles);

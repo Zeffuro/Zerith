@@ -23,6 +23,7 @@ export class ChoiceRenderer {
     private readonly display: IDisplayManager;
     private readonly optionBackgrounds: Graphics[] = [];
     private readonly optionButtons: Container[] = [];
+    private readonly optionSizes: Array<{ height: number; width: number }> = [];
 
     constructor(display: IDisplayManager, config: Required<ChoiceConfig>) {
         this.display = display;
@@ -40,6 +41,7 @@ export class ChoiceRenderer {
         this.activeChoiceContainer = choiceContainer;
         this.optionBackgrounds.length = 0;
         this.optionButtons.length = 0;
+        this.optionSizes.length = 0;
 
         const width = this.display.width;
         const height = this.display.height;
@@ -57,6 +59,7 @@ export class ChoiceRenderer {
             const background = new Graphics();
             this.styleButton(background, buttonWidth, buttonHeight, index === 0);
             this.optionBackgrounds.push(background);
+            this.optionSizes.push({ height: buttonHeight, width: buttonWidth });
 
             const text = new Text({
                 style: {
@@ -99,11 +102,14 @@ export class ChoiceRenderer {
         this.activeChoiceContainer = undefined;
         this.optionBackgrounds.length = 0;
         this.optionButtons.length = 0;
+        this.optionSizes.length = 0;
     }
 
     public setSelected(index: number): void {
         for (const [currentIndex, background] of this.optionBackgrounds.entries()) {
-            this.styleButton(background, background.width, background.height, currentIndex === index);
+            const size = this.optionSizes[currentIndex];
+            if (!size) continue;
+            this.styleButton(background, size.width, size.height, currentIndex === index);
         }
 
         for (const button of this.optionButtons) {

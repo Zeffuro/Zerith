@@ -6,6 +6,7 @@ import { openProjectEntry } from '../../../services/openProjectEntry';
 import { useProjectStore } from '../../../store/storeBootstrap';
 import { useScriptStore } from '../../../store/storeBootstrap';
 import { useEditorStore } from '../../../store/useEditorStore';
+import { useSettingsStore } from '../../../store/useSettingsStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
 import { MenuButton } from './MenuButton';
 import { MenuDropdown, type MenuItem } from './MenuDropdown';
@@ -27,9 +28,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         openGlobalSearchReplacePopup,
         openSettingsModal,
         playTrigger,
-        recentProjects,
         resetDockLayout,
-        setUiScale,
         stopTrigger,
         toggleBreakpoint,
         triggerPause,
@@ -37,8 +36,10 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         triggerResume,
         triggerStep,
         triggerStop,
-        uiScale: currentScale,
     } = useEditorStore();
+    const recentProjects = useSettingsStore((state) => state.recentProjects);
+    const currentScale = useSettingsStore((state) => state.uiScale);
+    const setUiScale = useSettingsStore((state) => state.setUiScale);
 
     const { activeFile, dirtyFiles, openProjectFromManifest, saveActiveFileFromCurrentScript, saveAllDirtyFiles } = useProjectStore();
     const selectedNodePaths = useEditorStore((state) => state.selectedNodePaths);

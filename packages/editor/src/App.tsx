@@ -15,11 +15,13 @@ import { setupConsoleInterceptor } from './services/consoleInterceptor';
 import { useProjectStore } from './store/storeBootstrap';
 import { useScriptStore } from './store/storeBootstrap';
 import { useEditorStore } from './store/useEditorStore';
+import { useSettingsStore } from './store/useSettingsStore';
 import { applyTheme } from './theme/applyTheme';
 import { getThemeRegistry } from './theme/themeRegistry';
 
 function App() {
-    const { themeKey, uiScale } = useEditorStore();
+    const themeKey = useSettingsStore((state) => state.themeKey);
+    const uiScale = useSettingsStore((state) => state.uiScale);
     const rootScript = useScriptStore((state) => state.rootScript);
     const [closePromptOpen, setClosePromptOpen] = useState(false);
     const [closePromptError, setClosePromptError] = useState<string | undefined>();
@@ -41,7 +43,7 @@ function App() {
         if (!hasTauriInternals()) return;
 
         const appWindow = getCurrentWindow();
-        const { setWindowState, windowState } = useEditorStore.getState();
+        const { setWindowState, windowState } = useSettingsStore.getState();
         const restoredWindowState = sanitizeRestoredWindowState(windowState);
 
         if (windowState && !restoredWindowState) {
@@ -202,7 +204,7 @@ function hasTauriInternals(): boolean {
     return windowObject?.__TAURI_INTERNALS__ !== undefined;
 }
 
-function sanitizeRestoredWindowState(value: ReturnType<typeof useEditorStore.getState>['windowState']) {
+function sanitizeRestoredWindowState(value: ReturnType<typeof useSettingsStore.getState>['windowState']) {
     if (!value) return;
 
     const isFinitePosition = Number.isFinite(value.x) && Number.isFinite(value.y);

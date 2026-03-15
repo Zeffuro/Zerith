@@ -54,10 +54,56 @@ describe('resolveGlobalShortcutAction', () => {
         ))?.action).toBe('saveAll');
     });
 
+    it('falls back to default binding when override is malformed or empty', () => {
+        expect(resolve(buildContext(
+            { ctrlKey: true, key: 's' },
+            { keymapOverrides: { save: 'mod+shift' } },
+        ))?.action).toBe('save');
+
+        expect(resolve(buildContext(
+            { ctrlKey: true, key: 's' },
+            { keymapOverrides: { save: '' } },
+        ))?.action).toBe('save');
+    });
+
+    it('resolves precedence when overrides collide with another command', () => {
+        expect(resolve(buildContext(
+            { altKey: true, ctrlKey: true, key: 's' },
+            { keymapOverrides: { save: 'alt+mod+s' } },
+        ))?.action).toBe('openSettingsModal');
+    });
+
+    it('requires modifiers from override chords exactly', () => {
+        expect(resolve(buildContext(
+            { ctrlKey: true, key: 'k' },
+            { keymapOverrides: { save: 'alt+mod+k' } },
+        ))).toBeUndefined();
+
+        expect(resolve(buildContext(
+            { altKey: true, ctrlKey: true, key: 'k' },
+            { keymapOverrides: { save: 'alt+mod+k' } },
+        ))?.action).toBe('save');
+
+        expect(resolve(buildContext(
+            { altKey: true, ctrlKey: true, key: 'k', shiftKey: true },
+            { keymapOverrides: { save: 'alt+mod+k' } },
+        ))).toBeUndefined();
+    });
+
+    it('matches mod bindings with meta on macOS-like events', () => {
+        expect(resolve(buildContext({ key: 's', metaKey: true }))?.action).toBe('save');
+        expect(resolve(buildContext({ ctrlKey: true, key: 's', metaKey: true }))?.action).toBe('save');
+    });
+
     it('blocks editor-phase commands while typing', () => {
         expect(resolve(buildContext({ ctrlKey: true, key: 'z' }, { isTypingTarget: true }))).toBeUndefined();
         expect(resolve(buildContext({ ctrlKey: true, key: 'f', shiftKey: true }, { isTypingTarget: true }))?.action)
             .toBe('openGlobalSearchFind');
+
+        expect(resolve(buildContext(
+            { ctrlKey: true, key: 'k' },
+            { isTypingTarget: true, keymapOverrides: { undo: 'mod+k' } },
+        ))).toBeUndefined();
     });
 
     it('blocks copy when console target is focused', () => {

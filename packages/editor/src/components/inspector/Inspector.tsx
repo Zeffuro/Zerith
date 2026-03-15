@@ -4,6 +4,7 @@ import { getPlugin } from '../../plugins/commandPlugins';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useScriptStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { styles } from '../../theme/styleHelpers';
 import { getAtPath } from '../../utils/scriptPathUtilities';
@@ -11,7 +12,7 @@ import { isRecord } from '../../utils/typeGuards';
 import { SchemaFallbackInspector } from './SchemaFallbackInspector';
 
 export function Inspector() {
-    const uiScale = useEditorStore((state) => state.uiScale);
+    const uiScale = useSettingsStore((state) => state.uiScale);
     const selectedNodePaths = useEditorStore((s) => s.selectedNodePaths);
 
     const { getActiveScript, getNodeAtPath, selectedNodeIndex, selectedNodePath } = useScriptStore();
