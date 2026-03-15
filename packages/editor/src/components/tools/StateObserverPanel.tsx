@@ -1,42 +1,26 @@
 import type { EvidenceItem, Serializable } from 'core';
-import type { CSSProperties } from 'react';
-import type { ReactElement } from 'react';
 
-import { Plus, RefreshCcw, Save, Trash2, Zap } from 'lucide-react';
+import { RefreshCcw, Save } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useEngineBridgeStore } from '../../store/useEngineBridgeStore';
 import { editorTheme as t } from '../../theme/editorTheme';
+import { StateObserverItems } from './StateObserverItems';
+import {
+    EMPTY_SNAPSHOT,
+    type ItemDraftRow,
+    type ObserverSnapshot,
+    parseDraftValue,
+    snapshotSignature,
+    type StateDraftRow,
+    toItemDraftRow,
+    toItemPayload,
+} from './stateObserverModel';
+import { StateObserverVariables } from './StateObserverVariables';
 
-type DraftValueKind = 'boolean' | 'json' | 'null' | 'number' | 'string';
-
-type ItemDraftRow = {
-    customJson: string;
-    description: string;
-    id: string;
-    imageUrl: string;
-    itemId: string;
-    name: string;
-    type: string;
-};
-
-type ObserverSnapshot = {
-    items: EvidenceItem[];
-    state: Record<string, Serializable>;
-};
-
-type StateDraftRow = {
-    id: string;
-    key: string;
-    valueText: string;
-};
-
-const EMPTY_SNAPSHOT: ObserverSnapshot = {
-    items: [],
-    state: {},
-};
+type ObserverTab = 'items' | 'state';
 
 export function StateObserverPanel() {
     const uiScale = useEditorStore((state) => state.uiScale);
@@ -45,6 +29,7 @@ export function StateObserverPanel() {
 
     const knownItemIds = useMemo(() => new Set(Object.keys(projectItems)), [projectItems]);
 
+    const [activeTab, setActiveTab] = useState<ObserverTab>('state');
     const [snapshot, setSnapshot] = useState<ObserverSnapshot>(EMPTY_SNAPSHOT);
     const [stateDraftRows, setStateDraftRows] = useState<StateDraftRow[]>([]);
     const [itemDraftRows, setItemDraftRows] = useState<ItemDraftRow[]>([]);
@@ -85,7 +70,7 @@ export function StateObserverPanel() {
                 state: engine.stateManager.state,
             };
 
-            const nextSignature = JSON.stringify(nextSnapshot);
+            const nextSignature = snapshotSignature(nextSnapshot);
             if (nextSignature === snapshotSignatureReference.current) return;
 
             snapshotSignatureReference.current = nextSignature;
@@ -103,15 +88,15 @@ export function StateObserverPanel() {
         };
     }, [applySnapshotToDrafts, engine]);
 
-    if (!engine) {
-        return <div style={{ color: t.text.faint, fontStyle: 'italic', padding: `${12 * uiScale}px` }}>Game preview not running.</div>;
-    }
-
-    const markDirty = () => {
+    const markDirty = useCallback(() => {
         hasDraftChangesReference.current = true;
         setHasDraftChanges(true);
         setStatusMessage(undefined);
-    };
+    }, []);
+
+    if (!engine) {
+        return <div style={{ color: t.text.faint, fontStyle: 'italic', padding: `${12 * uiScale}px` }}>Game preview not running.</div>;
+    }
 
     const syncFromRuntime = (nextMessage: string) => {
         const nextSnapshot: ObserverSnapshot = {
@@ -119,32 +104,11 @@ export function StateObserverPanel() {
             state: engine.stateManager.state,
         };
         setSnapshot(nextSnapshot);
-        snapshotSignatureReference.current = JSON.stringify(nextSnapshot);
+        snapshotSignatureReference.current = snapshotSignature(nextSnapshot);
         applySnapshotToDrafts(nextSnapshot);
         hasDraftChangesReference.current = false;
         setHasDraftChanges(false);
         setStatusMessage(nextMessage);
-    };
-
-    const addStateRow = () => {
-        setStateDraftRows((rows) => [...rows, { id: nextRowId(), key: '', valueText: 'null' }]);
-        markDirty();
-    };
-
-    const addItemRow = () => {
-        setItemDraftRows((rows) => [
-            ...rows,
-            {
-                customJson: '{}',
-                description: '',
-                id: nextRowId(),
-                imageUrl: '',
-                itemId: '',
-                name: '',
-                type: 'evidence',
-            },
-        ]);
-        markDirty();
     };
 
     const resetDraft = () => {
@@ -158,64 +122,54 @@ export function StateObserverPanel() {
         syncFromRuntime('Reloaded from preview runtime.');
     };
 
-    const applyStateRow = (rowId: string): boolean => {
+    const applyStateRow = (rowId: string) => {
         const row = stateDraftRows.find((candidate) => candidate.id === rowId);
-        if (!row) return false;
+        if (!row) return;
 
         const key = row.key.trim();
         if (!key) {
             setStatusMessage('Cannot apply state row: key cannot be empty.');
-            return false;
+            return;
         }
 
-        const parsedValue = parseJsonValue(row.valueText);
+        const parsedValue = parseDraftValue(row.valueText);
         if (parsedValue === undefined) {
             setStatusMessage(`Cannot apply state row '${key}': invalid JSON value.`);
-            return false;
+            return;
         }
 
         engine.stateManager.set(key, parsedValue);
         syncFromRuntime(`Applied state key '${key}'.`);
-        return true;
     };
 
-    const applyItemRow = (rowId: string): boolean => {
+    const applyItemRow = (rowId: string) => {
         const row = itemDraftRows.find((candidate) => candidate.id === rowId);
-        if (!row) return false;
+        if (!row) return;
 
         const itemId = row.itemId.trim();
         if (!itemId) {
             setStatusMessage('Cannot apply item row: item id cannot be empty.');
-            return false;
+            return;
         }
 
         if (!knownItemIds.has(itemId)) {
             setStatusMessage(`Cannot apply item row '${itemId}': unknown item id.`);
-            return false;
+            return;
         }
 
-        const custom = parseJsonObject(row.customJson);
-        if (!custom) {
+        const payload = toItemPayload(row);
+        if (!payload) {
             setStatusMessage(`Cannot apply item row '${itemId}': custom fields must be a JSON object.`);
-            return false;
+            return;
         }
-
-        const payload: Partial<Omit<EvidenceItem, 'id'>> = {
-            ...custom,
-            description: row.description,
-            imageUrl: row.imageUrl.trim() || undefined,
-            name: row.name,
-            type: row.type === 'profile' ? 'profile' : 'evidence',
-        };
 
         if (!engine.items.has(itemId) && !engine.items.add(itemId)) {
             setStatusMessage(`Cannot apply item row '${itemId}': item could not be added to inventory.`);
-            return false;
+            return;
         }
 
         engine.items.update(itemId, payload);
         syncFromRuntime(`Applied inventory item '${itemId}'.`);
-        return true;
     };
 
     const applyDraft = () => {
@@ -233,7 +187,7 @@ export function StateObserverPanel() {
                 return;
             }
 
-            const parsedValue = parseJsonValue(row.valueText);
+            const parsedValue = parseDraftValue(row.valueText);
             if (parsedValue === undefined) {
                 setStatusMessage(`Cannot apply: invalid JSON for state key '${key}'.`);
                 return;
@@ -255,22 +209,13 @@ export function StateObserverPanel() {
                 return;
             }
 
-            const custom = parseJsonObject(row.customJson);
-            if (!custom) {
+            const payload = toItemPayload(row);
+            if (!payload) {
                 setStatusMessage(`Cannot apply: custom fields for '${itemId}' must be a JSON object.`);
                 return;
             }
 
-            parsedItems.push({
-                id: itemId,
-                payload: {
-                    ...custom,
-                    description: row.description,
-                    imageUrl: row.imageUrl.trim() || undefined,
-                    name: row.name,
-                    type: row.type === 'profile' ? 'profile' : 'evidence',
-                },
-            });
+            parsedItems.push({ id: itemId, payload });
         }
 
         const currentState = engine.stateManager.state;
@@ -324,366 +269,40 @@ export function StateObserverPanel() {
                 </span>
             </div>
 
-            {statusMessage && <div style={{ color: t.text.muted, marginBottom: `${8 * uiScale}px` }}>{statusMessage}</div>}
-
-            <section style={sectionStyle(uiScale)}>
-                <div style={{ alignItems: 'center', display: 'flex', marginBottom: `${6 * uiScale}px` }}>
-                    <strong>State Variables</strong>
-                    <button className="toolbar-btn" onClick={addStateRow} style={{ marginLeft: 'auto', padding: `${2 * uiScale}px ${6 * uiScale}px` }}>
-                        <Plus size={12 * uiScale} /> Add
-                    </button>
-                </div>
-
-                {stateDraftRows.length === 0 && <div style={{ color: t.text.faint, fontStyle: 'italic' }}>No state keys.</div>}
-
-                {stateDraftRows.map((row) => (
-                    <div key={row.id} style={{ borderTop: `1px solid ${t.border.subtle}`, display: 'grid', gap: `${6 * uiScale}px`, gridTemplateColumns: '160px 1fr auto auto', padding: `${6 * uiScale}px 0` }}>
-                        <input
-                            onChange={(event) => {
-                                const next = event.target.value;
-                                setStateDraftRows((rows) => rows.map((candidate) => (candidate.id === row.id ? { ...candidate, key: next } : candidate)));
-                                markDirty();
-                            }}
-                            placeholder="state key"
-                            style={inputStyle(uiScale)}
-                            type="text"
-                            value={row.key}
-                        />
-
-                        <StateValueEditor
-                            onChange={(next) => {
-                                setStateDraftRows((rows) => rows.map((candidate) => (candidate.id === row.id ? { ...candidate, valueText: next } : candidate)));
-                                markDirty();
-                            }}
-                            uiScale={uiScale}
-                            valueText={row.valueText}
-                        />
-
-                        <button
-                            className="toolbar-btn"
-                            onClick={() => {
-                                void applyStateRow(row.id);
-                            }}
-                            style={{ padding: `${4 * uiScale}px` }}
-                            title="Apply this row"
-                        >
-                            <Zap size={12 * uiScale} />
-                        </button>
-
-                        <button
-                            className="toolbar-btn"
-                            onClick={() => {
-                                setStateDraftRows((rows) => rows.filter((candidate) => candidate.id !== row.id));
-                                markDirty();
-                            }}
-                            style={{ padding: `${4 * uiScale}px` }}
-                            title="Remove state row"
-                        >
-                            <Trash2 size={12 * uiScale} />
-                        </button>
-                    </div>
-                ))}
-            </section>
-
-            <section style={sectionStyle(uiScale)}>
-                <div style={{ alignItems: 'center', display: 'flex', marginBottom: `${6 * uiScale}px` }}>
-                    <strong>Inventory Items</strong>
-                    <button className="toolbar-btn" onClick={addItemRow} style={{ marginLeft: 'auto', padding: `${2 * uiScale}px ${6 * uiScale}px` }}>
-                        <Plus size={12 * uiScale} /> Add
-                    </button>
-                </div>
-
-                {itemDraftRows.length === 0 && <div style={{ color: t.text.faint, fontStyle: 'italic' }}>No items in inventory.</div>}
-
-                {itemDraftRows.map((row) => (
-                    <div key={row.id} style={{ borderTop: `1px solid ${t.border.subtle}`, display: 'flex', flexDirection: 'column', gap: `${6 * uiScale}px`, padding: `${8 * uiScale}px 0` }}>
-                        <div style={{ display: 'grid', gap: `${6 * uiScale}px`, gridTemplateColumns: '170px 1fr 1fr auto auto' }}>
-                            <input
-                                list="state-observer-item-ids"
-                                onChange={(event) => {
-                                    const next = event.target.value;
-                                    setItemDraftRows((rows) => rows.map((candidate) => (candidate.id === row.id ? { ...candidate, itemId: next } : candidate)));
-                                    markDirty();
-                                }}
-                                placeholder="item id"
-                                style={inputStyle(uiScale)}
-                                type="text"
-                                value={row.itemId}
-                            />
-
-                            <input
-                                onChange={(event) => {
-                                    const next = event.target.value;
-                                    setItemDraftRows((rows) => rows.map((candidate) => (candidate.id === row.id ? { ...candidate, name: next } : candidate)));
-                                    markDirty();
-                                }}
-                                placeholder="name"
-                                style={inputStyle(uiScale)}
-                                type="text"
-                                value={row.name}
-                            />
-
-                            <select
-                                onChange={(event) => {
-                                    const next = event.target.value;
-                                    setItemDraftRows((rows) => rows.map((candidate) => (candidate.id === row.id ? { ...candidate, type: next } : candidate)));
-                                    markDirty();
-                                }}
-                                style={inputStyle(uiScale)}
-                                value={row.type}
-                            >
-                                <option value="evidence">evidence</option>
-                                <option value="profile">profile</option>
-                            </select>
-
-                            <button
-                                className="toolbar-btn"
-                                onClick={() => {
-                                    void applyItemRow(row.id);
-                                }}
-                                style={{ padding: `${4 * uiScale}px` }}
-                                title="Apply this item"
-                            >
-                                <Zap size={12 * uiScale} />
-                            </button>
-
-                            <button
-                                className="toolbar-btn"
-                                onClick={() => {
-                                    setItemDraftRows((rows) => rows.filter((candidate) => candidate.id !== row.id));
-                                    markDirty();
-                                }}
-                                style={{ padding: `${4 * uiScale}px` }}
-                                title="Remove item row"
-                            >
-                                <Trash2 size={12 * uiScale} />
-                            </button>
-                        </div>
-
-                        <textarea
-                            onChange={(event) => {
-                                const next = event.target.value;
-                                setItemDraftRows((rows) => rows.map((candidate) => (candidate.id === row.id ? { ...candidate, description: next } : candidate)));
-                                markDirty();
-                            }}
-                            placeholder="description"
-                            rows={2}
-                            style={textareaStyle(uiScale)}
-                            value={row.description}
-                        />
-
-                        <input
-                            onChange={(event) => {
-                                const next = event.target.value;
-                                setItemDraftRows((rows) => rows.map((candidate) => (candidate.id === row.id ? { ...candidate, imageUrl: next } : candidate)));
-                                markDirty();
-                            }}
-                            placeholder="imageUrl (optional)"
-                            style={inputStyle(uiScale)}
-                            type="text"
-                            value={row.imageUrl}
-                        />
-
-                        <textarea
-                            onChange={(event) => {
-                                const next = event.target.value;
-                                setItemDraftRows((rows) => rows.map((candidate) => (candidate.id === row.id ? { ...candidate, customJson: next } : candidate)));
-                                markDirty();
-                            }}
-                            placeholder="custom fields as JSON object"
-                            rows={2}
-                            style={textareaStyle(uiScale)}
-                            value={row.customJson}
-                        />
-                    </div>
-                ))}
-
-                <datalist id="state-observer-item-ids">
-                    {[...knownItemIds].map((itemId) => <option key={itemId} value={itemId} />)}
-                </datalist>
-            </section>
-        </div>
-    );
-}
-
-function defaultValueForKind(kind: DraftValueKind): string {
-    switch (kind) {
-        case 'boolean': {
-            return 'false';
-        }
-        case 'json': {
-            return '{}';
-        }
-        case 'null': {
-            return 'null';
-        }
-        case 'number': {
-            return '0';
-        }
-        case 'string': {
-            return '""';
-        }
-    }
-}
-
-function detectDraftValueKind(valueText: string): DraftValueKind {
-    const parsed = parseJsonUnknown(valueText);
-    if (parsed === undefined) return 'json';
-    if (parsed === null) return 'null';
-    if (typeof parsed === 'boolean') return 'boolean';
-    if (typeof parsed === 'number') return 'number';
-    if (typeof parsed === 'string') return 'string';
-    return 'json';
-}
-
-function inputStyle(uiScale: number): CSSProperties {
-    return {
-        background: t.bg.input,
-        border: `1px solid ${t.border.input}`,
-        borderRadius: t.radius.sm,
-        color: t.text.primary,
-        fontSize: `${11 * uiScale}px`,
-        minWidth: 0,
-        padding: `${4 * uiScale}px ${6 * uiScale}px`,
-        width: '100%',
-    };
-}
-
-function isSerializable(value: unknown): value is Serializable {
-    if (value === null) return true;
-    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return true;
-    if (Array.isArray(value)) return value.every((entry) => isSerializable(entry));
-    if (typeof value === 'object') {
-        return Object.values(value as Record<string, unknown>).every((entry) => isSerializable(entry));
-    }
-    return false;
-}
-
-function parseJsonObject(raw: string): Record<string, unknown> | undefined {
-    try {
-        const parsed: unknown = JSON.parse(raw);
-        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-            return undefined;
-        }
-        return parsed as Record<string, unknown>;
-    } catch {
-        return undefined;
-    }
-}
-
-function parseJsonUnknown(raw: string): unknown {
-    try {
-        return JSON.parse(raw);
-    } catch {
-        return undefined;
-    }
-}
-
-function parseJsonValue(raw: string): Serializable | undefined {
-    try {
-        const parsed: unknown = JSON.parse(raw);
-        return isSerializable(parsed) ? parsed : undefined;
-    } catch {
-        return undefined;
-    }
-}
-
-function safeStringValue(valueText: string): string {
-    const parsed = parseJsonUnknown(valueText);
-    return typeof parsed === 'string' ? parsed : '';
-}
-
-function sectionStyle(uiScale: number): CSSProperties {
-    return {
-        border: `1px solid ${t.border.subtle}`,
-        borderRadius: t.radius.md,
-        marginBottom: `${10 * uiScale}px`,
-        padding: `${8 * uiScale}px`,
-    };
-}
-
-function StateValueEditor({ onChange, uiScale, valueText }: { onChange: (next: string) => void; uiScale: number; valueText: string; }) {
-    const kind = detectDraftValueKind(valueText);
-    let valueEditor: ReactElement;
-
-    switch (kind) {
-        case 'boolean': {
-            valueEditor = (
-                <select
-                    onChange={(event) => onChange(event.target.value === 'true' ? 'true' : 'false')}
-                    style={inputStyle(uiScale)}
-                    value={valueText === 'true' ? 'true' : 'false'}
-                >
-                    <option value="true">true</option>
-                    <option value="false">false</option>
-                </select>
-            );
-            break;
-        }
-        case 'json': {
-            valueEditor = <textarea onChange={(event) => onChange(event.target.value)} rows={2} style={textareaStyle(uiScale)} value={valueText} />;
-            break;
-        }
-        case 'null': {
-            valueEditor = <div style={{ color: t.text.faint, fontStyle: 'italic', padding: `${4 * uiScale}px 0` }}>null</div>;
-            break;
-        }
-        case 'number': {
-            valueEditor = <input onChange={(event) => onChange(event.target.value)} style={inputStyle(uiScale)} type="number" value={valueText} />;
-            break;
-        }
-        case 'string': {
-            valueEditor = (
-                <input
-                    onChange={(event) => onChange(JSON.stringify(event.target.value))}
-                    style={inputStyle(uiScale)}
-                    type="text"
-                    value={safeStringValue(valueText)}
-                />
-            );
-            break;
-        }
-    }
-
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: `${4 * uiScale}px` }}>
-            <div style={{ alignItems: 'center', display: 'flex', gap: `${6 * uiScale}px` }}>
-                <span style={{ color: t.text.muted }}>Type</span>
-                <select
-                    onChange={(event) => onChange(defaultValueForKind(event.target.value as DraftValueKind))}
-                    style={{ ...inputStyle(uiScale), maxWidth: 130, padding: `${2 * uiScale}px ${6 * uiScale}px` }}
-                    value={kind}
-                >
-                    <option value="string">string</option>
-                    <option value="number">number</option>
-                    <option value="boolean">boolean</option>
-                    <option value="null">null</option>
-                    <option value="json">json</option>
-                </select>
+            <div style={{ display: 'flex', gap: `${6 * uiScale}px`, marginBottom: `${8 * uiScale}px` }}>
+                <button className={activeTab === 'state' ? 'toolbar-btn primary' : 'toolbar-btn'} onClick={() => setActiveTab('state')} style={{ padding: `${3 * uiScale}px ${8 * uiScale}px` }}>
+                    State
+                </button>
+                <button className={activeTab === 'items' ? 'toolbar-btn primary' : 'toolbar-btn'} onClick={() => setActiveTab('items')} style={{ padding: `${3 * uiScale}px ${8 * uiScale}px` }}>
+                    Items
+                </button>
             </div>
 
-            {valueEditor}
+            {statusMessage && <div style={{ color: t.text.muted, marginBottom: `${8 * uiScale}px` }}>{statusMessage}</div>}
+
+            {activeTab === 'state' ? (
+                <StateObserverVariables
+                    onApplyStateRow={applyStateRow}
+                    onDirty={markDirty}
+                    onGenerateRowId={nextRowId}
+                    setHasDraftChanges={setHasDraftChanges}
+                    setStateDraftRows={setStateDraftRows}
+                    stateDraftRows={stateDraftRows}
+                    uiScale={uiScale}
+                />
+            ) : (
+                <StateObserverItems
+                    itemDraftRows={itemDraftRows}
+                    knownItemIds={knownItemIds}
+                    onApplyItemRow={applyItemRow}
+                    onDirty={markDirty}
+                    onGenerateRowId={nextRowId}
+                    setHasDraftChanges={setHasDraftChanges}
+                    setItemDraftRows={setItemDraftRows}
+                    uiScale={uiScale}
+                />
+            )}
         </div>
     );
 }
 
-function textareaStyle(uiScale: number): CSSProperties {
-    return {
-        ...inputStyle(uiScale),
-        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-        resize: 'vertical',
-    };
-}
-
-function toItemDraftRow(item: EvidenceItem, rowId: string): ItemDraftRow {
-    const { description, id, imageUrl, name, type, ...custom } = item;
-    return {
-        customJson: JSON.stringify(custom, undefined, 0),
-        description,
-        id: rowId,
-        imageUrl: typeof imageUrl === 'string' ? imageUrl : '',
-        itemId: id,
-        name,
-        type: type === 'profile' ? 'profile' : 'evidence',
-    };
-}
