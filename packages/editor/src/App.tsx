@@ -1,8 +1,10 @@
+import { convertFileSrc } from '@tauri-apps/api/core';
 import { PhysicalPosition, PhysicalSize } from '@tauri-apps/api/dpi';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ConfirmDialog } from './components/ConfirmDialog';
+import { SpritesheetAutoSliceDialog } from './components/editors/SpritesheetAutoSliceDialog';
 import { DockLayoutHost } from './components/layout/DockLayoutHost';
 import { SettingsModal } from './components/settings/SettingsModal';
 import './App.css';
@@ -12,20 +14,36 @@ import { useLiveScriptValidation } from './hooks/useLiveScriptValidation';
 import { useReferenceScanner } from './hooks/useReferenceScanner';
 import { useScriptDirtyTracking } from './hooks/useScriptDirtyTracking';
 import { setupConsoleInterceptor } from './services/consoleInterceptor';
+import { fsWriteTextFile } from './services/fs';
+import { openSpritesheetEntry, setMissingSpritesheetDescriptorHandler } from './services/openProjectEntry';
 import { useProjectStore } from './store/storeBootstrap';
 import { useScriptStore } from './store/storeBootstrap';
 import { useEditorStore } from './store/useEditorStore';
 import { useSettingsStore } from './store/useSettingsStore';
 import { applyTheme } from './theme/applyTheme';
 import { getThemeRegistry } from './theme/themeRegistry';
+import { getSheetDescriptorPath } from './utils/assetDescriptorUtilities';
+
+type AutoSliceRequest = {
+    entryName: string;
+    imagePath: string;
+};
+
+type PendingAutoSlice = {
+    resolve: (handled: boolean) => void;
+} & AutoSliceRequest;
 
 function App() {
+    const customThemes = useSettingsStore((state) => state.customThemes);
     const themeKey = useSettingsStore((state) => state.themeKey);
     const uiScale = useSettingsStore((state) => state.uiScale);
     const rootScript = useScriptStore((state) => state.rootScript);
     const [closePromptOpen, setClosePromptOpen] = useState(false);
     const [closePromptError, setClosePromptError] = useState<string | undefined>();
     const [isClosingWithSave, setIsClosingWithSave] = useState(false);
+    const [pendingAutoSlice, setPendingAutoSlice] = useState<PendingAutoSlice>();
+    const [autoSliceImage, setAutoSliceImage] = useState<HTMLImageElement>();
+    const pendingAutoSliceReference = useRef<null | PendingAutoSlice>(null);
     const allowCloseBypassReference = useRef(false);
     const isHandlingCloseRequestReference = useRef(false);
 
@@ -76,6 +94,82 @@ function App() {
             window.removeEventListener('beforeunload', onEvent);
         };
     }, []);
+
+    useEffect(() => {
+        pendingAutoSliceReference.current = pendingAutoSlice ?? null;
+    }, [pendingAutoSlice]);
+
+    useEffect(() => {
+        setMissingSpritesheetDescriptorHandler((request) => new Promise<boolean>((resolve) => {
+            const activeRequest = pendingAutoSliceReference.current;
+            if (activeRequest) {
+                activeRequest.resolve(false);
+            }
+
+            setAutoSliceImage(undefined);
+            setPendingAutoSlice({ ...request, resolve });
+        }));
+
+        return () => {
+            setMissingSpritesheetDescriptorHandler(undefined);
+            const activeRequest = pendingAutoSliceReference.current;
+            if (activeRequest) {
+                activeRequest.resolve(false);
+                pendingAutoSliceReference.current = null;
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!pendingAutoSlice) {
+            setAutoSliceImage(undefined);
+            return;
+        }
+
+        let disposed = false;
+        const image = new Image();
+        const source = /^(?:https?:|data:|blob:|file:)/.test(pendingAutoSlice.imagePath)
+            ? pendingAutoSlice.imagePath
+            : convertFileSrc(pendingAutoSlice.imagePath);
+
+        image.addEventListener('load', () => {
+            if (disposed) return;
+            setAutoSliceImage(image);
+        });
+
+        image.onerror = () => {
+            if (disposed) return;
+            pendingAutoSlice.resolve(false);
+            setPendingAutoSlice(undefined);
+            setAutoSliceImage(undefined);
+        };
+
+        image.src = source;
+
+        return () => {
+            disposed = true;
+        };
+    }, [pendingAutoSlice]);
+
+    const finalizeAutoSlice = useCallback((handled: boolean) => {
+        const activeRequest = pendingAutoSliceReference.current;
+        if (!activeRequest) return;
+
+        activeRequest.resolve(handled);
+        pendingAutoSliceReference.current = null;
+        setPendingAutoSlice(undefined);
+        setAutoSliceImage(undefined);
+    }, []);
+
+    const handleAutoSliceCreate = useCallback(async (descriptorText: string, descriptorPath: string) => {
+        try {
+            await fsWriteTextFile(descriptorPath, descriptorText);
+            await openSpritesheetEntry(descriptorPath);
+            finalizeAutoSlice(true);
+        } catch {
+            finalizeAutoSlice(false);
+        }
+    }, [finalizeAutoSlice]);
 
     const closeWindowNow = useCallback(async () => {
         allowCloseBypassReference.current = true;
@@ -172,10 +266,10 @@ function App() {
     }, [closeWindowNow, isClosingWithSave]);
 
     useEffect(() => {
-        const themes = getThemeRegistry();
+        const themes = getThemeRegistry(customThemes);
         const selected = themes.find((t) => t.key === themeKey) ?? themes.find((t) => t.key === 'classic') ?? themes[0];
         if (selected) applyTheme(selected);
-    }, [themeKey]);
+    }, [customThemes, themeKey]);
 
     return (
         <div style={{ '--ui-scale': uiScale, inset: 0, overflow: 'hidden', position: 'fixed' } as CSSProperties}>
@@ -193,6 +287,23 @@ function App() {
                 open={closePromptOpen}
                 title="Unsaved changes"
             />
+            {pendingAutoSlice && autoSliceImage ? (
+                <SpritesheetAutoSliceDialog
+                    image={autoSliceImage}
+                    imagePath={pendingAutoSlice.imagePath}
+                    onCancel={() => finalizeAutoSlice(false)}
+                    onCreate={(descriptor) => {
+                        const descriptorPath = getSheetDescriptorPath(pendingAutoSlice.imagePath);
+                        const normalizedDescriptor = {
+                            ...descriptor,
+                            source: pendingAutoSlice.entryName,
+                        };
+                        const descriptorText = `${JSON.stringify(normalizedDescriptor, undefined, 4)}\n`;
+                        void handleAutoSliceCreate(descriptorText, descriptorPath);
+                    }}
+                    uiScale={uiScale}
+                />
+            ) : null}
         </div>
     );
 }

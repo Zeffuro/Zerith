@@ -1,16 +1,22 @@
 import { type CSSProperties, type ReactNode, useMemo } from 'react';
 
+import type { CustomThemeEntry } from '../../store/settings/SettingsSchema';
 import type { ThemeVariables } from '../../theme/themeTypes';
 
 import { editorTheme as t } from '../../theme/editorTheme';
 import { getThemeRegistry } from '../../theme/themeRegistry';
 import { getVisibleSettingsControls, type SettingsControlId } from './settingsControlRegistry';
+import { SettingsThemeEditor } from './SettingsThemeEditor';
 
 type SettingsAppearancePanelProperties = {
     changedControlIds: ReadonlySet<string>;
+    customThemes: CustomThemeEntry[];
     focusedControlId: SettingsControlId | undefined;
     matchedControlIds: ReadonlySet<string>;
+    onAddCustomTheme: (theme: CustomThemeEntry) => void;
+    onDeleteCustomTheme: (key: string) => void;
     onSetDetailRowReference: (controlId: SettingsControlId, element: HTMLDivElement | null) => void;
+    onUpdateCustomTheme: (key: string, updates: Partial<Omit<CustomThemeEntry, 'key'>>) => void;
     panelId: string;
     searchQuery: string;
     setThemeKey: (key: string) => void;
@@ -39,9 +45,13 @@ const previewVariableOrder = [
 
 export function SettingsAppearancePanel({
     changedControlIds,
+    customThemes,
     focusedControlId,
     matchedControlIds,
+    onAddCustomTheme,
+    onDeleteCustomTheme,
     onSetDetailRowReference,
+    onUpdateCustomTheme,
     panelId,
     searchQuery,
     setThemeKey,
@@ -50,16 +60,20 @@ export function SettingsAppearancePanel({
     themeKey,
     uiScale,
 }: SettingsAppearancePanelProperties) {
-    const themes = useMemo(() => getThemeRegistry(), []);
+    const themes = useMemo(() => getThemeRegistry(customThemes), [customThemes]);
     const visibleControlIds = new Set(getVisibleSettingsControls(panelId));
 
     const themeChanged = changedControlIds.has('theme');
+    const customThemesChanged = changedControlIds.has('customThemes');
     const scaleChanged = changedControlIds.has('uiScale');
 
     const showThemeRow = visibleControlIds.has('theme') && matchedControlIds.has('theme') && (!showChangedOnly || themeChanged);
+    const showCustomThemesRow = visibleControlIds.has('customThemes')
+        && matchedControlIds.has('customThemes')
+        && (!showChangedOnly || customThemesChanged);
     const showScaleRow = visibleControlIds.has('uiScale') && matchedControlIds.has('uiScale') && (!showChangedOnly || scaleChanged);
 
-    if (!showThemeRow && !showScaleRow) {
+    if (!showThemeRow && !showCustomThemesRow && !showScaleRow) {
         return (
             <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
                 {showChangedOnly
@@ -167,6 +181,27 @@ export function SettingsAppearancePanel({
                             })}
                         </div>
                     </div>
+                </EditableSettingRow>
+            ) : undefined}
+
+            {showCustomThemesRow ? (
+                <EditableSettingRow
+                    controlId="customThemes"
+                    isChanged={customThemesChanged}
+                    isFocused={focusedControlId === 'customThemes'}
+                    label="Custom Themes"
+                    onSetDetailRowReference={onSetDetailRowReference}
+                    uiScale={uiScale}
+                >
+                    <SettingsThemeEditor
+                        activeThemeKey={themeKey}
+                        customThemes={customThemes}
+                        onAddCustomTheme={onAddCustomTheme}
+                        onDeleteCustomTheme={onDeleteCustomTheme}
+                        onSetActiveThemeKey={setThemeKey}
+                        onUpdateCustomTheme={onUpdateCustomTheme}
+                        uiScale={uiScale}
+                    />
                 </EditableSettingRow>
             ) : undefined}
 

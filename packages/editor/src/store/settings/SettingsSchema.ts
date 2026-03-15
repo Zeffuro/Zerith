@@ -10,8 +10,64 @@ import { isRecord } from '../../utils/typeGuards';
 const MIN_AUTOSAVE_INTERVAL_MS = 5 * 1000;
 const MAX_RECENT_PROJECTS = 12;
 
+export type CustomThemeEntry = {
+    baseThemeKey?: string;
+    key: string;
+    label: string;
+    vars: Record<string, string>;
+};
+
 function sanitizeAutosaveInterval(intervalMs: number): number {
     return Math.max(MIN_AUTOSAVE_INTERVAL_MS, Math.trunc(intervalMs));
+}
+
+function sanitizeCustomThemes(value: unknown): CustomThemeEntry[] | undefined {
+    if (!Array.isArray(value)) return undefined;
+
+    const themes: CustomThemeEntry[] = [];
+
+    for (const entry of value) {
+        if (!isRecord(entry)) continue;
+
+        const key = typeof entry.key === 'string' ? entry.key.trim() : '';
+        const label = typeof entry.label === 'string' ? entry.label.trim() : '';
+        const variables = sanitizeCustomThemeVariables(entry.vars);
+
+        if (key.length === 0 || label.length === 0 || !variables) continue;
+
+        const baseThemeKey = typeof entry.baseThemeKey === 'string'
+            ? entry.baseThemeKey.trim()
+            : undefined;
+
+        themes.push({
+            baseThemeKey: baseThemeKey && baseThemeKey.length > 0 ? baseThemeKey : undefined,
+            key,
+            label,
+            vars: variables,
+        });
+    }
+
+    const uniqueByKey = new Map<string, CustomThemeEntry>();
+    for (const theme of themes) uniqueByKey.set(theme.key, theme);
+
+    return [...uniqueByKey.values()];
+}
+
+function sanitizeCustomThemeVariables(value: unknown): Record<string, string> | undefined {
+    if (!isRecord(value)) return undefined;
+
+    const variables: Record<string, string> = {};
+
+    for (const [variableName, variableValue] of Object.entries(value)) {
+        if (typeof variableValue !== 'string') continue;
+
+        const normalizedName = variableName.trim();
+        const normalizedValue = variableValue.trim();
+        if (normalizedName.length === 0 || normalizedValue.length === 0) continue;
+        variables[normalizedName] = normalizedValue;
+    }
+
+    return variables;
 }
 
 function sanitizeKeymapOverrides(value: unknown): KeymapOverrides | undefined {
@@ -61,6 +117,7 @@ function sanitizeRecentProjects(value: unknown): RecentProject[] | undefined {
         .slice(0, MAX_RECENT_PROJECTS);
 }
 
+
 const recentProjectsSchema = z.preprocess(
     (value) => sanitizeRecentProjects(value),
     z.array(z.object({
@@ -75,9 +132,20 @@ const keymapOverridesSchema = z.preprocess(
     z.record(z.string(), z.string().min(1)),
 ).optional();
 
+const customThemesSchema = z.preprocess(
+    (value) => sanitizeCustomThemes(value),
+    z.array(z.object({
+        baseThemeKey: z.string().trim().min(1).optional(),
+        key: z.string().trim().min(1),
+        label: z.string().trim().min(1),
+        vars: z.record(z.string(), z.string()),
+    })),
+).optional();
+
 const persistedSettingsSchema = z.object({
     autosaveEnabled: z.boolean().optional(),
     autosaveIntervalMs: z.number().finite().positive().transform(sanitizeAutosaveInterval).optional(),
+    customThemes: customThemesSchema,
     isMuted: z.boolean().optional(),
     keymapOverrides: keymapOverridesSchema,
     recentProjects: recentProjectsSchema,
@@ -99,6 +167,7 @@ export type PersistedSettings = z.output<typeof SettingsSchema>;
 export type SettingsState = {
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
+    customThemes: CustomThemeEntry[];
     isMuted: boolean;
     keymapOverrides: KeymapOverrides;
     recentProjects: RecentProject[];
@@ -110,6 +179,7 @@ export type SettingsState = {
 export const defaultSettings: SettingsState = {
     autosaveEnabled: false,
     autosaveIntervalMs: 30 * 1000,
+    customThemes: [],
     isMuted: false,
     keymapOverrides: {},
     recentProjects: [],

@@ -14,6 +14,9 @@ function createResetActions(order: string[]): SettingsResetActions {
         resetAutosaveIntervalMs: vi.fn(() => {
             order.push('autosaveIntervalMs');
         }),
+        resetCustomThemes: vi.fn(() => {
+            order.push('customThemes');
+        }),
         resetKeymapOverrides: vi.fn(() => {
             order.push('keymap');
         }),
@@ -62,6 +65,7 @@ describe('settingsResetRoutingModel', () => {
 
         expect(order).toEqual([
             'theme',
+            'customThemes',
             'uiScale',
             'autosaveEnabled',
             'autosaveIntervalMs',

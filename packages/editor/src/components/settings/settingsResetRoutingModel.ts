@@ -4,6 +4,7 @@ export type SettingsResetActions = {
     resetAudio: () => void;
     resetAutosaveEnabled: () => void;
     resetAutosaveIntervalMs: () => void;
+    resetCustomThemes: () => void;
     resetKeymapOverrides: () => void;
     resetTheme: () => void;
     resetUiScale: () => void;
@@ -13,12 +14,14 @@ const controlResetActionById: Record<SettingsControlId, (actions: SettingsResetA
     audio: (actions) => actions.resetAudio(),
     autosaveEnabled: (actions) => actions.resetAutosaveEnabled(),
     autosaveIntervalMs: (actions) => actions.resetAutosaveIntervalMs(),
+    customThemes: (actions) => actions.resetCustomThemes(),
     theme: (actions) => actions.resetTheme(),
     uiScale: (actions) => actions.resetUiScale(),
 };
 
 export function runAllSettingsReset(actions: SettingsResetActions): void {
     actions.resetTheme();
+    actions.resetCustomThemes();
     actions.resetUiScale();
     actions.resetAutosaveEnabled();
     actions.resetAutosaveIntervalMs();

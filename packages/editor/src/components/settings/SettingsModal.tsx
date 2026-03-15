@@ -60,9 +60,14 @@ export function SettingsModal() {
     const themeKey = useEditorStore((state) => state.themeKey);
     const toggleMute = useEditorStore((state) => state.toggleMute);
     const uiScale = useEditorStore((state) => state.uiScale);
+    const addCustomTheme = useSettingsStore((state) => state.addCustomTheme);
+    const customThemes = useSettingsStore((state) => state.customThemes);
+    const deleteCustomTheme = useSettingsStore((state) => state.deleteCustomTheme);
     const keymapOverrides = useSettingsStore((state) => state.keymapOverrides);
+    const setCustomThemes = useSettingsStore((state) => state.setCustomThemes);
     const setKeymapOverrides = useSettingsStore((state) => state.setKeymapOverrides);
     const setSettingsMuted = useSettingsStore((state) => state.setIsMuted);
+    const updateCustomTheme = useSettingsStore((state) => state.updateCustomTheme);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [treeBadgeMode, setTreeBadgeMode] = useState<'changed' | 'hits'>('hits');
@@ -72,7 +77,6 @@ export function SettingsModal() {
     const [focusedControlId, setFocusedControlId] = useState<SettingsControlId | undefined>();
     const [focusedRowAction, setFocusedRowAction] = useState<GlobalShortcutCommand | undefined>();
     const [pendingReset, setPendingReset] = useState<PendingSettingsReset | undefined>();
-
     const detailContainerReference = useRef<HTMLDivElement | null>(null);
     const detailRowReferences = useRef<Partial<Record<SettingsControlId, HTMLDivElement | null>>>({});
     const rowReferences = useRef<Partial<Record<GlobalShortcutCommand, HTMLDivElement | null>>>({});
@@ -84,35 +88,35 @@ export function SettingsModal() {
         () => filterKeymapRows(keymapRows, searchQuery, showCustomizedOnly),
         [keymapRows, searchQuery, showCustomizedOnly],
     );
-
     const conflictCount = useMemo(() => keymapRows.filter((row) => row.conflictsWith.length > 0).length, [keymapRows]);
     const conflictEntries = useMemo(() => buildKeymapConflictEntries(keymapRows), [keymapRows]);
     const conflictActionSequence = useMemo(() => buildConflictActionSequence(keymapRows), [keymapRows]);
 
     const matchedControlIds = useMemo(
-        () => getMatchedSettingsControlIds(searchQuery, { autosaveEnabled, autosaveIntervalMs, isMuted, themeKey, uiScale }),
-        [autosaveEnabled, autosaveIntervalMs, isMuted, searchQuery, themeKey, uiScale],
+        () => getMatchedSettingsControlIds(searchQuery, { autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, themeKey, uiScale }),
+        [autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, searchQuery, themeKey, uiScale],
     );
 
     const changedControlIds = useMemo(
         () => getChangedSettingsControlIds(
-            { autosaveEnabled, autosaveIntervalMs, isMuted, themeKey, uiScale },
+            { autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, themeKey, uiScale },
             {
                 autosaveEnabled: defaultSettings.autosaveEnabled,
                 autosaveIntervalMs: defaultSettings.autosaveIntervalMs,
+                customThemes: defaultSettings.customThemes,
                 isMuted: defaultSettings.isMuted,
                 themeKey: defaultSettings.themeKey,
                 uiScale: defaultSettings.uiScale,
             },
         ),
-        [autosaveEnabled, autosaveIntervalMs, isMuted, themeKey, uiScale],
+        [autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, themeKey, uiScale],
     );
 
     const contentMatchedPanelIds = useMemo(() => {
-        const panelIds = getMatchedSettingsPanelIds(searchQuery, { autosaveEnabled, autosaveIntervalMs, isMuted, themeKey, uiScale });
+        const panelIds = getMatchedSettingsPanelIds(searchQuery, { autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, themeKey, uiScale });
         if (filteredKeymapRows.length > 0) panelIds.add('keymap');
         return panelIds;
-    }, [autosaveEnabled, autosaveIntervalMs, filteredKeymapRows.length, isMuted, searchQuery, themeKey, uiScale]);
+    }, [autosaveEnabled, autosaveIntervalMs, customThemes, filteredKeymapRows.length, isMuted, searchQuery, themeKey, uiScale]);
 
     const filteredNodes = useMemo(() => {
         if (searchQuery.trim().length === 0) return baseFilteredNodes;
@@ -129,10 +133,11 @@ export function SettingsModal() {
 
     const changedLeafCounts = useMemo(() => {
         const counts = getChangedSettingsLeafPanelCounts(
-            { autosaveEnabled, autosaveIntervalMs, isMuted, themeKey, uiScale },
+            { autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, themeKey, uiScale },
             {
                 autosaveEnabled: defaultSettings.autosaveEnabled,
                 autosaveIntervalMs: defaultSettings.autosaveIntervalMs,
+                customThemes: defaultSettings.customThemes,
                 isMuted: defaultSettings.isMuted,
                 themeKey: defaultSettings.themeKey,
                 uiScale: defaultSettings.uiScale,
@@ -142,12 +147,11 @@ export function SettingsModal() {
         const keymapChangedCount = Object.keys(keymapOverrides).length;
         if (keymapChangedCount > 0) counts.keymap = keymapChangedCount;
         return counts;
-    }, [autosaveEnabled, autosaveIntervalMs, isMuted, keymapOverrides, themeKey, uiScale]);
+    }, [autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, keymapOverrides, themeKey, uiScale]);
 
     const changedNodeCounts = useMemo(() => buildSettingsNodeCountMap(filteredNodes, changedLeafCounts), [changedLeafCounts, filteredNodes]);
     const settingsTreeBadgeCounts = treeBadgeMode === 'changed' ? changedNodeCounts : filteredNodeLeafCounts;
     const showSearchHitBadges = treeBadgeMode === 'changed' || searchQuery.trim().length > 0;
-
     const focusActionRow = useCallback((action: GlobalShortcutCommand) => {
         setShowCustomizedOnly(false);
         setSearchQuery('');
@@ -169,7 +173,6 @@ export function SettingsModal() {
             }, 1200);
         }, 0);
     }, []);
-
     const jumpToConflict = useCallback((direction: 'next' | 'previous') => {
         const nextAction = stepConflictAction(conflictActionSequence, focusedRowAction, direction);
         if (!nextAction) return;
@@ -194,7 +197,6 @@ export function SettingsModal() {
             }, 1200);
         }, 0);
     }, []);
-
     const requestResetConfirmation = useCallback((nextReset: PendingSettingsReset) => setPendingReset(nextReset), []);
     const cancelResetConfirmation = useCallback(() => setPendingReset(undefined), []);
 
@@ -211,7 +213,6 @@ export function SettingsModal() {
     const setKeymapRowReference = useCallback((action: GlobalShortcutCommand, element: HTMLDivElement | null) => {
         rowReferences.current[action] = element;
     }, []);
-
     const handleChangedBadgeClick = useCallback((nodeId: string) => {
         if (treeBadgeMode !== 'changed') return;
 
@@ -229,7 +230,6 @@ export function SettingsModal() {
         setSelectedPanelId(nodeId);
         focusDetailControl(firstChangedControl);
     }, [changedControlIds, focusActionRow, focusDetailControl, keymapRows, treeBadgeMode]);
-
     useEffect(() => {
         if (!isSettingsModalOpen) return;
 
@@ -240,7 +240,6 @@ export function SettingsModal() {
             setSelectedPanelId(firstVisiblePanelId);
         }, 0);
     }, [filteredNodes, isSettingsModalOpen, selectedPanelId]);
-
     useEffect(() => {
         if (!isSettingsModalOpen) return;
 
@@ -259,7 +258,6 @@ export function SettingsModal() {
         globalThis.addEventListener('keydown', onKeyDown);
         return () => globalThis.removeEventListener('keydown', onKeyDown);
     }, [closeSettingsModal, conflictActionSequence.length, isSettingsModalOpen, jumpToConflict, pendingReset, selectedPanelId]);
-
     useEffect(() => {
         if (!focusedRowAction) return;
         if (conflictActionSequence.includes(focusedRowAction)) return;
@@ -268,11 +266,9 @@ export function SettingsModal() {
             setFocusedRowAction(undefined);
         }, 0);
     }, [conflictActionSequence, focusedRowAction]);
-
     if (!isSettingsModalOpen) return;
 
     const showKeymapPanel = selectedPanelId === 'keymap';
-    const activeConflictIndex = focusedRowAction ? conflictActionSequence.indexOf(focusedRowAction) : -1;
 
     const resetCurrentPanel = () => {
         runCurrentPanelReset(selectedPanelId, getPanelSettingsControls, {
@@ -282,6 +278,7 @@ export function SettingsModal() {
             },
             resetAutosaveEnabled: () => setAutosaveEnabled(defaultSettings.autosaveEnabled),
             resetAutosaveIntervalMs: () => setAutosaveIntervalMs(defaultSettings.autosaveIntervalMs),
+            resetCustomThemes: () => setCustomThemes(defaultSettings.customThemes),
             resetKeymapOverrides: () => setKeymapOverrides(defaultSettings.keymapOverrides),
             resetTheme: () => setThemeKey(defaultSettings.themeKey),
             resetUiScale: () => setUiScale(defaultSettings.uiScale),
@@ -296,6 +293,7 @@ export function SettingsModal() {
             },
             resetAutosaveEnabled: () => setAutosaveEnabled(defaultSettings.autosaveEnabled),
             resetAutosaveIntervalMs: () => setAutosaveIntervalMs(defaultSettings.autosaveIntervalMs),
+            resetCustomThemes: () => setCustomThemes(defaultSettings.customThemes),
             resetKeymapOverrides: () => setKeymapOverrides(defaultSettings.keymapOverrides),
             resetTheme: () => setThemeKey(defaultSettings.themeKey),
             resetUiScale: () => setUiScale(defaultSettings.uiScale),
@@ -321,21 +319,24 @@ export function SettingsModal() {
                             uiScale={uiScale}
                         />
                         <SettingsModalMainPane
-                            activeConflictIndex={activeConflictIndex}
+                            activeConflictIndex={focusedRowAction ? conflictActionSequence.indexOf(focusedRowAction) : -1}
                             autosaveEnabled={autosaveEnabled}
                             autosaveIntervalMs={autosaveIntervalMs}
                             changedControlIds={changedControlIds}
                             conflictActionSequenceLength={conflictActionSequence.length}
                             conflictCount={conflictCount}
                             conflictEntries={conflictEntries}
+                            customThemes={customThemes}
                             detailContainerReference={detailContainerReference}
                             filteredKeymapRows={filteredKeymapRows}
                             focusedControlId={focusedControlId}
                             focusedRowAction={focusedRowAction}
                             isMuted={isMuted}
                             matchedControlIds={matchedControlIds}
+                            onAddCustomTheme={addCustomTheme}
                             onBeginDrag={beginDrag}
                             onClose={closeSettingsModal}
+                            onDeleteCustomTheme={deleteCustomTheme}
                             onFixAllConflicts={() => setKeymapOverrides(resolveAllKeymapConflicts(keymapDisplayBindings, keymapOverrides))}
                             onFocusActionRow={focusActionRow}
                             onJumpToConflict={jumpToConflict}
@@ -362,6 +363,7 @@ export function SettingsModal() {
                             onSetRowReference={setKeymapRowReference}
                             onSetShowChangedOnlySettings={setShowChangedOnlySettings}
                             onSetShowCustomizedOnly={setShowCustomizedOnly}
+                            onUpdateCustomTheme={updateCustomTheme}
                             onUpdateShortcut={(action, nextValue) => {
                                 setKeymapOverrides(setKeymapOverride(keymapOverrides, action, nextValue));
                             }}
@@ -395,6 +397,3 @@ export function SettingsModal() {
         </>
     );
 }
-
-
-

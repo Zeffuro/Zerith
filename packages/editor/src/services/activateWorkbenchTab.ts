@@ -30,6 +30,12 @@ export async function activateWorkbenchTab(tabId: string) {
         return;
     }
 
+    if (tab.kind === 'spritesheet' || tab.kind === 'audiosheet') {
+        const text = await fsReadTextFile(tab.path);
+        ws.updateTabContent(tab.id, text, { markDirty: false });
+        return;
+    }
+
     if (tab.kind === 'manifest' || tab.kind === 'json' || tab.kind === 'text') {
         const text = await fsReadTextFile(tab.path);
         ws.updateTabContent(tab.id, text, { markDirty: false });

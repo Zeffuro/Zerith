@@ -49,5 +49,6 @@ export * from './utils/ChromaKey';
 export * from './utils/deepClone';
 export * from './utils/Logger';
 export * from './utils/ManifestResolver';
+export * from './utils/sheetGridUtilities';
 export * from './utils/TextParser';
 export * from './utils/Theme';

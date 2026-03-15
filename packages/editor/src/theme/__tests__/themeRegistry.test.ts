@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { getThemeRegistry, normalizeTheme } from '../themeRegistry';
+import { getFullThemeRegistry, getThemeRegistry, isCustomTheme, normalizeTheme } from '../themeRegistry';
 
 describe('themeRegistry', () => {
     it('normalizes themes from module default exports', () => {
@@ -48,6 +48,26 @@ describe('themeRegistry', () => {
 
         expect(labels).toEqual(labels.toSorted((a, b) => a.localeCompare(b)));
         expect(registry.some((theme) => theme.key === 'classic')).toBe(true);
+    });
+
+    it('appends custom themes after built-in themes sorted by label', () => {
+        const registry = getFullThemeRegistry([
+            { key: 'custom-b', label: 'Zulu', vars: { '--editor-bg-app': '#111111' } },
+            { key: 'custom-a', label: 'Alpha', vars: { '--editor-bg-app': '#000000' } },
+        ]);
+
+        const builtInCount = getThemeRegistry().length;
+        expect(registry.slice(0, builtInCount)).toEqual(getThemeRegistry());
+        expect(registry.slice(builtInCount).map((theme) => theme.label)).toEqual(['Alpha', 'Zulu']);
+    });
+
+    it('detects custom keys with isCustomTheme', () => {
+        const customThemes = [
+            { key: 'custom-1', label: 'Custom One', vars: { '--editor-bg-app': '#000000' } },
+        ];
+
+        expect(isCustomTheme('custom-1', customThemes)).toBe(true);
+        expect(isCustomTheme('classic', customThemes)).toBe(false);
     });
 });
 

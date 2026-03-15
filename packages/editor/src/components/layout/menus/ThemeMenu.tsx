@@ -1,18 +1,22 @@
 import { useMemo } from 'react';
 
+import type { CustomThemeEntry } from '../../../store/settings/SettingsSchema';
+
 import { editorTheme as t } from '../../../theme/editorTheme';
 import { getThemeRegistry } from '../../../theme/themeRegistry';
 
 export function ThemeMenu({
+                              customThemes,
                               onSelect,
                               selectedKey,
                               uiScale,
                           }: {
+    customThemes: CustomThemeEntry[];
     onSelect: (key: string) => void;
     selectedKey: string;
     uiScale: number;
 }) {
-    const themes = useMemo(() => getThemeRegistry(), []);
+    const themes = useMemo(() => getThemeRegistry(customThemes), [customThemes]);
 
     return (
         <select

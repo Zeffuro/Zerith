@@ -1,5 +1,7 @@
 import { type RefObject } from 'react';
 
+import type { CustomThemeEntry } from '../../store/settings/SettingsSchema';
+
 import { editorTheme as t } from '../../theme/editorTheme';
 import { SettingsAppearancePanel } from './SettingsAppearancePanel';
 import { type SettingsControlId } from './settingsControlRegistry';
@@ -10,11 +12,15 @@ type SettingsDetailPanelProperties = {
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
     changedControlIds: ReadonlySet<string>;
+    customThemes: CustomThemeEntry[];
     detailContainerReference: RefObject<HTMLDivElement | null>;
     focusedControlId: SettingsControlId | undefined;
     isMuted: boolean;
     matchedControlIds: ReadonlySet<string>;
+    onAddCustomTheme: (theme: CustomThemeEntry) => void;
+    onDeleteCustomTheme: (key: string) => void;
     onSetDetailRowReference: (controlId: SettingsControlId, element: HTMLDivElement | null) => void;
+    onUpdateCustomTheme: (key: string, updates: Partial<Omit<CustomThemeEntry, 'key'>>) => void;
     panelId: string;
     searchQuery: string;
     setAutosaveEnabled: (enabled: boolean) => void;
@@ -31,11 +37,15 @@ export function SettingsDetailPanel({
     autosaveEnabled,
     autosaveIntervalMs,
     changedControlIds,
+    customThemes,
     detailContainerReference,
     focusedControlId,
     isMuted,
     matchedControlIds,
+    onAddCustomTheme,
+    onDeleteCustomTheme,
     onSetDetailRowReference,
+    onUpdateCustomTheme,
     panelId,
     searchQuery,
     setAutosaveEnabled,
@@ -75,9 +85,13 @@ export function SettingsDetailPanel({
             {panelId.startsWith('appearance') ? (
                 <SettingsAppearancePanel
                     changedControlIds={changedControlIds}
+                    customThemes={customThemes}
                     focusedControlId={focusedControlId}
                     matchedControlIds={matchedControlIds}
+                    onAddCustomTheme={onAddCustomTheme}
+                    onDeleteCustomTheme={onDeleteCustomTheme}
                     onSetDetailRowReference={onSetDetailRowReference}
+                    onUpdateCustomTheme={onUpdateCustomTheme}
                     panelId={panelId}
                     searchQuery={searchQuery}
                     setThemeKey={setThemeKey}

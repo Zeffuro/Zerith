@@ -4,12 +4,14 @@ export type WorkbenchGet = () => WorkbenchState;
 
 export type WorkbenchResourceKind =
     | 'asset'
+    | 'audiosheet'
     | 'characters'
     | 'items'
     | 'json'
     | 'macros'
     | 'manifest'
     | 'script'
+    | 'spritesheet'
     | 'text'
     | 'unknown';
 

@@ -9,12 +9,13 @@ import {
     renamePath,
     revealPathInSystem,
 } from '../../../services/explorerFileActions';
-import { type FsDirectoryEntry, fsDirname, fsJoin, fsReadDirectory } from '../../../services/fs';
-import { openProjectEntry } from '../../../services/openProjectEntry';
+import { type FsDirectoryEntry, fsDirname, fsJoin, fsReadDirectory, fsReadTextFile, fsWriteTextFile } from '../../../services/fs';
+import { openAudiosheetEntry, openProjectEntry } from '../../../services/openProjectEntry';
 import { useProjectStore } from '../../../store/storeBootstrap';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
+import { getSheetDescriptorPath } from '../../../utils/assetDescriptorUtilities';
 import { AUDIO_EXT, getExtension, IMG_EXT } from '../../../utils/assetTypes';
 import { ConfirmDialog } from '../../ConfirmDialog';
 import { DOCK_PANELS } from '../dock/dockPanelIds';
@@ -155,6 +156,23 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
         await openProjectEntry(fullPath, entry.name);
     };
 
+    const ensureDescriptorExists = useCallback(async (type: 'audiosheet' | 'spritesheet') => {
+        if (!fullPath || entry.isDirectory) return;
+
+        const descriptorPath = getSheetDescriptorPath(fullPath);
+
+        try {
+            await fsReadTextFile(descriptorPath);
+            return descriptorPath;
+        } catch {
+            const descriptor = type === 'spritesheet'
+                ? { format: 'atlas', frames: {}, source: entry.name }
+                : { cues: {}, source: entry.name };
+            await fsWriteTextFile(descriptorPath, `${JSON.stringify(descriptor, null, 2)}\n`);
+            return descriptorPath;
+        }
+    }, [entry.isDirectory, entry.name, fullPath]);
+
     const commitRename = async () => {
         const next = renameDraft.trim();
         if (!next || next === entry.name) {
@@ -245,7 +263,12 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
                             break;
                         }
                         case 'openAudiosheet': {
-                            await openProjectEntry(fullPath, entry.name);
+                            const descriptorPath = await ensureDescriptorExists('audiosheet');
+                            if (!descriptorPath) {
+                                break;
+                            }
+
+                            await openAudiosheetEntry(descriptorPath);
                             globalThis.dispatchEvent(
                                 new CustomEvent('zerith:dock-select', { detail: DOCK_PANELS.audiosheetEditor }),
                             );
@@ -256,7 +279,7 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
                             break;
                         }
                         case 'openSpritesheet': {
-                            await openProjectEntry(fullPath, entry.name);
+                            await openProjectEntry(fullPath, entry.name, { openInSpritesheetEditor: true });
                             globalThis.dispatchEvent(
                                 new CustomEvent('zerith:dock-select', { detail: DOCK_PANELS.spritesheetEditor }),
                             );

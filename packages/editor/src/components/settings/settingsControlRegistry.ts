@@ -1,10 +1,13 @@
+import type { CustomThemeEntry } from '../../store/settings/SettingsSchema';
+
 export type SettingsControlDefaults = SettingsControlSearchState;
 
-export type SettingsControlId = 'audio' | 'autosaveEnabled' | 'autosaveIntervalMs' | 'theme' | 'uiScale';
+export type SettingsControlId = 'audio' | 'autosaveEnabled' | 'autosaveIntervalMs' | 'customThemes' | 'theme' | 'uiScale';
 
 export type SettingsControlSearchState = {
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
+    customThemes: CustomThemeEntry[];
     isMuted: boolean;
     themeKey: string;
     uiScale: number;
@@ -43,6 +46,15 @@ const settingsControlRegistry: Record<SettingsControlId, SettingsControlDefiniti
         changed: (state, defaults) => state.autosaveIntervalMs !== defaults.autosaveIntervalMs,
         keywords: (state) => `autosave interval ${Math.round(state.autosaveIntervalMs / 1000)} seconds save`,
         panelIds: ['general', 'general-autosave'],
+    },
+    customThemes: {
+        badgePanelId: 'appearance-theme',
+        changed: (state, defaults) => serializeCustomThemes(state.customThemes) !== serializeCustomThemes(defaults.customThemes),
+        keywords: (state) => {
+            const tokens = state.customThemes.flatMap((theme) => [theme.key, theme.label, theme.baseThemeKey ?? '']);
+            return `custom themes create edit delete ${tokens.join(' ')}`;
+        },
+        panelIds: ['appearance', 'appearance-theme'],
     },
     theme: {
         badgePanelId: 'appearance-theme',
@@ -115,5 +127,18 @@ export function getMatchedSettingsPanelIds(rawQuery: string, state: SettingsCont
     }
 
     return panelIds;
+}
+
+function serializeCustomThemes(customThemes: CustomThemeEntry[]): string {
+    return JSON.stringify(
+        customThemes
+            .map((theme) => ({
+                baseThemeKey: theme.baseThemeKey ?? '',
+                key: theme.key,
+                label: theme.label,
+                vars: Object.entries(theme.vars).toSorted(([a], [b]) => a.localeCompare(b)),
+            }))
+            .toSorted((a, b) => a.key.localeCompare(b.key)),
+    );
 }
 

@@ -11,6 +11,14 @@ import {
 const state = {
     autosaveEnabled: true,
     autosaveIntervalMs: 30_000,
+    customThemes: [
+        {
+            baseThemeKey: 'classic',
+            key: 'custom-courtroom-night',
+            label: 'Courtroom Night',
+            vars: { '--editor-bg-app': '#111111' },
+        },
+    ],
     isMuted: false,
     themeKey: 'classicSoft',
     uiScale: 1.2,
@@ -26,7 +34,7 @@ describe('settingsControlRegistry', () => {
     it('returns all controls for blank query', () => {
         const matched = [...getMatchedSettingsControlIds('   ', state)];
 
-        expect(matched).toEqual(['audio', 'autosaveEnabled', 'autosaveIntervalMs', 'theme', 'uiScale']);
+        expect(matched).toEqual(['audio', 'autosaveEnabled', 'autosaveIntervalMs', 'customThemes', 'theme', 'uiScale']);
     });
 
     it('derives panel ids from matched controls', () => {
@@ -34,7 +42,7 @@ describe('settingsControlRegistry', () => {
     });
 
     it('returns panel-visible controls', () => {
-        expect(getVisibleSettingsControls('appearance')).toEqual(['theme', 'uiScale']);
+        expect(getVisibleSettingsControls('appearance')).toEqual(['customThemes', 'theme', 'uiScale']);
         expect(getVisibleSettingsControls('general-autosave')).toEqual(['autosaveEnabled', 'autosaveIntervalMs']);
     });
 
@@ -43,6 +51,7 @@ describe('settingsControlRegistry', () => {
             {
                 autosaveEnabled: false,
                 autosaveIntervalMs: 60_000,
+                customThemes: [],
                 isMuted: true,
                 themeKey: 'classic',
                 uiScale: 1,
@@ -52,7 +61,7 @@ describe('settingsControlRegistry', () => {
 
         expect(changedCounts).toEqual({
             'appearance-scale': 1,
-            'appearance-theme': 1,
+            'appearance-theme': 2,
             'general-autosave': 2,
             'general-playback': 1,
         });
@@ -63,6 +72,7 @@ describe('settingsControlRegistry', () => {
             {
                 autosaveEnabled: false,
                 autosaveIntervalMs: 60_000,
+                customThemes: [],
                 isMuted: true,
                 themeKey: 'classic',
                 uiScale: 1,
@@ -74,6 +84,7 @@ describe('settingsControlRegistry', () => {
             'audio',
             'autosaveEnabled',
             'autosaveIntervalMs',
+            'customThemes',
             'theme',
             'uiScale',
         ]);

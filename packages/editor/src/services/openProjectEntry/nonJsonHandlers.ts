@@ -20,6 +20,28 @@ export function openAssetEntry(fullPath: string): void {
     }});
 }
 
+export async function openAudiosheetEntry(descriptorPath: string): Promise<void> {
+    const contents = await fsReadTextFile(descriptorPath);
+    executeWorkbenchOpenAction({ action: 'openTab', tab: {
+        id: makeTabId('audiosheet', descriptorPath),
+        kind: 'audiosheet',
+        path: descriptorPath,
+        textContent: contents,
+        title: basenameFromPath(descriptorPath),
+    }});
+}
+
+export async function openSpritesheetEntry(descriptorPath: string): Promise<void> {
+    const contents = await fsReadTextFile(descriptorPath);
+    executeWorkbenchOpenAction({ action: 'openTab', tab: {
+        id: makeTabId('spritesheet', descriptorPath),
+        kind: 'spritesheet',
+        path: descriptorPath,
+        textContent: contents,
+        title: basenameFromPath(descriptorPath),
+    }});
+}
+
 export async function openTextEntry(fullPath: string): Promise<void> {
     const contents = await fsReadTextFile(fullPath);
     executeWorkbenchOpenAction({ action: 'openTab', tab: {

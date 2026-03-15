@@ -1,9 +1,10 @@
-TODO: Implement a settings modal for the editor inspired by Jetbrains IDEs, with a search bar and a tree of settings categories.
-TODO: Implement a keymap editor that allows users to customize keyboard shortcuts for various actions in the editor.
-TODO: Implement a theme editor that allows users to customize the colors and fonts used in the editor, with support for light and dark themes.
-TODO: Make sure that most things are themeable.
-TODO: Set up proper Vitest mocks/presets so we don't repeatedly remock projects, scripts etc etc. in every test file.
-TODO: Implement a graphical Spritesheet Editor.  
-TODO: Implement an Audiosheet Editor (if useful).  
-TODO: Optional automatic generation/packing of spritesheets and audiosheets from raw images/audio (probably for the build process?).  
-TODO: Have a build process that compiles the game. Not sure yet if using Tauri or something else. Would be nice if it "just works" (desktop, mobile, itch.io).  
+TODO: Have a build process (not documentation, something  that actually does it.) that compiles the game. Not sure yet if using Tauri or something else. Would be nice if it "just works" (desktop, mobile, itch.io).    
+TODO: Show .sheet files as a child of the sprite/audio sheet in the explorer, and open them in the appropriate editor when clicked, the json should also have a json editor.  
+TODO: Remove old sprite sheet editor and audio sheet editor (the ones next to the inspector etc).  
+TODO: Modernize audiosheet editor with better buttons that fit the design, allow dragging the cue start/end points on the waveform instead of shift-clicking. And be able to drag to scrub the audio.  
+TODO: Have a way to do manual spritesheet slicing (click and drag to create a new sprite, or click to set slice points). And be able to drag the slice points to adjust them.  
+TODO: Autosave interval should be a int input, not a dropdown.  
+TODO: Find a better name for the theme accents to know what users are changing (e.g. "blue" is not very descriptive, but "primary accent color" is). Maybe we can add a comment in the code to explain what each accent is used for, and use that as the label in the UI.  
+TODO: Improve the theme editor, maybe use small cards or have some kind of grid layout to show the variables in a more organized way. And maybe add a live preview of the theme as you edit it.
+TODO: Don't use native dialogs for confirmation, use the app's modal system so it looks consistent.
+TODO: Delete button in the timeline editor does nothing atm.

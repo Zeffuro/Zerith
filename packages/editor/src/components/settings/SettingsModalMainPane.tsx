@@ -5,6 +5,8 @@ import {
     type RefObject,
 } from 'react';
 
+import type { CustomThemeEntry } from '../../store/settings/SettingsSchema';
+
 import { editorTheme as t } from '../../theme/editorTheme';
 import { type SettingsControlId } from './settingsControlRegistry';
 import { SettingsDetailPanel } from './SettingsDetailPanel';
@@ -14,16 +16,20 @@ export type SettingsModalMainPaneProperties = {
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
     changedControlIds: ReadonlySet<string>;
+    customThemes: CustomThemeEntry[];
     detailContainerReference: RefObject<HTMLDivElement | null>;
     focusedControlId: SettingsControlId | undefined;
     isMuted: boolean;
     matchedControlIds: ReadonlySet<string>;
+    onAddCustomTheme: (theme: CustomThemeEntry) => void;
     onBeginDrag: (event: ReactMouseEvent<HTMLDivElement>) => void;
     onClose: () => void;
+    onDeleteCustomTheme: (key: string) => void;
     onRequestResetAllSettings: () => void;
     onRequestResetCurrentPanel: () => void;
     onSetDetailRowReference: (controlId: SettingsControlId, element: HTMLDivElement | null) => void;
     onSetShowChangedOnlySettings: (nextValue: boolean) => void;
+    onUpdateCustomTheme: (key: string, updates: Partial<Omit<CustomThemeEntry, 'key'>>) => void;
     searchQuery: string;
     selectedPanelId: string;
     setAutosaveEnabled: (enabled: boolean) => void;
@@ -76,14 +82,17 @@ export function SettingsModalMainPane({
     conflictActionSequenceLength,
     conflictCount,
     conflictEntries,
+    customThemes,
     detailContainerReference,
     filteredKeymapRows,
     focusedControlId,
     focusedRowAction,
     isMuted,
     matchedControlIds,
+    onAddCustomTheme,
     onBeginDrag,
     onClose,
+    onDeleteCustomTheme,
     onFixAllConflicts,
     onFocusActionRow,
     onJumpToConflict,
@@ -96,6 +105,7 @@ export function SettingsModalMainPane({
     onSetRowReference,
     onSetShowChangedOnlySettings,
     onSetShowCustomizedOnly,
+    onUpdateCustomTheme,
     onUpdateShortcut,
     rowsContainerReference,
     searchQuery,
@@ -219,11 +229,15 @@ export function SettingsModalMainPane({
                     autosaveEnabled={autosaveEnabled}
                     autosaveIntervalMs={autosaveIntervalMs}
                     changedControlIds={changedControlIds}
+                    customThemes={customThemes}
                     detailContainerReference={detailContainerReference}
                     focusedControlId={focusedControlId}
                     isMuted={isMuted}
                     matchedControlIds={matchedControlIds}
+                    onAddCustomTheme={onAddCustomTheme}
+                    onDeleteCustomTheme={onDeleteCustomTheme}
                     onSetDetailRowReference={onSetDetailRowReference}
+                    onUpdateCustomTheme={onUpdateCustomTheme}
                     panelId={selectedPanelId}
                     searchQuery={searchQuery}
                     setAutosaveEnabled={setAutosaveEnabled}

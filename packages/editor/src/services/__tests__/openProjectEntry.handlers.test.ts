@@ -10,9 +10,11 @@ import {
 import {
     handleJsonRoute,
     openAssetEntry,
+    openAudiosheetEntry,
     openJsonEntry,
     openMacrosTab,
     openScriptTab,
+    openSpritesheetEntry,
     openTextEntry,
     openUnknownEntry,
 } from '../openProjectEntry';
@@ -227,6 +229,40 @@ describe('openProjectEntry nonJsonHandlers', () => {
                 path: '/project/notes.txt',
                 textContent: 'notes',
                 title: 'notes.txt',
+            },
+        });
+    });
+
+    it('opens a spritesheet tab with descriptor content', async () => {
+        openProjectEntryMocks.fsReadTextFile.mockResolvedValueOnce('{"format":"atlas","source":"hero.png","frames":{}}');
+
+        await openSpritesheetEntry('/project/assets/sprites/hero.sheet.json');
+
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenCalledWith({
+            action: 'openTab',
+            tab: {
+                id: 'spritesheet:/project/assets/sprites/hero.sheet.json',
+                kind: 'spritesheet',
+                path: '/project/assets/sprites/hero.sheet.json',
+                textContent: '{"format":"atlas","source":"hero.png","frames":{}}',
+                title: 'hero.sheet.json',
+            },
+        });
+    });
+
+    it('opens an audiosheet tab with descriptor content', async () => {
+        openProjectEntryMocks.fsReadTextFile.mockResolvedValueOnce('{"source":"blip.wav","cues":{}}');
+
+        await openAudiosheetEntry('/project/assets/sfx/blip.sheet.json');
+
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenCalledWith({
+            action: 'openTab',
+            tab: {
+                id: 'audiosheet:/project/assets/sfx/blip.sheet.json',
+                kind: 'audiosheet',
+                path: '/project/assets/sfx/blip.sheet.json',
+                textContent: '{"source":"blip.wav","cues":{}}',
+                title: 'blip.sheet.json',
             },
         });
     });

@@ -10,6 +10,8 @@ const ScriptJsonEditor = lazy(() => import('./workbench/ScriptJsonEditor').then(
 const ManifestEditor = lazy(() => import('./workbench/ManifestEditor').then((m) => ({ default: m.ManifestEditor })));
 const ItemsEditor = lazy(() => import('./workbench/ItemsEditor').then((m) => ({ default: m.ItemsEditor })));
 const CharactersEditor = lazy(() => import('./workbench/CharactersEditor').then((m) => ({ default: m.CharactersEditor })));
+const SpritesheetEditorPanel = lazy(() => import('../editors/SpritesheetEditorPanel').then((m) => ({ default: m.SpritesheetEditorPanel })));
+const AudiosheetEditorPanel = lazy(() => import('../editors/AudiosheetEditorPanel').then((m) => ({ default: m.AudiosheetEditorPanel })));
 
 export function EditorSurface() {
     const uiScale = useEditorStore((s) => s.uiScale);
@@ -146,6 +148,22 @@ export function EditorSurface() {
                 {renderModeToggle('characters')}
                 {lastCharactersView === 'json' ? jsonEditor : charactersEditor}
             </div>
+        );
+    }
+
+    if (activeTab.kind === 'spritesheet') {
+        return (
+            <Suspense fallback={<div style={{ opacity: 0.7, padding: 12 }}>Loading Spritesheet editor...</div>}>
+                <SpritesheetEditorPanel tab={activeTab} />
+            </Suspense>
+        );
+    }
+
+    if (activeTab.kind === 'audiosheet') {
+        return (
+            <Suspense fallback={<div style={{ opacity: 0.7, padding: 12 }}>Loading Audiosheet editor...</div>}>
+                <AudiosheetEditorPanel tab={activeTab} />
+            </Suspense>
         );
     }
 

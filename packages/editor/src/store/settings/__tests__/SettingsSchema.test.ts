@@ -21,6 +21,7 @@ describe('SettingsSchema', () => {
         expect(mergeSettings({ autosaveEnabled: 'yes' })).toEqual(defaultSettings);
         expect(mergeSettings({ autosaveIntervalMs: 0 })).toEqual(defaultSettings);
         expect(mergeSettings({ autosaveIntervalMs: Number.NaN })).toEqual(defaultSettings);
+        expect(mergeSettings({ customThemes: 'invalid' })).toEqual(defaultSettings);
         expect(mergeSettings({ isMuted: 'yes' })).toEqual(defaultSettings);
         expect(mergeSettings({ keymapOverrides: 'invalid' })).toEqual(defaultSettings);
         expect(mergeSettings({ recentProjects: 'invalid' })).toEqual(defaultSettings);
@@ -55,6 +56,42 @@ describe('SettingsSchema', () => {
 
     it('accepts valid isMuted values', () => {
         expect(mergeSettings({ isMuted: true })).toEqual({ ...defaultSettings, isMuted: true });
+    });
+
+    it('accepts and sanitizes customThemes entries', () => {
+        expect(mergeSettings({
+            customThemes: [
+                {
+                    baseThemeKey: ' classic ',
+                    key: ' custom-2 ',
+                    label: ' Midnight ',
+                    vars: {
+                        '--editor-bg-app': ' #050505 ',
+                        '--editor-text-primary': '#f0f0f0',
+                        '--invalid-empty': '   ',
+                    },
+                },
+                {
+                    key: 'custom-2',
+                    label: 'Midnight Latest',
+                    vars: { '--editor-bg-app': '#111111' },
+                },
+                {
+                    key: 'bad',
+                    label: '',
+                    vars: { '--editor-bg-app': '#000000' },
+                },
+            ],
+        })).toEqual({
+            ...defaultSettings,
+            customThemes: [
+                {
+                    key: 'custom-2',
+                    label: 'Midnight Latest',
+                    vars: { '--editor-bg-app': '#111111' },
+                },
+            ],
+        });
     });
 
     it('accepts and sanitizes keymap overrides', () => {
@@ -145,6 +182,12 @@ describe('SettingsSchema', () => {
         expect(extractPersistedSettings({ recentProjects: [{ lastOpened: 1.9, name: 'A', path: '/a' }] }))
             .toEqual({ recentProjects: [{ lastOpened: 1, name: 'A', path: '/a' }] });
         expect(extractPersistedSettings({ recentProjects: 'invalid' })).toEqual({});
+        expect(extractPersistedSettings({
+            customThemes: [{ key: 'custom-1', label: 'Custom 1', vars: { '--editor-bg-app': '#000000' } }],
+        })).toEqual({
+            customThemes: [{ key: 'custom-1', label: 'Custom 1', vars: { '--editor-bg-app': '#000000' } }],
+        });
+        expect(extractPersistedSettings({ customThemes: 'invalid' })).toEqual({});
         expect(extractPersistedSettings({ themeKey: 'classicSoft' })).toEqual({ themeKey: 'classicSoft' });
         expect(extractPersistedSettings({ themeKey: '' })).toEqual({});
         expect(extractPersistedSettings({ uiScale: 1.5 })).toEqual({ uiScale: 1.5 });

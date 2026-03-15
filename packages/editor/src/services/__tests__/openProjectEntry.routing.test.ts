@@ -1,6 +1,6 @@
 import type { GameManifest } from 'core';
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
     getOpenProjectEntryMocks,
@@ -17,6 +17,7 @@ import {
     resolveJsonKindFromManifest,
     resolveJsonKindFromSchema,
     routeJsonEntry,
+    setMissingSpritesheetDescriptorHandler,
     toProjectRelativePath,
 } from '../openProjectEntry';
 
@@ -191,10 +192,158 @@ describe('openProjectEntry pathHelpers', () => {
 describe('openProjectEntry', () => {
     beforeEach(() => {
         resetOpenProjectEntryMocks();
+        setMissingSpritesheetDescriptorHandler(undefined);
     });
 
     it('opens image assets in an asset tab and updates selection', async () => {
+        openProjectEntryMocks.fsReadTextFile.mockRejectedValueOnce(new Error('missing descriptor'));
+
         await openProjectEntry('/project/assets/bg/courtroom.png', 'courtroom.png');
+
+        expect(openProjectEntryMocks.applyAssetSelection).toHaveBeenCalledWith('/assets/bg/courtroom.png');
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenCalledWith({
+            action: 'openTab',
+            tab: {
+                assetPath: '/assets/bg/courtroom.png',
+                id: 'asset:/project/assets/bg/courtroom.png',
+                kind: 'asset',
+                path: '/project/assets/bg/courtroom.png',
+                title: 'courtroom.png',
+            },
+        });
+    });
+
+    it('opens .sheet.json files as spritesheet tabs when descriptor payload is spritesheet-shaped', async () => {
+        const descriptor = '{"format":"atlas","source":"hero.png","frames":{}}';
+        openProjectEntryMocks.fsReadTextFile
+            .mockResolvedValueOnce(descriptor)
+            .mockResolvedValueOnce(descriptor);
+
+        await openProjectEntry('/project/assets/sprites/hero.sheet.json', 'hero.sheet.json');
+
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenCalledWith({
+            action: 'openTab',
+            tab: {
+                id: 'spritesheet:/project/assets/sprites/hero.sheet.json',
+                kind: 'spritesheet',
+                path: '/project/assets/sprites/hero.sheet.json',
+                textContent: descriptor,
+                title: 'hero.sheet.json',
+            },
+        });
+    });
+
+    it('opens .sheet.json files as audiosheet tabs when descriptor payload is audiosheet-shaped', async () => {
+        const descriptor = '{"source":"blip.wav","cues":{}}';
+        openProjectEntryMocks.fsReadTextFile
+            .mockResolvedValueOnce(descriptor)
+            .mockResolvedValueOnce(descriptor);
+
+        await openProjectEntry('/project/assets/sfx/blip.sheet.json', 'blip.sheet.json');
+
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenCalledWith({
+            action: 'openTab',
+            tab: {
+                id: 'audiosheet:/project/assets/sfx/blip.sheet.json',
+                kind: 'audiosheet',
+                path: '/project/assets/sfx/blip.sheet.json',
+                textContent: descriptor,
+                title: 'blip.sheet.json',
+            },
+        });
+    });
+
+    it('opens image entries in spritesheet editor when a companion descriptor exists', async () => {
+        const descriptor = '{"format":"atlas","source":"hero.png","frames":{}}';
+        openProjectEntryMocks.fsReadTextFile
+            .mockResolvedValueOnce(descriptor)
+            .mockResolvedValueOnce(descriptor);
+
+        await openProjectEntry('/project/assets/sprites/hero.png', 'hero.png');
+
+        expect(openProjectEntryMocks.applyAssetSelection).not.toHaveBeenCalled();
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenCalledWith({
+            action: 'openTab',
+            tab: {
+                id: 'spritesheet:/project/assets/sprites/hero.sheet.json',
+                kind: 'spritesheet',
+                path: '/project/assets/sprites/hero.sheet.json',
+                textContent: descriptor,
+                title: 'hero.sheet.json',
+            },
+        });
+    });
+
+    it('opens audio entries in audiosheet editor when a companion descriptor exists', async () => {
+        const descriptor = '{"source":"blip.wav","cues":{}}';
+        openProjectEntryMocks.fsReadTextFile
+            .mockResolvedValueOnce(descriptor)
+            .mockResolvedValueOnce(descriptor);
+
+        await openProjectEntry('/project/assets/sfx/blip.wav', 'blip.wav');
+
+        expect(openProjectEntryMocks.applyAssetSelection).not.toHaveBeenCalled();
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenCalledWith({
+            action: 'openTab',
+            tab: {
+                id: 'audiosheet:/project/assets/sfx/blip.sheet.json',
+                kind: 'audiosheet',
+                path: '/project/assets/sfx/blip.sheet.json',
+                textContent: descriptor,
+                title: 'blip.sheet.json',
+            },
+        });
+    });
+
+    it('falls back to asset tab when no image companion descriptor exists', async () => {
+        openProjectEntryMocks.fsReadTextFile.mockRejectedValueOnce(new Error('missing descriptor'));
+
+        await openProjectEntry('/project/assets/bg/courtroom.png', 'courtroom.png');
+
+        expect(openProjectEntryMocks.applyAssetSelection).toHaveBeenCalledWith('/assets/bg/courtroom.png');
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenCalledWith({
+            action: 'openTab',
+            tab: {
+                assetPath: '/assets/bg/courtroom.png',
+                id: 'asset:/project/assets/bg/courtroom.png',
+                kind: 'asset',
+                path: '/project/assets/bg/courtroom.png',
+                title: 'courtroom.png',
+            },
+        });
+    });
+
+    it('does not invoke the missing-spritesheet handler for default image opens', async () => {
+        const onMissingDescriptor = vi.fn(() => true);
+        setMissingSpritesheetDescriptorHandler(onMissingDescriptor);
+        openProjectEntryMocks.fsReadTextFile.mockRejectedValueOnce(new Error('missing descriptor'));
+
+        await openProjectEntry('/project/assets/sprites/hero.png', 'hero.png');
+
+        expect(onMissingDescriptor).not.toHaveBeenCalled();
+        expect(openProjectEntryMocks.applyAssetSelection).toHaveBeenCalledWith('/assets/sprites/hero.png');
+    });
+
+    it('invokes the missing-spritesheet handler for explicit spritesheet-open requests', async () => {
+        const onMissingDescriptor = vi.fn(() => true);
+        setMissingSpritesheetDescriptorHandler(onMissingDescriptor);
+        openProjectEntryMocks.fsReadTextFile.mockRejectedValueOnce(new Error('missing descriptor'));
+
+        await openProjectEntry('/project/assets/sprites/hero.png', 'hero.png', { openInSpritesheetEditor: true });
+
+        expect(onMissingDescriptor).toHaveBeenCalledWith({
+            entryName: 'hero.png',
+            imagePath: '/project/assets/sprites/hero.png',
+        });
+        expect(openProjectEntryMocks.applyAssetSelection).not.toHaveBeenCalled();
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).not.toHaveBeenCalled();
+    });
+
+    it('opens asset tabs when missing-spritesheet handler declines explicit spritesheet-open requests', async () => {
+        setMissingSpritesheetDescriptorHandler(() => false);
+        openProjectEntryMocks.fsReadTextFile.mockRejectedValueOnce(new Error('missing descriptor'));
+
+        await openProjectEntry('/project/assets/bg/courtroom.png', 'courtroom.png', { openInSpritesheetEditor: true });
 
         expect(openProjectEntryMocks.applyAssetSelection).toHaveBeenCalledWith('/assets/bg/courtroom.png');
         expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenCalledWith({

@@ -16,6 +16,7 @@ export function Toolbar() {
     const setIsMuted = useSettingsStore((state) => state.setIsMuted);
     const setThemeKey = useSettingsStore((state) => state.setThemeKey);
     const setUiScale = useSettingsStore((state) => state.setUiScale);
+    const customThemes = useSettingsStore((state) => state.customThemes);
     const themeKey = useSettingsStore((state) => state.themeKey);
     const uiScale = useSettingsStore((state) => state.uiScale);
     const {
@@ -109,7 +110,7 @@ export function Toolbar() {
             />
 
             <div style={{ alignItems: 'center', display: 'flex', marginLeft: '4px' }}>
-                <ThemeMenu onSelect={setThemeKey} selectedKey={themeKey} uiScale={uiScale} />
+                <ThemeMenu customThemes={customThemes} onSelect={setThemeKey} selectedKey={themeKey} uiScale={uiScale} />
             </div>
 
             <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto' }}>

@@ -1,4 +1,5 @@
 export * from './Animation';
+export * from './AudiosheetDescriptor';
 export * from './Character';
 export * from './Commands';
 export * from './Display';
@@ -8,4 +9,5 @@ export * from './MenuPanel';
 export * from './RuntimeEntry';
 export * from './Serializable';
 export * from './Spritesheet';
+export * from './SpritesheetDescriptor';
 export * from './SystemState';
