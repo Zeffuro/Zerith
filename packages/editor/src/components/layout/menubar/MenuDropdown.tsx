@@ -78,7 +78,8 @@ export function MenuDropdown({
                         if (!bounds) return;
                         setOpenSubmenu({
                             index,
-                            x: bounds.right + (4 * uiScale),
+                            // Keep a slight overlap so slow pointer movement does not fall into a dead zone.
+                            x: bounds.right - (2 * uiScale),
                             y: bounds.top,
                         });
                     };

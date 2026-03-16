@@ -1,19 +1,31 @@
 import { convertFileSrc } from '@tauri-apps/api/core';
-import { generateGridFrames, type SpritesheetDescriptor } from 'core';
+import { generateGridFrames, parseSpritesheetDescriptor, type SpritesheetDescriptor } from 'core';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { WorkbenchTab } from '../../store/workbench/types';
 
-import { parseSpritesheetDescriptor } from '../../../../core/src/schemas/descriptorSchemas';
 import { fsDirname, fsJoin, fsWriteTextFile } from '../../services/fs';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../theme/editorTheme';
+import { ConfirmDialog } from '../ConfirmDialog';
 import { SpritesheetAnimationEditor } from './SpritesheetAnimationEditor';
 import { SpritesheetCanvas } from './SpritesheetCanvas';
+import {
+    addSliceLine,
+    applyManualFrame,
+    applySliceLineFrames,
+    buildFramesFromSliceLines,
+    type ManualFrameRect,
+    type ManualSliceAxis,
+    type ManualSliceLines,
+    mergeFrameUpdates,
+    moveSliceLine,
+} from './spritesheetEditorModel';
 import { SpritesheetFrameList } from './SpritesheetFrameList';
-import { mergeFrameUpdates } from './spritesheetEditorModel';
+
+type ManualTool = 'draw' | 'select' | 'slice';
 
 type SpritesheetEditorPanelProperties = {
     tab: WorkbenchTab;
@@ -35,6 +47,11 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
     const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
     const [showGrid, setShowGrid] = useState(true);
     const [showChromaPreview, setShowChromaPreview] = useState(false);
+    const [manualTool, setManualTool] = useState<ManualTool>('select');
+    const [sliceAxis, setSliceAxis] = useState<ManualSliceAxis>('vertical');
+    const [sliceLines, setSliceLines] = useState<ManualSliceLines>({ horizontal: [], vertical: [] });
+    const [manualRectPreview, setManualRectPreview] = useState<ManualFrameRect>();
+    const [frameDialogMessage, setFrameDialogMessage] = useState<string>();
 
     const [imagePath, setImagePath] = useState<string>();
     const [imageUrl, setImageUrl] = useState<string>();
@@ -59,13 +76,20 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
         });
     }, [descriptor, image]);
     const frameNames = Object.keys(frames);
+    const slicePreviewFrames = useMemo(() => {
+        if (!image) return [];
+        return buildFramesFromSliceLines(sliceLines, {
+            height: image.naturalHeight,
+            width: image.naturalWidth,
+        });
+    }, [image, sliceLines]);
 
     useEffect(() => {
         const rawText = tab.textContent ?? '{}';
         latestSerializedReference.current = rawText;
         setSaveError(undefined);
 
-        let parsedJson: unknown = {};
+        let parsedJson: unknown;
         try {
             parsedJson = JSON.parse(rawText);
         } catch {
@@ -78,14 +102,14 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
         const parsedDescriptor = parseSpritesheetDescriptor(parsedJson);
         if (!parsedDescriptor.success) {
             setDescriptor(undefined);
-            setDescriptorRoot(typeof parsedJson === 'object' && parsedJson !== null ? parsedJson as Record<string, unknown> : {});
+            setDescriptorRoot(isObjectRecord(parsedJson) ? parsedJson : {});
             setDescriptorError(parsedDescriptor.error);
             return;
         }
 
         const nextDescriptor = parsedDescriptor.data;
         setDescriptor(nextDescriptor);
-        setDescriptorRoot(typeof parsedJson === 'object' && parsedJson !== null ? parsedJson as Record<string, unknown> : {});
+        setDescriptorRoot(isObjectRecord(parsedJson) ? parsedJson : {});
         setDescriptorError(undefined);
         setSelectedFrameName((current) => current ?? Object.keys(nextDescriptor.frames ?? {})[0]);
     }, [tab.id, tab.textContent]);
@@ -100,7 +124,7 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
         }
 
         let disposed = false;
-        (async () => {
+        void (async () => {
             try {
                 setImageError(undefined);
                 const resolvedPath = await resolveImagePath(tab.path, descriptor.source);
@@ -132,12 +156,12 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
             setImage(element);
             setIsImageLoading(false);
         });
-        element.onerror = () => {
+        element.addEventListener('error', () => {
             if (disposed) return;
             setImage(undefined);
             setIsImageLoading(false);
             setImageError('Failed to load source image.');
-        };
+        });
         element.src = imageUrl;
 
         return () => {
@@ -149,6 +173,12 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
         if (!selectedFrameName || frames[selectedFrameName]) return;
         setSelectedFrameName(frameNames[0]);
     }, [frameNames, frames, selectedFrameName]);
+
+    useEffect(() => {
+        setSliceLines({ horizontal: [], vertical: [] });
+        setManualRectPreview(undefined);
+        setManualTool('select');
+    }, [tab.id]);
 
     const applyDescriptorUpdate = (nextDescriptor: SpritesheetDescriptor) => {
         setDescriptor(nextDescriptor);
@@ -182,13 +212,13 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
 
         const name = nextName.trim();
         if (!name) {
-            globalThis.alert('Frame name is required.');
+            setFrameDialogMessage('Frame name is required.');
             return;
         }
 
         const existingFrames = descriptor.frames ?? {};
         if (existingFrames[name]) {
-            globalThis.alert(`Frame "${name}" already exists.`);
+            setFrameDialogMessage(`Frame "${name}" already exists.`);
             return;
         }
 
@@ -197,13 +227,13 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
 
         const values = rectInput.split(',').map((value) => Number(value.trim()));
         if (values.length !== 4 || values.some((value) => Number.isNaN(value))) {
-            globalThis.alert('Rect must contain four numbers: x,y,w,h');
+            setFrameDialogMessage('Rect must contain four numbers: x,y,w,h');
             return;
         }
 
         const [x, y, w, h] = values;
         if (x < 0 || y < 0 || w <= 0 || h <= 0) {
-            globalThis.alert('x/y must be non-negative and w/h must be positive.');
+            setFrameDialogMessage('x/y must be non-negative and w/h must be positive.');
             return;
         }
 
@@ -220,6 +250,33 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
         setSelectedFrameName(name);
     };
 
+    const handleCreateManualFrame = (rect?: ManualFrameRect) => {
+        if (!descriptor || !rect) return;
+
+        const result = applyManualFrame(descriptor, frames, rect);
+        applyDescriptorUpdate(result.descriptor);
+        setSelectedFrameName(result.frameName);
+        setManualRectPreview(undefined);
+    };
+
+    const handleApplySliceLines = () => {
+        if (!descriptor || !image) return;
+
+        const result = applySliceLineFrames(descriptor, frames, sliceLines, {
+            height: image.naturalHeight,
+            width: image.naturalWidth,
+        });
+
+        if (result.createdNames.length === 0) {
+            return;
+        }
+
+        applyDescriptorUpdate(result.descriptor);
+        setSelectedFrameName(result.createdNames[0]);
+        setSliceLines({ horizontal: [], vertical: [] });
+        setManualTool('select');
+    };
+
     const handleRemoveFrame = (name: string) => {
         if (!descriptor || descriptor.format !== 'atlas') return;
         const existingFrames = descriptor.frames ?? {};
@@ -234,6 +291,50 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
         <div style={{ display: 'grid', gap: 12, gridTemplateRows: 'auto 1fr', height: '100%', padding: 12 }}>
             <div style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
                 <strong style={{ color: t.text.primary, marginRight: 'auto' }}>Spritesheet Editor</strong>
+                <button
+                    onClick={() => setManualTool('select')}
+                    style={{ background: manualTool === 'select' ? t.bg.selected : undefined }}
+                >
+                    Select
+                </button>
+                <button
+                    onClick={() => setManualTool('draw')}
+                    style={{ background: manualTool === 'draw' ? t.bg.selected : undefined }}
+                >
+                    Draw Frame
+                </button>
+                <button
+                    onClick={() => setManualTool('slice')}
+                    style={{ background: manualTool === 'slice' ? t.bg.selected : undefined }}
+                >
+                    Slice Lines
+                </button>
+                {manualTool === 'slice' ? (
+                    <>
+                        <button
+                            onClick={() => setSliceAxis('vertical')}
+                            style={{ background: sliceAxis === 'vertical' ? t.bg.selected : undefined }}
+                        >
+                            Vertical
+                        </button>
+                        <button
+                            onClick={() => setSliceAxis('horizontal')}
+                            style={{ background: sliceAxis === 'horizontal' ? t.bg.selected : undefined }}
+                        >
+                            Horizontal
+                        </button>
+                        <button disabled={slicePreviewFrames.length === 0} onClick={handleApplySliceLines}>Apply Slices</button>
+                        <button
+                            onClick={() => {
+                                setSliceLines({ horizontal: [], vertical: [] });
+                                setManualRectPreview(undefined);
+                            }}
+                        >
+                            Clear Slices
+                        </button>
+                    </>
+                ) : undefined}
+                {manualTool === 'draw' ? <button disabled={!manualRectPreview} onClick={() => handleCreateManualFrame(manualRectPreview)}>Commit Drawn Frame</button> : undefined}
                 <button onClick={() => setZoomLevel((value) => Math.max(0.25, value - 0.25))}>-</button>
                 <span style={{ color: t.text.muted, width: 60 }}>{Math.round(zoomLevel * 100)}%</span>
                 <button onClick={() => setZoomLevel((value) => Math.min(8, value + 0.25))}>+</button>
@@ -254,7 +355,7 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
 
             <div style={{ display: 'grid', gap: 12, gridTemplateColumns: '240px minmax(0, 1fr) 300px', minHeight: 0 }}>
                 <section className="zerith-scrollbar" style={panelStyle}>
-                    {image ? null : <div style={{ color: t.text.muted }}>Load source image to preview frames.</div>}
+                    {image ? undefined : <div style={{ color: t.text.muted }}>Load source image to preview frames.</div>}
                     {image ? (
                         <SpritesheetFrameList
                             frames={frames}
@@ -265,29 +366,49 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
                             selectedFrame={selectedFrameName}
                             uiScale={uiScale}
                         />
-                    ) : null}
+                    ) : undefined}
                 </section>
 
                 <section className="zerith-scrollbar" style={panelStyle}>
-                    {isImageLoading ? <div style={{ color: t.text.muted }}>Loading source image...</div> : null}
-                    {!isImageLoading && imageError ? <div style={{ color: t.text.muted }}>{imageError}</div> : null}
-                    {!isImageLoading && !imageError && imagePath ? <div style={{ color: t.text.muted }}>{imagePath}</div> : null}
+                    {isImageLoading ? <div style={{ color: t.text.muted }}>Loading source image...</div> : undefined}
+                    {!isImageLoading && imageError ? <div style={{ color: t.text.muted }}>{imageError}</div> : undefined}
+                    {!isImageLoading && !imageError && imagePath ? <div style={{ color: t.text.muted }}>{imagePath}</div> : undefined}
                     {!isImageLoading && !imageError && image && imagePath ? (
                         <SpritesheetCanvas
                             chromaKey={showChromaPreview ? descriptor?.chromaKey : undefined}
                             chromaTolerance={descriptor?.chromaTolerance}
                             frames={frames}
                             image={image}
+                            manualRectPreview={manualRectPreview}
+                            manualTool={manualTool}
                             onSelectFrame={setSelectedFrameName}
+                            onSetManualRectPreview={setManualRectPreview}
+                            onSliceLineAdd={(axis, value) => {
+                                if (!image) return;
+                                setSliceLines((current) => addSliceLine(current, axis, value, {
+                                    height: image.naturalHeight,
+                                    width: image.naturalWidth,
+                                }));
+                            }}
+                            onSliceLineMove={(axis, index, value) => {
+                                if (!image) return;
+                                setSliceLines((current) => moveSliceLine(current, axis, index, value, {
+                                    height: image.naturalHeight,
+                                    width: image.naturalWidth,
+                                }));
+                            }}
                             panOffset={panOffset}
                             selectedFrame={selectedFrameName}
                             setPanOffset={setPanOffset}
                             setZoom={setZoomLevel}
                             showGrid={showGrid && descriptor?.format === 'grid'}
+                            sliceAxis={sliceAxis}
+                            sliceLines={sliceLines}
+                            slicePreviewFrames={slicePreviewFrames}
                             uiScale={uiScale}
                             zoom={zoomLevel}
                         />
-                    ) : null}
+                    ) : undefined}
                 </section>
 
                 <section className="zerith-scrollbar" style={panelStyle}>
@@ -305,14 +426,29 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
 
             {(descriptorError || saveError) ? (
                 <div style={{ color: t.text.muted }}>
-                    {descriptorError ? `Descriptor error: ${descriptorError}` : null}
-                    {descriptorError && saveError ? ' | ' : null}
-                    {saveError ? `Save error: ${saveError}` : null}
+                    {descriptorError ? `Descriptor error: ${descriptorError}` : undefined}
+                    {descriptorError && saveError ? ' | ' : undefined}
+                    {saveError ? `Save error: ${saveError}` : undefined}
                 </div>
-            ) : null}
+            ) : undefined}
+
+            <ConfirmDialog
+                cancelText="Close"
+                confirmText="OK"
+                message={frameDialogMessage ?? ''}
+                onCancel={() => setFrameDialogMessage(undefined)}
+                onConfirm={() => setFrameDialogMessage(undefined)}
+                open={Boolean(frameDialogMessage)}
+                title="Frame Validation"
+            />
         </div>
     );
 }
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value) && typeof value === 'object';
+}
+
 async function resolveImagePath(descriptorPath: string, source: string): Promise<string> {
     if (source.startsWith('http://') || source.startsWith('https://') || source.startsWith('data:') || source.startsWith('file:')) {
         return source;

@@ -232,6 +232,17 @@ describe('createUiPrefsSlice', () => {
         expect(set).toHaveBeenNthCalledWith(2, { isSettingsModalOpen: false });
     });
 
+    it('opens and closes export modal through direct actions', () => {
+        const set = vi.fn();
+        const slice = createUiPrefsSlice(set as never);
+
+        slice.openExportGameModal();
+        slice.closeExportGameModal();
+
+        expect(set).toHaveBeenNthCalledWith(1, { isExportGameModalOpen: true });
+        expect(set).toHaveBeenNthCalledWith(2, { isExportGameModalOpen: false });
+    });
+
     it('toggles settings modal visibility with a state updater', () => {
         const set = vi.fn(
             (

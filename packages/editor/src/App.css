@@ -63,7 +63,7 @@ pre, code, input, textarea {
 /* shared dark scrollbar for popups/lists */
 .zerith-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #4b5563 var(--editor-bg-popup);
+  scrollbar-color: var(--editor-border-button) var(--editor-bg-popup);
 }
 
 .zerith-scrollbar::-webkit-scrollbar {
@@ -77,23 +77,23 @@ pre, code, input, textarea {
 }
 
 .zerith-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #4b5563, #374151);
+  background: var(--editor-border-button);
   border: 2px solid var(--editor-bg-popup);
   border-radius: 8px;
 }
 
 .zerith-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #6b7280, #4b5563);
+  background: var(--editor-text-muted);
 }
 
 /* Monaco scrollbar parity with .zerith-scrollbar */
 .monaco-editor .scrollbar .slider {
-  background: linear-gradient(180deg, #4b5563, #374151) !important;
+  background: var(--editor-border-button) !important;
   border-radius: 8px !important;
 }
 
 .monaco-editor .scrollbar .slider:hover {
-  background: linear-gradient(180deg, #6b7280, #4b5563) !important;
+  background: var(--editor-text-muted) !important;
 }
 
 .monaco-editor .scrollbar.vertical,

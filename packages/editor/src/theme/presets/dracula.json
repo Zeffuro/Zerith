@@ -1,0 +1,37 @@
+{
+  "key": "dracula",
+  "label": "Dracula",
+  "vars": {
+    "--editor-bg-app": "#282a36",
+    "--editor-bg-panel": "#21222c",
+    "--editor-bg-panel-alt": "#191a21",
+    "--editor-bg-input": "#282a36",
+    "--editor-bg-popup": "#21222c",
+    "--editor-bg-hover": "#44475a",
+    "--editor-bg-selected": "#44475a",
+    "--editor-bg-danger": "#ff555544",
+    "--editor-bg-preview": "#000000",
+
+    "--editor-border-subtle": "#44475a",
+    "--editor-border-normal": "#6272a4",
+    "--editor-border-input": "#6272a4",
+    "--editor-border-button": "#6272a4",
+    "--editor-border-accent": "#bd93f9",
+    "--editor-border-focus": "#bd93f9",
+    "--editor-border-primary-btn": "#8be9fd",
+
+    "--editor-text-primary": "#f8f8f2",
+    "--editor-text-normal": "#e6e6e6",
+    "--editor-text-muted": "#6272a4",
+    "--editor-text-faint": "#44475a",
+
+    "--editor-accent-primary": "#bd93f9",
+    "--editor-accent-red": "#ff5555",
+    "--editor-accent-green": "#50fa7b",
+    "--editor-accent-yellow": "#f1fa8c",
+    "--editor-accent-blue": "#8be9fd",
+    "--editor-accent-purple": "#ff79c6",
+    "--editor-accent-teal": "#8be9fd",
+    "--editor-accent-orange": "#ffb86c"
+  }
+}

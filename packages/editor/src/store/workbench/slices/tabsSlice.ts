@@ -48,9 +48,15 @@ export function createWorkbenchTabsSlice(set: WorkbenchSet, get: WorkbenchGet): 
             set((state) => {
                 const existing = state.tabs.find((t: WorkbenchTab) => t.id === tab.id);
                 if (existing) {
+                    const merged = { ...existing, ...tab };
+                    if (existing.dirty && existing.textContent !== undefined) {
+                        merged.dirty = true;
+                        merged.textContent = existing.textContent;
+                    }
+
                     return {
                         activeTabId: existing.id,
-                        tabs: state.tabs.map((candidate) => (candidate.id === tab.id ? { ...candidate, ...tab } : candidate)),
+                        tabs: state.tabs.map((candidate) => (candidate.id === tab.id ? merged : candidate)),
                     };
                 }
                 return { activeTabId: tab.id, tabs: [...state.tabs, tab] };

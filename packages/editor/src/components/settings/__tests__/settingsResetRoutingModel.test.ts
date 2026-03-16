@@ -8,6 +8,9 @@ function createResetActions(order: string[]): SettingsResetActions {
         resetAudio: vi.fn(() => {
             order.push('audio');
         }),
+        resetAudiosheetShortcutTargetMode: vi.fn(() => {
+            order.push('audiosheetShortcutTargetMode');
+        }),
         resetAutosaveEnabled: vi.fn(() => {
             order.push('autosaveEnabled');
         }),
@@ -70,6 +73,7 @@ describe('settingsResetRoutingModel', () => {
             'autosaveEnabled',
             'autosaveIntervalMs',
             'audio',
+            'audiosheetShortcutTargetMode',
             'keymap',
         ]);
     });

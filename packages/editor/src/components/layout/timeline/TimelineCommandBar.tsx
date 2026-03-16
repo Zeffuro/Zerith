@@ -1,5 +1,6 @@
 import type { NonMacroEditorCommandType } from '../../../plugins/types';
 
+import { editorTheme as t } from '../../../theme/editorTheme';
 import { AddCommandMenu } from '../menus/AddCommandMenu';
 
 type Item = { icon: React.ReactNode; label: string; type: NonMacroEditorCommandType; };
@@ -50,25 +51,37 @@ export function TimelineCommandBar({
 }
 
 
-function QuickButton({ bg = '#333', border = '#444', icon, onClick, scale, title }: QuickButtonProperties) {
+function QuickButton({
+                         bg,
+                         border,
+                         icon,
+                         onClick,
+                         scale,
+                         title
+                     }: QuickButtonProperties) {
     return (
         <button
             onClick={onClick}
             style={{
                 alignItems: 'center',
-                background: bg,
-                border: `1px solid ${border}`,
-                borderRadius: '3px',
+                // Use theme fallback if no specific color is passed in
+                background: bg ?? t.bg.panelAlt,
+                border: `1px solid ${border ?? t.border.normal}`,
+                borderRadius: t.radius.sm,
                 boxSizing: 'border-box',
-                color: '#ccc',
+                // Use the theme's text color instead of hardcoded #ccc
+                color: t.text.primary,
                 cursor: 'pointer',
                 display: 'inline-flex',
                 height: `${26 * scale}px`,
                 justifyContent: 'center',
                 padding: 0,
                 width: `${28 * scale}px`,
+                transition: 'filter 0.1s', // Optional: adds a nice hover feel
             }}
             title={title}
+            onMouseEnter={(e) => (e.currentTarget.style.filter = 'brightness(1.1)')}
+            onMouseLeave={(e) => (e.currentTarget.style.filter = 'none')}
         >
             {icon}
         </button>

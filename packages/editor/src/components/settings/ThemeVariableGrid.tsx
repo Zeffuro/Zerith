@@ -14,10 +14,26 @@ type ThemeVariableGridProperties = {
 
 export function ThemeVariableGrid({ categoryNames, onChange, uiScale, vars }: ThemeVariableGridProperties) {
     return (
-        <>
+        <div
+            style={{
+                display: 'grid',
+                gap: `${8 * uiScale}px`,
+                gridTemplateColumns: `repeat(auto-fit, minmax(${220 * uiScale}px, 1fr))`,
+            }}
+        >
             {categoryNames.map((category) => (
-                <div key={category} style={{ display: 'grid', gap: `${6 * uiScale}px` }}>
-                    <div style={{ color: t.text.normal, fontSize: `${12 * uiScale}px`, fontWeight: 600 }}>{category}</div>
+                <section
+                    key={category}
+                    style={{
+                        background: t.bg.panelAlt,
+                        border: `1px solid ${t.border.subtle}`,
+                        borderRadius: t.radius.md,
+                        display: 'grid',
+                        gap: `${8 * uiScale}px`,
+                        padding: `${8 * uiScale}px`,
+                    }}
+                >
+                    <div style={{ color: t.text.normal, fontSize: `${12 * uiScale}px`, fontWeight: 700 }}>{category}</div>
                     <div style={{ display: 'grid', gap: `${6 * uiScale}px` }}>
                         {getVariablesByCategory(category).map((variable) => (
                             <ThemeVariableEditorField
@@ -29,18 +45,20 @@ export function ThemeVariableGrid({ categoryNames, onChange, uiScale, vars }: Th
                             />
                         ))}
                     </div>
-                </div>
+                </section>
             ))}
-        </>
+        </div>
     );
 }
 
 function fieldLabelStyle(uiScale: number): CSSProperties {
     return {
+        alignItems: 'center',
         color: t.text.normal,
         display: 'grid',
         fontSize: `${12 * uiScale}px`,
-        gap: `${4 * uiScale}px`,
+        gap: `${8 * uiScale}px`,
+        gridTemplateColumns: `minmax(${120 * uiScale}px, 1fr) minmax(0, 1fr)`,
     };
 }
 
@@ -84,7 +102,7 @@ function ThemeVariableEditorField({
 
         return (
             <label style={fieldLabelStyle(uiScale)}>
-                {variable.label}
+                <span style={{ color: t.text.normal }}>{variable.label}</span>
                 <div style={{ display: 'grid', gap: `${6 * uiScale}px`, gridTemplateColumns: `${36 * uiScale}px 1fr` }}>
                     <input
                         onChange={(event) => onChange(variable.cssVar, event.currentTarget.value)}
@@ -100,7 +118,7 @@ function ThemeVariableEditorField({
 
     return (
         <label style={fieldLabelStyle(uiScale)}>
-            {variable.label}
+            <span style={{ color: t.text.normal }}>{variable.label}</span>
             <input
                 onChange={(event) => onChange(variable.cssVar, event.currentTarget.value)}
                 placeholder={variable.type === 'size' ? 'e.g. 4px or 0.4rem' : undefined}

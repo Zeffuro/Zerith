@@ -143,6 +143,7 @@ const customThemesSchema = z.preprocess(
 ).optional();
 
 const persistedSettingsSchema = z.object({
+    audiosheetShortcutTargetMode: z.enum(['cursor', 'playhead']).optional(),
     autosaveEnabled: z.boolean().optional(),
     autosaveIntervalMs: z.number().finite().positive().transform(sanitizeAutosaveInterval).optional(),
     customThemes: customThemesSchema,
@@ -165,6 +166,7 @@ export const SettingsSchema = persistedSettingsSchema;
 export type PersistedSettings = z.output<typeof SettingsSchema>;
 
 export type SettingsState = {
+    audiosheetShortcutTargetMode: 'cursor' | 'playhead';
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
     customThemes: CustomThemeEntry[];
@@ -177,6 +179,7 @@ export type SettingsState = {
 };
 
 export const defaultSettings: SettingsState = {
+    audiosheetShortcutTargetMode: 'cursor',
     autosaveEnabled: false,
     autosaveIntervalMs: 30 * 1000,
     customThemes: [],

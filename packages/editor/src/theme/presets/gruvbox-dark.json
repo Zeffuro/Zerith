@@ -1,0 +1,37 @@
+{
+  "key": "gruvboxDark",
+  "label": "Gruvbox Dark",
+  "vars": {
+    "--editor-bg-app": "#282828",
+    "--editor-bg-panel": "#1d2021",
+    "--editor-bg-panel-alt": "#32302f",
+    "--editor-bg-input": "#3c3836",
+    "--editor-bg-popup": "#282828",
+    "--editor-bg-hover": "#504945",
+    "--editor-bg-selected": "#665c54",
+    "--editor-bg-danger": "#cc241d",
+    "--editor-bg-preview": "#000000",
+
+    "--editor-border-subtle": "#3c3836",
+    "--editor-border-normal": "#504945",
+    "--editor-border-input": "#665c54",
+    "--editor-border-button": "#665c54",
+    "--editor-border-accent": "#fe8019",
+    "--editor-border-focus": "#fabd2f",
+    "--editor-border-primary-btn": "#d3869b",
+
+    "--editor-text-primary": "#ebdbb2",
+    "--editor-text-normal": "#d5c4a1",
+    "--editor-text-muted": "#a89984",
+    "--editor-text-faint": "#928374",
+
+    "--editor-accent-primary": "#fe8019",
+    "--editor-accent-red": "#fb4934",
+    "--editor-accent-green": "#b8bb26",
+    "--editor-accent-yellow": "#fabd2f",
+    "--editor-accent-blue": "#83a598",
+    "--editor-accent-purple": "#d3869b",
+    "--editor-accent-teal": "#8ec07c",
+    "--editor-accent-orange": "#fe8019"
+  }
+}

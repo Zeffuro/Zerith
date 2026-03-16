@@ -27,7 +27,16 @@ describe('globalShortcutBindings', () => {
     it('recognizes valid global shortcut command ids', () => {
         expect(isGlobalShortcutCommand('save')).toBe(true);
         expect(isGlobalShortcutCommand('openSettingsModal')).toBe(true);
+        expect(isGlobalShortcutCommand('audiosheetTogglePlayPause')).toBe(true);
+        expect(isGlobalShortcutCommand('audiosheetSetLeftBoundary')).toBe(true);
+        expect(isGlobalShortcutCommand('audiosheetSetRightBoundary')).toBe(true);
         expect(isGlobalShortcutCommand('not-real')).toBe(false);
+    });
+
+    it('includes default audiosheet key bindings', () => {
+        expect(globalShortcutBindings.find((binding) => binding.action === 'audiosheetTogglePlayPause')?.keys[0]).toBe('space');
+        expect(globalShortcutBindings.find((binding) => binding.action === 'audiosheetSetLeftBoundary')?.keys[0]).toBe('q');
+        expect(globalShortcutBindings.find((binding) => binding.action === 'audiosheetSetRightBoundary')?.keys[0]).toBe('e');
     });
 });
 

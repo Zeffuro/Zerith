@@ -1,0 +1,37 @@
+{
+  "key": "monokai",
+  "label": "Monokai",
+  "vars": {
+    "--editor-bg-app": "#272822",
+    "--editor-bg-panel": "#1e1f1c",
+    "--editor-bg-panel-alt": "#171814",
+    "--editor-bg-input": "#272822",
+    "--editor-bg-popup": "#1e1f1c",
+    "--editor-bg-hover": "#3e3d32",
+    "--editor-bg-selected": "#49483e",
+    "--editor-bg-danger": "#f92672",
+    "--editor-bg-preview": "#000000",
+
+    "--editor-border-subtle": "#3e3d32",
+    "--editor-border-normal": "#49483e",
+    "--editor-border-input": "#75715e",
+    "--editor-border-button": "#75715e",
+    "--editor-border-accent": "#a6e22e",
+    "--editor-border-focus": "#a6e22e",
+    "--editor-border-primary-btn": "#fd971f",
+
+    "--editor-text-primary": "#f8f8f2",
+    "--editor-text-normal": "#e6db74",
+    "--editor-text-muted": "#75715e",
+    "--editor-text-faint": "#49483e",
+
+    "--editor-accent-primary": "#a6e22e",
+    "--editor-accent-red": "#f92672",
+    "--editor-accent-green": "#a6e22e",
+    "--editor-accent-yellow": "#e6db74",
+    "--editor-accent-blue": "#66d9ef",
+    "--editor-accent-purple": "#ae81ff",
+    "--editor-accent-teal": "#66d9ef",
+    "--editor-accent-orange": "#fd971f"
+  }
+}

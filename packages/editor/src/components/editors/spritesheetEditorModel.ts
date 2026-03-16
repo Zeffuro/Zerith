@@ -1,4 +1,13 @@
-import { type SpriteFrame } from 'core';
+import { type SpriteFrame, type SpritesheetDescriptor } from 'core';
+
+export type ManualFrameRect = Pick<SpriteFrame, 'h' | 'w' | 'x' | 'y'>;
+
+export type ManualSliceAxis = 'horizontal' | 'vertical';
+
+export type ManualSliceLines = {
+    horizontal: number[];
+    vertical: number[];
+};
 
 export type ThumbnailCanvasMetrics = {
     height: number;
@@ -6,6 +15,104 @@ export type ThumbnailCanvasMetrics = {
     pixelWidth: number;
     width: number;
 };
+
+type ImageBounds = { height: number; width: number };
+
+type Point = { x: number; y: number };
+
+export function addSliceLine(lines: ManualSliceLines, axis: ManualSliceAxis, value: number, bounds: ImageBounds): ManualSliceLines {
+    const key = axis === 'vertical' ? 'vertical' : 'horizontal';
+    const nextValues = [...lines[key], clampInnerAxis(value, axis === 'vertical' ? bounds.width : bounds.height)];
+    return {
+        ...lines,
+        [key]: sortUnique(nextValues),
+    };
+}
+
+export function applyManualFrame(
+    descriptor: SpritesheetDescriptor,
+    existingFrames: Record<string, SpriteFrame>,
+    rect: ManualFrameRect,
+): { descriptor: SpritesheetDescriptor; frameName: string; } {
+    const name = nextManualFrameName(existingFrames);
+    const nextFrames = mergeFrameUpdates(existingFrames, {
+        [name]: {
+            ...rect,
+            name,
+        },
+    });
+
+    return {
+        descriptor: {
+            ...descriptor,
+            format: 'atlas',
+            frames: nextFrames,
+        },
+        frameName: name,
+    };
+}
+
+export function applySliceLineFrames(
+    descriptor: SpritesheetDescriptor,
+    existingFrames: Record<string, SpriteFrame>,
+    lines: ManualSliceLines,
+    bounds: ImageBounds,
+): { createdNames: string[]; descriptor: SpritesheetDescriptor } {
+    const generated = buildFramesFromSliceLines(lines, bounds);
+    if (generated.length === 0) {
+        return { createdNames: [], descriptor };
+    }
+
+    const updates: Record<string, SpriteFrame> = {};
+    const working = { ...existingFrames };
+    const createdNames: string[] = [];
+    for (const frame of generated) {
+        const name = nextManualFrameName(working);
+        const spriteFrame = { ...frame, name };
+        updates[name] = spriteFrame;
+        working[name] = spriteFrame;
+        createdNames.push(name);
+    }
+
+    return {
+        createdNames,
+        descriptor: {
+            ...descriptor,
+            format: 'atlas',
+            frames: {
+                ...existingFrames,
+                ...updates,
+            },
+        },
+    };
+}
+
+export function buildFramesFromSliceLines(lines: ManualSliceLines, bounds: ImageBounds): ManualFrameRect[] {
+    const normalized = normalizeSliceLines(lines, bounds);
+    if (normalized.horizontal.length === 0 && normalized.vertical.length === 0) {
+        return [];
+    }
+    const width = Math.max(1, Math.floor(bounds.width));
+    const height = Math.max(1, Math.floor(bounds.height));
+    const xStops = [0, ...normalized.vertical, width];
+    const yStops = [0, ...normalized.horizontal, height];
+    const frames: ManualFrameRect[] = [];
+
+    for (let row = 0; row < yStops.length - 1; row += 1) {
+        for (let column = 0; column < xStops.length - 1; column += 1) {
+            const x = xStops[column];
+            const y = yStops[row];
+            const w = xStops[column + 1] - x;
+            const h = yStops[row + 1] - y;
+            if (w <= 0 || h <= 0) {
+                continue;
+            }
+            frames.push({ h, w, x, y });
+        }
+    }
+
+    return frames;
+}
 
 export function computeThumbnailCanvasMetrics(
     frame: Pick<SpriteFrame, 'h' | 'w'>,
@@ -65,6 +172,64 @@ export function mergeFrameUpdates(
     return next;
 }
 
+export function moveSliceLine(
+    lines: ManualSliceLines,
+    axis: ManualSliceAxis,
+    index: number,
+    value: number,
+    bounds: ImageBounds,
+): ManualSliceLines {
+    const key = axis === 'vertical' ? 'vertical' : 'horizontal';
+    const current = [...lines[key]];
+    if (index < 0 || index >= current.length) {
+        return lines;
+    }
+
+    current[index] = clampInnerAxis(value, axis === 'vertical' ? bounds.width : bounds.height);
+    return {
+        ...lines,
+        [key]: sortUnique(current),
+    };
+}
+
+export function nextManualFrameName(frames: Record<string, SpriteFrame>): string {
+    const used = new Set<number>();
+
+    for (const key of Object.keys(frames)) {
+        const matched = /^manual_frame_(\d+)$/.exec(key);
+        if (matched) {
+            used.add(Number(matched[1]));
+        }
+    }
+
+    let candidate = 0;
+    while (used.has(candidate)) {
+        candidate += 1;
+    }
+
+    return `manual_frame_${candidate}`;
+}
+
+export function normalizeManualDragFrame(start: Point, end: Point, bounds: ImageBounds): ManualFrameRect | undefined {
+    const width = Math.max(1, Math.floor(bounds.width));
+    const height = Math.max(1, Math.floor(bounds.height));
+    const left = clampAxis(Math.min(start.x, end.x), width);
+    const top = clampAxis(Math.min(start.y, end.y), height);
+    const right = clampAxis(Math.max(start.x, end.x), width);
+    const bottom = clampAxis(Math.max(start.y, end.y), height);
+
+    if (right <= left || bottom <= top) {
+        return undefined;
+    }
+
+    return {
+        h: bottom - top,
+        w: right - left,
+        x: left,
+        y: top,
+    };
+}
+
 export function reorderSequence(sequence: string[], sourceIndex: number, targetIndex: number): string[] {
     if (sourceIndex < 0 || sourceIndex >= sequence.length || targetIndex < 0 || targetIndex > sequence.length) {
         return sequence;
@@ -79,5 +244,29 @@ export function reorderSequence(sequence: string[], sourceIndex: number, targetI
     const insertionIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
     next.splice(insertionIndex, 0, moved);
     return next;
+}
+
+function clampAxis(value: number, size: number): number {
+    const clamped = Math.max(0, Math.min(size, value));
+    return Math.round(clamped);
+}
+
+function clampInnerAxis(value: number, size: number): number {
+    if (size <= 1) {
+        return 0;
+    }
+    const clamped = clampAxis(value, size);
+    return Math.max(1, Math.min(size - 1, clamped));
+}
+
+function normalizeSliceLines(lines: ManualSliceLines, bounds: ImageBounds): ManualSliceLines {
+    return {
+        horizontal: sortUnique(lines.horizontal.map((value) => clampInnerAxis(value, bounds.height))),
+        vertical: sortUnique(lines.vertical.map((value) => clampInnerAxis(value, bounds.width))),
+    };
+}
+
+function sortUnique(values: number[]): number[] {
+    return [...new Set(values)].toSorted((a, b) => a - b);
 }
 

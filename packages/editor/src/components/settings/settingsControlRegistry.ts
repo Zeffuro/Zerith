@@ -2,9 +2,17 @@ import type { CustomThemeEntry } from '../../store/settings/SettingsSchema';
 
 export type SettingsControlDefaults = SettingsControlSearchState;
 
-export type SettingsControlId = 'audio' | 'autosaveEnabled' | 'autosaveIntervalMs' | 'customThemes' | 'theme' | 'uiScale';
+export type SettingsControlId =
+    | 'audio'
+    | 'audiosheetShortcutTargetMode'
+    | 'autosaveEnabled'
+    | 'autosaveIntervalMs'
+    | 'customThemes'
+    | 'theme'
+    | 'uiScale';
 
 export type SettingsControlSearchState = {
+    audiosheetShortcutTargetMode: 'cursor' | 'playhead';
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
     customThemes: CustomThemeEntry[];
@@ -33,6 +41,12 @@ const settingsControlRegistry: Record<SettingsControlId, SettingsControlDefiniti
         badgePanelId: 'general-playback',
         changed: (state, defaults) => state.isMuted !== defaults.isMuted,
         keywords: (state) => `audio ${state.isMuted ? 'muted off false' : 'unmuted on true'} playback sound`,
+        panelIds: ['general', 'general-playback'],
+    },
+    audiosheetShortcutTargetMode: {
+        badgePanelId: 'general-playback',
+        changed: (state, defaults) => state.audiosheetShortcutTargetMode !== defaults.audiosheetShortcutTargetMode,
+        keywords: (state) => `audiosheet shortcut target ${state.audiosheetShortcutTargetMode} q e cue boundary playhead cursor`,
         panelIds: ['general', 'general-playback'],
     },
     autosaveEnabled: {

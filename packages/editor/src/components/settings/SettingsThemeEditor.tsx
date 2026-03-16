@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useMemo, useState } from 'react';
+import { type CSSProperties, useMemo, useState } from 'react';
 
 import type { CustomThemeEntry } from '../../store/settings/SettingsSchema';
 import type { ThemeFile, ThemeVariables } from '../../theme/themeTypes';
@@ -8,8 +8,9 @@ import { editorTheme as t } from '../../theme/editorTheme';
 import { getThemeRegistry } from '../../theme/themeRegistry';
 import {
     getVariableCategories,
-    themeVariableCatalog,
 } from '../../theme/themeVariableCatalog';
+import { ConfirmDialog } from '../ConfirmDialog';
+import { buildPreviewTheme, buildUniqueThemeKey, cloneThemeVariables } from './themeEditorDraftModel';
 import { ThemeVariableGrid } from './ThemeVariableGrid';
 
 type SettingsThemeEditorProperties = {
@@ -35,9 +36,11 @@ export function SettingsThemeEditor({
     const [createBaseThemeKey, setCreateBaseThemeKey] = useState('classic');
     const [createName, setCreateName] = useState('');
     const [editingThemeKey, setEditingThemeKey] = useState<string | undefined>();
+    const [pendingThemeDelete, setPendingThemeDelete] = useState<CustomThemeEntry | undefined>();
     const [draftLabel, setDraftLabel] = useState('');
     const [draftBaseThemeKey, setDraftBaseThemeKey] = useState('classic');
     const [draftVariables, setDraftVariables] = useState<ThemeVariables>({});
+    const [previewRestoreTheme, setPreviewRestoreTheme] = useState<ThemeFile | undefined>();
 
     const themes = useMemo(() => getThemeRegistry(customThemes), [customThemes]);
     const categoryNames = useMemo(() => getVariableCategories(), []);
@@ -50,16 +53,6 @@ export function SettingsThemeEditor({
         [customThemes, editingThemeKey],
     );
 
-    useEffect(() => {
-        if (!editingThemeKey) return;
-
-        applyTheme({ key: editingThemeKey, label: draftLabel || 'Preview', vars: draftVariables });
-
-        return () => {
-            if (activeTheme) applyTheme(activeTheme);
-        };
-    }, [activeTheme, draftLabel, draftVariables, editingThemeKey]);
-
     const startCreating = () => {
         setCreateName('');
         setCreateBaseThemeKey(themes.some((theme) => theme.key === activeThemeKey) ? activeThemeKey : 'classic');
@@ -67,10 +60,20 @@ export function SettingsThemeEditor({
     };
 
     const beginEditing = (theme: CustomThemeEntry) => {
+        if (activeTheme) {
+            setPreviewRestoreTheme({
+                key: activeTheme.key,
+                label: activeTheme.label,
+                vars: { ...activeTheme.vars },
+            });
+        }
+
         setEditingThemeKey(theme.key);
         setDraftLabel(theme.label);
         setDraftBaseThemeKey(theme.baseThemeKey ?? 'classic');
         setDraftVariables({ ...theme.vars });
+
+        applyTheme(buildPreviewTheme(theme.baseThemeKey, theme.vars, themes, theme.key, theme.label));
     };
 
     const submitCreate = () => {
@@ -111,19 +114,43 @@ export function SettingsThemeEditor({
     const revertDraft = () => {
         if (!editingTheme) return;
 
-        setDraftLabel(editingTheme.label);
-        setDraftBaseThemeKey(editingTheme.baseThemeKey ?? 'classic');
-        setDraftVariables({ ...editingTheme.vars });
+        const restoredLabel = editingTheme.label;
+        const restoredBaseThemeKey = editingTheme.baseThemeKey ?? 'classic';
+        const restoredVariables = { ...editingTheme.vars };
+
+        setDraftLabel(restoredLabel);
+        setDraftBaseThemeKey(restoredBaseThemeKey);
+        setDraftVariables(restoredVariables);
+        applyTheme(buildPreviewTheme(restoredBaseThemeKey, restoredVariables, themes, editingTheme.key, restoredLabel));
+    };
+
+    const cancelEditing = () => {
+        if (previewRestoreTheme) {
+            applyTheme(previewRestoreTheme);
+        } else if (activeTheme) {
+            applyTheme(activeTheme);
+        }
+
+        setEditingThemeKey(undefined);
+        setPreviewRestoreTheme(undefined);
     };
 
     const resetDraftToBase = () => {
         const baseTheme = themes.find((theme) => theme.key === draftBaseThemeKey) ?? themes.find((theme) => theme.key === 'classic') ?? themes[0];
         if (!baseTheme) return;
 
-        setDraftVariables(cloneThemeVariables(baseTheme));
+        const baseVariables = cloneThemeVariables(baseTheme);
+        setDraftVariables(baseVariables);
+        applyTheme(buildPreviewTheme(draftBaseThemeKey, baseVariables, themes, editingThemeKey, draftLabel));
+    };
+
+    const updateDraftBaseThemeKey = (baseThemeKey: string) => {
+        setDraftBaseThemeKey(baseThemeKey);
+        applyTheme(buildPreviewTheme(baseThemeKey, draftVariables, themes, editingThemeKey, draftLabel));
     };
 
     const updateVariable = (cssVariable: string, value: string) => {
+        document.documentElement.style.setProperty(cssVariable, value);
         setDraftVariables((previous) => ({
             ...previous,
             [cssVariable]: value,
@@ -134,16 +161,22 @@ export function SettingsThemeEditor({
         const theme = customThemes.find((entry) => entry.key === key);
         if (!theme) return;
 
-        const confirmed = globalThis.confirm(`Delete custom theme "${theme.label}"?`);
-        if (!confirmed) return;
+        setPendingThemeDelete(theme);
+    };
 
-        onDeleteCustomTheme(key);
-        if (activeThemeKey === key) {
+    const confirmDeleteTheme = () => {
+        const theme = pendingThemeDelete;
+        if (!theme) return;
+
+        onDeleteCustomTheme(theme.key);
+        if (activeThemeKey === theme.key) {
             onSetActiveThemeKey('classic');
         }
-        if (editingThemeKey === key) {
+        if (editingThemeKey === theme.key) {
             setEditingThemeKey(undefined);
+            setPreviewRestoreTheme(undefined);
         }
+        setPendingThemeDelete(undefined);
     };
 
     return (
@@ -230,7 +263,7 @@ export function SettingsThemeEditor({
                     </label>
                     <label style={fieldLabelStyle(uiScale)}>
                         Base Theme
-                        <select onChange={(event) => setDraftBaseThemeKey(event.currentTarget.value)} style={inputStyle(uiScale)} value={draftBaseThemeKey}>
+                        <select onChange={(event) => updateDraftBaseThemeKey(event.currentTarget.value)} style={inputStyle(uiScale)} value={draftBaseThemeKey}>
                             {themes.map((theme) => (
                                 <option key={theme.key} value={theme.key}>
                                     {theme.label}
@@ -248,12 +281,24 @@ export function SettingsThemeEditor({
                         <button onClick={revertDraft} style={actionButtonStyle(uiScale)} type="button">
                             Revert
                         </button>
+                        <button onClick={cancelEditing} style={actionButtonStyle(uiScale)} type="button">
+                            Cancel
+                        </button>
                         <button onClick={resetDraftToBase} style={actionButtonStyle(uiScale)} type="button">
                             Reset to Base
                         </button>
                     </div>
                 </div>
             ) : undefined}
+
+            <ConfirmDialog
+                danger
+                message={pendingThemeDelete ? `Delete custom theme "${pendingThemeDelete.label}"?` : ''}
+                onCancel={() => setPendingThemeDelete(undefined)}
+                onConfirm={confirmDeleteTheme}
+                open={Boolean(pendingThemeDelete)}
+                title="Delete Theme"
+            />
         </div>
     );
 }
@@ -270,36 +315,6 @@ function actionButtonStyle(uiScale: number): CSSProperties {
     };
 }
 
-function buildUniqueThemeKey(label: string, existingKeys: string[]): string {
-    const slug = label
-        .toLowerCase()
-        .replaceAll(/[^a-z0-9]+/g, '-')
-        .replaceAll(/^-+|-+$/g, '') || 'theme';
-
-    const baseKey = `custom-${slug}`;
-    const existing = new Set(existingKeys);
-
-    if (!existing.has(baseKey)) return baseKey;
-
-    let index = 2;
-    while (existing.has(`${baseKey}-${index}`)) {
-        index += 1;
-    }
-
-    return `${baseKey}-${index}`;
-}
-
-function cloneThemeVariables(theme: ThemeFile): ThemeVariables {
-    const variables = { ...theme.vars };
-
-    for (const variable of themeVariableCatalog) {
-        if (variables[variable.cssVar]) continue;
-        if (!variable.defaultValue) continue;
-        variables[variable.cssVar] = variable.defaultValue;
-    }
-
-    return variables;
-}
 
 function dangerButtonStyle(uiScale: number): CSSProperties {
     return {

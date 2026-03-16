@@ -4,6 +4,7 @@ import { editorTheme as t } from '../../theme/editorTheme';
 import { getVisibleSettingsControls, type SettingsControlId } from './settingsControlRegistry';
 
 type SettingsGeneralPanelProperties = {
+    audiosheetShortcutTargetMode: 'cursor' | 'playhead';
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
     changedControlIds: ReadonlySet<string>;
@@ -13,6 +14,7 @@ type SettingsGeneralPanelProperties = {
     onSetDetailRowReference: (controlId: SettingsControlId, element: HTMLDivElement | null) => void;
     panelId: string;
     searchQuery: string;
+    setAudiosheetShortcutTargetMode: (mode: 'cursor' | 'playhead') => void;
     setAutosaveEnabled: (enabled: boolean) => void;
     setAutosaveIntervalMs: (intervalMs: number) => void;
     showChangedOnly: boolean;
@@ -21,6 +23,7 @@ type SettingsGeneralPanelProperties = {
 };
 
 export function SettingsGeneralPanel({
+    audiosheetShortcutTargetMode,
     autosaveEnabled,
     autosaveIntervalMs,
     changedControlIds,
@@ -30,6 +33,7 @@ export function SettingsGeneralPanel({
     onSetDetailRowReference,
     panelId,
     searchQuery,
+    setAudiosheetShortcutTargetMode,
     setAutosaveEnabled,
     setAutosaveIntervalMs,
     showChangedOnly,
@@ -37,16 +41,23 @@ export function SettingsGeneralPanel({
     uiScale,
 }: SettingsGeneralPanelProperties) {
     const visibleControlIds = new Set(getVisibleSettingsControls(panelId));
+    const autosaveIntervalSeconds = Math.max(5, Math.round(autosaveIntervalMs / 1000));
+    const autosaveIntervalLabel = `Autosave interval: ${autosaveIntervalSeconds}s`;
 
     const autosaveChanged = changedControlIds.has('autosaveEnabled');
     const autosaveIntervalChanged = changedControlIds.has('autosaveIntervalMs');
     const audioChanged = changedControlIds.has('audio');
+    const audiosheetShortcutTargetModeChanged = changedControlIds.has('audiosheetShortcutTargetMode');
 
     const showAutosaveRow = visibleControlIds.has('autosaveEnabled') && matchedControlIds.has('autosaveEnabled') && (!showChangedOnly || autosaveChanged);
     const showAutosaveIntervalRow = visibleControlIds.has('autosaveIntervalMs') && matchedControlIds.has('autosaveIntervalMs') && (!showChangedOnly || autosaveIntervalChanged);
     const showAudioRow = visibleControlIds.has('audio') && matchedControlIds.has('audio') && (!showChangedOnly || audioChanged);
+    const showAudiosheetShortcutTargetModeRow =
+        visibleControlIds.has('audiosheetShortcutTargetMode')
+        && matchedControlIds.has('audiosheetShortcutTargetMode')
+        && (!showChangedOnly || audiosheetShortcutTargetModeChanged);
 
-    if (!showAutosaveRow && !showAutosaveIntervalRow && !showAudioRow) {
+    if (!showAutosaveRow && !showAutosaveIntervalRow && !showAudioRow && !showAudiosheetShortcutTargetModeRow) {
         return (
             <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
                 {showChangedOnly
@@ -83,19 +94,18 @@ export function SettingsGeneralPanel({
                             controlId="autosaveIntervalMs"
                             isChanged={autosaveIntervalChanged}
                             isFocused={focusedControlId === 'autosaveIntervalMs'}
-                            label="Autosave Interval"
+                            label={autosaveIntervalLabel}
                             onSetDetailRowReference={onSetDetailRowReference}
                             uiScale={uiScale}
                         >
-                            <select
-                                onChange={(event) => setAutosaveIntervalMs(Number(event.currentTarget.value))}
+                            <input
+                                min={5}
+                                onChange={(event) => setAutosaveIntervalMs(Number(event.currentTarget.value) * 1000)}
+                                step={1}
                                 style={settingsInputStyle(uiScale)}
-                                value={autosaveIntervalMs}
-                            >
-                                <option value={15_000}>15 seconds</option>
-                                <option value={30_000}>30 seconds</option>
-                                <option value={60_000}>60 seconds</option>
-                            </select>
+                                type="number"
+                                value={autosaveIntervalSeconds}
+                            />
                         </EditableSettingRow>
                     ) : undefined}
                 </>
@@ -104,19 +114,18 @@ export function SettingsGeneralPanel({
                     controlId="autosaveIntervalMs"
                     isChanged={autosaveIntervalChanged}
                     isFocused={focusedControlId === 'autosaveIntervalMs'}
-                    label="Autosave Interval"
+                    label={autosaveIntervalLabel}
                     onSetDetailRowReference={onSetDetailRowReference}
                     uiScale={uiScale}
                 >
-                    <select
-                        onChange={(event) => setAutosaveIntervalMs(Number(event.currentTarget.value))}
+                    <input
+                        min={5}
+                        onChange={(event) => setAutosaveIntervalMs(Number(event.currentTarget.value) * 1000)}
+                        step={1}
                         style={settingsInputStyle(uiScale)}
-                        value={autosaveIntervalMs}
-                    >
-                        <option value={15_000}>15 seconds</option>
-                        <option value={30_000}>30 seconds</option>
-                        <option value={60_000}>60 seconds</option>
-                    </select>
+                        type="number"
+                        value={autosaveIntervalSeconds}
+                    />
                 </EditableSettingRow>
             ) : undefined)}
 
@@ -141,6 +150,26 @@ export function SettingsGeneralPanel({
                         />
                         Unmuted
                     </label>
+                </EditableSettingRow>
+            ) : undefined}
+
+            {showAudiosheetShortcutTargetModeRow ? (
+                <EditableSettingRow
+                    controlId="audiosheetShortcutTargetMode"
+                    isChanged={audiosheetShortcutTargetModeChanged}
+                    isFocused={focusedControlId === 'audiosheetShortcutTargetMode'}
+                    label="Audiosheet Q/E Target"
+                    onSetDetailRowReference={onSetDetailRowReference}
+                    uiScale={uiScale}
+                >
+                    <select
+                        onChange={(event) => setAudiosheetShortcutTargetMode(event.currentTarget.value as 'cursor' | 'playhead')}
+                        style={settingsInputStyle(uiScale)}
+                        value={audiosheetShortcutTargetMode}
+                    >
+                        <option value="cursor">Cursor position</option>
+                        <option value="playhead">Playhead position</option>
+                    </select>
                 </EditableSettingRow>
             ) : undefined}
         </>

@@ -31,12 +31,14 @@ export async function activateWorkbenchTab(tabId: string) {
     }
 
     if (tab.kind === 'spritesheet' || tab.kind === 'audiosheet') {
+        if (tab.dirty && tab.textContent !== undefined) return;
         const text = await fsReadTextFile(tab.path);
         ws.updateTabContent(tab.id, text, { markDirty: false });
         return;
     }
 
     if (tab.kind === 'manifest' || tab.kind === 'json' || tab.kind === 'text') {
+        if (tab.dirty && tab.textContent !== undefined) return;
         const text = await fsReadTextFile(tab.path);
         ws.updateTabContent(tab.id, text, { markDirty: false });
     }

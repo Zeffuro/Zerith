@@ -2,12 +2,13 @@ import { type SpriteFrame } from 'core';
 import { type DragEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { editorTheme as t } from '../../theme/editorTheme';
+import { ConfirmDialog } from '../ConfirmDialog';
 import { computeThumbnailCanvasMetrics, insertFrameAtIndex, reorderSequence } from './spritesheetEditorModel';
 
 const FRAME_MIME = 'application/x-zerith-frame';
 const SEQ_INDEX_MIME = 'application/x-zerith-sequence-index';
 
-export type SpritesheetAnimationEditorProps = {
+export type SpritesheetAnimationEditorProperties = {
     animations: Record<string, string[]>;
     frames: Record<string, SpriteFrame>;
     image: HTMLImageElement;
@@ -15,7 +16,7 @@ export type SpritesheetAnimationEditorProps = {
     uiScale: number;
 };
 
-export function SpritesheetAnimationEditor({ animations, frames, image, onUpdateAnimations, uiScale }: SpritesheetAnimationEditorProps) {
+export function SpritesheetAnimationEditor({ animations, frames, image, onUpdateAnimations, uiScale }: SpritesheetAnimationEditorProperties) {
     const names = useMemo(() => Object.keys(animations), [animations]);
     const [selected, setSelected] = useState<string>();
     const [newName, setNewName] = useState('');
@@ -23,17 +24,10 @@ export function SpritesheetAnimationEditor({ animations, frames, image, onUpdate
     const [loop, setLoop] = useState(true);
     const [playing, setPlaying] = useState(false);
     const [previewIndex, setPreviewIndex] = useState(0);
-    const sequence = selected ? (animations[selected] ?? []) : [];
-
-    useEffect(() => {
-        if (selected && animations[selected]) return;
-        setSelected(names[0]);
-    }, [animations, names, selected]);
-
-    useEffect(() => {
-        if (previewIndex < sequence.length) return;
-        setPreviewIndex(0);
-    }, [previewIndex, sequence.length]);
+    const [validationMessage, setValidationMessage] = useState<string>();
+    const selectedAnimationName = selected && animations[selected] ? selected : names[0];
+    const sequence = selectedAnimationName ? (animations[selectedAnimationName] ?? []) : [];
+    const activePreviewIndex = sequence.length === 0 ? 0 : Math.min(previewIndex, sequence.length - 1);
 
     useEffect(() => {
         if (!playing || sequence.length === 0) return;
@@ -50,39 +44,34 @@ export function SpritesheetAnimationEditor({ animations, frames, image, onUpdate
     }, [fps, loop, playing, sequence.length]);
 
     const updateSequence = (nextSequence: string[]) => {
-        if (!selected) return;
-        onUpdateAnimations({ ...animations, [selected]: nextSequence });
+        if (!selectedAnimationName) return;
+        onUpdateAnimations({ ...animations, [selectedAnimationName]: nextSequence });
     };
 
     const addAnimation = () => {
         const name = newName.trim();
         if (!name) return;
-        if (animations[name]) return globalThis.alert(`Animation "${name}" already exists.`);
+        if (animations[name]) {
+            setValidationMessage(`Animation "${name}" already exists.`);
+            return;
+        }
         onUpdateAnimations({ ...animations, [name]: [] });
         setSelected(name);
         setNewName('');
     };
 
     const removeAnimation = () => {
-        if (!selected) return;
+        if (!selectedAnimationName) return;
         const next = { ...animations };
-        delete next[selected];
+        delete next[selectedAnimationName];
         onUpdateAnimations(next);
         setPlaying(false);
         setPreviewIndex(0);
     };
 
-    const readDroppedFrame = (event: DragEvent) => event.dataTransfer.getData(FRAME_MIME) || event.dataTransfer.getData('text/plain');
-    const readDroppedIndex = (event: DragEvent) => {
-        const raw = event.dataTransfer.getData(SEQ_INDEX_MIME);
-        if (!raw) return;
-        const value = Number(raw);
-        return Number.isInteger(value) ? value : undefined;
-    };
-
     const handleDrop = (event: DragEvent, targetIndex: number) => {
         event.preventDefault();
-        if (!selected) return;
+        if (!selectedAnimationName) return;
         const sourceIndex = readDroppedIndex(event);
         if (sourceIndex !== undefined) {
             const next = reorderSequence(sequence, sourceIndex, targetIndex);
@@ -100,7 +89,7 @@ export function SpritesheetAnimationEditor({ animations, frames, image, onUpdate
         <div style={{ display: 'grid', gap: 8, gridTemplateRows: 'auto auto auto minmax(0,1fr)', height: '100%' }}>
             <strong style={{ color: t.text.primary }}>Animations</strong>
             <div style={{ display: 'grid', gap: 6 }}>
-                {names.length === 0 ? <div style={{ color: t.text.muted }}>No animations configured.</div> : null}
+                {names.length === 0 ? <div style={{ color: t.text.muted }}>No animations configured.</div> : undefined}
                 {names.map((name) => (
                     <button
                         key={name}
@@ -137,7 +126,7 @@ export function SpritesheetAnimationEditor({ animations, frames, image, onUpdate
             </div>
 
             <div style={{ display: 'grid', gap: 8, minHeight: 0 }}>
-                <div style={{ color: t.text.muted }}>{selected ? `${selected} (${sequence.length} frames)` : 'Select an animation.'}</div>
+                <div style={{ color: t.text.muted }}>{selectedAnimationName ? `${selectedAnimationName} (${sequence.length} frames)` : 'Select an animation.'}</div>
                 <div
                     className="zerith-scrollbar"
                     onDragOver={(event) => event.preventDefault()}
@@ -161,7 +150,7 @@ export function SpritesheetAnimationEditor({ animations, frames, image, onUpdate
                             <FrameThumb frame={frames[frameName]} image={image} uiScale={uiScale} />
                         </button>
                     ))}
-                    {selected && sequence.length === 0 ? <div style={{ color: t.text.muted }}>Drag frames here.</div> : null}
+                    {selectedAnimationName && sequence.length === 0 ? <div style={{ color: t.text.muted }}>Drag frames here.</div> : undefined}
                 </div>
 
                 <div style={{ alignItems: 'center', display: 'grid', gap: 8, gridTemplateColumns: '1fr auto' }}>
@@ -169,16 +158,37 @@ export function SpritesheetAnimationEditor({ animations, frames, image, onUpdate
                     <label style={{ color: t.text.muted }}><input checked={loop} onChange={(event) => setLoop(event.target.checked)} type="checkbox" /> Loop</label>
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
-                    <button disabled={!selected || sequence.length === 0} onClick={() => setPlaying((value) => !value)}>{playing ? 'Pause' : 'Play'}</button>
-                    <button disabled={!selected || sequence.length === 0} onClick={() => {
+                    <button disabled={!selectedAnimationName || sequence.length === 0} onClick={() => setPlaying((value) => !value)}>{playing ? 'Pause' : 'Play'}</button>
+                    <button disabled={!selectedAnimationName || sequence.length === 0} onClick={() => {
                         setPlaying(false);
                         setPreviewIndex(0);
                     }}>Stop</button>
                 </div>
-                <PreviewBox frame={frames[sequence[previewIndex]]} image={image} uiScale={uiScale} />
+                <PreviewBox frame={frames[sequence[activePreviewIndex]]} image={image} uiScale={uiScale} />
             </div>
+
+            <ConfirmDialog
+                cancelText="Close"
+                confirmText="OK"
+                message={validationMessage ?? ''}
+                onCancel={() => setValidationMessage(undefined)}
+                onConfirm={() => setValidationMessage(undefined)}
+                open={Boolean(validationMessage)}
+                title="Animation Validation"
+            />
         </div>
     );
+}
+
+function readDroppedFrame(event: DragEvent): string {
+    return event.dataTransfer.getData(FRAME_MIME) || event.dataTransfer.getData('text/plain');
+}
+
+function readDroppedIndex(event: DragEvent): number | undefined {
+    const raw = event.dataTransfer.getData(SEQ_INDEX_MIME);
+    if (!raw) return undefined;
+    const value = Number(raw);
+    return Number.isInteger(value) ? value : undefined;
 }
 
 function drawBlank(canvas: HTMLCanvasElement) {

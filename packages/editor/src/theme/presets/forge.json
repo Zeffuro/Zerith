@@ -1,0 +1,51 @@
+{
+  "key": "forge",
+  "label": "Forge",
+  "vars": {
+    "--editor-bg-app": "#202531",
+    "--editor-bg-panel": "#2a303f",
+    "--editor-bg-panel-alt": "#363d4a",
+    "--editor-bg-input": "#202531",
+    "--editor-bg-popup": "#252a35",
+    "--editor-bg-hover": "#454c5e",
+    "--editor-bg-selected": "#363d4a",
+    "--editor-bg-danger": "#632d2d",
+    "--editor-bg-preview": "#000",
+
+    "--editor-border-subtle": "#3d4455",
+    "--editor-border-normal": "#4d5466",
+    "--editor-border-input": "#4d5466",
+    "--editor-border-button": "#5d657a",
+    "--editor-border-accent": "#4d97ff",
+    "--editor-border-focus": "#4d97ff",
+    "--editor-border-primary-btn": "#4d97ff",
+
+    "--editor-text-primary": "#e0e0e0",
+    "--editor-text-normal": "#b5bdc8",
+    "--editor-text-muted": "#868d9a",
+    "--editor-text-faint": "#626770",
+
+    "--editor-accent-primary": "#4d97ff",
+    "--editor-accent-red": "#ff5f5f",
+    "--editor-accent-green": "#29e69c",
+    "--editor-accent-yellow": "#ffd24d",
+    "--editor-accent-blue": "#4d97ff",
+    "--editor-accent-purple": "#cf8eff",
+    "--editor-accent-teal": "#29e69c",
+    "--editor-accent-orange": "#ff9e3d",
+
+    "--editor-icon-manifest": "#ffd24d",
+    "--editor-icon-image": "#29e69c",
+    "--editor-icon-audio": "#cf8eff",
+    "--editor-icon-script": "#4d97ff",
+    "--editor-icon-text": "#b5bdc8",
+    "--editor-icon-data": "#ff9e3d",
+
+    "--editor-shadow-popup": "0 8px 20px rgba(0,0,0,0.4)",
+    "--editor-shadow-popup-strong": "0 10px 24px rgba(0,0,0,0.5)",
+
+    "--editor-radius-sm": "3px",
+    "--editor-radius-md": "4px",
+    "--editor-radius-lg": "6px"
+  }
+}

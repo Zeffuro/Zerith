@@ -15,6 +15,7 @@
 
     --color-tab-background: transparent;
     --color-tab-background-selected: var(--editor-bg-app);
+    --color-tabset-background-selected: var(--editor-bg-panel);
 
     --color-tab-text: var(--editor-text-muted);
     --color-tab-text-selected: var(--editor-text-primary);
@@ -50,4 +51,22 @@
 
 .flexlayout__splitter:hover {
     background-color: var(--editor-border-accent);
+}
+
+.flexlayout__tabset_header,
+.flexlayout__tabset_header_outer,
+.flexlayout__tabset_tabbar_outer,
+.flexlayout__tabset_tabbar_inner,
+.flexlayout__tabset_selected,
+.flexlayout__tabset-selected {
+    background-image: none !important;
+}
+
+.flexlayout__tabset_tabbar_outer,
+.flexlayout__tabset_tabbar_inner {
+    background-color: var(--editor-bg-panel) !important;
+}
+
+.flexlayout__tabset {
+    background-color: var(--editor-bg-app) !important;
 }

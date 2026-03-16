@@ -1,5 +1,7 @@
 import { ArrowRightCircle, GitFork, Repeat, Sigma, Workflow } from 'lucide-react';
 
+import { editorTheme as t } from '../../theme/editorTheme';
+
 import type { EditorNodeByType, PluginNode } from '../types';
 
 import { CallInspector } from '../../components/inspector/CallInspector';
@@ -16,8 +18,9 @@ export const flowPluginOverrides: CommandPluginOverrides = {
     call: {
         createDefault: () => ({ name: '', type: 'call' }),
         getSummary: (node) => readString(node, 'name'),
-        icon: (size) => <Workflow color="#f472b6" size={size} />,
+        icon: (size) => <Workflow color={t.accent.purple} size={size} />,
         Inspector: CallInspector,
+        quickColor: { bg: t.bg.panelAlt, border: t.accent.purple },
     },
     for: {
         createDefault: () => ({ body: [], from: 0, iterator: 'i', step: 1, to: 3, type: 'for' }),
@@ -31,7 +34,7 @@ export const flowPluginOverrides: CommandPluginOverrides = {
         },
         icon: (size) => <Sigma color="#60a5fa" size={size} />,
         Inspector: asInspector(ForInspector),
-        quickColor: { bg: '#11263d', border: '#1f4b7a' },
+        quickColor: { bg: t.bg.panelAlt, border: t.accent.blue },
     },
     goto: {
         createDefault: () => ({ label: '', type: 'goto' }),
@@ -55,15 +58,16 @@ export const flowPluginOverrides: CommandPluginOverrides = {
             { label: 'ON FALSE', nodes: readArray<PluginNode>(node, 'onFalse'), path: ['onFalse'] },
         ],
         getSummary: (node) => readString(node, 'key'),
-        icon: (size) => <GitFork color="#4ec9b0" size={size} />,
+        icon: (size) => <GitFork color={t.accent.teal} size={size} />,
         Inspector: asInspector(IfInspector),
-        quickColor: { bg: '#103a38', border: '#1f6a66' },
+        quickColor: { bg: t.bg.panelAlt, border: t.accent.teal },
     },
     jump: {
         createDefault: () => ({ to: '', type: 'jump' }),
         getSummary: (node) => readString(node, 'to'),
-        icon: (size) => <ArrowRightCircle color="#fbbf24" size={size} />,
+        icon: (size) => <ArrowRightCircle color={t.accent.yellow} size={size} />,
         Inspector: asInspector(JumpInspector),
+        quickColor: { bg: t.bg.panelAlt, border: t.accent.yellow },
     },
     label: {
         createDefault: () => ({ name: '', type: 'label' }),
@@ -73,9 +77,10 @@ export const flowPluginOverrides: CommandPluginOverrides = {
         createDefault: () => ({ body: [], name: 'new_macro', type: 'macro_header' }),
         getBranches: (node) => [{ label: 'BODY', nodes: readArray<PluginNode>(node, 'body'), path: ['body'] }],
         getSummary: (node) => readString(node, 'name', '(unnamed macro)'),
-        icon: (size) => <Workflow color="#f59e0b" size={size} />,
+        icon: (size) => <Workflow color={t.accent.orange} size={size} />,
         Inspector: asInspector(MacroHeaderInspector),
         label: 'Macro',
+        quickColor: { bg: t.bg.panelAlt, border: t.accent.orange },
     },
     while: {
         createDefault: () => ({ body: [], key: '', maxIterations: 10_000, op: 'eq', source: 'variable', type: 'while', value: true }),
@@ -83,7 +88,7 @@ export const flowPluginOverrides: CommandPluginOverrides = {
         getSummary: (node) => readString(node, 'key', 'loop'),
         icon: (size) => <Repeat color="#22c55e" size={size} />,
         Inspector: asInspector(WhileInspector),
-        quickColor: { bg: '#11301b', border: '#1d5b32' },
+        quickColor: { bg: t.bg.panelAlt, border: t.accent.green },
     },
 };
 

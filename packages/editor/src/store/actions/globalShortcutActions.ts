@@ -5,11 +5,16 @@ import { deepClone } from 'core';
 import type { EditorNode } from '../../types/EditorNode';
 import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
+import { dispatchAudiosheetShortcut } from '../../services/audiosheetShortcuts';
 import { isRecord } from '../../utils/typeGuards';
 import { useProjectStore, useScriptStore } from '../storeBootstrap';
 import { useEditorStore } from '../useEditorStore';
+import { useWorkbenchStore } from '../useWorkbenchStore';
 
 export type GlobalShortcutAction =
+    | 'audiosheetSetLeftBoundary'
+    | 'audiosheetSetRightBoundary'
+    | 'audiosheetTogglePlayPause'
     | 'clearAllBreakpoints'
     | 'continueOrPlay'
     | 'copySelection'
@@ -45,6 +50,18 @@ type MacroClipboardPayload = {
 
 export async function executeGlobalShortcutAction(action: GlobalShortcutAction): Promise<boolean> {
     switch (action) {
+        case 'audiosheetSetLeftBoundary': {
+            return dispatchAudiosheetShortcutIfActive('setLeftBoundary');
+        }
+
+        case 'audiosheetSetRightBoundary': {
+            return dispatchAudiosheetShortcutIfActive('setRightBoundary');
+        }
+
+        case 'audiosheetTogglePlayPause': {
+            return dispatchAudiosheetShortcutIfActive('togglePlayPause');
+        }
+
         case 'clearAllBreakpoints': {
             useEditorStore.getState().clearAllBreakpoints();
             return true;
@@ -201,6 +218,13 @@ function copySelectionToClipboard(): void {
     }
 }
 
+function dispatchAudiosheetShortcutIfActive(action: Parameters<typeof dispatchAudiosheetShortcut>[0]): boolean {
+    const activeTab = useWorkbenchStore.getState().activeTab();
+    if (activeTab?.kind !== 'audiosheet') return false;
+    dispatchAudiosheetShortcut(action);
+    return true;
+}
+
 function duplicateSelection(): void {
     const editingAllMacrosFile = useProjectStore.getState().editingAllMacrosFile;
     const editor = useEditorStore.getState();
@@ -265,10 +289,10 @@ function isMacroClipboardNode(value: unknown): value is MacroClipboardNode {
     return isRecord(value.payload);
 }
 
+
 function isPlaybackRunning(editor: ReturnType<typeof useEditorStore.getState>): boolean {
     return editor.playTrigger > editor.stopTrigger;
 }
-
 
 function moveSelectionByArrow(direction: 'down' | 'up'): boolean {
     const editingAllMacrosFile = useProjectStore.getState().editingAllMacrosFile;
@@ -368,6 +392,10 @@ function pasteClipboardSelection(): boolean {
 }
 
 function requestDeleteSelection(): boolean {
+    if (dispatchAudiosheetShortcutIfActive('deleteSelectedCue')) {
+        return true;
+    }
+
     const script = useScriptStore.getState();
     const editor = useEditorStore.getState();
 

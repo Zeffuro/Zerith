@@ -79,7 +79,7 @@ export function MacroHeaderInspector() {
                 </button>
                 <button
                     onClick={() => removeMacroEntry(index)}
-                    style={{ ...button, border: '1px solid #7f1d1d', color: '#fecaca' }}
+                    style={{ ...button, border: `1px solid ${t.accent.red}`, color: t.accent.red }}
                 >
                     Delete Macro
                 </button>

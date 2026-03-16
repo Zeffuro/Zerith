@@ -4,6 +4,8 @@ import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { inferCommandFields } from '../../utils/zodInference';
 import { FieldError } from './FieldError';
 
+import { editorTheme as t } from '../../theme/editorTheme';
+
 const HIDDEN_COMPLEX_KEYS = new Set(['body', 'commands', 'else', 'onFalse', 'onTrue', 'options', 'then']);
 
 const getNodeFieldValue = (node: BaseCommand, key: string): unknown => (node as Record<string, unknown>)[key];
@@ -91,9 +93,9 @@ export function SchemaFallbackInspector({ index, node }: { index?: null | number
                             <div
                                 style={{
                                     ...getFieldInputStyle(f.key),
-                                    background: '#151515',
+                                    background: t.bg.panelAlt,
                                     borderStyle: 'dashed',
-                                    color: '#888',
+                                    color: t.text.muted,
                                 }}
                             >
                                 Complex field (not inline editable in fallback inspector).

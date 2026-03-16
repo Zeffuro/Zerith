@@ -1,5 +1,7 @@
 import { lazy, Suspense } from 'react';
 
+import type { ScriptViewMode } from '../../store/workbench/types';
+
 import { useEditorStore } from '../../store/useEditorStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../theme/editorTheme';
@@ -12,6 +14,13 @@ const ItemsEditor = lazy(() => import('./workbench/ItemsEditor').then((m) => ({ 
 const CharactersEditor = lazy(() => import('./workbench/CharactersEditor').then((m) => ({ default: m.CharactersEditor })));
 const SpritesheetEditorPanel = lazy(() => import('../editors/SpritesheetEditorPanel').then((m) => ({ default: m.SpritesheetEditorPanel })));
 const AudiosheetEditorPanel = lazy(() => import('../editors/AudiosheetEditorPanel').then((m) => ({ default: m.AudiosheetEditorPanel })));
+
+type ViewToggleToolbarProperties = {
+    currentView: ScriptViewMode;
+    onToggle: (view: ScriptViewMode) => void;
+    timelineLabel?: 'Timeline' | 'Visual';
+    uiScale: number;
+};
 
 export function EditorSurface() {
     const uiScale = useEditorStore((s) => s.uiScale);
@@ -53,55 +62,27 @@ export function EditorSurface() {
 
     if (!activeTab) return <div style={{ opacity: 0.7, padding: 16 }}>Open a file from Explorer.</div>;
 
-    const viewButton = (active: boolean) => ({
-        background: active ? t.bg.selected : t.bg.panel,
-        border: `1px solid ${active ? t.border.accent : t.border.button}`,
-        borderRadius: t.radius.sm,
-        color: active ? t.text.primary : t.text.normal,
-        cursor: 'pointer',
-        fontSize: `${12 * uiScale}px`,
-        padding: `${4 * uiScale}px ${10 * uiScale}px`,
-    });
-
     const renderModeToggle = (kind: 'characters' | 'items' | 'macros' | 'manifest' | 'script') => {
-        const mode = getMode(kind, {
+        const currentViewByKind = {
             characters: lastCharactersView,
             items: lastItemsView,
             macros: lastMacrosView,
             manifest: lastManifestView,
             script: lastScriptView,
-        });
-        const setMode = getModeSetter(kind, {
+        } as const;
+        const onToggleByKind = {
             characters: setLastCharactersView,
             items: setLastItemsView,
             macros: setLastMacrosView,
             manifest: setLastManifestView,
             script: setLastScriptView,
-        });
-        const visualLabel = kind === 'script' || kind === 'macros' ? 'Timeline' : 'Visual';
+        } as const;
 
-        return (
-            <div
-                style={{
-                    alignItems: 'center',
-                    background: t.bg.panel,
-                    borderBottom: `1px solid ${t.border.subtle}`,
-                    display: 'flex',
-                    gap: `${6 * uiScale}px`,
-                    padding: `${6 * uiScale}px`,
-                }}
-            >
-                <button onClick={() => setMode('timeline')} style={viewButton(mode === 'timeline')}>
-                    {visualLabel}
-                </button>
-                <button onClick={() => setMode('json')} style={viewButton(mode === 'json')}>
-                    JSON
-                </button>
-                <span style={{ color: t.text.muted, fontSize: `${12 * uiScale}px`, marginLeft: 8 }}>
-                Current: {mode}
-            </span>
-            </div>
-        );
+        const currentView = currentViewByKind[kind];
+        const onToggle = onToggleByKind[kind];
+        const timelineLabel = kind === 'script' || kind === 'macros' ? 'Timeline' : 'Visual';
+
+        return <ViewToggleToolbar currentView={currentView} onToggle={onToggle} timelineLabel={timelineLabel} uiScale={uiScale} />;
     };
 
     if (activeTab.kind === 'asset') return <AssetPreviewPanel uiScale={uiScale} />;
@@ -170,16 +151,36 @@ export function EditorSurface() {
     return jsonEditor;
 }
 
-function getMode(
-    kind: 'characters' | 'items' | 'macros' | 'manifest' | 'script',
-    modeByKind: Record<'characters' | 'items' | 'macros' | 'manifest' | 'script', 'json' | 'timeline'>
-) {
-    return modeByKind[kind];
+function ViewToggleToolbar({ currentView, onToggle, timelineLabel = 'Timeline', uiScale }: ViewToggleToolbarProperties) {
+    const viewButton = (active: boolean) => ({
+        background: active ? t.bg.selected : t.bg.panel,
+        border: `1px solid ${active ? t.border.accent : t.border.button}`,
+        borderRadius: t.radius.sm,
+        color: active ? t.text.primary : t.text.normal,
+        cursor: 'pointer',
+        fontSize: `${12 * uiScale}px`,
+        padding: `${4 * uiScale}px ${10 * uiScale}px`,
+    });
+
+    return (
+        <div
+            style={{
+                alignItems: 'center',
+                background: t.bg.panel,
+                borderBottom: `1px solid ${t.border.subtle}`,
+                display: 'flex',
+                gap: `${6 * uiScale}px`,
+                padding: `${6 * uiScale}px`,
+            }}
+        >
+            <button onClick={() => onToggle('timeline')} style={viewButton(currentView === 'timeline')}>
+                {timelineLabel}
+            </button>
+            <button onClick={() => onToggle('json')} style={viewButton(currentView === 'json')}>
+                JSON
+            </button>
+            <span style={{ color: t.text.muted, fontSize: `${12 * uiScale}px`, marginLeft: 8 }}>Current: {currentView}</span>
+        </div>
+    );
 }
 
-function getModeSetter(
-    kind: 'characters' | 'items' | 'macros' | 'manifest' | 'script',
-    setterByKind: Record<'characters' | 'items' | 'macros' | 'manifest' | 'script', (view: 'json' | 'timeline') => void>
-) {
-    return setterByKind[kind];
-}

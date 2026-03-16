@@ -80,6 +80,20 @@ describe('workbench tabs slice', () => {
         expect(harness.get().activeTab()?.id).toBe(sceneTab.id);
     });
 
+    it('openOrFocusTab preserves dirty text content for existing tabs', () => {
+        const harness = createTabsState();
+        const audiosheetTab = { ...tab('audiosheet', '/project/audio/court.json'), dirty: true, textContent: '{"dirty":true}\n' };
+
+        harness.setState({ tabs: [audiosheetTab] });
+        harness.get().openOrFocusTab({ ...audiosheetTab, dirty: false, textContent: '{"dirty":false}\n', title: 'From Disk' });
+
+        expect(harness.get().tabs[0]).toMatchObject({
+            dirty: true,
+            textContent: '{"dirty":true}\n',
+            title: 'From Disk',
+        });
+    });
+
     it('closeTab, closeOthers, closeToRight and clearTabs maintain active tab correctly', () => {
         const harness = createTabsState();
         const t1 = tab('script', '/project/scripts/intro.json');

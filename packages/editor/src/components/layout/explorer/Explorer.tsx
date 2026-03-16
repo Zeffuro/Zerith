@@ -15,10 +15,9 @@ import { useProjectStore } from '../../../store/storeBootstrap';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
-import { getSheetDescriptorPath } from '../../../utils/assetDescriptorUtilities';
+import { getSheetDescriptorPath, isSheetDescriptor } from '../../../utils/assetDescriptorUtilities';
 import { AUDIO_EXT, getExtension, IMG_EXT } from '../../../utils/assetTypes';
 import { ConfirmDialog } from '../../ConfirmDialog';
-import { DOCK_PANELS } from '../dock/dockPanelIds';
 import {
     ExplorerContextMenu,
     type ExplorerContextMenuState,
@@ -85,7 +84,17 @@ export function Explorer() {
     );
 }
 
-function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; level?: number; parentPath: string; }) {
+function FileNode({
+    entry,
+    isSheetChild = false,
+    level = 0,
+    parentPath,
+}: {
+    entry: FsDirectoryEntry;
+    isSheetChild?: boolean;
+    level?: number;
+    parentPath: string;
+}) {
     const [children, setChildren] = useState<FsDirectoryEntry[]>([]);
     const [fullPath, setFullPath] = useState<string>('');
     const [context, setContext] = useState<ExplorerContextMenuState>();
@@ -168,7 +177,7 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
             const descriptor = type === 'spritesheet'
                 ? { format: 'atlas', frames: {}, source: entry.name }
                 : { cues: {}, source: entry.name };
-            await fsWriteTextFile(descriptorPath, `${JSON.stringify(descriptor, null, 2)}\n`);
+            await fsWriteTextFile(descriptorPath, `${JSON.stringify(descriptor, undefined, 2)}\n`);
             return descriptorPath;
         }
     }, [entry.isDirectory, entry.name, fullPath]);
@@ -269,9 +278,6 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
                             }
 
                             await openAudiosheetEntry(descriptorPath);
-                            globalThis.dispatchEvent(
-                                new CustomEvent('zerith:dock-select', { detail: DOCK_PANELS.audiosheetEditor }),
-                            );
                             break;
                         }
                         case 'openJson': {
@@ -280,9 +286,6 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
                         }
                         case 'openSpritesheet': {
                             await openProjectEntry(fullPath, entry.name, { openInSpritesheetEditor: true });
-                            globalThis.dispatchEvent(
-                                new CustomEvent('zerith:dock-select', { detail: DOCK_PANELS.spritesheetEditor }),
-                            );
                             break;
                         }
                         case 'openTimeline': {
@@ -324,6 +327,7 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
 
     const isSelected = activeTab?.path === fullPath;
     const iconSize = 14 * uiScale;
+    const { descriptorChildrenByParent, topLevelEntries } = groupCompanionDescriptors(children);
 
     return (
         <div>
@@ -362,7 +366,7 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
 
                 {entry.isDirectory ? (
                     isOpen ? <FolderOpen color={t.icon.manifest} size={iconSize} /> : <FolderGit2 color={t.icon.manifest} size={iconSize} />
-                ) : getFileIcon(entry.name, fullPath, iconSize)}
+                ) : getFileIcon(entry.name, fullPath, iconSize, isSheetChild)}
 
                 {isRenaming ? (
                     <InlineNameInput
@@ -424,16 +428,62 @@ function FileNode({ entry, level = 0, parentPath }: { entry: FsDirectoryEntry; l
             )}
 
             {isOpen &&
-                children.map((child) => (
-                    <FileNode
-                        entry={child}
-                        key={`${fullPath}:${child.name}:${child.isDirectory ? 'dir' : 'file'}:${treeRevision}`}
-                        level={level + 1}
-                        parentPath={fullPath}
-                    />
+                topLevelEntries.map((child) => (
+                    <div key={`${fullPath}:${child.name}:${child.isDirectory ? 'dir' : 'file'}:${treeRevision}`}>
+                        <FileNode
+                            entry={child}
+                            level={level + 1}
+                            parentPath={fullPath}
+                        />
+
+                        {(descriptorChildrenByParent.get(child.name) ?? []).map((descriptor) => (
+                            <FileNode
+                                entry={descriptor}
+                                isSheetChild
+                                key={`${fullPath}:${child.name}:descriptor:${descriptor.name}:${treeRevision}`}
+                                level={level + 2}
+                                parentPath={fullPath}
+                            />
+                        ))}
+                    </div>
                 ))}
         </div>
     );
+}
+
+function groupCompanionDescriptors(entries: FsDirectoryEntry[]): {
+    descriptorChildrenByParent: Map<string, FsDirectoryEntry[]>;
+    topLevelEntries: FsDirectoryEntry[];
+} {
+    const descriptorChildrenByParent = new Map<string, FsDirectoryEntry[]>();
+    const parentAssetByDescriptorName = new Map<string, FsDirectoryEntry>();
+    const hiddenDescriptors = new Set<string>();
+
+    for (const entry of entries) {
+        if (!isCompanionAsset(entry)) continue;
+        parentAssetByDescriptorName.set(getSheetDescriptorPath(entry.name), entry);
+    }
+
+    for (const entry of entries) {
+        if (entry.isDirectory || !isSheetDescriptor(entry.name)) continue;
+
+        const parent = parentAssetByDescriptorName.get(entry.name);
+        if (!parent) continue;
+
+        hiddenDescriptors.add(entry.name);
+        const children = descriptorChildrenByParent.get(parent.name) ?? [];
+        children.push(entry);
+        descriptorChildrenByParent.set(parent.name, children);
+    }
+
+    const topLevelEntries = entries.filter((entry) => !(hiddenDescriptors.has(entry.name) && isSheetDescriptor(entry.name)));
+    return { descriptorChildrenByParent, topLevelEntries };
+}
+
+function isCompanionAsset(entry: FsDirectoryEntry): boolean {
+    if (entry.isDirectory) return false;
+    const extension = getExtension(entry.name);
+    return IMG_EXT.has(extension) || AUDIO_EXT.has(extension);
 }
 
 const AUDIO_EXTENSIONS = new Set(['.m4a', '.mp3', '.ogg', '.wav']);
@@ -444,7 +494,7 @@ function getFileExtension(path: string): string {
     return index === -1 ? '' : path.slice(index);
 }
 
-function getFileIcon(entryName: string, fullPath: string, iconSize: number) {
+function getFileIcon(entryName: string, fullPath: string, iconSize: number, isSheetChild = false) {
     const normalizedPath = fullPath.replaceAll('\\', '/').toLowerCase();
     const lowerName = entryName.toLowerCase();
     const extension = getFileExtension(lowerName);
@@ -470,7 +520,7 @@ function getFileIcon(entryName: string, fullPath: string, iconSize: number) {
     }
 
     if (extension === '.json') {
-        return <FileJson color={t.icon.data} size={iconSize} />;
+        return <FileJson color={isSheetChild ? t.icon.script : t.icon.data} size={iconSize} />;
     }
 
     return <FileText color={t.icon.text} size={iconSize} />;

@@ -13,6 +13,7 @@ import { SettingsDetailPanel } from './SettingsDetailPanel';
 import { SettingsKeymapPanel } from './SettingsKeymapPanel';
 
 export type SettingsModalMainPaneProperties = {
+    audiosheetShortcutTargetMode: 'cursor' | 'playhead';
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
     changedControlIds: ReadonlySet<string>;
@@ -32,6 +33,7 @@ export type SettingsModalMainPaneProperties = {
     onUpdateCustomTheme: (key: string, updates: Partial<Omit<CustomThemeEntry, 'key'>>) => void;
     searchQuery: string;
     selectedPanelId: string;
+    setAudiosheetShortcutTargetMode: (mode: 'cursor' | 'playhead') => void;
     setAutosaveEnabled: (enabled: boolean) => void;
     setAutosaveIntervalMs: (intervalMs: number) => void;
     setThemeKey: (key: string) => void;
@@ -76,6 +78,7 @@ const panelDescriptions: Record<string, string> = {
 
 export function SettingsModalMainPane({
     activeConflictIndex,
+    audiosheetShortcutTargetMode,
     autosaveEnabled,
     autosaveIntervalMs,
     changedControlIds,
@@ -110,6 +113,7 @@ export function SettingsModalMainPane({
     rowsContainerReference,
     searchQuery,
     selectedPanelId,
+    setAudiosheetShortcutTargetMode,
     setAutosaveEnabled,
     setAutosaveIntervalMs,
     setThemeKey,
@@ -226,6 +230,7 @@ export function SettingsModalMainPane({
                 </div>
             ) : (
                 <SettingsDetailPanel
+                    audiosheetShortcutTargetMode={audiosheetShortcutTargetMode}
                     autosaveEnabled={autosaveEnabled}
                     autosaveIntervalMs={autosaveIntervalMs}
                     changedControlIds={changedControlIds}
@@ -240,6 +245,7 @@ export function SettingsModalMainPane({
                     onUpdateCustomTheme={onUpdateCustomTheme}
                     panelId={selectedPanelId}
                     searchQuery={searchQuery}
+                    setAudiosheetShortcutTargetMode={setAudiosheetShortcutTargetMode}
                     setAutosaveEnabled={setAutosaveEnabled}
                     setAutosaveIntervalMs={setAutosaveIntervalMs}
                     setThemeKey={setThemeKey}

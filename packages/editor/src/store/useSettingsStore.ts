@@ -12,6 +12,7 @@ import {
 type SettingsStore = {
     addCustomTheme: (theme: CustomThemeEntry) => void;
     deleteCustomTheme: (key: string) => void;
+    setAudiosheetShortcutTargetMode: (mode: SettingsState['audiosheetShortcutTargetMode']) => void;
     setAutosaveEnabled: (autosaveEnabled: boolean) => void;
     setAutosaveIntervalMs: (autosaveIntervalMs: number) => void;
     setCustomThemes: (customThemes: SettingsState['customThemes']) => void;
@@ -39,6 +40,7 @@ export const useSettingsStore = create<SettingsStore>()(
                 const themeKey = state.themeKey === key ? 'classic' : state.themeKey;
                 return { customThemes, themeKey };
             }),
+            setAudiosheetShortcutTargetMode: (audiosheetShortcutTargetMode) => set({ audiosheetShortcutTargetMode }),
             setAutosaveEnabled: (autosaveEnabled) => set({ autosaveEnabled }),
             setAutosaveIntervalMs: (autosaveIntervalMs) => set({ autosaveIntervalMs: sanitizeAutosaveInterval(autosaveIntervalMs) }),
             setCustomThemes: (customThemes) => set({ customThemes }),
@@ -72,6 +74,7 @@ export const useSettingsStore = create<SettingsStore>()(
             },
             name: 'zerith-settings',
             partialize: (state) => ({
+                audiosheetShortcutTargetMode: state.audiosheetShortcutTargetMode,
                 autosaveEnabled: state.autosaveEnabled,
                 autosaveIntervalMs: state.autosaveIntervalMs,
                 customThemes: state.customThemes,

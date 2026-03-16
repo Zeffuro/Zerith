@@ -74,6 +74,7 @@ function matchesBinding(
 }
 
 function normalizeShortcutKey(value: string): string {
+    if (value === ' ') return 'space';
     return value.trim().toLowerCase();
 }
 

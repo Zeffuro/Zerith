@@ -23,33 +23,19 @@ export function SpritesheetAutoSliceDialog({
 }: SpritesheetAutoSliceDialogProperties) {
     const canvasReference = useRef<HTMLCanvasElement>(null);
     const [inputMode, setInputMode] = useState<InputMode>('frameSize');
+    const initialGrid = useMemo(
+        () => getInitialGridValues(image.naturalWidth, image.naturalHeight),
+        [image.naturalHeight, image.naturalWidth],
+    );
 
-    const [frameWidth, setFrameWidth] = useState(1);
-    const [frameHeight, setFrameHeight] = useState(1);
-    const [columns, setColumns] = useState(1);
-    const [rows, setRows] = useState(1);
+    const [frameWidth, setFrameWidth] = useState(initialGrid.frameWidth);
+    const [frameHeight, setFrameHeight] = useState(initialGrid.frameHeight);
+    const [columns, setColumns] = useState(initialGrid.columns);
+    const [rows, setRows] = useState(initialGrid.rows);
 
     const [useChromaKey, setUseChromaKey] = useState(false);
     const [chromaKey, setChromaKey] = useState('#00b140');
     const [chromaTolerance, setChromaTolerance] = useState(30);
-
-    useEffect(() => {
-        const suggestions = suggestGridDimensions(image.naturalWidth, image.naturalHeight);
-        const firstSuggestion = suggestions[0];
-
-        if (firstSuggestion) {
-            setFrameWidth(firstSuggestion.frameWidth);
-            setFrameHeight(firstSuggestion.frameHeight);
-            setColumns(firstSuggestion.cols);
-            setRows(firstSuggestion.rows);
-            return;
-        }
-
-        setFrameWidth(image.naturalWidth);
-        setFrameHeight(image.naturalHeight);
-        setColumns(1);
-        setRows(1);
-    }, [image.naturalHeight, image.naturalWidth]);
 
     const frames = useMemo(() => (
         generateGridFrames(image.naturalWidth, image.naturalHeight, frameWidth, frameHeight)
@@ -314,5 +300,29 @@ function clamp(value: number, minimum: number, maximum: number): number {
 function clampPositive(value: number): number {
     if (!Number.isFinite(value)) return 1;
     return Math.max(1, Math.floor(value));
+}
+
+function getInitialGridValues(width: number, height: number): {
+    columns: number;
+    frameHeight: number;
+    frameWidth: number;
+    rows: number;
+} {
+    const firstSuggestion = suggestGridDimensions(width, height)[0];
+    if (firstSuggestion) {
+        return {
+            columns: firstSuggestion.cols,
+            frameHeight: firstSuggestion.frameHeight,
+            frameWidth: firstSuggestion.frameWidth,
+            rows: firstSuggestion.rows,
+        };
+    }
+
+    return {
+        columns: 1,
+        frameHeight: height,
+        frameWidth: width,
+        rows: 1,
+    };
 }
 

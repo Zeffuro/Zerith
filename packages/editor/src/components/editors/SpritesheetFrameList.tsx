@@ -1,12 +1,13 @@
 import { type SpriteFrame } from 'core';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { editorTheme as t } from '../../theme/editorTheme';
+import { ConfirmDialog } from '../ConfirmDialog';
 import { computeThumbnailCanvasMetrics } from './spritesheetEditorModel';
 
 const FRAME_MIME = 'application/x-zerith-frame';
 
-export type SpritesheetFrameListProps = {
+export type SpritesheetFrameListProperties = {
     frames: Record<string, SpriteFrame>;
     image: HTMLImageElement;
     onAddFrame?: () => void;
@@ -30,13 +31,20 @@ export function SpritesheetFrameList({
     onSelectFrame,
     selectedFrame,
     uiScale,
-}: SpritesheetFrameListProps) {
+}: SpritesheetFrameListProperties) {
     const frameNames = useMemo(() => Object.keys(frames), [frames]);
+    const [pendingFrameRemoval, setPendingFrameRemoval] = useState<string>();
+
+    const confirmRemoveFrame = () => {
+        if (!pendingFrameRemoval || !onRemoveFrame) return;
+        onRemoveFrame(pendingFrameRemoval);
+        setPendingFrameRemoval(undefined);
+    };
 
     return (
         <div style={{ display: 'grid', gap: 10, gridTemplateRows: 'minmax(0, 1fr) auto', height: '100%' }}>
             <div className="zerith-scrollbar" style={{ minHeight: 0, overflow: 'auto' }}>
-                {frameNames.length === 0 ? <div style={{ color: t.text.muted }}>No frames in descriptor.</div> : null}
+                {frameNames.length === 0 ? <div style={{ color: t.text.muted }}>No frames in descriptor.</div> : undefined}
                 <div style={{ display: 'grid', gap: 6 }}>
                     {frameNames.map((name) => {
                         const frame = frames[name];
@@ -83,15 +91,23 @@ export function SpritesheetFrameList({
                         disabled={!onRemoveFrame || !selectedFrame}
                         onClick={() => {
                             if (!selectedFrame || !onRemoveFrame) return;
-                            if (!globalThis.confirm(`Remove frame \"${selectedFrame}\"?`)) return;
-                            onRemoveFrame(selectedFrame);
+                            setPendingFrameRemoval(selectedFrame);
                         }}
                         style={{ flex: 1 }}
                     >
                         Remove Frame
                     </button>
                 </div>
-            ) : null}
+            ) : undefined}
+
+            <ConfirmDialog
+                danger
+                message={pendingFrameRemoval ? `Remove frame "${pendingFrameRemoval}"?` : ''}
+                onCancel={() => setPendingFrameRemoval(undefined)}
+                onConfirm={confirmRemoveFrame}
+                open={Boolean(pendingFrameRemoval)}
+                title="Remove Frame"
+            />
         </div>
     );
 }

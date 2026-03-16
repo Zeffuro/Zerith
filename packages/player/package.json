@@ -6,10 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:game": "node ./scripts/build-game.mjs",
+    "build:game:zip": "node ./scripts/build-game.mjs --zip",
     "preview": "vite preview"
   },
   "dependencies": {
-    "core": "*"
+    "core": "*",
+    "fflate": "^0.8.2"
   },
   "devDependencies": {
     "@types/node": "^25.3.5",

@@ -9,6 +9,7 @@ import type { EditorNode } from '../../../types/EditorNode';
 import { fsWriteTextFile } from '../../../services/fs';
 import { useProjectStore } from '../../../store/storeBootstrap';
 import { useScriptStore } from '../../../store/storeBootstrap';
+import { useSettingsStore } from '../../../store/useSettingsStore';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
 import { isRecord } from '../../../utils/typeGuards';
@@ -52,6 +53,11 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
     const setLastMacrosView = useWorkbenchStore((s) => s.setLastMacrosView);
     const updateTabContent = useWorkbenchStore((s) => s.updateTabContent);
 
+    const monacoReference = useRef<any | null>(null);
+
+    const themeKey = useSettingsStore((s) => s.themeKey);
+    const customThemes = useSettingsStore((s) => s.customThemes);
+
     const mode = useMemo<EditorMode>(() => {
         if (!activeTab) return 'readonly';
         if (activeTab.kind === 'script') return 'script';
@@ -64,7 +70,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
         ) return 'file-json';
         if (activeTab.kind === 'text') return 'file-text';
         return 'readonly';
-    }, [activeTab]);
+    },[activeTab]);
 
     const initial = useMemo(() => {
         if (mode === 'script') return JSON.stringify(rootScript, undefined, 2);
@@ -96,11 +102,27 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
 
     const setDraft = useCallback((nextValue: string) => {
         setDraftBySession((previous) => ({ ...previous, [sessionKey]: nextValue }));
-    }, [sessionKey]);
+    },[sessionKey]);
 
     const setError = useCallback((nextError: string | undefined) => {
         setErrorBySession((previous) => ({ ...previous, [sessionKey]: nextError }));
     }, [sessionKey]);
+
+    const applyMonacoTheme = useCallback(() => {
+        if (!monacoReference.current?.editor) return;
+        setTimeout(() => {
+            try {
+                monacoReference.current.editor.defineTheme('zerith-dynamic', createMonacoTheme());
+                monacoReference.current.editor.setTheme('zerith-dynamic');
+            } catch (err) {
+                console.error('Failed to set monaco theme', err);
+            }
+        }, 10);
+    }, []);
+
+    useEffect(() => {
+        applyMonacoTheme();
+    },[themeKey, customThemes, applyMonacoTheme]);
 
     const visualSyncPayload = useMemo(() => {
         if (mode === 'script') {
@@ -116,7 +138,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
         }
 
         return;
-    }, [macroEntries, mode, rootScript]);
+    },[macroEntries, mode, rootScript]);
 
     useEffect(() => {
         if (!visualSyncPayload) return;
@@ -132,7 +154,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
 
         suppressNextMonacoChangeBySessionReference.current[sessionKey] = true;
         editor.getModel()?.setValue(visualSyncPayload.pretty);
-    }, [sessionKey, value, visualSyncPayload]);
+    },[sessionKey, value, visualSyncPayload]);
 
     const syncJsonToVisual = useCallback((sourceText: string) => {
         if (mode !== 'script' && mode !== 'macros') return;
@@ -161,7 +183,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
         if (syncedCanonicalBySessionReference.current[sessionKey] === canonical) return;
         syncedCanonicalBySessionReference.current[sessionKey] = canonical;
         setMacroEntries(entries);
-    }, [mode, sessionKey, setMacroEntries, setScript]);
+    },[mode, sessionKey, setMacroEntries, setScript]);
 
     useEffect(() => {
         if (mode === 'macros' || editingAllMacrosFile) {
@@ -172,7 +194,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
         if (mode === 'script') {
             setLastScriptView('json');
         }
-    }, [editingAllMacrosFile, mode, setLastMacrosView, setLastScriptView]);
+    },[editingAllMacrosFile, mode, setLastMacrosView, setLastScriptView]);
 
     const apply = useCallback((sourceText = value): ApplyResult => {
         if (!activeTab) return { ok: false };
@@ -222,7 +244,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
             setError(caughtError instanceof Error ? caughtError.message : 'Invalid JSON');
             return { ok: false };
         }
-    }, [activeTab, mode, setError, setMacroEntries, setScript, setDraft, updateTabContent, value]);
+    },[activeTab, mode, setError, setMacroEntries, setScript, setDraft, updateTabContent, value]);
 
     const formatDocument = () => {
         const editor = editorReference.current;
@@ -248,7 +270,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
         } catch (caughtError: unknown) {
             setError(caughtError instanceof Error ? caughtError.message : 'Failed to save file');
         }
-    }, [activeTab, apply, mode, saveActiveFileFromCurrentScript, setError, updateTabContent, value]);
+    },[activeTab, apply, mode, saveActiveFileFromCurrentScript, setError, updateTabContent, value]);
 
     useEffect(() => {
         saveNowReference.current = saveNow;
@@ -259,25 +281,14 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
 
     const onMount: OnMount = (editor, monaco) => {
         editorReference.current = editor;
+        monacoReference.current = monaco;
+
+        applyMonacoTheme();
+
         const monacoApi = monaco as unknown as MonacoThemeApi;
-
-        monacoApi.editor.defineTheme('zerith-json-dark', {
-            base: 'vs-dark',
-            colors: {
-                'editor.background': '#1e1e1e',
-                'editorCursor.foreground': '#f9fafb',
-                'editorGutter.background': '#1e1e1e',
-                'editorLineNumber.activeForeground': '#9ca3af',
-                'editorLineNumber.foreground': '#6b7280',
-            },
-            inherit: true,
-            rules: [],
-        });
-        monacoApi.editor.setTheme('zerith-json-dark');
-
         editor.addAction({
             id: 'zerith-save-current-editor',
-            keybindings: [monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.KeyS],
+            keybindings:[monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.KeyS],
             label: 'Save Current File',
             run: async () => {
                 await saveNowReference.current();
@@ -321,6 +332,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
                         mouseWheelZoom: true,
                         tabSize: 2,
                         wordWrap: 'off',
+                        automaticLayout: true,
                     }}
                     value={value}
                 />
@@ -333,7 +345,57 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
     );
 }
 
+function createMonacoTheme(): Monaco.editor.IStandaloneThemeData {
+    return {
+        base: 'vs-dark',
+        inherit: true,
+        rules:[
+            { token: 'string.key.json', foreground: cssVarHex('--editor-syntax-logic', '9cdcfe') },
+            { token: 'string.value.json', foreground: cssVarHex('--editor-syntax-media', 'ce9178') },
+            { token: 'number', foreground: cssVarHex('--editor-syntax-flow', 'b5cea8') },
+            { token: 'keyword.json', foreground: cssVarHex('--editor-accent-blue', '569cd6') },
+            { token: 'comment', foreground: cssVarHex('--editor-text-muted', '6a9955'), fontStyle: 'italic' },
+        ],
+        colors: {
+            'editor.background': cssVar('--editor-bg-input', '#1e1e1e'),
+            'editor.foreground': cssVar('--editor-text-normal', '#d4d4d4'),
+            'editorCursor.foreground': cssVar('--editor-text-primary', '#ffffff'),
+            'editorLineNumber.foreground': cssVar('--editor-text-muted', '#6b7280'),
+            'editorLineNumber.activeForeground': cssVar('--editor-text-primary', '#9ca3af'),
+            'editorGutter.background': cssVar('--editor-bg-input', '#1e1e1e'),
+            'editor.selectionBackground': cssVar('--editor-bg-selected', '#264f78'),
+            'editor.inactiveSelectionBackground': cssVar('--editor-bg-hover', '#264f78'),
+            'editorIndentGuide.background': cssVar('--editor-border-subtle', '#2d2d2d'),
+            'editorIndentGuide.activeBackground': cssVar('--editor-border-normal', '#3c3c3c'),
+        },
+    };
+}
 
+function cssVar(name: string, fallback = '#ffffff'): string {
+    try {
+        const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        return raw || fallback;
+    } catch {
+        return fallback;
+    }
+}
+
+function cssVarHex(name: string, fallbackHex = 'ffffff'): string {
+    const raw = cssVar(name, `#${fallbackHex}`);
+
+    if (raw.startsWith('#')) {
+        const hex = raw.slice(1).trim();
+        if (hex.length === 3) return hex.split('').map((c) => c + c).join('').toLowerCase();
+        if (hex.length === 6 || hex.length === 8) return hex.slice(0, 6).toLowerCase();
+    }
+
+    const rgbMatch = raw.match(/rgba?\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/i);
+    if (rgbMatch) {
+        return[1, 2, 3].map(i => Number(rgbMatch[i]).toString(16).padStart(2, '0')).join('').toLowerCase();
+    }
+
+    return fallbackHex.toLowerCase();
+}
 
 function helperTextForMode(mode: EditorMode): string {
     if (mode === 'file-text') return 'Text mode: edit file contents and click Apply. Ctrl/Cmd+S saves to disk.';
@@ -342,7 +404,6 @@ function helperTextForMode(mode: EditorMode): string {
     if (mode === 'script') return 'Script JSON mode: edit command array and click Apply. Ctrl/Cmd+S saves.';
     return 'No editable file selected.';
 }
-
 
 function languageForMode(mode: EditorMode, path: string | undefined): string {
     if (mode === 'file-text') {
@@ -372,7 +433,6 @@ function titleForMode(mode: EditorMode, activeTitle: string | undefined): string
 
 function toMacroEntries(value: unknown): { commands: Command[]; name: string; }[] | undefined {
     if (!isRecord(value)) return undefined;
-
     return Object.entries(value).map(([name, commands]) => ({
         commands: Array.isArray(commands) ? (commands as Command[]) : [],
         name,
@@ -385,4 +445,3 @@ function toSyncPayload(value: unknown): SyncPayload {
         pretty: JSON.stringify(value, undefined, 2),
     };
 }
-

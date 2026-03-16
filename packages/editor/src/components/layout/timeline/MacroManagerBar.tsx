@@ -105,7 +105,7 @@ export function MacroManagerBar({ uiScale }: { uiScale: number }) {
 
                     <button
                         onClick={deleteSelectedMacros}
-                        style={{ ...buttonStyle, border: `1px solid #7f1d1d`, color: '#fca5a5' }}
+                        style={{ ...buttonStyle, border: `1px solid ${t.accent.red}`, color: t.accent.red }}
                         title="Delete macro"
                         type="button"
                     >

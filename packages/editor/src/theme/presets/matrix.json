@@ -1,0 +1,51 @@
+{
+  "key": "retroTerminal",
+  "label": "Retro Terminal",
+  "vars": {
+    "--editor-bg-app": "#000000",
+    "--editor-bg-panel": "#050505",
+    "--editor-bg-panel-alt": "#0a0a0a",
+    "--editor-bg-input": "#000000",
+    "--editor-bg-popup": "#0a0a0a",
+    "--editor-bg-hover": "#003b00",
+    "--editor-bg-selected": "#004b00",
+    "--editor-bg-danger": "#4b0000",
+    "--editor-bg-preview": "#000",
+
+    "--editor-border-subtle": "#003b00",
+    "--editor-border-normal": "#005f00",
+    "--editor-border-input": "#005f00",
+    "--editor-border-button": "#008f11",
+    "--editor-border-accent": "#00ff41",
+    "--editor-border-focus": "#00ff41",
+    "--editor-border-primary-btn": "#008f11",
+
+    "--editor-text-primary": "#00ff41",
+    "--editor-text-normal": "#00cc00",
+    "--editor-text-muted": "#008f11",
+    "--editor-text-faint": "#005f00",
+
+    "--editor-accent-primary": "#00ff41",
+    "--editor-accent-red": "#ff0000",
+    "--editor-accent-green": "#00ff41",
+    "--editor-accent-yellow": "#ffff00",
+    "--editor-accent-blue": "#00ff41",
+    "--editor-accent-purple": "#00ff41",
+    "--editor-accent-teal": "#00ff41",
+    "--editor-accent-orange": "#00ff41",
+
+    "--editor-icon-manifest": "#00ff41",
+    "--editor-icon-image": "#00ff41",
+    "--editor-icon-audio": "#00ff41",
+    "--editor-icon-script": "#00ff41",
+    "--editor-icon-text": "#00ff41",
+    "--editor-icon-data": "#00ff41",
+
+    "--editor-shadow-popup": "0 8px 20px rgba(0,255,65,0.05)",
+    "--editor-shadow-popup-strong": "0 10px 24px rgba(0,255,65,0.1)",
+
+    "--editor-radius-sm": "0px",
+    "--editor-radius-md": "0px",
+    "--editor-radius-lg": "0px"
+  }
+}

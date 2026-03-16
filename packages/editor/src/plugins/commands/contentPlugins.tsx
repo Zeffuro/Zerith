@@ -1,5 +1,7 @@
 import { Gamepad2, GitFork, Image as ImageIcon, MessageSquare, User } from 'lucide-react';
 
+import { editorTheme as t } from '../../theme/editorTheme';
+
 import type { PluginNode } from '../types';
 
 import { BackgroundInspector } from '../../components/inspector/BackgroundInspector';
@@ -13,8 +15,9 @@ export const contentPluginOverrides: CommandPluginOverrides = {
     background: {
         createDefault: () => ({ assetUrl: '', type: 'background' }),
         getSummary: (node) => readString(node, 'assetUrl', '(no asset)'),
-        icon: (size) => <ImageIcon color="#34d399" size={size} />,
+        icon: (size) => <ImageIcon color={t.accent.teal} size={size} />,
         Inspector: asInspector(BackgroundInspector),
+        quickColor: { bg: t.bg.panelAlt, border: t.accent.teal },
     },
     choice: {
         createDefault: () => ({ options: [{ commands: [], label: 'Option 1' }], type: 'choice' }),
@@ -32,21 +35,23 @@ export const contentPluginOverrides: CommandPluginOverrides = {
             });
         },
         getSummary: (node) => `${readArray(node, 'options').length} options`,
-        icon: (size) => <GitFork color="#fbbf24" size={size} />,
+        icon: (size) => <GitFork color={t.accent.yellow} size={size} />,
         Inspector: asInspector(ChoiceInspector),
-        quickColor: { bg: '#4a3b10', border: '#7a5f19' },
+        quickColor: { bg: t.bg.panelAlt, border: t.accent.yellow },
     },
     dialogue: {
         createDefault: () => ({ speaker: '???', text: '...', type: 'dialogue' }),
         getSummary: (node) => `${readString(node, 'speaker', '???')}: ${readString(node, 'text')}`,
-        icon: (size) => <MessageSquare color="#60a5fa" size={size} />,
+        icon: (size) => <MessageSquare color={t.accent.blue} size={size} />,
         Inspector: asInspector(DialogueInspector),
+        quickColor: { bg: t.bg.panelAlt, border: t.accent.blue },
     },
     item: {
         createDefault: () => ({ action: 'add', id: '', type: 'item' }),
         getSummary: (node) => `${readString(node, 'action', 'add')} ${readString(node, 'id')}`,
-        icon: (size) => <Gamepad2 color="#f87171" size={size} />,
+        icon: (size) => <Gamepad2 color={t.accent.red} size={size} />,
         Inspector: asInspector(ItemInspector),
+        quickColor: { bg: t.bg.panelAlt, border: t.accent.red },
     },
     sprite: {
         createDefault: () => ({ action: 'show', id: '', type: 'sprite' }),
@@ -56,8 +61,9 @@ export const contentPluginOverrides: CommandPluginOverrides = {
             const pose = readString(node, 'pose');
             return `${id} • ${action}${pose ? ` • ${pose}` : ''}`;
         },
-        icon: (size) => <User color="#a78bfa" size={size} />,
+        icon: (size) => <User color={t.accent.purple} size={size} />,
         Inspector: asInspector(SpriteInspector),
+        quickColor: { bg: t.bg.panelAlt, border: t.accent.purple },
     },
 };
 

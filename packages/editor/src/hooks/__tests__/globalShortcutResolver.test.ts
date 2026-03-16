@@ -15,6 +15,7 @@ describe('resolveGlobalShortcutAction', () => {
         expect(resolve(buildContext({ key: 'F5', shiftKey: true }, { isPlaybackRunning: true }))?.action).toBe('stopPlayback');
         expect(resolve(buildContext({ key: 'F5' }, { isPlaybackRunning: true }))?.action).toBe('continueOrPlay');
         expect(resolve(buildContext({ key: 'F10' }, { isPlaybackRunning: true }))?.action).toBe('stepPlayback');
+        expect(resolve(buildContext({ key: ' ' }))?.action).toBe('audiosheetTogglePlayPause');
     });
 
     it('does not resolve guarded playback commands when playback is not running', () => {
@@ -99,6 +100,8 @@ describe('resolveGlobalShortcutAction', () => {
         expect(resolve(buildContext({ ctrlKey: true, key: 'z' }, { isTypingTarget: true }))).toBeUndefined();
         expect(resolve(buildContext({ ctrlKey: true, key: 'f', shiftKey: true }, { isTypingTarget: true }))?.action)
             .toBe('openGlobalSearchFind');
+        expect(resolve(buildContext({ key: 'q' }, { isTypingTarget: true }))).toBeUndefined();
+        expect(resolve(buildContext({ key: ' ' }, { isTypingTarget: true }))).toBeUndefined();
 
         expect(resolve(buildContext(
             { ctrlKey: true, key: 'k' },

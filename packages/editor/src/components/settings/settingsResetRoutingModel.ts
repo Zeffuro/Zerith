@@ -2,6 +2,7 @@ import type { SettingsControlId } from './settingsControlRegistry';
 
 export type SettingsResetActions = {
     resetAudio: () => void;
+    resetAudiosheetShortcutTargetMode: () => void;
     resetAutosaveEnabled: () => void;
     resetAutosaveIntervalMs: () => void;
     resetCustomThemes: () => void;
@@ -12,6 +13,7 @@ export type SettingsResetActions = {
 
 const controlResetActionById: Record<SettingsControlId, (actions: SettingsResetActions) => void> = {
     audio: (actions) => actions.resetAudio(),
+    audiosheetShortcutTargetMode: (actions) => actions.resetAudiosheetShortcutTargetMode(),
     autosaveEnabled: (actions) => actions.resetAutosaveEnabled(),
     autosaveIntervalMs: (actions) => actions.resetAutosaveIntervalMs(),
     customThemes: (actions) => actions.resetCustomThemes(),
@@ -26,6 +28,7 @@ export function runAllSettingsReset(actions: SettingsResetActions): void {
     actions.resetAutosaveEnabled();
     actions.resetAutosaveIntervalMs();
     actions.resetAudio();
+    actions.resetAudiosheetShortcutTargetMode();
     actions.resetKeymapOverrides();
 }
 

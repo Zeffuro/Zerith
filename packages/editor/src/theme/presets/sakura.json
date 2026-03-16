@@ -1,0 +1,51 @@
+{
+  "key": "sakura",
+  "label": "Sakura",
+  "vars": {
+    "--editor-bg-app": "#fff5f7",
+    "--editor-bg-panel": "#fdeef2",
+    "--editor-bg-panel-alt": "#fadce6",
+    "--editor-bg-input": "#ffffff",
+    "--editor-bg-popup": "#ffffff",
+    "--editor-bg-hover": "#f3d1dc",
+    "--editor-bg-selected": "#ec9db4",
+    "--editor-bg-danger": "#ffccd5",
+    "--editor-bg-preview": "#222",
+
+    "--editor-border-subtle": "#f2ccd7",
+    "--editor-border-normal": "#e9b5c5",
+    "--editor-border-input": "#e9b5c5",
+    "--editor-border-button": "#dca1b3",
+    "--editor-border-accent": "#d23669",
+    "--editor-border-focus": "#d23669",
+    "--editor-border-primary-btn": "#d23669",
+
+    "--editor-text-primary": "#5c2d3a",
+    "--editor-text-normal": "#7d4a59",
+    "--editor-text-muted": "#a67c88",
+    "--editor-text-faint": "#c4a7b0",
+
+    "--editor-accent-primary": "#d23669",
+    "--editor-accent-red": "#e05252",
+    "--editor-accent-green": "#4a9c5d",
+    "--editor-accent-yellow": "#c49a00",
+    "--editor-accent-blue": "#3d7ab1",
+    "--editor-accent-purple": "#9058a3",
+    "--editor-accent-teal": "#2d8a8a",
+    "--editor-accent-orange": "#c47a00",
+
+    "--editor-icon-manifest": "#c49a00",
+    "--editor-icon-image": "#2d8a8a",
+    "--editor-icon-audio": "#9058a3",
+    "--editor-icon-script": "#4a9c5d",
+    "--editor-icon-text": "#7d4a59",
+    "--editor-icon-data": "#c47a00",
+
+    "--editor-shadow-popup": "0 8px 20px rgba(92,45,58,0.1)",
+    "--editor-shadow-popup-strong": "0 10px 24px rgba(92,45,58,0.15)",
+
+    "--editor-radius-sm": "4px",
+    "--editor-radius-md": "6px",
+    "--editor-radius-lg": "8px"
+  }
+}

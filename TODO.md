@@ -1,10 +1,21 @@
-TODO: Have a build process (not documentation, something  that actually does it.) that compiles the game. Not sure yet if using Tauri or something else. Would be nice if it "just works" (desktop, mobile, itch.io).    
-TODO: Show .sheet files as a child of the sprite/audio sheet in the explorer, and open them in the appropriate editor when clicked, the json should also have a json editor.  
-TODO: Remove old sprite sheet editor and audio sheet editor (the ones next to the inspector etc).  
-TODO: Modernize audiosheet editor with better buttons that fit the design, allow dragging the cue start/end points on the waveform instead of shift-clicking. And be able to drag to scrub the audio.  
-TODO: Have a way to do manual spritesheet slicing (click and drag to create a new sprite, or click to set slice points). And be able to drag the slice points to adjust them.  
-TODO: Autosave interval should be a int input, not a dropdown.  
-TODO: Find a better name for the theme accents to know what users are changing (e.g. "blue" is not very descriptive, but "primary accent color" is). Maybe we can add a comment in the code to explain what each accent is used for, and use that as the label in the UI.  
-TODO: Improve the theme editor, maybe use small cards or have some kind of grid layout to show the variables in a more organized way. And maybe add a live preview of the theme as you edit it.
-TODO: Don't use native dialogs for confirmation, use the app's modal system so it looks consistent.
-TODO: Delete button in the timeline editor does nothing atm.
+TODO: Physical delete button in the timeline editor does nothing atm.  
+TODO: Enhance commandpalette (stuff like export game etc.)  
+TODO: Keeping an eye on the project folder/subfolder, need to know when files are added/removed (through Rust for speed?).  
+TODO: Find out what the difference is between .sheet.json and .atlas.json and if they can be unified.  
+TODO: A close project button.  
+TODO: A way to edit docked panel layouts and save them.  
+TODO: Add link to GitHub in about/help menu.  
+TODO: Add Exit/Quit option to file menu.  
+TODO: Add multiple settings to also independently size other components / ignore UI scale option.  
+TODO: Add JSON editor to spritesheet and audiosheet panels for direct atlas/sheet editing.  
+TODO: Reset zoom and increase/decrease zoom buttons are not keymapped yet.  
+TODO: Add a "New Project" option to the file menu.
+TODO: Add a "Save Project As..." option to the file menu. 
+TODO: Possibly add git integration? Is there any library for this, maybe through Rust? Some minimal GUI for commits, branches, and diffs would be amazing.  
+TODO: Currently the EngineConfig is hardcoded in the bootstrap code, it should be editable through the UI and saved in the project folder.  
+TODO: Investigate other game export options, like desktop builds through Tauri or other options that make sense.  
+TODO: Add a way to edit the project settings, like the game title, version, author, etc.  
+TODO: Add a way to manage assets in the project, like adding/removing assets, organizing them in folders, etc.
+TODO: Some way to keep track of what assets/scenes are used in the game and which ones are not, maybe through a dependency graph or something similar as well as a check when trying to delete an asset that is still being used in a scene.  
+TODO: Quickbuttons modal should probably also live in settings.  
+TODO: Check if audiosheet sprites are already properly used in core and if not, add support for them.  

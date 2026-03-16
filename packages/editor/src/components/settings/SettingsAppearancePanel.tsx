@@ -5,6 +5,7 @@ import type { ThemeVariables } from '../../theme/themeTypes';
 
 import { editorTheme as t } from '../../theme/editorTheme';
 import { getThemeRegistry } from '../../theme/themeRegistry';
+import { themeVariableLabels } from '../../theme/themeVariableLabels';
 import { getVisibleSettingsControls, type SettingsControlId } from './settingsControlRegistry';
 import { SettingsThemeEditor } from './SettingsThemeEditor';
 
@@ -191,6 +192,7 @@ export function SettingsAppearancePanel({
                     isFocused={focusedControlId === 'customThemes'}
                     label="Custom Themes"
                     onSetDetailRowReference={onSetDetailRowReference}
+                    stacked
                     uiScale={uiScale}
                 >
                     <SettingsThemeEditor
@@ -234,6 +236,26 @@ export function SettingsAppearancePanel({
     );
 }
 
+function changedBadgeStyle(isChanged: boolean, uiScale: number): CSSProperties {
+    return {
+        alignItems: 'center',
+        background: t.accent.green,
+        borderRadius: t.radius.sm,
+        color: '#fff',
+        display: 'inline-flex',
+        fontSize: `${10 * uiScale}px`,
+        fontWeight: 700,
+        height: `${18 * uiScale}px`,
+        justifyContent: 'center',
+        letterSpacing: '.03em',
+        opacity: isChanged ? 1 : 0,
+        pointerEvents: 'none',
+        textTransform: 'uppercase',
+        visibility: isChanged ? 'visible' : 'hidden',
+        width: `${56 * uiScale}px`,
+    };
+}
+
 function EditableSettingRow({
     children,
     controlId,
@@ -241,6 +263,7 @@ function EditableSettingRow({
     isFocused = false,
     label,
     onSetDetailRowReference,
+    stacked = false,
     uiScale,
 }: {
     children: ReactNode;
@@ -249,6 +272,7 @@ function EditableSettingRow({
     isFocused?: boolean;
     label: string;
     onSetDetailRowReference: (controlId: SettingsControlId, element: HTMLDivElement | null) => void;
+    stacked?: boolean;
     uiScale: number;
 }) {
     return (
@@ -264,33 +288,25 @@ function EditableSettingRow({
                 boxShadow: isFocused ? `0 0 0 2px ${t.accent.primary}` : undefined,
                 display: 'grid',
                 gap: `${8 * uiScale}px`,
-                gridTemplateColumns: `${170 * uiScale}px auto 1fr`,
+                gridTemplateColumns: stacked ? '1fr' : `${170 * uiScale}px auto 1fr`,
                 padding: `${10 * uiScale}px ${12 * uiScale}px`,
             }}
         >
-            <span style={{ color: t.text.normal, fontSize: `${12 * uiScale}px` }}>{label}</span>
-            <span
-                style={{
-                    alignItems: 'center',
-                    background: t.accent.green,
-                    borderRadius: t.radius.sm,
-                    color: '#fff',
-                    display: 'inline-flex',
-                    fontSize: `${10 * uiScale}px`,
-                    fontWeight: 700,
-                    height: `${18 * uiScale}px`,
-                    justifyContent: 'center',
-                    letterSpacing: '.03em',
-                    opacity: isChanged ? 1 : 0,
-                    pointerEvents: 'none',
-                    textTransform: 'uppercase',
-                    visibility: isChanged ? 'visible' : 'hidden',
-                    width: `${56 * uiScale}px`,
-                }}
-            >
-                Changed
-            </span>
-            <div>{children}</div>
+            {stacked ? (
+                <>
+                    <div style={{ alignItems: 'center', display: 'flex', gap: `${8 * uiScale}px`, justifyContent: 'space-between' }}>
+                        <span style={{ color: t.text.normal, fontSize: `${12 * uiScale}px` }}>{label}</span>
+                        <span style={changedBadgeStyle(isChanged, uiScale)}>Changed</span>
+                    </div>
+                    <div style={{ minWidth: 0 }}>{children}</div>
+                </>
+            ) : (
+                <>
+                    <span style={{ color: t.text.normal, fontSize: `${12 * uiScale}px` }}>{label}</span>
+                    <span style={changedBadgeStyle(isChanged, uiScale)}>Changed</span>
+                    <div style={{ minWidth: 0 }}>{children}</div>
+                </>
+            )}
         </div>
     );
 }
@@ -300,7 +316,7 @@ function getThemeSwatches(variables: ThemeVariables): ThemeSwatch[] {
         const value = variables[variable];
         return value
             ? [{
-                label: variable.replace('--editor-', ''),
+                label: themeVariableLabels[variable] ?? variable,
                 value,
                 variable,
             }]
@@ -319,5 +335,3 @@ function settingsInputStyle(uiScale: number): CSSProperties {
         width: '100%',
     };
 }
-
-

@@ -9,6 +9,7 @@ import { SettingsEditorPanel } from './SettingsEditorPanel';
 import { SettingsGeneralPanel } from './SettingsGeneralPanel';
 
 type SettingsDetailPanelProperties = {
+    audiosheetShortcutTargetMode: 'cursor' | 'playhead';
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
     changedControlIds: ReadonlySet<string>;
@@ -23,6 +24,7 @@ type SettingsDetailPanelProperties = {
     onUpdateCustomTheme: (key: string, updates: Partial<Omit<CustomThemeEntry, 'key'>>) => void;
     panelId: string;
     searchQuery: string;
+    setAudiosheetShortcutTargetMode: (mode: 'cursor' | 'playhead') => void;
     setAutosaveEnabled: (enabled: boolean) => void;
     setAutosaveIntervalMs: (intervalMs: number) => void;
     setThemeKey: (key: string) => void;
@@ -34,6 +36,7 @@ type SettingsDetailPanelProperties = {
 };
 
 export function SettingsDetailPanel({
+    audiosheetShortcutTargetMode,
     autosaveEnabled,
     autosaveIntervalMs,
     changedControlIds,
@@ -48,6 +51,7 @@ export function SettingsDetailPanel({
     onUpdateCustomTheme,
     panelId,
     searchQuery,
+    setAudiosheetShortcutTargetMode,
     setAutosaveEnabled,
     setAutosaveIntervalMs,
     setThemeKey,
@@ -65,6 +69,7 @@ export function SettingsDetailPanel({
         >
             {panelId.startsWith('general') ? (
                 <SettingsGeneralPanel
+                    audiosheetShortcutTargetMode={audiosheetShortcutTargetMode}
                     autosaveEnabled={autosaveEnabled}
                     autosaveIntervalMs={autosaveIntervalMs}
                     changedControlIds={changedControlIds}
@@ -74,6 +79,7 @@ export function SettingsDetailPanel({
                     onSetDetailRowReference={onSetDetailRowReference}
                     panelId={panelId}
                     searchQuery={searchQuery}
+                    setAudiosheetShortcutTargetMode={setAudiosheetShortcutTargetMode}
                     setAutosaveEnabled={setAutosaveEnabled}
                     setAutosaveIntervalMs={setAutosaveIntervalMs}
                     showChangedOnly={showChangedOnly}

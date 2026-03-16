@@ -61,10 +61,12 @@ export function SettingsModal() {
     const toggleMute = useEditorStore((state) => state.toggleMute);
     const uiScale = useEditorStore((state) => state.uiScale);
     const addCustomTheme = useSettingsStore((state) => state.addCustomTheme);
+    const audiosheetShortcutTargetMode = useSettingsStore((state) => state.audiosheetShortcutTargetMode);
     const customThemes = useSettingsStore((state) => state.customThemes);
     const deleteCustomTheme = useSettingsStore((state) => state.deleteCustomTheme);
     const keymapOverrides = useSettingsStore((state) => state.keymapOverrides);
     const setCustomThemes = useSettingsStore((state) => state.setCustomThemes);
+    const setAudiosheetShortcutTargetMode = useSettingsStore((state) => state.setAudiosheetShortcutTargetMode);
     const setKeymapOverrides = useSettingsStore((state) => state.setKeymapOverrides);
     const setSettingsMuted = useSettingsStore((state) => state.setIsMuted);
     const updateCustomTheme = useSettingsStore((state) => state.updateCustomTheme);
@@ -93,14 +95,15 @@ export function SettingsModal() {
     const conflictActionSequence = useMemo(() => buildConflictActionSequence(keymapRows), [keymapRows]);
 
     const matchedControlIds = useMemo(
-        () => getMatchedSettingsControlIds(searchQuery, { autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, themeKey, uiScale }),
-        [autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, searchQuery, themeKey, uiScale],
+        () => getMatchedSettingsControlIds(searchQuery, { audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, themeKey, uiScale }),
+        [audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, searchQuery, themeKey, uiScale],
     );
 
     const changedControlIds = useMemo(
         () => getChangedSettingsControlIds(
-            { autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, themeKey, uiScale },
+            { audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, themeKey, uiScale },
             {
+                audiosheetShortcutTargetMode: defaultSettings.audiosheetShortcutTargetMode,
                 autosaveEnabled: defaultSettings.autosaveEnabled,
                 autosaveIntervalMs: defaultSettings.autosaveIntervalMs,
                 customThemes: defaultSettings.customThemes,
@@ -109,14 +112,14 @@ export function SettingsModal() {
                 uiScale: defaultSettings.uiScale,
             },
         ),
-        [autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, themeKey, uiScale],
+        [audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, themeKey, uiScale],
     );
 
     const contentMatchedPanelIds = useMemo(() => {
-        const panelIds = getMatchedSettingsPanelIds(searchQuery, { autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, themeKey, uiScale });
+        const panelIds = getMatchedSettingsPanelIds(searchQuery, { audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, themeKey, uiScale });
         if (filteredKeymapRows.length > 0) panelIds.add('keymap');
         return panelIds;
-    }, [autosaveEnabled, autosaveIntervalMs, customThemes, filteredKeymapRows.length, isMuted, searchQuery, themeKey, uiScale]);
+    }, [audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, filteredKeymapRows.length, isMuted, searchQuery, themeKey, uiScale]);
 
     const filteredNodes = useMemo(() => {
         if (searchQuery.trim().length === 0) return baseFilteredNodes;
@@ -133,8 +136,9 @@ export function SettingsModal() {
 
     const changedLeafCounts = useMemo(() => {
         const counts = getChangedSettingsLeafPanelCounts(
-            { autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, themeKey, uiScale },
+            { audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, themeKey, uiScale },
             {
+                audiosheetShortcutTargetMode: defaultSettings.audiosheetShortcutTargetMode,
                 autosaveEnabled: defaultSettings.autosaveEnabled,
                 autosaveIntervalMs: defaultSettings.autosaveIntervalMs,
                 customThemes: defaultSettings.customThemes,
@@ -147,7 +151,7 @@ export function SettingsModal() {
         const keymapChangedCount = Object.keys(keymapOverrides).length;
         if (keymapChangedCount > 0) counts.keymap = keymapChangedCount;
         return counts;
-    }, [autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, keymapOverrides, themeKey, uiScale]);
+    }, [audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, keymapOverrides, themeKey, uiScale]);
 
     const changedNodeCounts = useMemo(() => buildSettingsNodeCountMap(filteredNodes, changedLeafCounts), [changedLeafCounts, filteredNodes]);
     const settingsTreeBadgeCounts = treeBadgeMode === 'changed' ? changedNodeCounts : filteredNodeLeafCounts;
@@ -276,6 +280,7 @@ export function SettingsModal() {
                 setSettingsMuted(defaultSettings.isMuted);
                 useEditorStore.setState({ isMuted: defaultSettings.isMuted });
             },
+            resetAudiosheetShortcutTargetMode: () => setAudiosheetShortcutTargetMode(defaultSettings.audiosheetShortcutTargetMode),
             resetAutosaveEnabled: () => setAutosaveEnabled(defaultSettings.autosaveEnabled),
             resetAutosaveIntervalMs: () => setAutosaveIntervalMs(defaultSettings.autosaveIntervalMs),
             resetCustomThemes: () => setCustomThemes(defaultSettings.customThemes),
@@ -291,6 +296,7 @@ export function SettingsModal() {
                 setSettingsMuted(defaultSettings.isMuted);
                 useEditorStore.setState({ isMuted: defaultSettings.isMuted });
             },
+            resetAudiosheetShortcutTargetMode: () => setAudiosheetShortcutTargetMode(defaultSettings.audiosheetShortcutTargetMode),
             resetAutosaveEnabled: () => setAutosaveEnabled(defaultSettings.autosaveEnabled),
             resetAutosaveIntervalMs: () => setAutosaveIntervalMs(defaultSettings.autosaveIntervalMs),
             resetCustomThemes: () => setCustomThemes(defaultSettings.customThemes),
@@ -320,6 +326,7 @@ export function SettingsModal() {
                         />
                         <SettingsModalMainPane
                             activeConflictIndex={focusedRowAction ? conflictActionSequence.indexOf(focusedRowAction) : -1}
+                            audiosheetShortcutTargetMode={audiosheetShortcutTargetMode}
                             autosaveEnabled={autosaveEnabled}
                             autosaveIntervalMs={autosaveIntervalMs}
                             changedControlIds={changedControlIds}
@@ -370,6 +377,7 @@ export function SettingsModal() {
                             rowsContainerReference={rowsContainerReference}
                             searchQuery={searchQuery}
                             selectedPanelId={selectedPanelId}
+                            setAudiosheetShortcutTargetMode={setAudiosheetShortcutTargetMode}
                             setAutosaveEnabled={setAutosaveEnabled}
                             setAutosaveIntervalMs={setAutosaveIntervalMs}
                             setThemeKey={setThemeKey}

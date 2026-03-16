@@ -24,6 +24,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         isPlaybackPaused,
         markManualSave,
         openCommandPalette,
+        openExportGameModal,
         openGlobalSearchPopup,
         openGlobalSearchReplacePopup,
         openSettingsModal,
@@ -41,7 +42,14 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
     const currentScale = useSettingsStore((state) => state.uiScale);
     const setUiScale = useSettingsStore((state) => state.setUiScale);
 
-    const { activeFile, dirtyFiles, openProjectFromManifest, saveActiveFileFromCurrentScript, saveAllDirtyFiles } = useProjectStore();
+    const {
+        activeFile,
+        dirtyFiles,
+        openProjectFromManifest,
+        projectPath,
+        saveActiveFileFromCurrentScript,
+        saveAllDirtyFiles,
+    } = useProjectStore();
     const selectedNodePaths = useEditorStore((state) => state.selectedNodePaths);
     const canRedo = useScriptStore((state) => state.future.length > 0);
     const canUndo = useScriptStore((state) => state.past.length > 0);
@@ -121,6 +129,10 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
             { disabled: !activeFile, label: 'Save', onClick: () => { void handleSave(); }, shortcut: 'Ctrl+S' },
             { disabled: !hasDirtyFiles, label: 'Save All', onClick: () => { void handleSaveAll(); }, shortcut: 'Ctrl+Shift+S' },
             { label: 'sep-1', separator: true },
+            { label: 'Settings…', onClick: openSettingsModal, shortcut: 'Ctrl+Alt+S' },
+            { label: 'sep-1a', separator: true },
+            { disabled: !projectPath, label: 'Export Game…', onClick: openExportGameModal },
+            { label: 'sep-1b', separator: true },
             { label: 'Reset Layout', onClick: resetDockLayout },
         ];
     })();
@@ -140,13 +152,12 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
             { label: 'Find in Project…', onClick: openGlobalSearchPopup, shortcut: 'Ctrl+Shift+F' },
             { label: 'Find and Replace in Project…', onClick: openGlobalSearchReplacePopup, shortcut: 'Ctrl+Shift+G' },
             { label: 'Command Palette…', onClick: openCommandPalette, shortcut: 'Ctrl+Shift+P' },
-            { label: 'Settings…', onClick: openSettingsModal, shortcut: 'Ctrl+Alt+S' },
             { label: 'sep-3', separator: true },
             { label: 'Zoom In', onClick: () => setUiScale(Math.min(1.5, currentScale + 0.1)), shortcut: 'Ctrl+=' },
             { label: 'Zoom Out', onClick: () => setUiScale(Math.max(0.8, currentScale - 0.1)), shortcut: 'Ctrl+-' },
             { label: 'Reset Zoom', onClick: () => setUiScale(1), shortcut: 'Ctrl+0' },
         ],
-        [currentScale, openCommandPalette, openGlobalSearchPopup, openGlobalSearchReplacePopup, openSettingsModal, setUiScale]
+        [currentScale, openCommandPalette, openGlobalSearchPopup, openGlobalSearchReplacePopup, setUiScale]
     );
 
     const runItems = useMemo<MenuItem[]>(

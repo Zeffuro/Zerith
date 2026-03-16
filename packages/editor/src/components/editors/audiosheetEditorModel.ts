@@ -16,6 +16,19 @@ export type WaveformBar = {
     y: number;
 };
 
+export type WaveformCueHandle = 'end' | 'start';
+
+export type WaveformCueHandleHit = {
+    cueName: string;
+    handle: WaveformCueHandle;
+};
+
+export type WaveformCueRange = {
+    end: number;
+    name: string;
+    start: number;
+};
+
 export function buildWaveformBars(peaks: number[], width: number, height: number): WaveformBar[] {
     const safeWidth = Math.max(1, width);
     const safeHeight = Math.max(1, height);
@@ -34,6 +47,33 @@ export function buildWaveformBars(peaks: number[], width: number, height: number
     });
 }
 
+export function computeCueDragUpdate(
+    cue: AudiosheetCue,
+    handle: WaveformCueHandle,
+    pointerSeconds: number,
+    clipDuration?: number,
+): Partial<AudiosheetCue> {
+    const minDuration = 0.01;
+    const safeStart = Math.max(0, cue.start);
+    const maxTime = clipDuration === undefined ? Number.POSITIVE_INFINITY : Math.max(0, clipDuration);
+
+    if (handle === 'start') {
+        if (cue.duration === undefined) {
+            return { start: clamp(pointerSeconds, 0, maxTime) };
+        }
+
+        const cueEnd = clamp(safeStart + Math.max(minDuration, cue.duration), 0, maxTime);
+        const nextStart = clamp(pointerSeconds, 0, cueEnd - minDuration);
+        return {
+            duration: Math.max(minDuration, cueEnd - nextStart),
+            start: nextStart,
+        };
+    }
+
+    const nextEnd = clamp(pointerSeconds, safeStart + minDuration, maxTime);
+    return { duration: Math.max(minDuration, nextEnd - safeStart) };
+}
+
 export function cueAtTime(cues: Record<string, AudiosheetCue>, timeSeconds: number): string | undefined {
     if (!Number.isFinite(timeSeconds) || timeSeconds < 0) return undefined;
 
@@ -45,6 +85,71 @@ export function cueAtTime(cues: Record<string, AudiosheetCue>, timeSeconds: numb
     }
 
     return undefined;
+}
+
+export function findCueHandleHit(
+    cues: WaveformCueRange[],
+    pointerX: number,
+    durationSeconds: number,
+    width: number,
+    tolerancePx: number,
+): undefined | WaveformCueHandleHit {
+    if (cues.length === 0 || durationSeconds <= 0 || width <= 0) return undefined;
+
+    let best: { distance: number; hit: WaveformCueHandleHit } | undefined;
+    for (const cue of cues) {
+        const startDistance = Math.abs(pointerX - timeToWaveformX(cue.start, durationSeconds, width));
+        if (startDistance <= tolerancePx && (!best || startDistance < best.distance)) {
+            best = { distance: startDistance, hit: { cueName: cue.name, handle: 'start' } };
+        }
+
+        const endDistance = Math.abs(pointerX - timeToWaveformX(cue.end, durationSeconds, width));
+        if (endDistance <= tolerancePx && (!best || endDistance < best.distance)) {
+            best = { distance: endDistance, hit: { cueName: cue.name, handle: 'end' } };
+        }
+    }
+
+    return best?.hit;
+}
+
+export function findNearestCueBoundary(
+    cues: WaveformCueRange[],
+    timeSeconds: number,
+    side: 'left' | 'right',
+): { cueName: string; handle: WaveformCueHandle; time: number } | undefined {
+    let best: { cueName: string; handle: WaveformCueHandle; time: number } | undefined;
+
+    for (const cue of cues) {
+        const candidates: readonly [WaveformCueHandle, number][] = [
+            ['start', cue.start],
+            ['end', cue.end],
+        ];
+
+        for (const [handle, markerTime] of candidates) {
+            if (side === 'left' && markerTime > timeSeconds) continue;
+            if (side === 'right' && markerTime < timeSeconds) continue;
+
+            if (!best) {
+                best = { cueName: cue.name, handle, time: markerTime };
+                continue;
+            }
+
+            if (side === 'left' && markerTime > best.time) {
+                best = { cueName: cue.name, handle, time: markerTime };
+            }
+            if (side === 'right' && markerTime < best.time) {
+                best = { cueName: cue.name, handle, time: markerTime };
+            }
+            if (side === 'left' && markerTime === best.time && handle === 'end' && best.handle !== 'end') {
+                best = { cueName: cue.name, handle, time: markerTime };
+            }
+            if (side === 'right' && markerTime === best.time && handle === 'start' && best.handle !== 'start') {
+                best = { cueName: cue.name, handle, time: markerTime };
+            }
+        }
+    }
+
+    return best;
 }
 
 export function formatTimestamp(seconds: number): string {
@@ -87,6 +192,12 @@ export function validateCueOverlaps(cues: Record<string, AudiosheetCue>): CueOve
     }
 
     return overlaps;
+}
+
+export function waveformXToTime(x: number, durationSeconds: number, width: number): number {
+    const safeWidth = Math.max(1, width);
+    const ratio = clamp(x / safeWidth, 0, 1);
+    return ratio * Math.max(0, durationSeconds);
 }
 
 

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
     buildWaveformBars,
     cueAtTime,
+    findNearestCueBoundary,
     formatTimestamp,
     timeToWaveformX,
     validateCueOverlaps,
@@ -58,6 +59,28 @@ describe('audiosheetEditorModel', () => {
         expect(timeToWaveformX(2, 4, 200)).toBe(100);
         expect(timeToWaveformX(-1, 4, 200)).toBe(0);
         expect(timeToWaveformX(9, 4, 200)).toBe(200);
+    });
+
+    it('finds nearest cue boundary by side', () => {
+        const cues = [
+            { end: 1, name: 'a', start: 0 },
+            { end: 3.5, name: 'b', start: 2 },
+        ];
+
+        expect(findNearestCueBoundary(cues, 2.4, 'left')).toEqual({ cueName: 'b', handle: 'start', time: 2 });
+        expect(findNearestCueBoundary(cues, 2.4, 'right')).toEqual({ cueName: 'b', handle: 'end', time: 3.5 });
+        expect(findNearestCueBoundary(cues, -1, 'left')).toBeUndefined();
+        expect(findNearestCueBoundary(cues, 9, 'right')).toBeUndefined();
+    });
+
+    it('prefers end for left and start for right at tied boundary time', () => {
+        const cues = [
+            { end: 2, name: 'a', start: 1 },
+            { end: 3, name: 'b', start: 2 },
+        ];
+
+        expect(findNearestCueBoundary(cues, 2, 'left')).toMatchObject({ cueName: 'a', handle: 'end', time: 2 });
+        expect(findNearestCueBoundary(cues, 2, 'right')).toMatchObject({ cueName: 'b', handle: 'start', time: 2 });
     });
 });
 

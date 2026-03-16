@@ -1,6 +1,9 @@
 import { serializeShortcutChord } from './shortcutChord';
 
 export const globalShortcutActionCommands = [
+    'audiosheetSetLeftBoundary',
+    'audiosheetSetRightBoundary',
+    'audiosheetTogglePlayPause',
     'clearAllBreakpoints',
     'continueOrPlay',
     'copySelection',
@@ -74,6 +77,9 @@ export const globalShortcutBindings: readonly GlobalShortcutBinding[] = [
     { action: 'openGlobalSearchFind', keys: ['f'], phase: 'global', preventDefault: 'always', requireMod: true, requireShift: true },
     { action: 'openGlobalSearchReplace', keys: ['g'], phase: 'global', preventDefault: 'always', requireMod: true, requireShift: true },
     { action: 'toggleCommandPalette', keys: ['p'], phase: 'global', preventDefault: 'always', requireMod: true, requireShift: true },
+    { action: 'audiosheetTogglePlayPause', keys: ['space'], phase: 'editor', preventDefault: 'whenHandled' },
+    { action: 'audiosheetSetLeftBoundary', keys: ['q'], phase: 'editor', preventDefault: 'whenHandled' },
+    { action: 'audiosheetSetRightBoundary', keys: ['e'], phase: 'editor', preventDefault: 'whenHandled' },
     { action: 'undo', keys: ['z'], phase: 'editor', preventDefault: 'always', requireMod: true },
     { action: 'redo', keys: ['y'], phase: 'editor', preventDefault: 'always', requireMod: true },
     { action: 'redo', keys: ['z'], phase: 'editor', preventDefault: 'always', requireMod: true, requireShift: true },

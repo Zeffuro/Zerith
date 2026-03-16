@@ -6,6 +6,16 @@ export interface ThemeVariableEntry {
     type: 'color' | 'shadow' | 'size';
 }
 
+const variableCategoryPrefixes = [
+    { category: 'Background', cssPrefix: '--editor-bg-' },
+    { category: 'Text', cssPrefix: '--editor-text-' },
+    { category: 'Border', cssPrefix: '--editor-border-' },
+    { category: 'Accent', cssPrefix: '--editor-accent-' },
+    { category: 'Radius', cssPrefix: '--editor-radius-' },
+    { category: 'Shadow', cssPrefix: '--editor-shadow-' },
+    { category: 'Syntax', cssPrefix: '--editor-syntax-' },
+] as const;
+
 export const themeVariableCatalog: ThemeVariableEntry[] = [
     // Background
     { category: 'Background', cssVar: '--editor-bg-app', defaultValue: '#1e1e1e', label: 'App Background', type: 'color' },
@@ -69,10 +79,15 @@ export const themeVariableCatalog: ThemeVariableEntry[] = [
 ];
 
 export function getVariableCategories(): string[] {
-    return [...new Set(themeVariableCatalog.map((variable) => variable.category))];
+    return variableCategoryPrefixes
+        .filter(({ cssPrefix }) => themeVariableCatalog.some((variable) => variable.cssVar.startsWith(cssPrefix)))
+        .map(({ category }) => category);
 }
 
 export function getVariablesByCategory(category: string): ThemeVariableEntry[] {
-    return themeVariableCatalog.filter((variable) => variable.category === category);
+    const categoryPrefix = variableCategoryPrefixes.find((entry) => entry.category === category)?.cssPrefix;
+    if (!categoryPrefix) return [];
+
+    return themeVariableCatalog.filter((variable) => variable.cssVar.startsWith(categoryPrefix));
 }
 

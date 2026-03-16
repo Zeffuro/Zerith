@@ -97,16 +97,19 @@ export interface UiPrefsSlice {
     autosaveIntervalMs: number;
     clearRecentProjects: () => void;
     closeCommandPalette: () => void;
+    closeExportGameModal: () => void;
     closeGlobalSearchPopup: () => void;
     closeSettingsModal: () => void;
     globalSearchLaunchMode: GlobalSearchLaunchMode;
     isCommandPaletteOpen: boolean;
+    isExportGameModalOpen: boolean;
     isGlobalSearchPopupOpen: boolean;
     isMuted: boolean;
     isSettingsModalOpen: boolean;
     lastManualSaveAt: number;
     markManualSave: () => void;
     openCommandPalette: () => void;
+    openExportGameModal: () => void;
     openGlobalSearchPopup: (mode?: GlobalSearchLaunchMode) => void;
     openGlobalSearchReplacePopup: () => void;
     openSettingsModal: () => void;
@@ -118,6 +121,7 @@ export interface UiPrefsSlice {
     setWindowState: (state: EditorWindowState) => void;
     themeKey: string;
     toggleCommandPalette: () => void;
+    toggleExportGameModal: () => void;
     toggleGlobalSearchPopup: () => void;
     toggleMute: () => void;
     toggleSettingsModal: () => void;

@@ -17,7 +17,7 @@ export function AddCommandMenu({
     onAdd: (type: NonMacroEditorCommandType) => void;
     uiScale: number;
 }) {
-    const [open, setOpen] = useState(false);
+    const[open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const rootReference = useRef<HTMLDivElement>(null);
     const inputReference = useRef<HTMLInputElement>(null);
@@ -48,7 +48,7 @@ export function AddCommandMenu({
                     border: `1px solid ${t.border.primaryBtn}`,
                     borderRadius: t.radius.md,
                     boxSizing: 'border-box',
-                    color: t.text.primary,
+                    color: '#fff',
                     cursor: 'pointer',
                     display: 'inline-flex',
                     fontSize: '0.85em',
@@ -81,9 +81,6 @@ export function AddCommandMenu({
                         ref={inputReference}
                         style={{
                             ...styles.input(uiScale),
-                            background: '#111',
-                            border: '1px solid #333',
-                            color: '#ddd',
                             fontSize: '0.85em',
                             marginBottom: `${8 * uiScale}px`,
                             padding: `${6 * uiScale}px`,
@@ -107,7 +104,7 @@ export function AddCommandMenu({
                                 background: 'transparent',
                                 border: 'none',
                                 borderRadius: '4px',
-                                color: '#ddd',
+                                color: t.text.normal,
                                 cursor: 'pointer',
                                 display: 'flex',
                                 fontSize: '0.85em',
@@ -119,12 +116,12 @@ export function AddCommandMenu({
                         >
                             <span style={{ alignItems: 'center', display: 'inline-flex' }}>{item.icon}</span>
                             <span>{item.label}</span>
-                            <span style={{ color: '#777', marginLeft: 'auto' }}>({item.type})</span>
+                            <span style={{ color: t.text.faint, marginLeft: 'auto' }}>({item.type})</span>
                         </button>
                     ))}
 
                     {filtered.length === 0 && (
-                        <div style={{ color: '#777', fontSize: '0.85em', padding: `${6 * uiScale}px` }}>
+                        <div style={{ color: t.text.faint, fontSize: '0.85em', padding: `${6 * uiScale}px` }}>
                             No commands found.
                         </div>
                     )}

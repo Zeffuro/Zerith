@@ -1,11 +1,18 @@
-import { type SpriteFrame } from 'core';
+import { type SpriteFrame, type SpritesheetDescriptor } from 'core';
 import { describe, expect, it } from 'vitest';
 
 import {
+    addSliceLine,
+    applyManualFrame,
+    applySliceLineFrames,
+    buildFramesFromSliceLines,
     computeThumbnailCanvasMetrics,
     frameAtPoint,
     insertFrameAtIndex,
     mergeFrameUpdates,
+    moveSliceLine,
+    nextManualFrameName,
+    normalizeManualDragFrame,
     reorderSequence,
 } from '../spritesheetEditorModel';
 
@@ -74,6 +81,94 @@ describe('spritesheetEditorModel', () => {
         expect(removed).toEqual({
             b: { h: 12, name: 'b', w: 8, x: 2, y: 3 },
         });
+    });
+
+    it('normalizes manual drag rectangles and clamps to image bounds', () => {
+        const rect = normalizeManualDragFrame({ x: 32.2, y: 16.8 }, { x: -8, y: 64.1 }, { height: 48, width: 40 });
+
+        expect(rect).toEqual({ h: 31, w: 32, x: 0, y: 17 });
+        expect(normalizeManualDragFrame({ x: 20, y: 20 }, { x: 20, y: 20 }, { height: 32, width: 32 })).toBeUndefined();
+    });
+
+    it('builds frame cells from slice lines with dedupe and sort', () => {
+        const frames = buildFramesFromSliceLines(
+            { horizontal: [30, 10, 10], vertical: [40, 20, 20] },
+            { height: 50, width: 60 },
+        );
+
+        expect(frames).toEqual([
+            { h: 10, w: 20, x: 0, y: 0 },
+            { h: 10, w: 20, x: 20, y: 0 },
+            { h: 10, w: 20, x: 40, y: 0 },
+            { h: 20, w: 20, x: 0, y: 10 },
+            { h: 20, w: 20, x: 20, y: 10 },
+            { h: 20, w: 20, x: 40, y: 10 },
+            { h: 20, w: 20, x: 0, y: 30 },
+            { h: 20, w: 20, x: 20, y: 30 },
+            { h: 20, w: 20, x: 40, y: 30 },
+        ]);
+    });
+
+    it('generates manual frame names using the first open index', () => {
+        const frames: Record<string, SpriteFrame> = {
+            hero: { h: 16, name: 'hero', w: 16, x: 0, y: 0 },
+            manual_frame_0: { h: 16, name: 'manual_frame_0', w: 16, x: 0, y: 0 },
+            manual_frame_2: { h: 16, name: 'manual_frame_2', w: 16, x: 16, y: 0 },
+        };
+
+        expect(nextManualFrameName(frames)).toBe('manual_frame_1');
+    });
+
+    it('switches grid descriptors to atlas when manual frames are created', () => {
+        const descriptor: SpritesheetDescriptor = {
+            format: 'grid',
+            frameHeight: 16,
+            frameWidth: 16,
+            source: 'sprites.png',
+        };
+        const existingFrames: Record<string, SpriteFrame> = {
+            frame_0: { h: 16, name: 'frame_0', w: 16, x: 0, y: 0 },
+        };
+
+        const result = applyManualFrame(descriptor, existingFrames, { h: 14, w: 12, x: 3, y: 4 });
+
+        expect(result.frameName).toBe('manual_frame_0');
+        expect(result.descriptor.format).toBe('atlas');
+        expect(result.descriptor.frames).toMatchObject({
+            frame_0: { h: 16, name: 'frame_0', w: 16, x: 0, y: 0 },
+            manual_frame_0: { h: 14, name: 'manual_frame_0', w: 12, x: 3, y: 4 },
+        });
+    });
+
+    it('adds and moves slice lines within inner image bounds', () => {
+        const started = addSliceLine({ horizontal: [], vertical: [] }, 'vertical', 0, { height: 80, width: 100 });
+        const moved = moveSliceLine(started, 'vertical', 0, 150, { height: 80, width: 100 });
+
+        expect(started.vertical).toEqual([1]);
+        expect(moved.vertical).toEqual([99]);
+    });
+
+    it('applies slice line grid frames and keeps descriptor unchanged for empty results', () => {
+        const descriptor: SpritesheetDescriptor = {
+            format: 'atlas',
+            frames: { idle: { h: 10, name: 'idle', w: 10, x: 0, y: 0 } },
+            source: 'sprites.png',
+        };
+
+        const applied = applySliceLineFrames(
+            descriptor,
+            descriptor.frames ?? {},
+            { horizontal: [12], vertical: [16] },
+            { height: 24, width: 32 },
+        );
+
+        expect(applied.createdNames.length).toBe(4);
+        expect(applied.descriptor.frames?.idle).toBeDefined();
+        expect(applied.descriptor.frames?.[applied.createdNames[0]]).toBeDefined();
+
+        const unchanged = applySliceLineFrames(descriptor, descriptor.frames ?? {}, { horizontal: [], vertical: [] }, { height: 0, width: 0 });
+        expect(unchanged.createdNames).toEqual([]);
+        expect(unchanged.descriptor).toBe(descriptor);
     });
 });
 

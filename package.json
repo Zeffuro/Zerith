@@ -7,6 +7,8 @@
   "scripts": {
     "dev:player": "npm run dev --workspace=player",
     "dev:editor": "npm run tauri dev --workspace=editor",
+    "build:game": "npm run build:game --workspace=player --",
+    "build:game:zip": "npm run build:game:zip --workspace=player --",
     "lint": "eslint \"packages/**/*.{ts,tsx}\" --max-warnings 0",
     "lint:fix": "eslint \"packages/**/*.{ts,tsx}\" --max-warnings 0 --fix",
     "test": "vitest run"

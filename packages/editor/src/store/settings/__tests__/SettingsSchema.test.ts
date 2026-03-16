@@ -18,6 +18,7 @@ describe('SettingsSchema', () => {
 
     it('returns defaults for invalid persisted values', () => {
         expect(mergeSettings()).toEqual(defaultSettings);
+        expect(mergeSettings({ audiosheetShortcutTargetMode: 'invalid' })).toEqual(defaultSettings);
         expect(mergeSettings({ autosaveEnabled: 'yes' })).toEqual(defaultSettings);
         expect(mergeSettings({ autosaveIntervalMs: 0 })).toEqual(defaultSettings);
         expect(mergeSettings({ autosaveIntervalMs: Number.NaN })).toEqual(defaultSettings);
@@ -37,6 +38,13 @@ describe('SettingsSchema', () => {
         expect(mergeSettings({ autosaveEnabled: true })).toEqual({ ...defaultSettings, autosaveEnabled: true });
         expect(mergeSettings({ autosaveIntervalMs: 1250.9 })).toEqual({ ...defaultSettings, autosaveIntervalMs: 5000 });
         expect(mergeSettings({ autosaveIntervalMs: 9000.9 })).toEqual({ ...defaultSettings, autosaveIntervalMs: 9000 });
+    });
+
+    it('accepts audiosheet shortcut target mode', () => {
+        expect(mergeSettings({ audiosheetShortcutTargetMode: 'playhead' })).toEqual({
+            ...defaultSettings,
+            audiosheetShortcutTargetMode: 'playhead',
+        });
     });
 
     it('sanitizes autosave intervals by truncating and enforcing minimum', () => {
@@ -172,6 +180,8 @@ describe('SettingsSchema', () => {
 
     it('extracts only valid persisted settings', () => {
         expect(extractPersistedSettings({ autosaveEnabled: true })).toEqual({ autosaveEnabled: true });
+        expect(extractPersistedSettings({ audiosheetShortcutTargetMode: 'cursor' })).toEqual({ audiosheetShortcutTargetMode: 'cursor' });
+        expect(extractPersistedSettings({ audiosheetShortcutTargetMode: 'bad' })).toEqual({});
         expect(extractPersistedSettings({ autosaveIntervalMs: 4500.5 })).toEqual({ autosaveIntervalMs: 5000 });
         expect(extractPersistedSettings({ autosaveIntervalMs: -1 })).toEqual({});
         expect(extractPersistedSettings({ isMuted: true })).toEqual({ isMuted: true });
