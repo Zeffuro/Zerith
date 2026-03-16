@@ -350,51 +350,45 @@ function createMonacoTheme(): Monaco.editor.IStandaloneThemeData {
         base: 'vs-dark',
         inherit: true,
         rules:[
-            { token: 'string.key.json', foreground: cssVarHex('--editor-syntax-logic', '9cdcfe') },
-            { token: 'string.value.json', foreground: cssVarHex('--editor-syntax-media', 'ce9178') },
-            { token: 'number', foreground: cssVarHex('--editor-syntax-flow', 'b5cea8') },
-            { token: 'keyword.json', foreground: cssVarHex('--editor-accent-blue', '569cd6') },
-            { token: 'comment', foreground: cssVarHex('--editor-text-muted', '6a9955'), fontStyle: 'italic' },
+            { token: 'string.key.json', foreground: getMonacoColor('--editor-syntax-logic', '#9cdcfe') },
+            { token: 'string.value.json', foreground: getMonacoColor('--editor-syntax-media', '#ce9178') },
+            { token: 'number', foreground: getMonacoColor('--editor-syntax-flow', '#b5cea8') },
+            { token: 'keyword.json', foreground: getMonacoColor('--editor-accent-blue', '#569cd6') },
+            { token: 'comment', foreground: getMonacoColor('--editor-text-muted', '#6a9955'), fontStyle: 'italic' },
         ],
         colors: {
-            'editor.background': cssVar('--editor-bg-input', '#1e1e1e'),
-            'editor.foreground': cssVar('--editor-text-normal', '#d4d4d4'),
-            'editorCursor.foreground': cssVar('--editor-text-primary', '#ffffff'),
-            'editorLineNumber.foreground': cssVar('--editor-text-muted', '#6b7280'),
-            'editorLineNumber.activeForeground': cssVar('--editor-text-primary', '#9ca3af'),
-            'editorGutter.background': cssVar('--editor-bg-input', '#1e1e1e'),
-            'editor.selectionBackground': cssVar('--editor-bg-selected', '#264f78'),
-            'editor.inactiveSelectionBackground': cssVar('--editor-bg-hover', '#264f78'),
-            'editorIndentGuide.background': cssVar('--editor-border-subtle', '#2d2d2d'),
-            'editorIndentGuide.activeBackground': cssVar('--editor-border-normal', '#3c3c3c'),
+            'editor.background': getMonacoColor('--editor-bg-input', '#1e1e1e'),
+            'editor.foreground': getMonacoColor('--editor-text-normal', '#d4d4d4'),
+            'editorCursor.foreground': getMonacoColor('--editor-text-primary', '#ffffff'),
+            'editorLineNumber.foreground': getMonacoColor('--editor-text-muted', '#6b7280'),
+            'editorLineNumber.activeForeground': getMonacoColor('--editor-text-primary', '#9ca3af'),
+            'editorGutter.background': getMonacoColor('--editor-bg-input', '#1e1e1e'),
+            'editor.selectionBackground': getMonacoColor('--editor-bg-selected', '#264f78'),
+            'editor.inactiveSelectionBackground': getMonacoColor('--editor-bg-hover', '#264f78'),
+            'editorIndentGuide.background': getMonacoColor('--editor-border-subtle', '#2d2d2d'),
+            'editorIndentGuide.activeBackground': getMonacoColor('--editor-border-normal', '#3c3c3c'),
         },
     };
 }
 
-function cssVar(name: string, fallback = '#ffffff'): string {
+function getMonacoColor(name: string, fallback: string): string {
+    let raw = fallback;
     try {
-        const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-        return raw || fallback;
+        const cssValue = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        if (cssValue) raw = cssValue;
     } catch {
-        return fallback;
     }
-}
 
-function cssVarHex(name: string, fallbackHex = 'ffffff'): string {
-    const raw = cssVar(name, `#${fallbackHex}`);
-
-    if (raw.startsWith('#')) {
-        const hex = raw.slice(1).trim();
-        if (hex.length === 3) return hex.split('').map((c) => c + c).join('').toLowerCase();
-        if (hex.length === 6 || hex.length === 8) return hex.slice(0, 6).toLowerCase();
+    if (/^#[0-9a-fA-F]{3}$/.test(raw)) {
+        return '#' + raw[1] + raw[1] + raw[2] + raw[2] + raw[3] + raw[3];
     }
 
     const rgbMatch = raw.match(/rgba?\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/i);
     if (rgbMatch) {
-        return[1, 2, 3].map(i => Number(rgbMatch[i]).toString(16).padStart(2, '0')).join('').toLowerCase();
+        return '#' + [1, 2, 3].map(i => Number(rgbMatch[i]).toString(16).padStart(2, '0')).join('').toLowerCase();
     }
 
-    return fallbackHex.toLowerCase();
+    return raw;
 }
 
 function helperTextForMode(mode: EditorMode): string {
