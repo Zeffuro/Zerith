@@ -11,6 +11,10 @@ describe('EngineConfigSchema', () => {
                 scaleMode: 'fit',
                 width: 1280,
             },
+            preview: {
+                fontAssetUrl: '/assets/fonts/custom.ttf',
+                useDisplayConfig: false,
+            },
             theme: {
                 boxColor: 0x00_00_33,
                 fontFamily: 'Courier New',

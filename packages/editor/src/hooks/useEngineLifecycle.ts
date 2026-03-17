@@ -38,6 +38,8 @@ const PreviewDefaultEngineConfig: EngineConfig = {
     },
 };
 
+const loadedPreviewFonts = new Set<string>();
+
 export function useEngineLifecycle({
     activeFileReference,
     canvasReference,
@@ -48,6 +50,7 @@ export function useEngineLifecycle({
     projectPath,
     scriptReference,
     setPreviewLogCaptureEnabled,
+    treeRevision,
 }: {
     activeFileReference: RefObject<string | undefined>;
     canvasReference: RefObject<HTMLCanvasElement | null>;
@@ -58,6 +61,7 @@ export function useEngineLifecycle({
     projectPath: string | undefined;
     scriptReference: WritableReference<Script>;
     setPreviewLogCaptureEnabled: (enabled: boolean) => void;
+    treeRevision: number;
 }): WritableReference<Engine | undefined> {
     const detachFlowListenersReference = useRef<(() => void) | undefined>(undefined);
     const engineReference = useRef<Engine | undefined>(undefined);
@@ -78,6 +82,23 @@ export function useEngineLifecycle({
 
         void (async () => {
             const loadedEngineConfig = await loadProjectEngineConfig(projectPath);
+            const useDisplayConfigInPreview = loadedEngineConfig?.preview?.useDisplayConfig !== false;
+
+            const resolvedDisplayConfig = useDisplayConfigInPreview
+                ? {
+                    ...PreviewDefaultEngineConfig.display,
+                    ...loadedEngineConfig?.display,
+                }
+                : PreviewDefaultEngineConfig.display;
+
+            const resolvedTheme = {
+                ...PreviewDefaultEngineConfig.theme,
+                ...loadedEngineConfig?.theme,
+            };
+
+            if (resolvedTheme.fontFamily && typeof loadedEngineConfig?.preview?.fontAssetUrl === 'string') {
+                await loadPreviewFont(resolvedTheme.fontFamily, loadedEngineConfig.preview.fontAssetUrl, projectPath);
+            }
 
             const effectiveConfig: EngineConfig = {
                 ...PreviewDefaultEngineConfig,
@@ -88,13 +109,11 @@ export function useEngineLifecycle({
                     muted: useSettingsStore.getState().isMuted,
                 },
                 display: {
-                    ...PreviewDefaultEngineConfig.display,
-                    ...loadedEngineConfig?.display,
+                    ...resolvedDisplayConfig,
                 },
                 onSceneNavigation: () => 'skip',
                 theme: {
-                    ...PreviewDefaultEngineConfig.theme,
-                    ...loadedEngineConfig?.theme,
+                    ...resolvedTheme,
                 },
             };
 
@@ -130,7 +149,7 @@ export function useEngineLifecycle({
             const playbackState = useEditorStore.getState();
             const shouldAutoplay = playbackState.playTrigger > playbackState.stopTrigger;
             if (shouldAutoplay) {
-                const requestId = ++playbackRequestIdReference.current;
+                const requestId = nextPlaybackRequestId(playbackRequestIdReference);
                 void startPreviewPlayback(
                     engine,
                     scriptReference.current,
@@ -169,23 +188,37 @@ export function useEngineLifecycle({
         projectPath,
         scriptReference,
         setPreviewLogCaptureEnabled,
+        treeRevision,
     ]);
 
 
     return engineReference;
 }
 
-function toEvidenceDefinitions(
-    items: Record<string, ItemManifestEntry>
-): Record<string, Omit<EvidenceItem, 'id'>> {
-    const next: Record<string, Omit<EvidenceItem, 'id'>> = {};
-    for (const [key, item] of Object.entries(items)) {
-        next[key] = {
-            ...item,
-            type: item.type === 'profile' ? 'profile' : 'evidence',
-        };
+function isLikelyMissingFileError(caughtError: unknown): boolean {
+    if (!(caughtError instanceof Error)) return false;
+    const message = caughtError.message.toLowerCase();
+    return message.includes('cannot find') || message.includes('no such file') || message.includes('not found');
+}
+
+async function loadPreviewFont(fontFamily: string, fontAssetUrl: string, projectPath: string): Promise<void> {
+    if (typeof FontFace !== 'function' || !globalThis.document?.fonts) return;
+
+    const normalizedFontAssetUrl = fontAssetUrl.trim();
+    if (!normalizedFontAssetUrl) return;
+
+    const cacheKey = `${fontFamily}::${normalizedFontAssetUrl}`;
+    if (loadedPreviewFonts.has(cacheKey)) return;
+
+    try {
+        const resolvedAssetUrl = resolvePreviewAssetUrl(normalizedFontAssetUrl, projectPath);
+        const fontFace = new FontFace(fontFamily, `url(${JSON.stringify(resolvedAssetUrl)})`);
+        const loadedFace = await fontFace.load();
+        globalThis.document.fonts.add(loadedFace);
+        loadedPreviewFonts.add(cacheKey);
+    } catch (caughtError: unknown) {
+        console.warn('[preview] Failed to load custom font asset:', caughtError);
     }
-    return next;
 }
 
 async function loadProjectEngineConfig(projectPath: string): Promise<EngineConfig | undefined> {
@@ -209,9 +242,36 @@ async function loadProjectEngineConfig(projectPath: string): Promise<EngineConfi
     }
 }
 
-function isLikelyMissingFileError(caughtError: unknown): boolean {
-    if (!(caughtError instanceof Error)) return false;
-    const message = caughtError.message.toLowerCase();
-    return message.includes('cannot find') || message.includes('no such file') || message.includes('not found');
+function nextPlaybackRequestId(reference: WritableReference<number>): number {
+    const nextValue = reference.current + 1;
+    reference.current = nextValue;
+    return nextValue;
 }
+
+function resolvePreviewAssetUrl(assetUrl: string, projectPath: string): string {
+    if (/^(?:[a-z]+:)?\/\//i.test(assetUrl) || assetUrl.startsWith('data:')) {
+        return assetUrl;
+    }
+
+    if (/^[a-zA-Z]:[\\/]/.test(assetUrl) || assetUrl.startsWith('\\\\')) {
+        return convertFileSrc(assetUrl);
+    }
+
+    const slashPrefixedPath = assetUrl.startsWith('/') ? assetUrl : `/${assetUrl}`;
+    return convertFileSrc(projectPath + slashPrefixedPath);
+}
+
+function toEvidenceDefinitions(
+    items: Record<string, ItemManifestEntry>
+): Record<string, Omit<EvidenceItem, 'id'>> {
+    const next: Record<string, Omit<EvidenceItem, 'id'>> = {};
+    for (const [key, item] of Object.entries(items)) {
+        next[key] = {
+            ...item,
+            type: item.type === 'profile' ? 'profile' : 'evidence',
+        };
+    }
+    return next;
+}
+
 

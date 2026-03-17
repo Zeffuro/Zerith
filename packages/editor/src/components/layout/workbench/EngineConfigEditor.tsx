@@ -1,11 +1,12 @@
-import { EngineConfigSchema, type EngineConfigFile } from 'core';
-
+import { type EngineConfigFile, EngineConfigSchema } from 'core';
 import { useMemo, useState } from 'react';
 
 import { fsWriteTextFile } from '../../../services/fs';
 import { useProjectStore } from '../../../store/storeBootstrap';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
+import { AssetPickerField } from '../../inspector/fields/AssetPickerField';
+import { ColorPickerField } from '../../inspector/fields/ColorPickerField';
 import { Field, isRecord, sharedStyles } from './EditorSharedUI';
 
 type ActiveTab = ReturnType<typeof useWorkbenchStore.getState>['tabs'][number] | undefined;
@@ -19,10 +20,26 @@ const DISPLAY_SCALE_MODES = ['fill', 'fit', 'fixed', 'stretch'] as const;
 
 type DisplayScaleMode = (typeof DISPLAY_SCALE_MODES)[number];
 
+const FONT_FAMILY_PRESETS = [
+    'Arial',
+    'Courier New',
+    'Comic Sans MS',
+    'Georgia',
+    'Tahoma',
+    'Times New Roman',
+    'Trebuchet MS',
+    'Verdana',
+    'system-ui',
+    'sans-serif',
+    'serif',
+    'monospace',
+] as const;
+
 export function EngineConfigEditor({ uiScale }: { uiScale: number }) {
     const activeTab = useWorkbenchStore((state) => state.activeTab());
     const updateTabContent = useWorkbenchStore((state) => state.updateTabContent);
     const clearFileDirty = useProjectStore((state) => state.clearFileDirty);
+    const bumpTreeRevision = useProjectStore((state) => state.bumpTreeRevision);
 
     const [runtimeError, setRuntimeError] = useState<string>();
     const [status, setStatus] = useState('');
@@ -31,7 +48,12 @@ export function EngineConfigEditor({ uiScale }: { uiScale: number }) {
     const tabId = activeTab?.id;
 
     const display = readRecord(parsedTab.config.display);
+    const preview = readRecord(parsedTab.config.preview);
     const theme = readRecord(parsedTab.config.theme);
+    const fontFamilyValue = readString(theme.fontFamily);
+    const fontPresetValue = FONT_FAMILY_PRESETS.includes(fontFamilyValue as (typeof FONT_FAMILY_PRESETS)[number])
+        ? fontFamilyValue
+        : '__custom__';
 
     const updateConfig = (updater: (current: EngineConfigFile) => EngineConfigFile) => {
         if (!tabId || !activeTab || activeTab.kind !== 'engineConfig') return;
@@ -53,10 +75,10 @@ export function EngineConfigEditor({ uiScale }: { uiScale: number }) {
     const setDisplayScaleMode = (value: string) => {
         updateConfig((current) => {
             const nextDisplay = { ...readRecord(current.display) };
-            if (!value) {
-                delete nextDisplay.scaleMode;
-            } else {
+            if (value) {
                 nextDisplay.scaleMode = value as DisplayScaleMode;
+            } else {
+                delete nextDisplay.scaleMode;
             }
             return { ...current, display: nextDisplay };
         });
@@ -78,6 +100,24 @@ export function EngineConfigEditor({ uiScale }: { uiScale: number }) {
         });
     };
 
+    const setPreviewBoolean = (key: 'useDisplayConfig', value: boolean) => {
+        updateConfig((current) => ({
+            ...current,
+            preview: {
+                ...readRecord(current.preview),
+                [key]: value,
+            },
+        }));
+    };
+
+    const setPreviewString = (key: 'fontAssetUrl', value: string) => {
+        updateConfig((current) => {
+            const nextPreview = { ...readRecord(current.preview) };
+            writeOptionalString(nextPreview, key, value);
+            return { ...current, preview: nextPreview };
+        });
+    };
+
     const apply = async () => {
         if (!activeTab || activeTab.kind !== 'engineConfig') return;
         try {
@@ -85,6 +125,7 @@ export function EngineConfigEditor({ uiScale }: { uiScale: number }) {
             await fsWriteTextFile(activeTab.path, nextText);
             updateTabContent(activeTab.id, nextText, { markDirty: false });
             clearFileDirty(activeTab.path);
+            bumpTreeRevision();
             setStatus('Saved engine config.');
             setRuntimeError(undefined);
         } catch (caughtError: unknown) {
@@ -114,6 +155,14 @@ export function EngineConfigEditor({ uiScale }: { uiScale: number }) {
                                 ))}
                             </select>
                         </Field>
+                        <label style={{ alignItems: 'center', color: t.text.normal, display: 'flex', fontSize: `${12 * uiScale}px`, gap: `${8 * uiScale}px` }}>
+                            <input
+                                checked={readBooleanWithDefault(preview.useDisplayConfig, true)}
+                                onChange={(event) => setPreviewBoolean('useDisplayConfig', event.target.checked)}
+                                type="checkbox"
+                            />
+                            Use display overrides in preview
+                        </label>
                     </div>
                 </div>
 
@@ -121,28 +170,80 @@ export function EngineConfigEditor({ uiScale }: { uiScale: number }) {
                     <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px`, marginBottom: `${8 * uiScale}px` }}>Theme Overrides</div>
                     <div style={{ display: 'grid', gap: `${10 * uiScale}px` }}>
                         <Field label="Font Family">
-                            <input onChange={(event) => setThemeString('fontFamily', event.target.value)} style={sharedStyles.input(uiScale)} value={readString(theme.fontFamily)} />
+                            <select
+                                onChange={(event) => {
+                                    const nextValue = event.target.value;
+                                    if (nextValue === '__custom__') return;
+                                    setThemeString('fontFamily', nextValue);
+                                }}
+                                style={sharedStyles.input(uiScale)}
+                                value={fontPresetValue}
+                            >
+                                {FONT_FAMILY_PRESETS.map((font) => (
+                                    <option key={font} value={font}>{font}</option>
+                                ))}
+                                <option value="__custom__">Custom...</option>
+                            </select>
+                        </Field>
+                        {fontPresetValue === '__custom__' && (
+                            <Field label="Custom Font Family">
+                                <input onChange={(event) => setThemeString('fontFamily', event.target.value)} placeholder="My Font Family" style={sharedStyles.input(uiScale)} value={fontFamilyValue} />
+                            </Field>
+                        )}
+                        <Field label="Custom Font Asset (preview)">
+                            <AssetPickerField
+                                inputStyle={sharedStyles.input(uiScale)}
+                                kind="font"
+                                listId="engine-config-font-assets"
+                                onChange={(nextValue) => setPreviewString('fontAssetUrl', nextValue)}
+                                placeholder="/assets/fonts/my-font.ttf"
+                                value={readString(preview.fontAssetUrl)}
+                            />
                         </Field>
                         <Field label="Font Size">
                             <input onChange={(event) => setThemeNumber('fontSize', event.target.value)} style={sharedStyles.input(uiScale)} type="number" value={readNumber(theme.fontSize)} />
                         </Field>
                         <Field label="Box Color">
-                            <input onChange={(event) => setThemeNumber('boxColor', event.target.value)} style={sharedStyles.input(uiScale)} type="number" value={readNumber(theme.boxColor)} />
+                            <ColorPickerField
+                                inputMode="text"
+                                inputStyle={sharedStyles.input(uiScale)}
+                                onChange={(_, numberValue) => setThemeNumber('boxColor', String(numberValue))}
+                                uiScale={uiScale}
+                                value={readNumberValue(theme.boxColor, 0x00_00_33)}
+                            />
                         </Field>
                         <Field label="Box Alpha">
                             <input max={1} min={0} onChange={(event) => setThemeNumber('boxAlpha', event.target.value)} step="0.05" style={sharedStyles.input(uiScale)} type="number" value={readNumber(theme.boxAlpha)} />
                         </Field>
                         <Field label="Accent Color">
-                            <input onChange={(event) => setThemeNumber('accentColor', event.target.value)} style={sharedStyles.input(uiScale)} type="number" value={readNumber(theme.accentColor)} />
+                            <ColorPickerField
+                                inputMode="text"
+                                inputStyle={sharedStyles.input(uiScale)}
+                                onChange={(_, numberValue) => setThemeNumber('accentColor', String(numberValue))}
+                                uiScale={uiScale}
+                                value={readNumberValue(theme.accentColor, 0xFF_AA_AA)}
+                            />
                         </Field>
                         <Field label="Border Color">
-                            <input onChange={(event) => setThemeNumber('borderColor', event.target.value)} style={sharedStyles.input(uiScale)} type="number" value={readNumber(theme.borderColor)} />
+                            <ColorPickerField
+                                inputMode="text"
+                                inputStyle={sharedStyles.input(uiScale)}
+                                onChange={(_, numberValue) => setThemeNumber('borderColor', String(numberValue))}
+                                uiScale={uiScale}
+                                value={readNumberValue(theme.borderColor, 0xAA_AA_FF)}
+                            />
                         </Field>
                         <Field label="Border Width">
                             <input onChange={(event) => setThemeNumber('borderWidth', event.target.value)} style={sharedStyles.input(uiScale)} type="number" value={readNumber(theme.borderWidth)} />
                         </Field>
                         <Field label="Hover Color">
-                            <input onChange={(event) => setThemeNumber('hoverColor', event.target.value)} style={sharedStyles.input(uiScale)} type="number" value={readNumber(theme.hoverColor)} />
+                            <ColorPickerField
+                                inputMode="text"
+                                inputStyle={sharedStyles.input(uiScale)}
+                                onChange={(_, numberValue) => setThemeNumber('hoverColor', String(numberValue))}
+                                uiScale={uiScale}
+                                value={readNumberValue(theme.hoverColor, 0x33_33_99)}
+                            />
                         </Field>
                     </div>
                 </div>
@@ -188,9 +289,18 @@ function parseActiveTab(activeTab: ActiveTab): ParsedConfigTab {
     }
 }
 
+function readBooleanWithDefault(value: unknown, fallback: boolean): boolean {
+    return typeof value === 'boolean' ? value : fallback;
+}
+
 function readNumber(value: unknown): string {
     return typeof value === 'number' && Number.isFinite(value) ? String(value) : '';
 }
+
+function readNumberValue(value: unknown, fallback: number): number {
+    return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
 
 function readRecord(value: unknown): Record<string, unknown> {
     return isRecord(value) ? value : {};

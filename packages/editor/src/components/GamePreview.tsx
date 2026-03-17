@@ -13,7 +13,7 @@ import { editorTheme as t } from '../theme/editorTheme';
 
 export function GamePreview({ script }: { script: Script }) {
     // Manifest data
-    const { activeFile, characters, items, macros, manifest, projectPath, scenes } = useProjectStore();
+    const { activeFile, characters, items, macros, manifest, projectPath, scenes, treeRevision } = useProjectStore();
     const isMuted = useSettingsStore((state) => state.isMuted);
     // Triggers
     const {
@@ -67,6 +67,7 @@ export function GamePreview({ script }: { script: Script }) {
         projectPath,
         scriptReference,
         setPreviewLogCaptureEnabled,
+        treeRevision,
     });
 
     useEngineMute({ engineReferenceRef: engineReference, isMuted });

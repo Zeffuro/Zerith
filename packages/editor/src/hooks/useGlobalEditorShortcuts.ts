@@ -53,7 +53,8 @@ function isTypingTarget(element: EventTarget | null) {
     const node = element as HTMLElement | null;
     if (!node) return false;
     const tag = node.tagName?.toLowerCase();
-    return tag === 'input' || tag === 'textarea' || node.isContentEditable;
+    if (tag === 'input' || tag === 'textarea' || node.isContentEditable) return true;
+    return Boolean(node.closest('.monaco-editor'));
 }
 
 

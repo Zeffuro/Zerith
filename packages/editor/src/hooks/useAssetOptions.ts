@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { type FsDirectoryEntry, fsReadDirectory } from '../services/fs';
 import { useProjectStore } from '../store/storeBootstrap';
-import { AUDIO_EXT, getExtension, IMG_EXT } from '../utils/assetTypes';
+import { AUDIO_EXT, FONT_EXT, getExtension, IMG_EXT } from '../utils/assetTypes';
 
-type AssetKind = 'all' | 'audio' | 'bg' | 'bgm' | 'sfx' | 'sprite';
+type AssetKind = 'all' | 'audio' | 'bg' | 'bgm' | 'font' | 'sfx' | 'sprite';
 
 type AssetOption = {
     absPath: string;
@@ -86,6 +86,7 @@ function matchKind(path: string, kind: AssetKind) {
     if (kind === 'all') return true;
     const extension = getExtension(path);
     if (kind === 'bg') return BG_EXT.has(extension);
+    if (kind === 'font') return FONT_EXT.has(extension);
     if (kind === 'sprite') return SPRITE_EXT.has(extension);
     if (kind === 'audio' || kind === 'bgm' || kind === 'sfx') return AUDIO_EXT.has(extension);
     return true;

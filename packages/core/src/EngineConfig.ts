@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import type { IStorageProvider } from './interfaces/providers';
 import type { AudioConfig } from './managers/AudioManager';
 import type { DisplayConfig } from './managers/DisplayManager';
@@ -7,8 +9,6 @@ import type { OverlayConfig } from './managers/OverlayManager';
 import type { StartScreenConfig } from './managers/StartScreenManager';
 import type { SceneNavigationCommandType } from './types';
 import type { Theme } from './utils/Theme';
-
-import { z } from 'zod';
 
 export type { SceneNavigationCommandType } from './types';
 
@@ -53,6 +53,11 @@ const StartScreenConfigSchema = z.object({
     textColor: z.number().int().nonnegative().optional(),
 }).strict();
 
+const PreviewConfigSchema = z.object({
+    fontAssetUrl: z.string().optional(),
+    useDisplayConfig: z.boolean().optional(),
+}).strict();
+
 export const EngineConfigSchema = z.object({
     $schema: z.literal('zerith/engine-config').optional(),
     audio: AudioConfigSchema.optional(),
@@ -61,12 +66,10 @@ export const EngineConfigSchema = z.object({
     input: z.record(z.string(), z.unknown()).optional(),
     notifications: z.record(z.string(), z.unknown()).optional(),
     overlay: z.record(z.string(), z.unknown()).optional(),
+    preview: PreviewConfigSchema.optional(),
     startScreen: StartScreenConfigSchema.optional(),
     theme: ThemeSchema.optional(),
 }).passthrough();
-
-export type EngineConfigFile = z.infer<typeof EngineConfigSchema>;
-
 
 export interface EngineConfig {
     audio?: AudioConfig;
@@ -76,9 +79,15 @@ export interface EngineConfig {
     notifications?: NotificationConfig;
     onSceneNavigation?: (sceneName: string, commandType: SceneNavigationCommandType) => SceneNavigationAction;
     overlay?: OverlayConfig;
+    preview?: {
+        fontAssetUrl?: string;
+        useDisplayConfig?: boolean;
+    };
     startScreen?: StartScreenConfig;
     storage?: IStorageProvider;
     theme?: Partial<Theme>;
 }
+
+export type EngineConfigFile = z.infer<typeof EngineConfigSchema>;
 
 export type SceneNavigationAction = 'execute' | 'skip';

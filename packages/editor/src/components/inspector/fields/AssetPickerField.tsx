@@ -7,7 +7,7 @@ import { editorTheme as t } from '../../../theme/editorTheme';
 
 type Properties = {
     inputStyle?: CSSProperties;
-    kind?: 'all' | 'audio' | 'bg' | 'bgm' | 'sfx' | 'sprite';
+    kind?: 'all' | 'audio' | 'bg' | 'bgm' | 'font' | 'sfx' | 'sprite';
     listId: string;
     onChange: (next: string) => void;
     placeholder?: string;
