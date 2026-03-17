@@ -53,7 +53,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
     const setLastMacrosView = useWorkbenchStore((s) => s.setLastMacrosView);
     const updateTabContent = useWorkbenchStore((s) => s.updateTabContent);
 
-    const monacoReference = useRef<any | null>(null);
+    const monacoReference = useRef<MonacoThemeApi | null>(null);
 
     const themeKey = useSettingsStore((s) => s.themeKey);
     const customThemes = useSettingsStore((s) => s.customThemes);
@@ -64,9 +64,12 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
         if (activeTab.kind === 'macros') return 'macros';
         if (
             activeTab.kind === 'characters'
+            || activeTab.kind === 'audiosheet'
+            || activeTab.kind === 'engineConfig'
             || activeTab.kind === 'items'
             || activeTab.kind === 'manifest'
             || activeTab.kind === 'json'
+            || activeTab.kind === 'spritesheet'
         ) return 'file-json';
         if (activeTab.kind === 'text') return 'file-text';
         return 'readonly';
@@ -111,11 +114,13 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
     const applyMonacoTheme = useCallback(() => {
         if (!monacoReference.current?.editor) return;
         setTimeout(() => {
+            const monacoApi = monacoReference.current;
+            if (!monacoApi) return;
             try {
-                monacoReference.current.editor.defineTheme('zerith-dynamic', createMonacoTheme());
-                monacoReference.current.editor.setTheme('zerith-dynamic');
-            } catch (err) {
-                console.error('Failed to set monaco theme', err);
+                monacoApi.editor.defineTheme('zerith-dynamic', createMonacoTheme());
+                monacoApi.editor.setTheme('zerith-dynamic');
+            } catch (error_) {
+                console.error('Failed to set monaco theme', error_);
             }
         }, 10);
     }, []);
@@ -279,22 +284,21 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
     const title = titleForMode(mode, activeTab?.title);
     const language = languageForMode(mode, activeTab?.path);
 
-    const onMount: OnMount = (editor, monaco) => {
+    const onMount = ((editor: Monaco.editor.IStandaloneCodeEditor, monaco: MonacoThemeApi) => {
         editorReference.current = editor;
         monacoReference.current = monaco;
 
         applyMonacoTheme();
 
-        const monacoApi = monaco as unknown as MonacoThemeApi;
         editor.addAction({
             id: 'zerith-save-current-editor',
-            keybindings:[monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.KeyS],
+            keybindings:[monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
             label: 'Save Current File',
             run: async () => {
                 await saveNowReference.current();
             },
         });
-    };
+    }) satisfies OnMount;
 
     return (
         <div style={{ background: t.bg.app, display: 'grid', gap: `${8 * uiScale}px`, gridTemplateRows: 'auto 1fr auto', height: '100%', padding: `${8 * uiScale}px` }}>
@@ -325,6 +329,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
                     }}
                     onMount={onMount}
                     options={{
+                        automaticLayout: true,
                         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
                         fontSize: Math.round(12 * uiScale),
                         insertSpaces: true,
@@ -332,7 +337,6 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
                         mouseWheelZoom: true,
                         tabSize: 2,
                         wordWrap: 'off',
-                        automaticLayout: true,
                     }}
                     value={value}
                 />
@@ -348,26 +352,26 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
 function createMonacoTheme(): Monaco.editor.IStandaloneThemeData {
     return {
         base: 'vs-dark',
-        inherit: true,
-        rules:[
-            { token: 'string.key.json', foreground: getMonacoColor('--editor-syntax-logic', '#9cdcfe') },
-            { token: 'string.value.json', foreground: getMonacoColor('--editor-syntax-media', '#ce9178') },
-            { token: 'number', foreground: getMonacoColor('--editor-syntax-flow', '#b5cea8') },
-            { token: 'keyword.json', foreground: getMonacoColor('--editor-accent-blue', '#569cd6') },
-            { token: 'comment', foreground: getMonacoColor('--editor-text-muted', '#6a9955'), fontStyle: 'italic' },
-        ],
         colors: {
             'editor.background': getMonacoColor('--editor-bg-input', '#1e1e1e'),
             'editor.foreground': getMonacoColor('--editor-text-normal', '#d4d4d4'),
-            'editorCursor.foreground': getMonacoColor('--editor-text-primary', '#ffffff'),
-            'editorLineNumber.foreground': getMonacoColor('--editor-text-muted', '#6b7280'),
-            'editorLineNumber.activeForeground': getMonacoColor('--editor-text-primary', '#9ca3af'),
-            'editorGutter.background': getMonacoColor('--editor-bg-input', '#1e1e1e'),
-            'editor.selectionBackground': getMonacoColor('--editor-bg-selected', '#264f78'),
             'editor.inactiveSelectionBackground': getMonacoColor('--editor-bg-hover', '#264f78'),
-            'editorIndentGuide.background': getMonacoColor('--editor-border-subtle', '#2d2d2d'),
+            'editor.selectionBackground': getMonacoColor('--editor-bg-selected', '#264f78'),
+            'editorCursor.foreground': getMonacoColor('--editor-text-primary', '#ffffff'),
+            'editorGutter.background': getMonacoColor('--editor-bg-input', '#1e1e1e'),
             'editorIndentGuide.activeBackground': getMonacoColor('--editor-border-normal', '#3c3c3c'),
+            'editorIndentGuide.background': getMonacoColor('--editor-border-subtle', '#2d2d2d'),
+            'editorLineNumber.activeForeground': getMonacoColor('--editor-text-primary', '#9ca3af'),
+            'editorLineNumber.foreground': getMonacoColor('--editor-text-muted', '#6b7280'),
         },
+        inherit: true,
+        rules:[
+            { foreground: getMonacoColor('--editor-syntax-logic', '#9cdcfe'), token: 'string.key.json' },
+            { foreground: getMonacoColor('--editor-syntax-media', '#ce9178'), token: 'string.value.json' },
+            { foreground: getMonacoColor('--editor-syntax-flow', '#b5cea8'), token: 'number' },
+            { foreground: getMonacoColor('--editor-accent-blue', '#569cd6'), token: 'keyword.json' },
+            { fontStyle: 'italic', foreground: getMonacoColor('--editor-text-muted', '#6a9955'), token: 'comment' },
+        ],
     };
 }
 
@@ -376,7 +380,8 @@ function getMonacoColor(name: string, fallback: string): string {
     try {
         const cssValue = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
         if (cssValue) raw = cssValue;
-    } catch {
+    } catch (error_) {
+        void error_;
     }
 
     if (/^#[0-9a-fA-F]{3}$/.test(raw)) {
@@ -385,7 +390,7 @@ function getMonacoColor(name: string, fallback: string): string {
 
     const rgbMatch = raw.match(/rgba?\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/i);
     if (rgbMatch) {
-        return '#' + [1, 2, 3].map(i => Number(rgbMatch[i]).toString(16).padStart(2, '0')).join('').toLowerCase();
+        return '#' + [1, 2, 3].map(index => Number(rgbMatch[index]).toString(16).padStart(2, '0')).join('').toLowerCase();
     }
 
     return raw;

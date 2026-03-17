@@ -1,19 +1,20 @@
 import { type KeyboardEventHandler, useCallback, useState } from 'react';
 
 import { openProjectEntry } from '../../services/openProjectEntry';
+import { executeCloseProjectAction } from '../../store/actions/projectOpenActions';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { buildCommandPaletteActions } from './commandPaletteActionsModel';
 import { executeSelectedAction, reduceCommandPaletteKey } from './commandPaletteInteractionModel';
-import { filterActions } from './commandPaletteModel';
 import {
     clampRenderSelection,
+    filterActions,
+    openInitialProjectEntry,
     shouldShowEmptyActions,
     toRenderableActions,
-} from './commandPalettePresentationModel';
-import { openInitialProjectEntry } from './commandPaletteProjectEntry';
+} from './commandPaletteModel';
 
 type Properties = {
     onRequestClose: () => void;
@@ -62,6 +63,7 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
         activeFile,
         addRecentProject,
         clearAllBreakpoints,
+        closeProject: executeCloseProjectAction,
         isPlaybackPaused,
         isRunning,
         markManualSave,

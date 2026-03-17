@@ -1,5 +1,6 @@
 import type { OpenProjectEntryOptions } from './contracts';
 
+import { DOCK_PANELS } from '../../components/layout/dock/dockPanelIds';
 import { detectDescriptorType, getSheetDescriptorPath, isSheetDescriptor } from '../../utils/assetDescriptorUtilities';
 import { AUDIO_EXT, getExtension, IMG_EXT, TEXT_EXT } from '../../utils/assetTypes';
 import { fsReadTextFile } from '../fs';
@@ -98,7 +99,11 @@ export function setMissingSpritesheetDescriptorHandler(handler: MissingSpriteshe
 }
 
 function focusMainEditorFor(kind: 'asset' | 'scriptLike' | 'text') {
-    // TODO: integrate with Dock model to select center tabset tab.
     void kind;
+    if (typeof globalThis.dispatchEvent !== 'function' || typeof globalThis.CustomEvent !== 'function') {
+        return;
+    }
+
+    globalThis.dispatchEvent(new globalThis.CustomEvent('zerith:dock-select', { detail: DOCK_PANELS.editor }));
 }
 

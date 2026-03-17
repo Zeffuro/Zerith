@@ -2,6 +2,7 @@ export type CommandPaletteActionDeps = {
     activeFile: string | undefined;
     addRecentProject: (manifestPath: string) => void;
     clearAllBreakpoints: () => void;
+    closeProject: () => void;
     isPlaybackPaused: boolean;
     isRunning: boolean;
     markManualSave: () => void;
@@ -74,6 +75,14 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
             id: 'save-all',
             keywords: 'save all files write',
             label: 'Save All Dirty Files',
+        },
+        {
+            execute: () => {
+                deps.closeProject();
+            },
+            id: 'close-project',
+            keywords: 'close unload project workspace',
+            label: 'Close Project',
         },
         {
             execute: () => {

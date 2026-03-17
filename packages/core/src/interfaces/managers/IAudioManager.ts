@@ -10,7 +10,7 @@ export interface IAudioManager extends IBaseManager {
     muted: boolean;
     pauseBgm(): void;
     playBgm(url: string, loop: boolean, volume?: number): Promise<void>;
-    playSfx(url: string, volume?: number): Promise<void>;
+    playSfx(url: string, volume?: number, options?: SfxPlaybackOptions): Promise<void>;
     playVoice(url: string): Promise<void>;
     preloadAudio(url: string): Promise<void>;
     resumeBgm(): void;
@@ -22,3 +22,8 @@ export interface IAudioManager extends IBaseManager {
     voiceVolume: number;
 }
 
+export interface SfxPlaybackOptions {
+    duration?: number;
+    loop?: boolean;
+    start?: number;
+}

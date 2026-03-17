@@ -83,9 +83,23 @@ export class AudioManager {
         });
     }
 
-    public async playSfx(url: string, volume: number = 1): Promise<void> {
+    public async playSfx(
+        url: string,
+        volume: number = 1,
+        options?: { duration?: number; loop?: boolean; start?: number },
+    ): Promise<void> {
         await this.preloadAudio(url);
-        await sound.play(url, { volume: volume * this.sfxVolume });
+        const start = options?.start;
+        const end = options?.duration === undefined
+            ? undefined
+            : (start ?? 0) + options.duration;
+
+        await sound.play(url, {
+            end,
+            loop: options?.loop ?? false,
+            start,
+            volume: volume * this.sfxVolume,
+        });
     }
 
     public async playVoice(url: string): Promise<void> {

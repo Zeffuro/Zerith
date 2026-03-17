@@ -95,6 +95,7 @@ export interface UiPrefsSlice {
     addRecentProject: (manifestPath: string) => void;
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
+    clearProjectCloseRequest: () => void;
     clearRecentProjects: () => void;
     closeCommandPalette: () => void;
     closeExportGameModal: () => void;
@@ -105,6 +106,7 @@ export interface UiPrefsSlice {
     isExportGameModalOpen: boolean;
     isGlobalSearchPopupOpen: boolean;
     isMuted: boolean;
+    isProjectCloseRequested: boolean;
     isSettingsModalOpen: boolean;
     lastManualSaveAt: number;
     markManualSave: () => void;
@@ -114,6 +116,7 @@ export interface UiPrefsSlice {
     openGlobalSearchReplacePopup: () => void;
     openSettingsModal: () => void;
     recentProjects: RecentProject[];
+    requestProjectClose: () => void;
     setAutosaveEnabled: (enabled: boolean) => void;
     setAutosaveIntervalMs: (intervalMs: number) => void;
     setThemeKey: (key: string) => void;

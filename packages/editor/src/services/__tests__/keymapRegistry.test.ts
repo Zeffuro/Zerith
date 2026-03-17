@@ -30,6 +30,9 @@ describe('globalShortcutBindings', () => {
         expect(isGlobalShortcutCommand('audiosheetTogglePlayPause')).toBe(true);
         expect(isGlobalShortcutCommand('audiosheetSetLeftBoundary')).toBe(true);
         expect(isGlobalShortcutCommand('audiosheetSetRightBoundary')).toBe(true);
+        expect(isGlobalShortcutCommand('zoomIn')).toBe(true);
+        expect(isGlobalShortcutCommand('zoomOut')).toBe(true);
+        expect(isGlobalShortcutCommand('zoomReset')).toBe(true);
         expect(isGlobalShortcutCommand('not-real')).toBe(false);
     });
 
@@ -37,6 +40,12 @@ describe('globalShortcutBindings', () => {
         expect(globalShortcutBindings.find((binding) => binding.action === 'audiosheetTogglePlayPause')?.keys[0]).toBe('space');
         expect(globalShortcutBindings.find((binding) => binding.action === 'audiosheetSetLeftBoundary')?.keys[0]).toBe('q');
         expect(globalShortcutBindings.find((binding) => binding.action === 'audiosheetSetRightBoundary')?.keys[0]).toBe('e');
+    });
+
+    it('includes default zoom key bindings', () => {
+        expect(globalShortcutBindings.find((binding) => binding.action === 'zoomIn')?.keys[0]).toBe('=');
+        expect(globalShortcutBindings.find((binding) => binding.action === 'zoomOut')?.keys[0]).toBe('-');
+        expect(globalShortcutBindings.find((binding) => binding.action === 'zoomReset')?.keys[0]).toBe('0');
     });
 });
 

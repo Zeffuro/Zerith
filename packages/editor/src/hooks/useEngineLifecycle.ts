@@ -1,10 +1,11 @@
-import type { CharacterDefinition, Engine, GameManifest, ItemManifestEntry, SceneMap, Script } from 'core';
+import type { CharacterDefinition, Engine, EngineConfig, GameManifest, ItemManifestEntry, SceneMap, Script } from 'core';
 import type { RefObject } from 'react';
 
 import { convertFileSrc } from '@tauri-apps/api/core';
-import { bootstrapEngine, type EvidenceItem } from 'core';
+import { bootstrapEngine, EngineConfigSchema, type EvidenceItem } from 'core';
 import { useEffect, useRef } from 'react';
 
+import { fsJoin, fsReadTextFile } from '../services/fs';
 import { createGamePreviewLogger } from '../services/gamePreviewLoggerBridge';
 import { useEditorStore } from '../store/useEditorStore';
 import { useEngineBridgeStore } from '../store/useEngineBridgeStore';
@@ -20,6 +21,22 @@ export type EngineLifecycleProjectData = {
 };
 
 type WritableReference<T> = { current: T };
+
+const PreviewDefaultEngineConfig: EngineConfig = {
+    audio: {
+        muted: false,
+    },
+    display: {
+        height: 720,
+        scaleMode: 'fit',
+        width: 1280,
+    },
+    theme: {
+        boxColor: 0x00_00_33,
+        fontFamily: 'Courier New',
+        fontSize: 24,
+    },
+};
 
 export function useEngineLifecycle({
     activeFileReference,
@@ -50,6 +67,8 @@ export function useEngineLifecycle({
         if (!canvasReference.current || !projectPath || !manifest) return;
 
         let destroyed = false;
+        const canvas = canvasReference.current;
+        if (!canvas) return;
         const {
             characters: bootstrapCharacters,
             items: bootstrapItems,
@@ -57,25 +76,43 @@ export function useEngineLifecycle({
             scenes: bootstrapScenes,
         } = projectDataReference.current;
 
-        void bootstrapEngine({
-            assetResolver: (url: string) => {
-                if (projectPath && !url.startsWith('http')) return convertFileSrc(projectPath + url);
-                return url;
-            },
-            canvas: canvasReference.current,
-            characters: bootstrapCharacters,
-            config: {
-                audio: { muted: useSettingsStore.getState().isMuted },
-                display: { height: 720, scaleMode: 'fit', width: 1280 },
+        void (async () => {
+            const loadedEngineConfig = await loadProjectEngineConfig(projectPath);
+
+            const effectiveConfig: EngineConfig = {
+                ...PreviewDefaultEngineConfig,
+                ...loadedEngineConfig,
+                audio: {
+                    ...PreviewDefaultEngineConfig.audio,
+                    ...loadedEngineConfig?.audio,
+                    muted: useSettingsStore.getState().isMuted,
+                },
+                display: {
+                    ...PreviewDefaultEngineConfig.display,
+                    ...loadedEngineConfig?.display,
+                },
                 onSceneNavigation: () => 'skip',
-                theme: { boxColor: 0x00_00_33, fontFamily: 'Courier New', fontSize: 24 },
-            },
-            defaultBlipUrl: '/assets/sfx/blip.wav',
-            items: toEvidenceDefinitions(bootstrapItems),
-            macros: bootstrapMacros,
-            manifest,
-            scenes: bootstrapScenes,
-        }).then((engine) => {
+                theme: {
+                    ...PreviewDefaultEngineConfig.theme,
+                    ...loadedEngineConfig?.theme,
+                },
+            };
+
+            const engine = await bootstrapEngine({
+                assetResolver: (url: string) => {
+                    if (projectPath && !url.startsWith('http')) return convertFileSrc(projectPath + url);
+                    return url;
+                },
+                canvas,
+                characters: bootstrapCharacters,
+                config: effectiveConfig,
+                defaultBlipUrl: '/assets/sfx/blip.wav',
+                items: toEvidenceDefinitions(bootstrapItems),
+                macros: bootstrapMacros,
+                manifest,
+                scenes: bootstrapScenes,
+            });
+
             if (destroyed) {
                 engine.destroy();
                 return;
@@ -108,7 +145,7 @@ export function useEngineLifecycle({
             const sceneManager = engine.scenes;
             sceneManager.addScene('preview', scriptReference.current);
             void sceneManager.jumpToScene('preview');
-        });
+        })();
 
         return () => {
             destroyed = true;
@@ -149,5 +186,32 @@ function toEvidenceDefinitions(
         };
     }
     return next;
+}
+
+async function loadProjectEngineConfig(projectPath: string): Promise<EngineConfig | undefined> {
+    try {
+        const configPath = await fsJoin(projectPath, 'engine.config.json');
+        const contents = await fsReadTextFile(configPath);
+        const parsed: unknown = JSON.parse(contents);
+        const result = EngineConfigSchema.safeParse(parsed);
+
+        if (!result.success) {
+            console.warn('[preview] Ignoring invalid engine.config.json:', result.error.issues[0]?.message ?? 'schema validation failed');
+            return;
+        }
+
+        return result.data as EngineConfig;
+    } catch (caughtError: unknown) {
+        if (!isLikelyMissingFileError(caughtError)) {
+            console.warn('[preview] Failed to load engine.config.json:', caughtError);
+        }
+        return;
+    }
+}
+
+function isLikelyMissingFileError(caughtError: unknown): boolean {
+    if (!(caughtError instanceof Error)) return false;
+    const message = caughtError.message.toLowerCase();
+    return message.includes('cannot find') || message.includes('no such file') || message.includes('not found');
 }
 

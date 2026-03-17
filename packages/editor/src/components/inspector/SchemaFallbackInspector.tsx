@@ -1,10 +1,9 @@
 import type { BaseCommand } from 'core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
+import { editorTheme as t } from '../../theme/editorTheme';
 import { inferCommandFields } from '../../utils/zodInference';
 import { FieldError } from './FieldError';
-
-import { editorTheme as t } from '../../theme/editorTheme';
 
 const HIDDEN_COMPLEX_KEYS = new Set(['body', 'commands', 'else', 'onFalse', 'onTrue', 'options', 'then']);
 

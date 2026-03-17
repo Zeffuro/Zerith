@@ -28,6 +28,9 @@ describe('resolveGlobalShortcutAction', () => {
         expect(resolve(buildContext({ altKey: true, ctrlKey: true, key: 's' }))?.action).toBe('openSettingsModal');
         expect(resolve(buildContext({ ctrlKey: true, key: 's' }))?.action).toBe('save');
         expect(resolve(buildContext({ ctrlKey: true, key: 'F', shiftKey: true }))?.action).toBe('openGlobalSearchFind');
+        expect(resolve(buildContext({ ctrlKey: true, key: '=' }))?.action).toBe('zoomIn');
+        expect(resolve(buildContext({ ctrlKey: true, key: '-' }))?.action).toBe('zoomOut');
+        expect(resolve(buildContext({ ctrlKey: true, key: '0' }))?.action).toBe('zoomReset');
         expect(resolve(buildContext({ altKey: true, ctrlKey: true, key: 's' }))).not.toMatchObject({ action: 'save' });
     });
 

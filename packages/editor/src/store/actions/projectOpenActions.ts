@@ -2,14 +2,31 @@ import type { Command } from 'core';
 
 import type { MacroEntry } from '../project/types';
 
-import { useProjectStore } from '../storeBootstrap';
+import { useProjectStore, useScriptStore } from '../storeBootstrap';
 import { useEditorStore } from '../useEditorStore';
+import { useWorkbenchStore } from '../useWorkbenchStore';
 
 export type ExecuteProjectOpenActionOptions =
     | { action: 'applyAssetSelection'; assetPath: string }
     | { action: 'applyMacrosFile'; entries: MacroEntry[]; path: string; }
     | { action: 'applyScriptFile'; path: string; script: Command[] };
 
+
+export function closeProject(): void {
+    useWorkbenchStore.getState().clearTabs();
+    useProjectStore.getState().setProject(undefined, []);
+    useScriptStore.getState().setScript([]);
+}
+
+export function executeCloseProjectAction(): void {
+    const dirtyCount = useProjectStore.getState().dirtyFiles.size;
+    if (dirtyCount > 0) {
+        useEditorStore.getState().requestProjectClose();
+        return;
+    }
+
+    closeProject();
+}
 
 export function executeProjectOpenAction(options: ExecuteProjectOpenActionOptions): void {
     if (options.action === 'applyAssetSelection') {
@@ -32,4 +49,5 @@ export function executeProjectOpenAction(options: ExecuteProjectOpenActionOption
     project.setMacroEntries(options.entries);
     project.setActiveFile(options.path, []);
 }
+
 

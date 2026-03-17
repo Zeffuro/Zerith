@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
-import type { BaseCommand } from './types';
+import type { BaseCommand } from '../types';
+
+export { parseAudiosheetDescriptor, parseSpritesheetDescriptor } from './descriptorSchemas';
 
 
 export const BaseCommandSchema = z.object({
@@ -347,3 +349,4 @@ export function validateScript(script: unknown[]): BaseCommand[] {
         return result.data as BaseCommand;
     });
 }
+

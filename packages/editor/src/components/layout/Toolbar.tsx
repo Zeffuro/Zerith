@@ -7,6 +7,7 @@ import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { editorTheme as t } from '../../theme/editorTheme';
+import { openInitialProjectEntry as openInitialProjectEntryModel } from '../tools/commandPaletteModel';
 import { QuickCommandsMenu } from './menus/QuickCommandsMenu';
 import { ThemeMenu } from './menus/ThemeMenu';
 
@@ -37,6 +38,16 @@ export function Toolbar() {
 
     const [quickOpen, setQuickOpen] = useState(false);
 
+    const handleOpenInitialProjectEntry = async () => {
+        const { expandToPath, manifest, projectPath } = useProjectStore.getState();
+        await openInitialProjectEntryModel({
+            expandToPath,
+            manifest,
+            openProjectEntry,
+            projectPath,
+        });
+    };
+
     const handleOpenProject = async () => {
         try {
             const selectedFile = await open({
@@ -49,7 +60,7 @@ export function Toolbar() {
             if (selectedFile) {
                 await openProjectFromManifest(selectedFile);
                 addRecentProject(selectedFile);
-                await openInitialProjectEntry();
+                await handleOpenInitialProjectEntry();
             }
         } catch (error) {
             console.error('Failed to open project dialog:', error);
@@ -95,7 +106,6 @@ export function Toolbar() {
             <button className="toolbar-btn" onClick={() => setQuickOpen(v => !v)} style={{ padding: pad }} title="Quick Buttons Configuration">
                 <Star size={iconSize} />
             </button>
-
             <button className="toolbar-btn" onClick={resetDockLayout} style={{ padding: pad }} title="Reset UI Layout">
                 <MonitorDot size={iconSize} />
             </button>
@@ -174,34 +184,4 @@ export function Toolbar() {
             </div>
         </div>
     );
-}
-
-function basename(path: string): string {
-    return path.split(/[\\/]/).pop() || path;
-}
-
-async function openInitialProjectEntry(): Promise<void> {
-    const { expandToPath, manifest, projectPath } = useProjectStore.getState();
-    if (!projectPath) return;
-
-    const startSceneName = manifest?.startScene;
-    const sceneEntry = startSceneName ? manifest?.scenes?.[startSceneName] : undefined;
-    if (typeof sceneEntry === 'string') {
-        const scenePath = resolveProjectPath(projectPath, sceneEntry);
-        expandToPath(scenePath);
-        await openProjectEntry(scenePath, basename(scenePath));
-        return;
-    }
-
-    const gameManifestPath = `${projectPath}/game.json`;
-    expandToPath(gameManifestPath);
-    await openProjectEntry(gameManifestPath, 'game.json');
-}
-
-
-function resolveProjectPath(projectPath: string, targetPath: string): string {
-    if (targetPath.startsWith('/') || targetPath.startsWith('\\')) {
-        return `${projectPath}${targetPath}`;
-    }
-    return `${projectPath}/${targetPath}`;
 }

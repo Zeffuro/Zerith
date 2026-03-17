@@ -18,7 +18,7 @@ type RouteJsonEntryOptions = {
 export function routeJsonEntry(options: RouteJsonEntryOptions): JsonRoute {
     const { data, filePath, hintedKind, isMacrosObject } = options;
 
-    if (hintedKind === 'manifest' || hintedKind === 'items' || hintedKind === 'characters') {
+    if (hintedKind === 'manifest' || hintedKind === 'items' || hintedKind === 'characters' || hintedKind === 'engineConfig') {
         return { kind: 'resource', resourceKind: hintedKind };
     }
 

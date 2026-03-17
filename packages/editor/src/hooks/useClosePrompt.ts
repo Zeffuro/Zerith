@@ -1,8 +1,11 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { closeProject } from '../store/actions/projectOpenActions';
 import { useProjectStore } from '../store/storeBootstrap';
 import { useEditorStore } from '../store/useEditorStore';
+
+type CloseIntent = 'project' | 'window';
 
 type UseClosePromptResult = {
     closePromptMessage: string;
@@ -16,6 +19,7 @@ type UseClosePromptResult = {
 export function useClosePrompt(): UseClosePromptResult {
     const [closePromptOpen, setClosePromptOpen] = useState(false);
     const [closePromptError, setClosePromptError] = useState<string | undefined>();
+    const [closeIntent, setCloseIntent] = useState<CloseIntent>('window');
     const [isClosingWithSave, setIsClosingWithSave] = useState(false);
     const allowCloseBypassReference = useRef(false);
     const isHandlingCloseRequestReference = useRef(false);
@@ -57,6 +61,7 @@ export function useClosePrompt(): UseClosePromptResult {
                 return;
             }
 
+            setCloseIntent('window');
             setClosePromptError(undefined);
             setClosePromptOpen(true);
         });
@@ -71,22 +76,53 @@ export function useClosePrompt(): UseClosePromptResult {
         isHandlingCloseRequestReference.current = false;
     }, [closePromptOpen]);
 
+    const clearProjectCloseRequest = useEditorStore((state) => state.clearProjectCloseRequest);
+    const isProjectCloseRequested = useEditorStore((state) => state.isProjectCloseRequested);
+
+    useEffect(() => {
+        if (!isProjectCloseRequested) return;
+
+        clearProjectCloseRequest();
+
+        const dirtyCount = useProjectStore.getState().dirtyFiles.size;
+        if (dirtyCount === 0) {
+            closeProject();
+            return;
+        }
+
+        setCloseIntent('project');
+        setClosePromptError(undefined);
+        setClosePromptOpen(true);
+    }, [clearProjectCloseRequest, isProjectCloseRequested]);
+
     const closePromptMessage = useMemo(() => {
-        const baseMessage = 'You have unsaved changes. Save before closing?';
+        const baseMessage = closeIntent === 'project'
+            ? 'You have unsaved changes. Save before closing the project?'
+            : 'You have unsaved changes. Save before closing?';
         if (!closePromptError) return baseMessage;
         return `${baseMessage}\n\n${closePromptError}`;
-    }, [closePromptError]);
+    }, [closeIntent, closePromptError]);
 
     const onCancelClose = useCallback(() => {
         if (isClosingWithSave) return;
         setClosePromptOpen(false);
         setClosePromptError(undefined);
+        setCloseIntent('window');
     }, [isClosingWithSave]);
 
     const onCloseWithoutSaving = useCallback(async () => {
         if (isClosingWithSave) return;
+
+        if (closeIntent === 'project') {
+            closeProject();
+            setClosePromptOpen(false);
+            setClosePromptError(undefined);
+            setCloseIntent('window');
+            return;
+        }
+
         await closeWindowNow();
-    }, [closeWindowNow, isClosingWithSave]);
+    }, [closeIntent, closeWindowNow, isClosingWithSave]);
 
     const onSaveAllAndClose = useCallback(async () => {
         if (isClosingWithSave) return;
@@ -105,6 +141,14 @@ export function useClosePrompt(): UseClosePromptResult {
                 return;
             }
 
+            if (closeIntent === 'project') {
+                closeProject();
+                setClosePromptOpen(false);
+                setClosePromptError(undefined);
+                setCloseIntent('window');
+                return;
+            }
+
             await closeWindowNow();
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : String(error);
@@ -112,7 +156,7 @@ export function useClosePrompt(): UseClosePromptResult {
         } finally {
             setIsClosingWithSave(false);
         }
-    }, [closeWindowNow, isClosingWithSave]);
+    }, [closeIntent, closeWindowNow, isClosingWithSave]);
 
     return {
         closePromptMessage,

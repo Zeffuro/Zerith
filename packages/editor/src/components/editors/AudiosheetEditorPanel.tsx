@@ -1,5 +1,5 @@
 import { type AudiosheetDescriptor, parseAudiosheetDescriptor } from 'core';
-import { type MouseEvent, type PointerEvent, type RefObject, useEffect, useMemo, useRef, useState, type WheelEvent } from 'react';
+import { type MouseEvent, type PointerEvent, type RefObject, useCallback, useEffect, useMemo, useRef, useState, type WheelEvent } from 'react';
 
 import type { WorkbenchTab } from '../../store/workbench/types';
 
@@ -9,10 +9,12 @@ import { useProjectStore } from '../../store/storeBootstrap';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../theme/editorTheme';
-import { styles } from '../../theme/styleHelpers';
 import { ConfirmDialog } from '../ConfirmDialog';
+import { AudiosheetCueTable } from './AudiosheetCueTable';
 import { computeCueDragUpdate, findCueHandleHit, formatTimestamp, validateCueOverlaps, waveformXToTime } from './audiosheetEditorModel';
-import { type ActiveWaveformHandle, AudioWaveformCanvas, computeWaveformPeaks } from './AudioWaveformCanvas';
+import { AudiosheetEditorToolbar } from './AudiosheetEditorToolbar';
+import { AudiosheetTransportBar } from './AudiosheetTransportBar';
+import { type ActiveWaveformHandle, computeWaveformPeaks } from './AudioWaveformCanvas';
 
 const WAVEFORM_BINS = 640;
 const WAVEFORM_HANDLE_TOLERANCE_PX = 8;
@@ -112,7 +114,7 @@ export function AudiosheetEditorPanel({ tab }: AudiosheetEditorPanelProperties) 
         setWaveformViewportStart((current) => clamp(current, 0, maxViewportStart));
     }, [maxViewportStart]);
 
-    const stopPlayback = () => {
+    const stopPlayback = useCallback(() => {
         if (sourceReference.current) {
             try {
                 sourceReference.current.stop();
@@ -126,9 +128,9 @@ export function AudiosheetEditorPanel({ tab }: AudiosheetEditorPanelProperties) 
         frameReference.current = undefined;
         playEndReference.current = undefined;
         setIsPlaying(false);
-    };
+    }, []);
 
-    const applyDescriptorUpdate = (next: AudiosheetDescriptor) => {
+    const applyDescriptorUpdate = useCallback((next: AudiosheetDescriptor) => {
         setDescriptor(next);
         const nextRoot = { ...root, ...next };
         const nextText = `${JSON.stringify(nextRoot, undefined, 4)}\n`;
@@ -136,7 +138,7 @@ export function AudiosheetEditorPanel({ tab }: AudiosheetEditorPanelProperties) 
         skipNextLocalSyncReference.current = true;
         setRoot(nextRoot);
         updateTabContent(tab.id, nextText);
-    };
+    }, [root, tab.id, updateTabContent]);
 
     useEffect(() => {
         const rawText = tab.textContent ?? '{}';
@@ -199,7 +201,7 @@ export function AudiosheetEditorPanel({ tab }: AudiosheetEditorPanelProperties) 
         return () => {
             canceled = true;
         };
-    }, [descriptorSource, tab.path]);
+    }, [descriptorSource, stopPlayback, tab.path]);
 
     useEffect(() => () => {
         stopPlayback();
@@ -207,9 +209,9 @@ export function AudiosheetEditorPanel({ tab }: AudiosheetEditorPanelProperties) 
             void contextReference.current.close();
             contextReference.current = undefined;
         }
-    }, []);
+    }, [stopPlayback]);
 
-    const play = async (from: number, to?: number) => {
+    const play = useCallback(async (from: number, to?: number) => {
         if (!audioBuffer) return;
         const context = getAudioContext(contextReference);
         if (context.state === 'suspended') await context.resume();
@@ -241,15 +243,15 @@ export function AudiosheetEditorPanel({ tab }: AudiosheetEditorPanelProperties) 
             frameReference.current = requestAnimationFrame(sync);
         };
         frameReference.current = requestAnimationFrame(sync);
-    };
+    }, [audioBuffer, stopPlayback]);
 
-    const pause = () => {
+    const pause = useCallback(() => {
         if (isPlaying && contextReference.current && audioBuffer) {
             const elapsed = contextReference.current.currentTime - playStartReference.current;
             setScrub(clamp(playOffsetReference.current + elapsed, 0, audioBuffer.duration));
         }
         stopPlayback();
-    };
+    }, [audioBuffer, isPlaying, stopPlayback]);
 
     const handleSave = async () => {
         if (!descriptor) return;
@@ -266,10 +268,10 @@ export function AudiosheetEditorPanel({ tab }: AudiosheetEditorPanelProperties) 
         }
     };
 
-    const updateCue = (name: string, changes: Partial<AudiosheetDescriptor['cues'][string]>) => {
+    const updateCue = useCallback((name: string, changes: Partial<AudiosheetDescriptor['cues'][string]>) => {
         if (!descriptor?.cues[name]) return;
         applyDescriptorUpdate({ ...descriptor, cues: { ...descriptor.cues, [name]: { ...descriptor.cues[name], ...changes } } });
-    };
+    }, [applyDescriptorUpdate, descriptor]);
 
     const renameCue = (name: string, nextRaw: string) => {
         if (!descriptor) return;
@@ -294,7 +296,7 @@ export function AudiosheetEditorPanel({ tab }: AudiosheetEditorPanelProperties) 
         setScrub(start);
     };
 
-    const deleteCue = (name: string) => {
+    const deleteCue = useCallback((name: string) => {
         if (!descriptor?.cues[name]) return;
 
         const nextCueEntries = Object.entries(descriptor.cues)
@@ -311,9 +313,9 @@ export function AudiosheetEditorPanel({ tab }: AudiosheetEditorPanelProperties) 
         if (nextSelection && nextCues[nextSelection]) {
             setScrub(nextCues[nextSelection].start);
         }
-    };
+    }, [applyDescriptorUpdate, descriptor, selectedCue]);
 
-    const applyBoundaryShortcut = (side: 'left' | 'right', targetTimeRaw: number) => {
+    const applyBoundaryShortcut = useCallback((side: 'left' | 'right', targetTimeRaw: number) => {
         if (!descriptor) return;
         const clipDuration = Math.max(0.01, audioBuffer?.duration ?? (targetTimeRaw + 0.5));
         const targetTime = clamp(targetTimeRaw, 0, clipDuration);
@@ -395,15 +397,15 @@ export function AudiosheetEditorPanel({ tab }: AudiosheetEditorPanelProperties) 
         });
         setSelectedCue(name);
         setScrub(targetTime);
-    };
+    }, [applyDescriptorUpdate, audioBuffer?.duration, cueMarkers, descriptor, updateCue]);
 
-    const getShortcutTargetTime = () => {
+    const getShortcutTargetTime = useCallback(() => {
         if (audiosheetShortcutTargetMode === 'playhead') {
             return clamp(scrub, 0, Math.max(0, totalDuration));
         }
 
         return clamp(waveformCursorSecondsReference.current ?? scrub, 0, Math.max(0, totalDuration));
-    };
+    }, [audiosheetShortcutTargetMode, scrub, totalDuration]);
 
     const applyZoomAtRatio = (nextZoomRaw: number, ratioRaw: number) => {
         if (totalDuration <= 0) return;
@@ -625,103 +627,77 @@ export function AudiosheetEditorPanel({ tab }: AudiosheetEditorPanelProperties) 
     const selectedCueData = selectedCue ? descriptor?.cues[selectedCue] : undefined;
     const selectedCueEnd = selectedCueData ? selectedCueData.start + (selectedCueData.duration ?? Math.max(0, (audioBuffer?.duration ?? selectedCueData.start) - selectedCueData.start)) : 0;
     const format = descriptor?.source.split('.').pop()?.toUpperCase() ?? 'unknown';
-    const buttonStyle = (disabled: boolean, primary = false) => ({
-        ...styles.buttonBase(uiScale),
-        background: primary ? t.accent.primary : 'transparent',
-        border: primary ? 'none' : `1px solid ${t.border.button}`,
-        color: primary ? '#fff' : t.text.normal,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.55 : 1,
-    });
-    const iconButtonStyle = (disabled: boolean) => ({
-        ...styles.iconButton(uiScale),
-        border: `1px solid ${t.border.button}`,
-        borderRadius: t.radius.sm,
-        color: t.text.normal,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.55 : 1,
-    });
 
     return (
         <div style={{ display: 'grid', gap: 12, gridTemplateRows: 'auto auto 1fr', height: '100%', padding: 12 }}>
-            <div style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
-                <strong style={{ color: t.text.primary, marginRight: 'auto' }}>Audiosheet Editor</strong>
-                <button disabled={!audioBuffer || isPlaying} onClick={() => void play(scrub)} style={buttonStyle(!audioBuffer || isPlaying)} type="button">Play</button>
-                <button disabled={!audioBuffer || !isPlaying} onClick={pause} style={buttonStyle(!audioBuffer || !isPlaying)} type="button">Pause</button>
-                <button disabled={!audioBuffer} onClick={() => { stopPlayback(); setScrub(0); }} style={buttonStyle(!audioBuffer)} type="button">Stop</button>
-                <button disabled={!audioBuffer || !selectedCueData} onClick={() => void play(selectedCueData?.start ?? 0, selectedCueEnd)} style={buttonStyle(!audioBuffer || !selectedCueData)} type="button">Play Cue</button>
-                <button disabled={!selectedCueData} onClick={() => selectedCue && deleteCue(selectedCue)} style={buttonStyle(!selectedCueData)} type="button">Delete Cue</button>
-                <button disabled={!descriptor || isSaving} onClick={() => void handleSave()} style={buttonStyle(!descriptor || isSaving, true)} type="button">{isSaving ? 'Saving...' : 'Save'}</button>
-            </div>
+            <AudiosheetEditorToolbar
+                canDeleteCue={Boolean(selectedCueData)}
+                canPause={Boolean(audioBuffer && isPlaying)}
+                canPlay={Boolean(audioBuffer && !isPlaying)}
+                canPlayCue={Boolean(audioBuffer && selectedCueData)}
+                canSave={Boolean(descriptor)}
+                isSaving={isSaving}
+                onDeleteCue={() => {
+                    if (selectedCue) deleteCue(selectedCue);
+                }}
+                onPause={pause}
+                onPlay={() => void play(scrub)}
+                onPlayCue={() => void play(selectedCueData?.start ?? 0, selectedCueEnd)}
+                onSave={() => void handleSave()}
+                onStop={() => {
+                    stopPlayback();
+                    setScrub(0);
+                }}
+                uiScale={uiScale}
+            />
 
-            <section style={panelStyle}>
-                <div style={{ alignItems: 'center', color: t.text.muted, display: 'flex', gap: 8, marginBottom: 6 }}>
-                    <span>Wheel to zoom, right-drag to pan view, left-drag to scrub. Drag cue handles to retime. Shift+click creates ranges. Q/E nudge nearest left/right boundary.</span>
-                    <span style={{ marginLeft: 'auto' }}>Zoom</span>
-                    <button onClick={() => applyZoomAtRatio(waveformZoom / 1.5, 0.5)} style={iconButtonStyle(false)} type="button">-</button>
-                    <input max={16} min={1} onChange={(event) => applyZoomAtRatio(Number(event.target.value) || 1, 0.5)} step={0.25} style={{ width: 120 }} type="range" value={waveformZoom} />
-                    <button onClick={() => applyZoomAtRatio(waveformZoom * 1.5, 0.5)} style={iconButtonStyle(false)} type="button">+</button>
-                    <span>{waveformZoom.toFixed(2)}x</span>
-                </div>
-                <AudioWaveformCanvas activeHandle={activeHandle} cues={projectedWaveformMarkers} durationSeconds={waveformViewport.duration} onClick={onWaveformClick} onContextMenu={preventWaveformContextMenu} onPointerDown={onWaveformPointerDown} onPointerMove={onWaveformPointerMove} onPointerUp={onWaveformPointerUp} onWheel={onWaveformWheel} peaks={projectedPeaks} scrubSeconds={projectedScrub} selectedCue={selectedCue} selectionAnchor={projectedSelectionAnchor} />
-                <div style={{ color: t.text.muted, display: 'grid', gap: 4, gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', marginTop: 8 }}>
-                    <span>Scrub: {formatTimestamp(scrub)}</span><span>Duration: {formatTimestamp(audioBuffer?.duration ?? 0)}</span>
-                    <span>Rate: {audioBuffer?.sampleRate ? `${audioBuffer.sampleRate} Hz` : 'n/a'}</span><span>Channels: {audioBuffer?.numberOfChannels ?? 0}</span><span>Format: {format}</span>
-                </div>
-                {audioPath ? <div style={{ color: t.text.faint, marginTop: 6 }}>{audioPath}</div> : undefined}
-                {overlapIssues.length > 0 ? <div style={{ color: '#fbbf24', marginTop: 6 }}>Overlap warning: {overlapIssues.length} cue range(s) overlap.</div> : undefined}
-            </section>
+            <AudiosheetTransportBar
+                activeHandle={activeHandle}
+                audioPath={audioPath}
+                channels={audioBuffer?.numberOfChannels ?? 0}
+                format={format}
+                onWaveformClick={onWaveformClick}
+                onWaveformContextMenu={preventWaveformContextMenu}
+                onWaveformPointerDown={onWaveformPointerDown}
+                onWaveformPointerMove={onWaveformPointerMove}
+                onWaveformPointerUp={onWaveformPointerUp}
+                onWaveformWheel={onWaveformWheel}
+                onWaveformZoom={(nextZoom) => applyZoomAtRatio(nextZoom, 0.5)}
+                overlapIssueCount={overlapIssues.length}
+                peaks={projectedPeaks}
+                projectedScrub={projectedScrub}
+                sampleRate={audioBuffer?.sampleRate}
+                scrub={scrub}
+                selectedCue={selectedCue}
+                selectionAnchor={projectedSelectionAnchor}
+                totalDuration={audioBuffer?.duration ?? 0}
+                uiScale={uiScale}
+                viewportDuration={waveformViewport.duration}
+                waveformMarkers={projectedWaveformMarkers}
+                waveformZoom={waveformZoom}
+            />
 
-            <section className="zerith-scrollbar" style={{ ...panelStyle, minHeight: 0, overflow: 'auto' }}>
-                <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-                    <thead><tr style={{ color: t.text.muted, textAlign: 'left' }}><th>Name</th><th>Start (s)</th><th>Duration</th><th>Loop</th><th>Volume</th><th>Actions</th></tr></thead>
-                    <tbody>{cueEntries.map(([name, cue]) => (
-                        <tr key={name} onClick={() => { setSelectedCue(name); setScrub(cue.start); }} style={{ background: selectedCue === name ? t.bg.selected : 'transparent' }}>
-                            <td><input defaultValue={name} onBlur={(event) => renameCue(name, event.target.value)} style={inputStyle} /></td>
-                            <td><input onChange={(event) => updateCue(name, { start: Math.max(0, Number(event.target.value) || 0) })} step={0.01} style={inputStyle} type="number" value={cue.start} /></td>
-                            <td><input onChange={(event) => updateCue(name, { duration: event.target.value === '' ? undefined : Math.max(0.01, Number(event.target.value) || 0.01) })} step={0.01} style={inputStyle} type="number" value={cue.duration ?? ''} /></td>
-                            <td><input checked={Boolean(cue.loop)} onChange={(event) => updateCue(name, { loop: event.target.checked || undefined })} type="checkbox" /></td>
-                            <td><input onChange={(event) => updateCue(name, { volume: event.target.value === '' ? undefined : Math.max(0, Number(event.target.value) || 0) })} step={0.05} style={inputStyle} type="number" value={cue.volume ?? ''} /></td>
-                            <td style={{ display: 'flex', gap: 6 }}>
-                                <button
-                                    onClick={(event) => {
-                                        event.stopPropagation();
-                                        setSelectedCue(name);
-                                        setScrub(cue.start);
-                                    }}
-                                    style={iconButtonStyle(false)}
-                                    type="button"
-                                >
-                                    Seek
-                                </button>
-                                <button
-                                    disabled={!audioBuffer}
-                                    onClick={(event) => {
-                                        event.stopPropagation();
-                                        const cueEnd = cue.start + (cue.duration ?? Math.max(0, (audioBuffer?.duration ?? cue.start) - cue.start));
-                                        void play(cue.start, cueEnd);
-                                    }}
-                                    style={buttonStyle(!audioBuffer)}
-                                    type="button"
-                                >
-                                    Play
-                                </button>
-                                <button
-                                    onClick={(event) => {
-                                        event.stopPropagation();
-                                        deleteCue(name);
-                                    }}
-                                    style={buttonStyle(false)}
-                                    type="button"
-                                >
-                                    Delete
-                                </button>
-                            </td>
-                        </tr>
-                    ))}</tbody>
-                </table>
-                {cueEntries.length === 0 ? <div style={{ color: t.text.faint, marginTop: 8 }}>No cues. Shift+click waveform to add one.</div> : undefined}
-            </section>
+            <AudiosheetCueTable
+                audioDuration={audioBuffer?.duration ?? 0}
+                canPlayAudio={Boolean(audioBuffer)}
+                cueEntries={cueEntries}
+                onDeleteCue={deleteCue}
+                onPlayCue={(_name, start, end) => {
+                    void play(start, end);
+                }}
+                onRenameCue={renameCue}
+                onSeekCue={(name, start) => {
+                    setSelectedCue(name);
+                    setScrub(start);
+                }}
+                onSelectCue={(name, start) => {
+                    setSelectedCue(name);
+                    setScrub(start);
+                }}
+                onUpdateCue={updateCue}
+                selectedCue={selectedCue}
+                uiScale={uiScale}
+            />
 
             {(descriptorError || audioError || saveError || selectionAnchor !== undefined) ? (
                 <div style={{ color: t.text.muted }}>
@@ -758,17 +734,14 @@ async function loadAudioBytes(path: string): Promise<ArrayBuffer> {
     const bytes = await fsReadBinaryFile(path);
     return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
+function preventWaveformContextMenu(event: MouseEvent<HTMLCanvasElement>) {
+    event.preventDefault();
+}
+
 async function resolveAudioPath(descriptorPath: string, source: string): Promise<string> {
     if (/^(?:https?:|data:|blob:|file:)/.test(source)) return source;
     if (/^[A-Za-z]:[\\/]/.test(source) || source.startsWith('/')) return source;
     const parent = await fsDirname(descriptorPath);
     return fsJoin(parent, source);
-}
-
-const panelStyle = { background: t.bg.panelAlt, border: `1px solid ${t.border.subtle}`, borderRadius: t.radius.md, padding: 10 } as const;
-const inputStyle = { background: t.bg.input, border: `1px solid ${t.border.input}`, borderRadius: t.radius.sm, color: t.text.normal, padding: '4px 6px', width: '100%' } as const;
-
-function preventWaveformContextMenu(event: MouseEvent<HTMLCanvasElement>) {
-    event.preventDefault();
 }
 

@@ -1,8 +1,14 @@
-import { generateGridFrames, type SpritesheetDescriptor, suggestGridDimensions } from 'core';
+import { generateGridFrames, type SpritesheetDescriptor } from 'core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { editorTheme as t } from '../../theme/editorTheme';
 import { styles } from '../../theme/styleHelpers';
+import {
+    getFrameSizeFromGridSize,
+    getGridSizeFromFrameSize,
+    getInitialGridValues,
+    getSuggestedGridValues,
+} from './spritesheetAutoSliceModel';
 
 type InputMode = 'frameSize' | 'gridSize';
 
@@ -121,36 +127,32 @@ export function SpritesheetAutoSliceDialog({
     }, [frameHeight, frameWidth, image, uiScale]);
 
     const detectGrid = () => {
-        const suggestion = suggestGridDimensions(image.naturalWidth, image.naturalHeight)[0];
+        const suggestion = getSuggestedGridValues(image.naturalWidth, image.naturalHeight);
         if (!suggestion) {
             return;
         }
 
         setFrameWidth(suggestion.frameWidth);
         setFrameHeight(suggestion.frameHeight);
-        setColumns(suggestion.cols);
+        setColumns(suggestion.columns);
         setRows(suggestion.rows);
         setInputMode('frameSize');
     };
 
     const handleFrameDimensionChange = (nextWidth: number, nextHeight: number) => {
-        const safeWidth = clampPositive(nextWidth);
-        const safeHeight = clampPositive(nextHeight);
-
-        setFrameWidth(safeWidth);
-        setFrameHeight(safeHeight);
-        setColumns(Math.max(1, Math.floor(image.naturalWidth / safeWidth)));
-        setRows(Math.max(1, Math.floor(image.naturalHeight / safeHeight)));
+        const nextValues = getGridSizeFromFrameSize(image.naturalWidth, image.naturalHeight, nextWidth, nextHeight);
+        setFrameWidth(nextValues.frameWidth);
+        setFrameHeight(nextValues.frameHeight);
+        setColumns(nextValues.columns);
+        setRows(nextValues.rows);
     };
 
     const handleGridDimensionChange = (nextColumns: number, nextRows: number) => {
-        const safeColumns = clampPositive(nextColumns);
-        const safeRows = clampPositive(nextRows);
-
-        setColumns(safeColumns);
-        setRows(safeRows);
-        setFrameWidth(Math.max(1, Math.floor(image.naturalWidth / safeColumns)));
-        setFrameHeight(Math.max(1, Math.floor(image.naturalHeight / safeRows)));
+        const nextValues = getFrameSizeFromGridSize(image.naturalWidth, image.naturalHeight, nextColumns, nextRows);
+        setColumns(nextValues.columns);
+        setRows(nextValues.rows);
+        setFrameWidth(nextValues.frameWidth);
+        setFrameHeight(nextValues.frameHeight);
     };
 
     return (
@@ -297,32 +299,4 @@ function clamp(value: number, minimum: number, maximum: number): number {
     return Math.min(maximum, Math.max(minimum, value));
 }
 
-function clampPositive(value: number): number {
-    if (!Number.isFinite(value)) return 1;
-    return Math.max(1, Math.floor(value));
-}
-
-function getInitialGridValues(width: number, height: number): {
-    columns: number;
-    frameHeight: number;
-    frameWidth: number;
-    rows: number;
-} {
-    const firstSuggestion = suggestGridDimensions(width, height)[0];
-    if (firstSuggestion) {
-        return {
-            columns: firstSuggestion.cols,
-            frameHeight: firstSuggestion.frameHeight,
-            frameWidth: firstSuggestion.frameWidth,
-            rows: firstSuggestion.rows,
-        };
-    }
-
-    return {
-        columns: 1,
-        frameHeight: height,
-        frameWidth: width,
-        rows: 1,
-    };
-}
 

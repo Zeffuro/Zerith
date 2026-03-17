@@ -180,17 +180,6 @@ export function SpritesheetAnimationEditor({ animations, frames, image, onUpdate
     );
 }
 
-function readDroppedFrame(event: DragEvent): string {
-    return event.dataTransfer.getData(FRAME_MIME) || event.dataTransfer.getData('text/plain');
-}
-
-function readDroppedIndex(event: DragEvent): number | undefined {
-    const raw = event.dataTransfer.getData(SEQ_INDEX_MIME);
-    if (!raw) return undefined;
-    const value = Number(raw);
-    return Number.isInteger(value) ? value : undefined;
-}
-
 function drawBlank(canvas: HTMLCanvasElement) {
     canvas.width = 1;
     canvas.height = 1;
@@ -234,5 +223,16 @@ function PreviewBox({ frame, image, uiScale }: { frame?: SpriteFrame; image: HTM
         drawFrame(reference.current, frame, image, Math.max(32, Math.round(96 * uiScale)));
     }, [frame, image, uiScale]);
     return <div style={{ alignItems: 'center', background: t.bg.panel, border: `1px solid ${t.border.input}`, borderRadius: t.radius.sm, display: 'flex', height: 110, justifyContent: 'center', width: 110 }}><canvas ref={reference} /></div>;
+}
+
+function readDroppedFrame(event: DragEvent): string {
+    return event.dataTransfer.getData(FRAME_MIME) || event.dataTransfer.getData('text/plain');
+}
+
+function readDroppedIndex(event: DragEvent): number | undefined {
+    const raw = event.dataTransfer.getData(SEQ_INDEX_MIME);
+    if (!raw) return undefined;
+    const value = Number(raw);
+    return Number.isInteger(value) ? value : undefined;
 }
 

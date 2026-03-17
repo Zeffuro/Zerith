@@ -14,6 +14,7 @@ function createDeps(overrides?: Partial<CommandPaletteActionDeps>): CommandPalet
     return {
         activeFile: '/project/scripts/intro.json',
         addRecentProject: vi.fn(),
+        closeProject: vi.fn(),
         clearAllBreakpoints: vi.fn(),
         isPlaybackPaused: false,
         isRunning: false,
@@ -47,11 +48,11 @@ describe('commandPaletteActionsModel', () => {
 
         const actions = buildCommandPaletteActions(deps);
 
-        expect(actions).toHaveLength(14);
+        expect(actions).toHaveLength(15);
         expect(actions[0]?.id).toBe('find-project');
-        expect(actions[11]?.id).toBe('reset-layout');
-        expect(actions[12]?.id).toBe('open-recent-/alpha/game.json');
-        expect(actions[13]?.id).toBe('open-recent-/beta/game.json');
+        expect(actions[12]?.id).toBe('reset-layout');
+        expect(actions[13]?.id).toBe('open-recent-/alpha/game.json');
+        expect(actions[14]?.id).toBe('open-recent-/beta/game.json');
     });
 
     it('marks manual save before save and save-all actions', async () => {

@@ -22,6 +22,7 @@ const hoistedMocks = vi.hoisted(() => {
         fsReadTextFile: vi.fn(() => Promise.resolve('')),
         getCurrentProjectPath: vi.fn(() => state.projectPath),
         getPreferredCharactersView: vi.fn((fallback?: 'json' | 'timeline') => fallback ?? 'json'),
+        getPreferredEngineConfigView: vi.fn((fallback?: 'json' | 'timeline') => fallback ?? 'json'),
         getPreferredItemsView: vi.fn((fallback?: 'json' | 'timeline') => fallback ?? 'json'),
         getPreferredMacrosView: vi.fn((fallback?: 'json' | 'timeline') => fallback ?? 'timeline'),
         getPreferredManifestView: vi.fn((fallback?: 'json' | 'timeline') => fallback ?? 'json'),
@@ -45,6 +46,7 @@ export function resetOpenProjectEntryMocks(): void {
     hoistedMocks.fsReadTextFile.mockReset();
     hoistedMocks.getCurrentProjectPath.mockReset();
     hoistedMocks.getPreferredCharactersView.mockReset();
+    hoistedMocks.getPreferredEngineConfigView.mockReset();
     hoistedMocks.getPreferredItemsView.mockReset();
     hoistedMocks.getPreferredMacrosView.mockReset();
     hoistedMocks.getPreferredManifestView.mockReset();
@@ -57,6 +59,7 @@ export function resetOpenProjectEntryMocks(): void {
 
     hoistedMocks.getCurrentProjectPath.mockImplementation(() => hoistedMocks.state.projectPath);
     hoistedMocks.getPreferredCharactersView.mockImplementation((fallback?: 'json' | 'timeline') => fallback ?? 'json');
+    hoistedMocks.getPreferredEngineConfigView.mockImplementation((fallback?: 'json' | 'timeline') => fallback ?? 'json');
     hoistedMocks.getPreferredItemsView.mockImplementation((fallback?: 'json' | 'timeline') => fallback ?? 'json');
     hoistedMocks.getPreferredMacrosView.mockImplementation((fallback?: 'json' | 'timeline') => fallback ?? 'timeline');
     hoistedMocks.getPreferredManifestView.mockImplementation((fallback?: 'json' | 'timeline') => fallback ?? 'json');
@@ -88,6 +91,7 @@ vi.mock('../store/actions/projectTreeActions', () => ({
 vi.mock('../store/actions/workbenchOpenActions', () => ({
     executeWorkbenchOpenAction: hoistedMocks.executeWorkbenchOpenAction,
     getPreferredCharactersView: hoistedMocks.getPreferredCharactersView,
+    getPreferredEngineConfigView: hoistedMocks.getPreferredEngineConfigView,
     getPreferredItemsView: hoistedMocks.getPreferredItemsView,
     getPreferredMacrosView: hoistedMocks.getPreferredMacrosView,
     getPreferredManifestView: hoistedMocks.getPreferredManifestView,

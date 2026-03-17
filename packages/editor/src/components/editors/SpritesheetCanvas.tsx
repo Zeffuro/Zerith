@@ -3,21 +3,22 @@ import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { editorTheme as t } from '../../theme/editorTheme';
 import {
-    frameAtPoint,
+    clampZoom,
+    findFrameAtPoint,
+    findSliceHandleAtPoint,
+    type Point,
+    type SliceHandle,
+    toImagePoint,
+    toLocalPoint,
+} from './spritesheetCanvasInteraction';
+import {
     type ManualFrameRect,
     type ManualSliceAxis,
     type ManualSliceLines,
     normalizeManualDragFrame,
 } from './spritesheetEditorModel';
 
-const MAX_ZOOM = 8;
-const MIN_ZOOM = 0.1;
-
 type ManualTool = 'draw' | 'select' | 'slice';
-
-type Point = { x: number; y: number };
-
-type SliceHandle = { axis: ManualSliceAxis; index: number };
 
 type SpritesheetCanvasProperties = {
     chromaKey?: string;
@@ -183,44 +184,14 @@ export function SpritesheetCanvas({
         zoom,
     ]);
 
-    const findFrameAtPoint = (point: Point): string | undefined => {
-        const imageX = (point.x - panOffset.x) / zoom;
-        const imageY = (point.y - panOffset.y) / zoom;
-        return frameAtPoint(frameEntries, imageX, imageY);
-    };
-
-    const toLocalPoint = (event: MouseEvent<HTMLCanvasElement>): Point => {
+    const toCanvasLocalPoint = (event: MouseEvent<HTMLCanvasElement>): Point => {
         const bounds = event.currentTarget.getBoundingClientRect();
-        return {
-            x: event.clientX - bounds.left,
-            y: event.clientY - bounds.top,
-        };
+        return toLocalPoint({ x: event.clientX, y: event.clientY }, bounds);
     };
 
-    const toImagePoint = (point: Point): Point => ({
-        x: (point.x - panOffset.x) / zoom,
-        y: (point.y - panOffset.y) / zoom,
-    });
-
-    const findSliceHandleAtPoint = (point: Point): SliceHandle | undefined => {
+    const findSliceHandleForCurrentMode = (point: Point): SliceHandle | undefined => {
         if (manualTool !== 'slice') return undefined;
-
-        const imagePoint = toImagePoint(point);
-        const tolerance = Math.max(3, 8 / zoom);
-
-        for (let index = 0; index < sliceLines.vertical.length; index += 1) {
-            if (Math.abs(sliceLines.vertical[index] - imagePoint.x) <= tolerance) {
-                return { axis: 'vertical', index };
-            }
-        }
-
-        for (let index = 0; index < sliceLines.horizontal.length; index += 1) {
-            if (Math.abs(sliceLines.horizontal[index] - imagePoint.y) <= tolerance) {
-                return { axis: 'horizontal', index };
-            }
-        }
-
-        return undefined;
+        return findSliceHandleAtPoint(point, { lines: sliceLines, panOffset, zoom });
     };
 
     return (
@@ -252,7 +223,7 @@ export function SpritesheetCanvas({
                     }
 
                     if (manualTool === 'slice') {
-                        const imagePoint = toImagePoint(toLocalPoint(event));
+                        const imagePoint = toImagePoint(toCanvasLocalPoint(event), panOffset, zoom);
                         const axisValue = sliceAxis === 'vertical' ? imagePoint.x : imagePoint.y;
                         onSliceLineAdd(sliceAxis, axisValue);
                         return;
@@ -260,7 +231,7 @@ export function SpritesheetCanvas({
 
                     if (manualTool !== 'select') return;
 
-                    const frameName = findFrameAtPoint(toLocalPoint(event));
+                    const frameName = findFrameAtPoint(frameEntries, toCanvasLocalPoint(event), panOffset, zoom);
                     if (frameName) {
                         onSelectFrame(frameName);
                     }
@@ -282,10 +253,10 @@ export function SpritesheetCanvas({
                     }
 
                     if (event.button !== 0) return;
-                    const localPoint = toLocalPoint(event);
+                    const localPoint = toCanvasLocalPoint(event);
 
                     if (manualTool === 'slice') {
-                        const handle = findSliceHandleAtPoint(localPoint);
+                        const handle = findSliceHandleForCurrentMode(localPoint);
                         if (handle) {
                             event.preventDefault();
                             sliceDragReference.current.active = true;
@@ -297,7 +268,7 @@ export function SpritesheetCanvas({
                     }
 
                     if (manualTool === 'draw') {
-                        const imagePoint = toImagePoint(localPoint);
+                        const imagePoint = toImagePoint(localPoint, panOffset, zoom);
                         drawDragReference.current.active = true;
                         drawDragReference.current.current = imagePoint;
                         drawDragReference.current.start = imagePoint;
@@ -328,8 +299,8 @@ export function SpritesheetCanvas({
                     }
 
                     if (sliceDragReference.current.active) {
-                        const localPoint = toLocalPoint(event);
-                        const imagePoint = toImagePoint(localPoint);
+                        const localPoint = toCanvasLocalPoint(event);
+                        const imagePoint = toImagePoint(localPoint, panOffset, zoom);
                         const { axis, index } = sliceDragReference.current.handle;
                         onSliceLineMove(axis, index, axis === 'vertical' ? imagePoint.x : imagePoint.y);
                         sliceDragReference.current.moved = true;
@@ -338,8 +309,8 @@ export function SpritesheetCanvas({
                     }
 
                     if (drawDragReference.current.active) {
-                        const localPoint = toLocalPoint(event);
-                        const imagePoint = toImagePoint(localPoint);
+                        const localPoint = toCanvasLocalPoint(event);
+                        const imagePoint = toImagePoint(localPoint, panOffset, zoom);
                         drawDragReference.current.current = imagePoint;
                         const rect = normalizeManualDragFrame(drawDragReference.current.start, imagePoint, {
                             height: image.naturalHeight,
@@ -350,13 +321,13 @@ export function SpritesheetCanvas({
                         return;
                     }
 
-                    setHoveredSliceHandle(findSliceHandleAtPoint(toLocalPoint(event)));
+                    setHoveredSliceHandle(findSliceHandleForCurrentMode(toCanvasLocalPoint(event)));
                     if (manualTool !== 'select') {
                         setHoveredFrame(undefined);
                         return;
                     }
 
-                    setHoveredFrame(findFrameAtPoint(toLocalPoint(event)));
+                    setHoveredFrame(findFrameAtPoint(frameEntries, toCanvasLocalPoint(event), panOffset, zoom));
                 }}
                 onMouseUp={() => {
                     dragStateReference.current.panning = false;
@@ -382,13 +353,12 @@ export function SpritesheetCanvas({
                     const bounds = event.currentTarget.getBoundingClientRect();
                     const cursorX = event.clientX - bounds.left;
                     const cursorY = event.clientY - bounds.top;
-                    const imageX = (cursorX - panOffset.x) / zoom;
-                    const imageY = (cursorY - panOffset.y) / zoom;
+                    const imagePoint = toImagePoint({ x: cursorX, y: cursorY }, panOffset, zoom);
                     const nextZoom = clampZoom(zoom * (event.deltaY > 0 ? 0.9 : 1.1));
                     setZoom(nextZoom);
                     setPanOffset({
-                        x: cursorX - imageX * nextZoom,
-                        y: cursorY - imageY * nextZoom,
+                        x: cursorX - imagePoint.x * nextZoom,
+                        y: cursorY - imagePoint.y * nextZoom,
                     });
                 }}
                 ref={canvasReference}
@@ -407,9 +377,6 @@ export function SpritesheetCanvas({
     );
 }
 
-function clampZoom(value: number): number {
-    return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
-}
 function drawFrameOverlay(
     context: CanvasRenderingContext2D,
     name: string,

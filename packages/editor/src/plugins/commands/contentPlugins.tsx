@@ -1,7 +1,5 @@
 import { Gamepad2, GitFork, Image as ImageIcon, MessageSquare, User } from 'lucide-react';
 
-import { editorTheme as t } from '../../theme/editorTheme';
-
 import type { PluginNode } from '../types';
 
 import { BackgroundInspector } from '../../components/inspector/BackgroundInspector';
@@ -9,6 +7,7 @@ import { ChoiceInspector } from '../../components/inspector/ChoiceInspector';
 import { DialogueInspector } from '../../components/inspector/DialogueInspector';
 import { ItemInspector } from '../../components/inspector/ItemInspector';
 import { SpriteInspector } from '../../components/inspector/SpriteInspector';
+import { editorTheme as t } from '../../theme/editorTheme';
 import { asInspector, asRecord, type CommandPluginOverrides, readArray, readString } from './shared';
 
 export const contentPluginOverrides: CommandPluginOverrides = {

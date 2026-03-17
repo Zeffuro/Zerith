@@ -2,10 +2,9 @@ import type { ComponentType } from 'react';
 
 import { Gamepad2 } from 'lucide-react';
 
-import { editorTheme as t } from '../../theme/editorTheme';
-
 import type { CommandPlugin, EditorCommandType, PluginInspectorProperties } from '../types';
 
+import { editorTheme as t } from '../../theme/editorTheme';
 import { toRecordOrUndefined } from '../../utils/typeGuards';
 
 export type CommandPluginOverrides = Partial<Record<EditorCommandType, Partial<CommandPlugin>>>;

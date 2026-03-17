@@ -1,12 +1,20 @@
-import type { IAssetManager, IAudioManager } from '../interfaces/managers';
+import type { IAssetManager, IAudioManager, SfxPlaybackOptions } from '../interfaces/managers';
 import type { BaseCommand, CommandHandler } from '../types';
+import type { AudioCue, AudiosheetDescriptor } from '../types';
 import type { Logger } from '../utils/Logger';
+
+import { parseAudiosheetDescriptor } from '../schemas';
 
 export interface SfxCommand extends BaseCommand {
     assetUrl: string;
     type: 'sfx';
     volume?: number;
 }
+
+type CueReference = {
+    cueName: string;
+    sheetUrl: string;
+};
 
 export class SfxHandler implements CommandHandler<SfxCommand> {
     public autoNext = true;
@@ -29,14 +37,78 @@ export class SfxHandler implements CommandHandler<SfxCommand> {
         const url = command.assetUrl;
         if (!url) return;
 
-        const resolvedUrl = this.assets.resolve(url);
+        const cueReference = this.parseCueReference(url);
 
         try {
-            await this.audio.playSfx(resolvedUrl, command.volume ?? 0.8);
+            if (cueReference) {
+                await this.playCue(cueReference, command.volume ?? 0.8);
+                this.logger.info(`Played SFX cue: ${url}`);
+                return;
+            }
 
+            const resolvedUrl = this.assets.resolve(url);
+            await this.audio.playSfx(resolvedUrl, command.volume ?? 0.8);
             this.logger.info(`Played SFX: ${url}`);
         } catch (error) {
             this.logger.error(`Failed to load/play SFX: ${url}`, error);
         }
+    };
+
+    private parseCueReference(assetUrl: string): CueReference | undefined {
+        if (!assetUrl.includes(':') || assetUrl.startsWith('http') || assetUrl.startsWith('/')) {
+            return undefined;
+        }
+
+        const separatorIndex = assetUrl.indexOf(':');
+        if (separatorIndex <= 0 || separatorIndex >= assetUrl.length - 1) {
+            return undefined;
+        }
+
+        const sheetUrl = assetUrl.slice(0, separatorIndex);
+        const cueName = assetUrl.slice(separatorIndex + 1);
+
+        if (sheetUrl.length === 0 || cueName.length === 0) {
+            return undefined;
+        }
+
+        return { cueName, sheetUrl };
+    }
+
+    private async playCue(cueReference: CueReference, commandVolume: number): Promise<void> {
+        const descriptorData = await this.assets.load<unknown>(cueReference.sheetUrl);
+        const parsedDescriptor = parseAudiosheetDescriptor(descriptorData);
+
+        if (!parsedDescriptor.success) {
+            throw new Error(`Invalid audiosheet descriptor '${cueReference.sheetUrl}': ${parsedDescriptor.error}`);
+        }
+
+        const cue = parsedDescriptor.data.cues[cueReference.cueName];
+        if (!cue) {
+            throw new Error(`Cue '${cueReference.cueName}' not found in '${cueReference.sheetUrl}'`);
+        }
+
+        const sourceAssetUrl = resolveSheetSource(cueReference.sheetUrl, parsedDescriptor.data);
+        const resolvedSourceUrl = this.assets.resolve(sourceAssetUrl);
+        const cueOptions = toSfxPlaybackOptions(cue);
+        const cueVolume = cue.volume === undefined ? commandVolume : commandVolume * cue.volume;
+
+        await this.audio.playSfx(resolvedSourceUrl, cueVolume, cueOptions);
+    }
+}
+
+function resolveSheetSource(sheetUrl: string, descriptor: AudiosheetDescriptor): string {
+    if (descriptor.source.startsWith('/') || descriptor.source.startsWith('http')) {
+        return descriptor.source;
+    }
+
+    const directory = sheetUrl.slice(0, Math.max(0, sheetUrl.lastIndexOf('/') + 1));
+    return `${directory}${descriptor.source}`;
+}
+
+function toSfxPlaybackOptions(cue: AudioCue): SfxPlaybackOptions {
+    return {
+        duration: cue.duration,
+        loop: cue.loop,
+        start: cue.start,
     };
 }

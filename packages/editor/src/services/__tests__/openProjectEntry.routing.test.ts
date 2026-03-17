@@ -46,6 +46,13 @@ describe('openProjectEntry jsonRouting', () => {
             hintedKind: 'characters',
             isMacrosObject: looksLikeMacros,
         })).toEqual({ kind: 'resource', resourceKind: 'characters' });
+
+        expect(routeJsonEntry({
+            data: {},
+            filePath: '/project/engine.config.json',
+            hintedKind: 'engineConfig',
+            isMacrosObject: looksLikeMacros,
+        })).toEqual({ kind: 'resource', resourceKind: 'engineConfig' });
     });
 
     it('routes hinted script/macros before heuristics', () => {
@@ -102,6 +109,7 @@ describe('openProjectEntry jsonKindResolution', () => {
         it('maps known schema ids to JSON kinds', () => {
             expect(resolveJsonKindFromSchema({ $schema: 'zerith/manifest' })).toBe('manifest');
             expect(resolveJsonKindFromSchema({ $schema: 'zerith/characters' })).toBe('characters');
+            expect(resolveJsonKindFromSchema({ $schema: 'zerith/engine-config' })).toBe('engineConfig');
             expect(resolveJsonKindFromSchema({ $schema: 'zerith/items' })).toBe('items');
             expect(resolveJsonKindFromSchema({ $schema: 'zerith/macros' })).toBe('macros');
         });
@@ -116,6 +124,10 @@ describe('openProjectEntry jsonKindResolution', () => {
     describe('resolveJsonKindFromManifest', () => {
         it('detects manifest from game.json path without manifest state', () => {
             expect(resolveJsonKindFromManifest('/project/game.json', undefined, '/project')).toBe('manifest');
+        });
+
+        it('detects engine config from engine.config.json path without manifest state', () => {
+            expect(resolveJsonKindFromManifest('/project/engine.config.json', undefined, '/project')).toBe('engineConfig');
         });
 
         it('resolves characters and scenes using manifest-relative paths', () => {
@@ -147,16 +159,19 @@ describe('openProjectEntry viewPrefs', () => {
 
     it('maps resource kinds to preferred view selectors', () => {
         expect(getPreferredViewForJsonResource('manifest', 'timeline')).toBe('timeline');
+        expect(getPreferredViewForJsonResource('engineConfig', 'timeline')).toBe('timeline');
         expect(getPreferredViewForJsonResource('items', 'timeline')).toBe('timeline');
         expect(getPreferredViewForJsonResource('characters', 'json')).toBe('json');
 
         expect(openProjectEntryMocks.getPreferredManifestView).toHaveBeenCalledWith('timeline');
+        expect(openProjectEntryMocks.getPreferredEngineConfigView).toHaveBeenCalledWith('timeline');
         expect(openProjectEntryMocks.getPreferredItemsView).toHaveBeenCalledWith('timeline');
         expect(openProjectEntryMocks.getPreferredCharactersView).toHaveBeenCalledWith('json');
     });
 
     it('maps resource kinds to view action names', () => {
         expect(getViewActionForJsonResource('manifest')).toBe('setManifestView');
+        expect(getViewActionForJsonResource('engineConfig')).toBe('setEngineConfigView');
         expect(getViewActionForJsonResource('items')).toBe('setItemsView');
         expect(getViewActionForJsonResource('characters')).toBe('setCharactersView');
     });
@@ -194,6 +209,29 @@ describe('openProjectEntry', () => {
         resetOpenProjectEntryMocks();
         setMissingSpritesheetDescriptorHandler(undefined);
     });
+
+    it('opens engine.config.json using engineConfig route and applies forced view', async () => {
+        openProjectEntryMocks.fsReadTextFile.mockResolvedValueOnce('{"display":{"width":1280}}');
+
+        await openProjectEntry('/project/engine.config.json', 'engine.config.json', { forceView: 'json' });
+
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenNthCalledWith(1, {
+            action: 'setEngineConfigView',
+            view: 'json',
+        });
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenNthCalledWith(2, {
+            action: 'openTab',
+            tab: {
+                id: 'engineConfig:/project/engine.config.json',
+                kind: 'engineConfig',
+                path: '/project/engine.config.json',
+                preferredView: 'json',
+                textContent: '{"display":{"width":1280}}',
+                title: 'Engine Config',
+            },
+        });
+    });
+
 
     it('opens image assets in an asset tab and updates selection', async () => {
         openProjectEntryMocks.fsReadTextFile.mockRejectedValueOnce(new Error('missing descriptor'));

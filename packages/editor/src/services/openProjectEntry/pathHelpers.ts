@@ -8,6 +8,10 @@ export function isManifestFilePath(path: string): boolean {
     return basenameFromPath(path).toLowerCase() === 'game.json';
 }
 
+export function isEngineConfigFilePath(path: string): boolean {
+    return basenameFromPath(path).toLowerCase() === 'engine.config.json';
+}
+
 export function normalizeFilePath(path: string): string {
     return path.replaceAll('\\', '/');
 }

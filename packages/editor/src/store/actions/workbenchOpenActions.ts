@@ -5,6 +5,7 @@ import { useWorkbenchStore } from '../useWorkbenchStore';
 export type ExecuteWorkbenchOpenActionOptions =
     | { action: 'openTab'; tab: WorkbenchTab }
     | { action: 'setCharactersView'; view: ScriptViewMode }
+    | { action: 'setEngineConfigView'; view: ScriptViewMode }
     | { action: 'setItemsView'; view: ScriptViewMode }
     | { action: 'setMacrosView'; view: ScriptViewMode }
     | { action: 'setManifestView'; view: ScriptViewMode }
@@ -13,6 +14,7 @@ export type ExecuteWorkbenchOpenActionOptions =
 export type WorkbenchOpenAction =
     | 'openTab'
     | 'setCharactersView'
+    | 'setEngineConfigView'
     | 'setItemsView'
     | 'setMacrosView'
     | 'setManifestView'
@@ -33,6 +35,11 @@ export function executeWorkbenchOpenAction(options: ExecuteWorkbenchOpenActionOp
 
     if (options.action === 'setManifestView') {
         workbench.setLastManifestView(options.view);
+        return;
+    }
+
+    if (options.action === 'setEngineConfigView') {
+        workbench.setLastEngineConfigView(options.view);
         return;
     }
 
@@ -57,6 +64,11 @@ export function getPreferredCharactersView(fallback?: ScriptViewMode): ScriptVie
 export function getPreferredItemsView(fallback?: ScriptViewMode): ScriptViewMode {
     const workbench = useWorkbenchStore.getState();
     return fallback ?? workbench.lastItemsView;
+}
+
+export function getPreferredEngineConfigView(fallback?: ScriptViewMode): ScriptViewMode {
+    const workbench = useWorkbenchStore.getState();
+    return fallback ?? workbench.lastEngineConfigView;
 }
 
 export function getPreferredMacrosView(fallback?: ScriptViewMode): ScriptViewMode {

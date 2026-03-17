@@ -6,6 +6,7 @@ export type WorkbenchResourceKind =
     | 'asset'
     | 'audiosheet'
     | 'characters'
+    | 'engineConfig'
     | 'items'
     | 'json'
     | 'macros'
@@ -53,14 +54,20 @@ export interface WorkbenchTabsSlice {
 }
 
 export interface WorkbenchViewPrefsSlice {
+    lastAudiosheetView: ScriptViewMode;
     lastCharactersView: ScriptViewMode;
+    lastEngineConfigView: ScriptViewMode;
     lastItemsView: ScriptViewMode;
     lastMacrosView: ScriptViewMode;
     lastManifestView: ScriptViewMode;
     lastScriptView: ScriptViewMode;
+    lastSpritesheetView: ScriptViewMode;
+    setLastAudiosheetView: (view: ScriptViewMode) => void;
     setLastCharactersView: (view: ScriptViewMode) => void;
+    setLastEngineConfigView: (view: ScriptViewMode) => void;
     setLastItemsView: (view: ScriptViewMode) => void;
     setLastMacrosView: (view: ScriptViewMode) => void;
     setLastManifestView: (view: ScriptViewMode) => void;
     setLastScriptView: (view: ScriptViewMode) => void;
+    setLastSpritesheetView: (view: ScriptViewMode) => void;
 }

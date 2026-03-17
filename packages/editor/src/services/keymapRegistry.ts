@@ -26,6 +26,9 @@ export const globalShortcutActionCommands = [
     'toggleCommandPalette',
     'toggleGlobalSearch',
     'undo',
+    'zoomIn',
+    'zoomOut',
+    'zoomReset',
 ] as const;
 
 export type GlobalShortcutActionCommand = (typeof globalShortcutActionCommands)[number];
@@ -77,6 +80,9 @@ export const globalShortcutBindings: readonly GlobalShortcutBinding[] = [
     { action: 'openGlobalSearchFind', keys: ['f'], phase: 'global', preventDefault: 'always', requireMod: true, requireShift: true },
     { action: 'openGlobalSearchReplace', keys: ['g'], phase: 'global', preventDefault: 'always', requireMod: true, requireShift: true },
     { action: 'toggleCommandPalette', keys: ['p'], phase: 'global', preventDefault: 'always', requireMod: true, requireShift: true },
+    { action: 'zoomIn', keys: ['='], phase: 'global', preventDefault: 'always', requireMod: true },
+    { action: 'zoomOut', keys: ['-'], phase: 'global', preventDefault: 'always', requireMod: true },
+    { action: 'zoomReset', keys: ['0'], phase: 'global', preventDefault: 'always', requireMod: true },
     { action: 'audiosheetTogglePlayPause', keys: ['space'], phase: 'editor', preventDefault: 'whenHandled' },
     { action: 'audiosheetSetLeftBoundary', keys: ['q'], phase: 'editor', preventDefault: 'whenHandled' },
     { action: 'audiosheetSetRightBoundary', keys: ['e'], phase: 'editor', preventDefault: 'whenHandled' },

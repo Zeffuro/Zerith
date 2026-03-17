@@ -5,7 +5,7 @@ export { resolveJsonKindFromManifest, resolveJsonKindFromSchema } from './jsonKi
 export type { JsonRoute } from './jsonRouting';
 export { routeJsonEntry } from './jsonRouting';
 export { openAssetEntry, openAudiosheetEntry, openSpritesheetEntry, openTextEntry, openUnknownEntry } from './nonJsonHandlers';
-export { basenameFromPath, isManifestFilePath, normalizeFilePath, toProjectRelativePath } from './pathHelpers';
+export { basenameFromPath, isEngineConfigFilePath, isManifestFilePath, normalizeFilePath, toProjectRelativePath } from './pathHelpers';
 export { openProjectEntry, setMissingSpritesheetDescriptorHandler } from './service';
 export { openMacrosTab, openScriptTab } from './tabOpeners';
 export { getPreferredViewForJsonResource, getViewActionForJsonResource } from './viewPrefs';

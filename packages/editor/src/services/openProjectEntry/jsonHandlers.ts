@@ -44,7 +44,11 @@ export function handleJsonRoute(options: HandleJsonRouteOptions): void {
             path: fullPath,
             preferredView,
             textContent: contents,
-            title: route.resourceKind === 'manifest' ? 'Project Settings' : basenameFromPath(fullPath),
+            title: route.resourceKind === 'manifest'
+                ? 'Project Settings'
+                : route.resourceKind === 'engineConfig'
+                    ? 'Engine Config'
+                    : basenameFromPath(fullPath),
         }});
         return;
     }

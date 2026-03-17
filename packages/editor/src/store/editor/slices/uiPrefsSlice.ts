@@ -32,6 +32,7 @@ export function createUiPrefsSlice(set: EditorSet): UiPrefsSlice {
         },
         autosaveEnabled,
         autosaveIntervalMs,
+        clearProjectCloseRequest: () => set({ isProjectCloseRequested: false }),
         clearRecentProjects: () => {
             updateSettingsRecentProjects([]);
             set({ recentProjects: [] });
@@ -45,6 +46,7 @@ export function createUiPrefsSlice(set: EditorSet): UiPrefsSlice {
         isExportGameModalOpen: false,
         isGlobalSearchPopupOpen: false,
         isMuted,
+        isProjectCloseRequested: false,
         isSettingsModalOpen: false,
         lastManualSaveAt: 0,
         markManualSave: () => set({ lastManualSaveAt: Date.now() }),
@@ -56,6 +58,7 @@ export function createUiPrefsSlice(set: EditorSet): UiPrefsSlice {
             set((state) => state.isSettingsModalOpen ? {} : { globalSearchLaunchMode: 'replace', isGlobalSearchPopupOpen: true }),
         openSettingsModal: () => set({ isGlobalSearchPopupOpen: false, isSettingsModalOpen: true }),
         recentProjects,
+        requestProjectClose: () => set({ isProjectCloseRequested: true }),
         setAutosaveEnabled: (nextAutosaveEnabled) => {
             getSettingsSnapshot().setAutosaveEnabled(nextAutosaveEnabled);
             set({ autosaveEnabled: nextAutosaveEnabled });

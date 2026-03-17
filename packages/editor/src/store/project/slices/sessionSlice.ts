@@ -68,7 +68,8 @@ export function createProjectSessionSlice(
             }),
 
 
-        setProject: (path: string, files: FsDirectoryEntry[]) =>
+        setProject: (path: string | undefined, files: FsDirectoryEntry[]) => {
+            scriptBridge.setScript([]);
             set({
                 activeFile: undefined,
                 activeMacroName: undefined,
@@ -84,7 +85,8 @@ export function createProjectSessionSlice(
                 projectPath: path,
                 scenes: {},
                 treeRevision: 0,
-            }),
+            });
+        },
 
         setProjectFiles: (files: FsDirectoryEntry[]) =>
             set((state) => ({

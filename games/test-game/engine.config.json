@@ -1,0 +1,13 @@
+{
+  "$schema": "zerith/engine-config",
+  "display": {
+    "height": 720,
+    "scaleMode": "fit",
+    "width": 1280
+  },
+  "theme": {
+    "boxColor": 51,
+    "fontFamily": "Comic",
+    "fontSize": 24
+  }
+}

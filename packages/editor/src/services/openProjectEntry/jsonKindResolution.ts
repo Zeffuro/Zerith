@@ -3,7 +3,7 @@ import type { GameManifest } from 'core';
 import type { JsonHintKind } from './contracts';
 
 import { isRecord, toRecord } from '../../utils/typeGuards';
-import { isManifestFilePath, normalizeFilePath, toProjectRelativePath } from './pathHelpers';
+import { isEngineConfigFilePath, isManifestFilePath, normalizeFilePath, toProjectRelativePath } from './pathHelpers';
 
 export function resolveJsonKindFromManifest(
     fullPath: string,
@@ -13,6 +13,7 @@ export function resolveJsonKindFromManifest(
     const normalizedPath = normalizeFilePath(fullPath);
 
     if (isManifestFilePath(normalizedPath)) return 'manifest';
+    if (isEngineConfigFilePath(normalizedPath)) return 'engineConfig';
     if (!manifest || !projectPath) return;
 
     const normalizedProjectPath = normalizeFilePath(projectPath).replace(/\/+$/, '');
@@ -48,6 +49,7 @@ export function resolveJsonKindFromSchema(data: unknown): JsonHintKind {
     const schema = toRecord(data).$schema;
     if (schema === 'zerith/manifest') return 'manifest';
     if (schema === 'zerith/characters') return 'characters';
+    if (schema === 'zerith/engine-config') return 'engineConfig';
     if (schema === 'zerith/items') return 'items';
     if (schema === 'zerith/macros') return 'macros';
     return;

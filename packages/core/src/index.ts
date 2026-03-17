@@ -34,7 +34,6 @@ export * from './managers/StateManager';
 
 /* Schemas & Types */
 export * from './schemas';
-export { parseAudiosheetDescriptor, parseSpritesheetDescriptor } from './schemas/descriptorSchemas';
 export * from './types';
 
 /* UI */

@@ -1,7 +1,5 @@
 import { ArrowRightCircle, GitFork, Repeat, Sigma, Workflow } from 'lucide-react';
 
-import { editorTheme as t } from '../../theme/editorTheme';
-
 import type { EditorNodeByType, PluginNode } from '../types';
 
 import { CallInspector } from '../../components/inspector/CallInspector';
@@ -12,6 +10,7 @@ import { JumpInspector } from '../../components/inspector/JumpInspector';
 import { LabelInspector } from '../../components/inspector/LabelInspector';
 import { MacroHeaderInspector } from '../../components/inspector/MacroHeaderInspector';
 import { WhileInspector } from '../../components/inspector/WhileInspector';
+import { editorTheme as t } from '../../theme/editorTheme';
 import { asInspector, type CommandPluginOverrides, readArray, readNumber, readString } from './shared';
 
 export const flowPluginOverrides: CommandPluginOverrides = {

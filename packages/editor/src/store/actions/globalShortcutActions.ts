@@ -9,6 +9,7 @@ import { dispatchAudiosheetShortcut } from '../../services/audiosheetShortcuts';
 import { isRecord } from '../../utils/typeGuards';
 import { useProjectStore, useScriptStore } from '../storeBootstrap';
 import { useEditorStore } from '../useEditorStore';
+import { useSettingsStore } from '../useSettingsStore';
 import { useWorkbenchStore } from '../useWorkbenchStore';
 
 export type GlobalShortcutAction =
@@ -36,7 +37,15 @@ export type GlobalShortcutAction =
     | 'toggleBreakpoint'
     | 'toggleCommandPalette'
     | 'toggleGlobalSearch'
-    | 'undo';
+    | 'undo'
+    | 'zoomIn'
+    | 'zoomOut'
+    | 'zoomReset';
+
+const UI_SCALE_DEFAULT = 1;
+const UI_SCALE_MAX = 1.5;
+const UI_SCALE_MIN = 0.8;
+const UI_SCALE_STEP = 0.1;
 
 type MacroClipboardNode = {
     __kind: 'macro_header';
@@ -183,8 +192,34 @@ export async function executeGlobalShortcutAction(action: GlobalShortcutAction):
             useScriptStore.getState().undo();
             return true;
         }
+
+        case 'zoomIn': {
+            adjustUiScale(UI_SCALE_STEP);
+            return true;
+        }
+
+        case 'zoomOut': {
+            adjustUiScale(-UI_SCALE_STEP);
+            return true;
+        }
+
+        case 'zoomReset': {
+            useSettingsStore.getState().setUiScale(UI_SCALE_DEFAULT);
+            return true;
+        }
     }
 }
+
+function adjustUiScale(delta: number): void {
+    const settings = useSettingsStore.getState();
+    const nextUiScale = clampUiScale(Math.round((settings.uiScale + delta) * 10) / 10);
+    settings.setUiScale(nextUiScale);
+}
+
+function clampUiScale(value: number): number {
+    return Math.min(UI_SCALE_MAX, Math.max(UI_SCALE_MIN, value));
+}
+
 
 function cloneValue<T>(value: T): T {
     return deepClone(value);
@@ -230,11 +265,7 @@ function duplicateSelection(): void {
     const editor = useEditorStore.getState();
 
     if (editingAllMacrosFile) {
-        const rootIndices = editor.selectedNodePaths
-            .filter((p) => Array.isArray(p) && p.length === 1 && typeof p[0] === 'number')
-            .map((p) => p[0] as number)
-            .filter((v, index, a) => a.indexOf(v) === index)
-            .toSorted((a, b) => a - b);
+        const rootIndices = getUniqueSortedRootIndices(editor.selectedNodePaths);
 
         if (rootIndices.length > 0) {
             useProjectStore.getState().duplicateMacroEntries(rootIndices);
@@ -249,11 +280,7 @@ function duplicateSelection(): void {
     const script = useScriptStore.getState();
 
     if (editor.selectedNodePaths.length > 1) {
-        const originals = editor.selectedNodePaths
-            .filter((p) => Array.isArray(p) && p.length === 1 && typeof p[0] === 'number')
-            .map((p) => p[0] as number)
-            .filter((v, index, a) => a.indexOf(v) === index)
-            .toSorted((a, b) => a - b);
+        const originals = getUniqueSortedRootIndices(editor.selectedNodePaths);
 
         script.duplicateNodesByPaths(editor.selectedNodePaths);
 
@@ -277,6 +304,14 @@ function duplicateSelection(): void {
             editor.setSelectionAnchorPath([index]);
         }
     }
+}
+
+function getUniqueSortedRootIndices(paths: ScriptPath[]): number[] {
+    return paths
+        .filter((p) => Array.isArray(p) && p.length === 1 && typeof p[0] === 'number')
+        .map((p) => p[0] as number)
+        .filter((value, index, array) => array.indexOf(value) === index)
+        .toSorted((a, b) => a - b);
 }
 
 function isEditorNode(value: unknown): value is EditorNode {
@@ -400,7 +435,7 @@ function requestDeleteSelection(): boolean {
     const editor = useEditorStore.getState();
 
     const paths =
-        editor.selectedNodePaths.length > 1
+        editor.selectedNodePaths.length > 0
             ? editor.selectedNodePaths
             : (script.selectedNodePath
                 ? [script.selectedNodePath]

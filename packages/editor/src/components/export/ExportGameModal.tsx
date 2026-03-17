@@ -70,7 +70,7 @@ export function ExportGameModal() {
     }, [closeExportGameModal, isExporting, isOpen]);
 
     if (!isOpen) {
-        return undefined;
+        return;
     }
 
     const canExport = !!projectPath && !isExporting;

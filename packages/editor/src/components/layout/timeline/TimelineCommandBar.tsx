@@ -62,6 +62,8 @@ function QuickButton({
     return (
         <button
             onClick={onClick}
+            onMouseEnter={(event) => (event.currentTarget.style.filter = 'brightness(1.1)')}
+            onMouseLeave={(event) => (event.currentTarget.style.filter = 'none')}
             style={{
                 alignItems: 'center',
                 // Use theme fallback if no specific color is passed in
@@ -76,12 +78,10 @@ function QuickButton({
                 height: `${26 * scale}px`,
                 justifyContent: 'center',
                 padding: 0,
-                width: `${28 * scale}px`,
                 transition: 'filter 0.1s', // Optional: adds a nice hover feel
+                width: `${28 * scale}px`,
             }}
             title={title}
-            onMouseEnter={(e) => (e.currentTarget.style.filter = 'brightness(1.1)')}
-            onMouseLeave={(e) => (e.currentTarget.style.filter = 'none')}
         >
             {icon}
         </button>

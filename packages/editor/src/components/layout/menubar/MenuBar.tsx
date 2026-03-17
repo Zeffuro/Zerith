@@ -1,17 +1,26 @@
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useDismissiblePopup } from '../../../hooks/useDismissiblePopup';
 import { openProjectEntry } from '../../../services/openProjectEntry';
+import { executeCloseProjectAction } from '../../../store/actions/projectOpenActions';
 import { useProjectStore } from '../../../store/storeBootstrap';
 import { useScriptStore } from '../../../store/storeBootstrap';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useSettingsStore } from '../../../store/useSettingsStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
+import { openInitialProjectEntry as openInitialProjectEntryModel } from '../../tools/commandPaletteModel';
 import { MenuButton } from './MenuButton';
 import { MenuDropdown, type MenuItem } from './MenuDropdown';
 
+const REPOSITORY_URL = 'https://github.com/Zeffuro/Zerith';
+
 type MenuKey = 'Debug' | 'Edit' | 'File' | 'Help' | 'Run' | 'View';
+
+type ShellModule = {
+    open?: (path: string) => Promise<void>;
+};
 
 export function MenuBar({ uiScale }: { uiScale: number }) {
     const rootReference = useRef<HTMLDivElement>(null);
@@ -50,6 +59,17 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         saveActiveFileFromCurrentScript,
         saveAllDirtyFiles,
     } = useProjectStore();
+
+    const handleOpenInitialProjectEntry = useCallback(async () => {
+        const { expandToPath, manifest, projectPath: currentProjectPath } = useProjectStore.getState();
+        await openInitialProjectEntryModel({
+            expandToPath,
+            manifest,
+            openProjectEntry,
+            projectPath: currentProjectPath,
+        });
+    }, []);
+
     const selectedNodePaths = useEditorStore((state) => state.selectedNodePaths);
     const canRedo = useScriptStore((state) => state.future.length > 0);
     const canUndo = useScriptStore((state) => state.past.length > 0);
@@ -70,22 +90,22 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
             if (selectedFile) {
                 await openProjectFromManifest(selectedFile);
                 addRecentProject(selectedFile);
-                await openInitialProjectEntry();
+                await handleOpenInitialProjectEntry();
             }
         } catch (error) {
             console.error('Failed to open project dialog:', error);
         }
-    }, [addRecentProject, openProjectFromManifest]);
+    }, [addRecentProject, handleOpenInitialProjectEntry, openProjectFromManifest]);
 
     const handleOpenRecentProject = useCallback(async (manifestPath: string) => {
         try {
             await openProjectFromManifest(manifestPath);
             addRecentProject(manifestPath);
-            await openInitialProjectEntry();
+            await handleOpenInitialProjectEntry();
         } catch (error) {
             console.error('Failed to open recent project:', error);
         }
-    }, [addRecentProject, openProjectFromManifest]);
+    }, [addRecentProject, handleOpenInitialProjectEntry, openProjectFromManifest]);
 
     const handleSave = useCallback(async () => {
         if (!activeFile) return;
@@ -97,6 +117,20 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         markManualSave();
         await saveAllDirtyFiles();
     }, [markManualSave, saveAllDirtyFiles]);
+
+    const handleExit = useCallback(() => {
+        void getCurrentWindow().close();
+    }, []);
+
+    const handleOpenRepository = useCallback(() => {
+        void (async () => {
+            const openedInShell = await openInShellIfAvailable(REPOSITORY_URL);
+            if (openedInShell) {
+                return;
+            }
+            globalThis.open?.(REPOSITORY_URL, '_blank');
+        })();
+    }, []);
 
     const isRunning = playTrigger > stopTrigger;
     const selectedRootIndex = selectedNodePaths[0]?.length === 1
@@ -128,12 +162,15 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
             { label: 'sep-0', separator: true },
             { disabled: !activeFile, label: 'Save', onClick: () => { void handleSave(); }, shortcut: 'Ctrl+S' },
             { disabled: !hasDirtyFiles, label: 'Save All', onClick: () => { void handleSaveAll(); }, shortcut: 'Ctrl+Shift+S' },
+            { disabled: !projectPath, label: 'Close Project', onClick: executeCloseProjectAction },
             { label: 'sep-1', separator: true },
             { label: 'Settings…', onClick: openSettingsModal, shortcut: 'Ctrl+Alt+S' },
             { label: 'sep-1a', separator: true },
             { disabled: !projectPath, label: 'Export Game…', onClick: openExportGameModal },
             { label: 'sep-1b', separator: true },
             { label: 'Reset Layout', onClick: resetDockLayout },
+            { label: 'sep-1c', separator: true },
+            { label: 'Exit', onClick: handleExit },
         ];
     })();
 
@@ -213,8 +250,11 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
     ];
 
     const helpItems = useMemo<MenuItem[]>(
-        () =>[{ disabled: true, label: 'About Zerith Editor' }],
-        []
+        () =>[
+            { label: 'GitHub Repository', onClick: handleOpenRepository },
+            { disabled: true, label: 'About Zerith Editor' },
+        ],
+        [handleOpenRepository]
     );
 
     const menuMap: Record<MenuKey, MenuItem[]> = {
@@ -266,32 +306,18 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
     );
 }
 
-function basename(path: string): string {
-    return path.split(/[\\/]/).pop() || path;
-}
-
-async function openInitialProjectEntry(): Promise<void> {
-    const { expandToPath, manifest, projectPath } = useProjectStore.getState();
-    if (!projectPath) return;
-
-    const startSceneName = manifest?.startScene;
-    const sceneEntry = startSceneName ? manifest?.scenes?.[startSceneName] : undefined;
-    if (typeof sceneEntry === 'string') {
-        const scenePath = resolveProjectPath(projectPath, sceneEntry);
-        expandToPath(scenePath);
-        await openProjectEntry(scenePath, basename(scenePath));
-        return;
+async function openInShellIfAvailable(url: string): Promise<boolean> {
+    try {
+        const loadModule = (modulePath: string): Promise<ShellModule> => import(modulePath) as Promise<ShellModule>;
+        const shell = await loadModule('@tauri-apps/plugin-shell');
+        if (typeof shell.open === 'function') {
+            await shell.open(url);
+            return true;
+        }
+    } catch {
+        // Optional plugin may not be present in all builds.
     }
 
-    const gameManifestPath = `${projectPath}/game.json`;
-    expandToPath(gameManifestPath);
-    await openProjectEntry(gameManifestPath, 'game.json');
+    return false;
 }
 
-
-function resolveProjectPath(projectPath: string, targetPath: string): string {
-    if (targetPath.startsWith('/') || targetPath.startsWith('\\')) {
-        return `${projectPath}${targetPath}`;
-    }
-    return `${projectPath}/${targetPath}`;
-}

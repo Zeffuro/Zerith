@@ -59,7 +59,7 @@ export interface ProjectSessionSlice {
     projectPath: string | undefined;
     setActiveFile: (file: string, content: EditorNode[]) => void;
     setPathExpanded: (path: string, expanded: boolean) => void;
-    setProject: (path: string, files: FsDirectoryEntry[]) => void;
+    setProject: (path: string | undefined, files: FsDirectoryEntry[]) => void;
     setProjectFiles: (files: FsDirectoryEntry[]) => void;
     treeRevision: number;
 }

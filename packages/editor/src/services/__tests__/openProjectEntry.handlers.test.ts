@@ -127,6 +127,35 @@ describe('openProjectEntry jsonHandlers', () => {
         });
     });
 
+    it('handles engineConfig resource route with engine config title', () => {
+        const route: JsonRoute = { kind: 'resource', resourceKind: 'engineConfig' };
+
+        handleJsonRoute({
+            contents: '{"display":{"width":1024}}',
+            data: { display: { width: 1024 } },
+            forceView: 'json',
+            fullPath: '/project/engine.config.json',
+            isMacrosObject: looksLikeMacros,
+            route,
+        });
+
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenNthCalledWith(1, {
+            action: 'setEngineConfigView',
+            view: 'json',
+        });
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenNthCalledWith(2, {
+            action: 'openTab',
+            tab: {
+                id: 'engineConfig:/project/engine.config.json',
+                kind: 'engineConfig',
+                path: '/project/engine.config.json',
+                preferredView: 'json',
+                textContent: '{"display":{"width":1024}}',
+                title: 'Engine Config',
+            },
+        });
+    });
+
     it('throws for hinted script route when payload is not an array', () => {
         const route: JsonRoute = { kind: 'script', requiresArrayShape: true };
 

@@ -1,9 +1,8 @@
 import { FileAudio, Music } from 'lucide-react';
 
-import { editorTheme as t } from '../../theme/editorTheme';
-
 import { BgmInspector } from '../../components/inspector/BgmInspector';
 import { SfxInspector } from '../../components/inspector/SfxInspector';
+import { editorTheme as t } from '../../theme/editorTheme';
 import { asInspector, asRecord, type CommandPluginOverrides, readString } from './shared';
 
 export const audioPluginOverrides: CommandPluginOverrides = {

@@ -282,8 +282,10 @@ function readString(value: unknown): string {
 }
 
 function writeOptionalString(target: Record<string, unknown>, key: string, value: string) {
-    const normalized = value.trim();
-    if (normalized.length === 0) { delete target[key]; return; }
-    target[key] = normalized;
+    if (value.trim().length === 0) {
+        delete target[key];
+        return;
+    }
+    target[key] = value;
 }
 
