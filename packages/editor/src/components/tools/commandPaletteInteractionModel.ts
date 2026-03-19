@@ -11,7 +11,7 @@ export type CommandPaletteInteractionState = {
 };
 
 type ExecutableAction = {
-    execute: () => Promise<void> | void;
+    action: () => Promise<void> | void;
 };
 
 export function clampSelectionIndex(index: number, length: number): number {
@@ -29,7 +29,7 @@ export async function executeSelectedAction(
     const selected = actions[index];
     if (!selected) return;
 
-    await selected.execute();
+    await selected.action();
     onRequestClose();
 }
 

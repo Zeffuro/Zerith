@@ -9,6 +9,8 @@ export type ManualSliceLines = {
     vertical: number[];
 };
 
+export type ManualTool = 'draw' | 'select' | 'slice';
+
 export type ThumbnailCanvasMetrics = {
     height: number;
     pixelHeight: number;

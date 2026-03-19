@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import { scanReferences } from '../services/referenceScanner';
+import { collectDataAssetReferences, listProjectAssetFiles, scanReferences } from '../services/referenceScanner';
 import { useProjectStore } from '../store/storeBootstrap';
 import { useReferenceStore } from '../store/useReferenceStore';
 
@@ -12,18 +12,32 @@ export function useReferenceScanner() {
     const treeRevision = useProjectStore((state) => state.treeRevision);
 
     useEffect(() => {
-        const timeout = globalThis.setTimeout(() => {
-            if (!projectPath) {
-                useReferenceStore.getState().setResult({ assets: {}, characters: {}, variables: {} });
-                return;
-            }
+        let cancelled = false;
 
-            const projectData = useProjectStore.getState();
-            const result = scanReferences(projectData);
-            useReferenceStore.getState().setResult(result);
+        const timeout = globalThis.setTimeout(() => {
+            void (async () => {
+                if (!projectPath) {
+                    if (cancelled) return;
+                    useReferenceStore.getState().setAssetInventory([]);
+                    useReferenceStore.getState().setResult({ assetFiles: {}, assets: {}, characters: {}, variables: {} });
+                    return;
+                }
+
+                const projectData = useProjectStore.getState();
+                const result = scanReferences(projectData);
+                await collectDataAssetReferences(projectData, result);
+                const assetInventory = await listProjectAssetFiles(projectPath);
+
+                if (cancelled) return;
+                useReferenceStore.getState().setResult(result);
+                useReferenceStore.getState().setAssetInventory(assetInventory);
+            })();
         }, 500);
 
-        return () => globalThis.clearTimeout(timeout);
+        return () => {
+            cancelled = true;
+            globalThis.clearTimeout(timeout);
+        };
     }, [characters, macros, projectPath, scenes, treeRevision]);
 }
 

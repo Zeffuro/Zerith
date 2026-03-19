@@ -3,11 +3,13 @@ import { z } from 'zod';
 
 import type { ScriptPath } from '../../utils/scriptPathUtilities';
 import type {
+    AssetUsageEntry,
     ReferenceLocation,
     ReferenceScannerResult,
     VariableReferenceStats,
 } from '../referenceScanner';
 
+import { createAssetDependencyGraph, normalizeAssetReference } from '../referenceScanner/assets';
 import { scanCommandReferences } from '../referenceScanner/commandScan';
 import { resolveFilePath, resolveScenePath } from '../referenceScanner/paths';
 import { getCommandFieldHints, unwrapObjectSchema } from '../referenceScanner/schemaHints';
@@ -21,6 +23,7 @@ import {
 
 function createResult(): ReferenceScannerResult {
     return {
+        assetFiles: {},
         assets: {},
         characters: {},
         variables: {},
@@ -112,6 +115,7 @@ describe('referenceScanner command scan', () => {
         );
 
         expect(result.assets['bg/courtroom.png']).toHaveLength(1);
+        expect(result.assetFiles['/assets/bg/courtroom.png']).toHaveLength(1);
         expect(result.characters.Phoenix).toHaveLength(1);
     });
 
@@ -210,6 +214,30 @@ describe('referenceScanner helpers', () => {
 
         const unknownHints = getCommandFieldHints('unknown-command-type');
         expect(unknownHints).toEqual({ assetFields: [], keyFields: [], speakerFields: [] });
+    });
+
+    it('normalizes asset references for dependency matching', () => {
+        expect(normalizeAssetReference('/assets/bg/office.png')).toBe('/assets/bg/office.png');
+        expect(normalizeAssetReference('bg/office.png')).toBe('/assets/bg/office.png');
+        expect(normalizeAssetReference('/assets/bgm/court.mp3:loop')).toBe('/assets/bgm/court.mp3');
+        expect(normalizeAssetReference('https://example.com/bg.png')).toBeUndefined();
+    });
+
+    it('builds used, unused, and missing sets for asset dependency graph', () => {
+        const dependencyGraph = createAssetDependencyGraph(
+            {
+                '/assets/bg/office.png': [{ commandType: 'background', filePath: '/project/scripts/intro.json', path: [0], sceneName: 'intro' }],
+                '/assets/sfx/missing.wav': [{ commandType: 'sfx', filePath: '/project/scripts/intro.json', path: [1], sceneName: 'intro' }],
+            },
+            ['/assets/bg/office.png', '/assets/bg/courtroom.png'],
+        );
+
+        expect(dependencyGraph.used.map((entry: AssetUsageEntry) => entry.assetUrl)).toEqual([
+            '/assets/bg/office.png',
+            '/assets/sfx/missing.wav',
+        ]);
+        expect(dependencyGraph.unused).toEqual(['/assets/bg/courtroom.png']);
+        expect(dependencyGraph.missing.map((entry: AssetUsageEntry) => entry.assetUrl)).toEqual(['/assets/sfx/missing.wav']);
     });
 
     it('unwraps nested object wrappers and returns undefined for non-object schemas', () => {

@@ -5,12 +5,16 @@ import type { ReferenceScannerResult } from '../referenceScanner';
 
 import '../../test-utils/registerEditorServiceMocks';
 import { createGlobalSearchProjectData } from '../../test-utils/projectDataBuilder';
-import { scanReferences } from '../referenceScanner';
-import { scanProjectScriptBranches } from '../referenceScanner/coordinator';
-import { scanMacroReferences, scanSceneReferences } from '../referenceScanner/orchestration';
+import {
+    scanMacroReferences,
+    scanProjectScriptBranches,
+    scanReferences,
+    scanSceneReferences,
+} from '../referenceScanner';
 
 function createResult(): ReferenceScannerResult {
     return {
+        assetFiles: {},
         assets: {},
         characters: {},
         variables: {},
@@ -203,6 +207,7 @@ describe('referenceScanner', () => {
         const result = scanReferences(createGlobalSearchProjectData({ projectPath: undefined }));
 
         expect(result).toEqual({
+            assetFiles: {},
             assets: {},
             characters: {},
             variables: {},

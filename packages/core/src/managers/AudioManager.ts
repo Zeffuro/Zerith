@@ -1,5 +1,8 @@
 import { sound } from '@pixi/sound';
 
+import type { CuePlaybackOptions } from '../interfaces/managers';
+import type { AudioCue, AudiosheetDescriptor } from '../types';
+
 export interface AudioConfig {
     bgmVolume?: number;
     masterVolume?: number;
@@ -7,6 +10,11 @@ export interface AudioConfig {
     sfxVolume?: number;
     voiceVolume?: number;
 }
+
+type AudiosheetRuntimeDescriptor = {
+    cues: Record<string, AudioCue>;
+    source: string;
+};
 
 export class AudioManager {
     public bgmVolume: number;
@@ -26,6 +34,7 @@ export class AudioManager {
     }
 
     private _muted: boolean = false;
+    private readonly audiosheets = new Map<string, AudiosheetRuntimeDescriptor>();
 
     constructor(config: AudioConfig = {}) {
         this.bgmVolume = config.bgmVolume ?? 1;
@@ -62,6 +71,14 @@ export class AudioManager {
         this.updateSystemVolume();
     }
 
+    public async loadAudiosheet(sheetName: string, descriptor: AudiosheetDescriptor): Promise<void> {
+        this.audiosheets.set(sheetName, {
+            cues: descriptor.cues,
+            source: descriptor.source,
+        });
+        await this.preloadAudio(descriptor.source);
+    }
+
 
     public pauseBgm(): void {
         if (!this.currentBgmUrl) return;
@@ -80,6 +97,45 @@ export class AudioManager {
             loop,
             singleInstance: true,
             volume: volume * this.bgmVolume,
+        });
+    }
+
+    public async playCue(
+        sheetName: string,
+        cueName: string,
+        options: CuePlaybackOptions = {},
+    ): Promise<void> {
+        const descriptor = this.audiosheets.get(sheetName);
+        if (!descriptor) {
+            throw new Error(`Audiosheet '${sheetName}' is not loaded.`);
+        }
+
+        const cue = descriptor.cues[cueName];
+        if (!cue) {
+            throw new Error(`Cue '${cueName}' not found in audiosheet '${sheetName}'.`);
+        }
+
+        const channel = options.channel ?? 'sfx';
+        const cueVolume = cue.volume === undefined ? (options.volume ?? 1) : (options.volume ?? 1) * cue.volume;
+        const playback = toCuePlaybackOptions(cue, channel, options.loop);
+        await this.preloadAudio(descriptor.source);
+
+        if (channel === 'bgm') {
+            if (this.currentBgmUrl && this.currentBgmUrl !== descriptor.source) {
+                sound.stop(this.currentBgmUrl);
+            }
+            this.currentBgmUrl = descriptor.source;
+            await sound.play(descriptor.source, {
+                ...playback,
+                singleInstance: true,
+                volume: cueVolume * this.bgmVolume,
+            });
+            return;
+        }
+
+        await sound.play(descriptor.source, {
+            ...playback,
+            volume: cueVolume * this.sfxVolume,
         });
     }
 
@@ -170,3 +226,19 @@ export class AudioManager {
         sound.volumeAll = this._muted ? 0 : this.masterVolume;
     }
 }
+
+function toCuePlaybackOptions(
+    cue: AudioCue,
+    channel: 'bgm' | 'sfx',
+    loopOverride?: boolean,
+): { end?: number; loop: boolean; start: number } {
+    const start = cue.start;
+    const end = cue.duration === undefined ? undefined : start + cue.duration;
+
+    return {
+        end,
+        loop: loopOverride ?? cue.loop ?? (channel === 'bgm'),
+        start,
+    };
+}
+

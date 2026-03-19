@@ -69,11 +69,14 @@ export class SpritesheetManager {
         if (!response.ok) {
             throw new Error(`Failed to fetch spritesheet atlas: ${config.atlasUrl} (${response.status})`);
         }
-        const atlasData = (await response.json()) as SpritesheetData;
+        const atlasData = this.toPixiAtlasData(await response.json());
 
         const atlasDirectory = config.atlasUrl.slice(0, Math.max(0, config.atlasUrl.lastIndexOf('/') + 1));
-        const imageName = atlasData.meta?.image ?? '';
-        const imagePath = imageName.startsWith('/') ? imageName : atlasDirectory + imageName;
+        const imageName = this.resolveImageName(atlasData);
+        if (!imageName) {
+            throw new Error(`Spritesheet descriptor is missing image source: ${config.atlasUrl}`);
+        }
+        const imagePath = this.isAbsoluteImagePath(imageName) ? imageName : atlasDirectory + imageName;
 
         const img = await this.loadImage(this.resolver(imagePath));
 
@@ -94,6 +97,93 @@ export class SpritesheetManager {
         return sheet;
     }
 
+    private toPixiAtlasData(rawData: unknown): SpritesheetData {
+        if (!isRecord(rawData)) {
+            throw new Error('Spritesheet descriptor must be a JSON object.');
+        }
+
+        const frames = rawData.frames;
+        if (!isRecord(frames)) {
+            return rawData as unknown as SpritesheetData;
+        }
+
+        const normalizedFrames: Record<string, unknown> = {};
+        let requiresNormalization = false;
+
+        for (const [frameName, frameValue] of Object.entries(frames)) {
+            if (!isRecord(frameValue)) {
+                normalizedFrames[frameName] = frameValue;
+                continue;
+            }
+
+            // Canonical descriptors store atlas frames as {x,y,w,h}; Pixi expects nested `frame` bounds.
+            const hasRect = typeof frameValue.x === 'number'
+                && typeof frameValue.y === 'number'
+                && typeof frameValue.w === 'number'
+                && typeof frameValue.h === 'number';
+
+            if (!hasRect || isRecord(frameValue.frame)) {
+                normalizedFrames[frameName] = frameValue;
+                continue;
+            }
+
+            requiresNormalization = true;
+            normalizedFrames[frameName] = {
+                anchor: buildAnchor(frameValue),
+                frame: {
+                    h: frameValue.h,
+                    w: frameValue.w,
+                    x: frameValue.x,
+                    y: frameValue.y,
+                },
+                rotated: false,
+                sourceSize: {
+                    h: frameValue.h,
+                    w: frameValue.w,
+                },
+                spriteSourceSize: {
+                    h: frameValue.h,
+                    w: frameValue.w,
+                    x: 0,
+                    y: 0,
+                },
+                trimmed: false,
+            };
+        }
+
+        if (!requiresNormalization) {
+            return rawData as unknown as SpritesheetData;
+        }
+
+        return {
+            ...rawData,
+            frames: normalizedFrames,
+        } as SpritesheetData;
+    }
+
+    private resolveImageName(atlasData: SpritesheetData): string | undefined {
+        const candidate = atlasData as SpritesheetData & {
+            meta?: SpritesheetData['meta'] & { image?: unknown };
+            source?: unknown;
+        };
+
+        if (typeof candidate.meta?.image === 'string' && candidate.meta.image.length > 0) {
+            return candidate.meta.image;
+        }
+
+        if (typeof candidate.source === 'string' && candidate.source.length > 0) {
+            return candidate.source;
+        }
+
+        return undefined;
+    }
+
+    private isAbsoluteImagePath(path: string): boolean {
+        return path.startsWith('/')
+            || /^[a-zA-Z]+:\/\//.test(path)
+            || /^[a-zA-Z]:[\\/]/.test(path);
+    }
+
     private loadImage(url: string): Promise<HTMLImageElement> {
         return new Promise((resolve, reject) => {
             const img = new Image();
@@ -105,4 +195,22 @@ export class SpritesheetManager {
     }
 
     private resolver: AssetResolver = (url) => url;
+}
+
+function buildAnchor(frame: Record<string, unknown>): { x?: number; y?: number } | undefined {
+    const anchorX = typeof frame.anchorX === 'number' ? frame.anchorX : undefined;
+    const anchorY = typeof frame.anchorY === 'number' ? frame.anchorY : undefined;
+
+    if (anchorX === undefined && anchorY === undefined) {
+        return undefined;
+    }
+
+    return {
+        x: anchorX,
+        y: anchorY,
+    };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
 }

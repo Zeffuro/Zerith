@@ -4,7 +4,6 @@ import { useProjectStore } from '../store/storeBootstrap';
 import { useWorkbenchStore } from '../store/useWorkbenchStore';
 import { sanitizeFileName } from '../utils/sanitizeFileName';
 import {
-    type FsDirectoryEntry,
     fsDirname,
     fsJoin,
     fsMkdir,
@@ -83,6 +82,26 @@ export async function deletePath(path: string) {
     }
 }
 
+export async function deletePaths(paths: string[]): Promise<number> {
+    const uniquePaths = [...new Set(paths.filter(Boolean))];
+    if (uniquePaths.length === 0) return 0;
+
+    let deletedCount = 0;
+
+    for (const path of uniquePaths) {
+        try {
+            await fsRemove(path, true);
+            deletedCount += 1;
+        } catch (error) {
+            console.error('Delete failed:', error);
+            executeConsoleMessageAction('editor', 'error', `Delete failed for ${path}:`, String(error));
+        }
+    }
+
+    await refreshProjectTree();
+    return deletedCount;
+}
+
 export async function duplicatePath(path: string) {
     try {
         const parent = await fsDirname(path);
@@ -109,7 +128,6 @@ export async function refreshProjectTree() {
     if (!projectPath) return;
 
     const entries = await fsReadDirectory(projectPath);
-    sortEntries(entries);
     executeProjectTreeRefreshAction(projectPath, entries);
 }
 
@@ -203,11 +221,4 @@ function replacePathPrefix(path: string, oldPath: string, newPath: string): stri
     return path;
 }
 
-function sortEntries(entries: FsDirectoryEntry[]) {
-    entries.sort((a, b) => {
-        if (a.isDirectory && !b.isDirectory) return -1;
-        if (!a.isDirectory && b.isDirectory) return 1;
-        return a.name.localeCompare(b.name);
-    });
-}
 

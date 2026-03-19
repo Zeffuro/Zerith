@@ -2,6 +2,13 @@ import type { GlobalSearchProjectData } from '../globalSearch';
 import type { ReferenceScannerResult } from './types';
 
 import { useProjectStore } from '../../store/storeBootstrap';
+export {
+    collectDataAssetReferences,
+    createAssetDependencyGraph,
+    listProjectAssetFiles,
+    normalizeAssetReference,
+    toProjectAssetUrl,
+} from './assets';
 import { scanProjectScriptBranches } from './coordinator';
 import { scanReferenceTree } from './treeScan';
 export { scanCommandReferences } from './commandScan';
@@ -11,6 +18,8 @@ export { resolveFilePath, resolveScenePath } from './paths';
 export { getCommandFieldHints, unwrapObjectSchema } from './schemaHints';
 export { scanReferenceTree } from './treeScan';
 export type {
+    AssetDependencyGraph,
+    AssetUsageEntry,
     InferredVariableType,
     ReferenceLocation,
     ReferenceScannerResult,
@@ -27,6 +36,7 @@ export function scanReferences(
     projectData: GlobalSearchProjectData = useProjectStore.getState(),
 ): ReferenceScannerResult {
     const result: ReferenceScannerResult = {
+        assetFiles: {},
         assets: {},
         characters: {},
         variables: {},

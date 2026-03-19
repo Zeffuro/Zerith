@@ -14,7 +14,6 @@ describe('mergePersistedEditorState', () => {
             dockLayoutJson: { global: { splitterSize: 4 }, layout: { type: 'row' } },
             dockLayoutVersion: 4,
             isMuted: false,
-            quickCommandTypes: ['wait'],
             recentProjects: [{ lastOpened: 9, name: 'Current', path: '/current/game.json' }],
             themeKey: 'classicSoft',
             uiScale: 1.25,
@@ -28,7 +27,6 @@ describe('mergePersistedEditorState', () => {
             dockLayoutJson: { global: { splitterSize: 6 }, layout: { type: 'row' } },
             dockLayoutVersion: 4,
             isMuted: true,
-            quickCommandTypes: ['dialogue'],
             recentProjects: [{ lastOpened: 1, name: 'Old', path: '/old/game.json' }],
             themeKey: 'classic',
             uiScale: 2,
@@ -44,7 +42,6 @@ describe('mergePersistedEditorState', () => {
         });
 
         expect(normalizedMerged.breakpoints).toEqual({ '/persisted.json': [2, 4] });
-        expect(normalizedMerged.quickCommandTypes).toEqual(['dialogue']);
         expect(normalizedMerged.dockLayoutVersion).toBe(4);
         expect(normalizedMerged.dockLayoutJson).toEqual({ global: { splitterSize: 6 }, layout: { type: 'row' } });
 

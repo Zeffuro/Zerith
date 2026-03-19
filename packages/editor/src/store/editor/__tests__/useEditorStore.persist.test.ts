@@ -15,7 +15,6 @@ describe('partializeEditorStateForPersistence', () => {
             dockLayoutJson: { value: 1 },
             dockLayoutVersion: 2,
             isMuted: true,
-            quickCommandTypes: ['wait'],
             recentProjects: [{ lastOpened: 1, name: 'Game', path: '/game.json' }],
             themeKey: 'classicSoft',
             uiScale: 1.5,
@@ -28,7 +27,6 @@ describe('partializeEditorStateForPersistence', () => {
             breakpoints: { '/script.json': [1, 3] },
             dockLayoutJson: { value: 1 },
             dockLayoutVersion: 2,
-            quickCommandTypes: ['wait'],
         });
 
         for (const key of settingsBackedUiPrefsKeys) {

@@ -1,9 +1,11 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { open } from '@tauri-apps/plugin-dialog';
+import { open as openDialog } from '@tauri-apps/plugin-dialog';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useDismissiblePopup } from '../../../hooks/useDismissiblePopup';
 import { openProjectEntry } from '../../../services/openProjectEntry';
+import { saveProjectAs } from '../../../services/saveProjectAs';
 import { executeCloseProjectAction } from '../../../store/actions/projectOpenActions';
 import { useProjectStore } from '../../../store/storeBootstrap';
 import { useScriptStore } from '../../../store/storeBootstrap';
@@ -18,16 +20,13 @@ const REPOSITORY_URL = 'https://github.com/Zeffuro/Zerith';
 
 type MenuKey = 'Debug' | 'Edit' | 'File' | 'Help' | 'Run' | 'View';
 
-type ShellModule = {
-    open?: (path: string) => Promise<void>;
-};
-
 export function MenuBar({ uiScale }: { uiScale: number }) {
     const rootReference = useRef<HTMLDivElement>(null);
     const [openMenu, setOpenMenu] = useState<MenuKey | undefined>();
 
     const {
         addRecentProject,
+        captureDockLayoutJson,
         clearAllBreakpoints,
         clearRecentProjects,
         isPlaybackPaused,
@@ -36,9 +35,12 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         openExportGameModal,
         openGlobalSearchPopup,
         openGlobalSearchReplacePopup,
+        openNewProjectModal,
         openSettingsModal,
         playTrigger,
         resetDockLayout,
+        setDockLayoutJson,
+        setUiScale,
         stopTrigger,
         toggleBreakpoint,
         triggerPause,
@@ -46,10 +48,14 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         triggerResume,
         triggerStep,
         triggerStop,
+        uiScale: currentScale,
     } = useEditorStore();
     const recentProjects = useSettingsStore((state) => state.recentProjects);
-    const currentScale = useSettingsStore((state) => state.uiScale);
-    const setUiScale = useSettingsStore((state) => state.setUiScale);
+    const activeDockLayoutPresetId = useSettingsStore((state) => state.activeDockLayoutPresetId);
+    const deleteDockLayoutPreset = useSettingsStore((state) => state.deleteDockLayoutPreset);
+    const dockLayoutPresets = useSettingsStore((state) => state.dockLayoutPresets);
+    const saveDockLayoutPreset = useSettingsStore((state) => state.saveDockLayoutPreset);
+    const setActiveDockLayoutPresetId = useSettingsStore((state) => state.setActiveDockLayoutPresetId);
 
     const {
         activeFile,
@@ -80,7 +86,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
 
     const handleOpenProject = useCallback(async () => {
         try {
-            const selectedFile = await open({
+            const selectedFile = await openDialog({
                 directory: false,
                 filters: [{ extensions: ['json'], name: 'Game Manifest' }],
                 multiple: false,
@@ -118,21 +124,67 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         await saveAllDirtyFiles();
     }, [markManualSave, saveAllDirtyFiles]);
 
+    const handleSaveProjectAs = useCallback(async () => {
+        if (!projectPath) return;
+
+        try {
+            markManualSave();
+            await saveAllDirtyFiles();
+
+            const result = await saveProjectAs(projectPath);
+            if (!result) return;
+
+            await openProjectFromManifest(result.manifestPath);
+            addRecentProject(result.manifestPath);
+            await handleOpenInitialProjectEntry();
+        } catch (error) {
+            console.error('Failed to save project as:', error);
+        }
+    }, [
+        addRecentProject,
+        handleOpenInitialProjectEntry,
+        markManualSave,
+        openProjectFromManifest,
+        projectPath,
+        saveAllDirtyFiles,
+    ]);
+
     const handleExit = useCallback(() => {
         void getCurrentWindow().close();
     }, []);
 
-    const handleOpenRepository = useCallback(() => {
-        void (async () => {
-            const openedInShell = await openInShellIfAvailable(REPOSITORY_URL);
-            if (openedInShell) {
-                return;
-            }
-            globalThis.open?.(REPOSITORY_URL, '_blank');
-        })();
+    const handleOpenRepository = useCallback(async () => {
+        try {
+            await openUrl(REPOSITORY_URL);
+            return;
+        } catch {
+            // Fall back for non-Tauri web contexts.
+        }
+
+        globalThis.open?.(REPOSITORY_URL, '_blank');
     }, []);
 
     const isRunning = playTrigger > stopTrigger;
+            const handleSaveLayoutPreset = useCallback(() => {
+                const layoutName = globalThis.prompt('Save current layout as preset', 'My Layout')?.trim();
+                if (!layoutName) return;
+                const layoutJson = captureDockLayoutJson();
+                if (!layoutJson || typeof layoutJson !== 'object') return;
+                saveDockLayoutPreset(layoutName, layoutJson);
+            }, [captureDockLayoutJson, saveDockLayoutPreset]);
+
+            const handleLoadLayoutPreset = useCallback((presetId: string) => {
+                const preset = dockLayoutPresets.find((entry) => entry.id === presetId);
+                if (!preset) return;
+                setDockLayoutJson(preset.layoutJson);
+                setActiveDockLayoutPresetId(preset.id);
+            }, [dockLayoutPresets, setActiveDockLayoutPresetId, setDockLayoutJson]);
+
+            const handleResetLayout = useCallback(() => {
+                resetDockLayout();
+                setActiveDockLayoutPresetId(undefined);
+            }, [resetDockLayout, setActiveDockLayoutPresetId]);
+
     const selectedRootIndex = selectedNodePaths[0]?.length === 1
         && typeof selectedNodePaths[0][0] === 'number'
         ? selectedNodePaths[0][0]
@@ -157,18 +209,25 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
             ];
 
         return [
+            { label: 'New Project…', onClick: openNewProjectModal, shortcut: 'Ctrl+Shift+N' },
             { label: 'Open Project…', onClick: () => { void handleOpenProject(); }, shortcut: 'Ctrl+O' },
             { children: openRecentChildren, label: `Open Recent (${safeRecentProjects.length})` },
             { label: 'sep-0', separator: true },
             { disabled: !activeFile, label: 'Save', onClick: () => { void handleSave(); }, shortcut: 'Ctrl+S' },
             { disabled: !hasDirtyFiles, label: 'Save All', onClick: () => { void handleSaveAll(); }, shortcut: 'Ctrl+Shift+S' },
+            {
+                disabled: !projectPath,
+                label: 'Save Project As...',
+                onClick: () => { void handleSaveProjectAs(); },
+                shortcut: 'Ctrl+Alt+Shift+S',
+            },
             { disabled: !projectPath, label: 'Close Project', onClick: executeCloseProjectAction },
             { label: 'sep-1', separator: true },
             { label: 'Settings…', onClick: openSettingsModal, shortcut: 'Ctrl+Alt+S' },
             { label: 'sep-1a', separator: true },
             { disabled: !projectPath, label: 'Export Game…', onClick: openExportGameModal },
             { label: 'sep-1b', separator: true },
-            { label: 'Reset Layout', onClick: resetDockLayout },
+            { label: 'Reset Layout', onClick: handleResetLayout },
             { label: 'sep-1c', separator: true },
             { label: 'Exit', onClick: handleExit },
         ];
@@ -190,11 +249,45 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
             { label: 'Find and Replace in Project…', onClick: openGlobalSearchReplacePopup, shortcut: 'Ctrl+Shift+G' },
             { label: 'Command Palette…', onClick: openCommandPalette, shortcut: 'Ctrl+Shift+P' },
             { label: 'sep-3', separator: true },
+            { label: 'Save Layout Preset…', onClick: handleSaveLayoutPreset },
+            {
+                children: dockLayoutPresets.length === 0
+                    ? [{ disabled: true, label: 'No saved presets' }]
+                    : dockLayoutPresets.map((preset) => ({
+                        label: preset.id === activeDockLayoutPresetId ? `${preset.name} (Active)` : preset.name,
+                        onClick: () => handleLoadLayoutPreset(preset.id),
+                    })),
+                label: 'Load Layout Preset',
+            },
+            {
+                children: dockLayoutPresets.length === 0
+                    ? [{ disabled: true, label: 'No saved presets' }]
+                    : dockLayoutPresets.map((preset) => ({
+                        danger: true,
+                        label: preset.name,
+                        onClick: () => deleteDockLayoutPreset(preset.id),
+                    })),
+                label: 'Delete Layout Preset',
+            },
+            { label: 'Reset Layout to Default', onClick: handleResetLayout },
+            { label: 'sep-3a', separator: true },
             { label: 'Zoom In', onClick: () => setUiScale(Math.min(1.5, currentScale + 0.1)), shortcut: 'Ctrl+=' },
             { label: 'Zoom Out', onClick: () => setUiScale(Math.max(0.8, currentScale - 0.1)), shortcut: 'Ctrl+-' },
             { label: 'Reset Zoom', onClick: () => setUiScale(1), shortcut: 'Ctrl+0' },
         ],
-        [currentScale, openCommandPalette, openGlobalSearchPopup, openGlobalSearchReplacePopup, setUiScale]
+        [
+            activeDockLayoutPresetId,
+            currentScale,
+            deleteDockLayoutPreset,
+            dockLayoutPresets,
+            handleLoadLayoutPreset,
+            handleResetLayout,
+            handleSaveLayoutPreset,
+            openCommandPalette,
+            openGlobalSearchPopup,
+            openGlobalSearchReplacePopup,
+            setUiScale,
+        ]
     );
 
     const runItems = useMemo<MenuItem[]>(
@@ -306,18 +399,4 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
     );
 }
 
-async function openInShellIfAvailable(url: string): Promise<boolean> {
-    try {
-        const loadModule = (modulePath: string): Promise<ShellModule> => import(modulePath) as Promise<ShellModule>;
-        const shell = await loadModule('@tauri-apps/plugin-shell');
-        if (typeof shell.open === 'function') {
-            await shell.open(url);
-            return true;
-        }
-    } catch {
-        // Optional plugin may not be present in all builds.
-    }
-
-    return false;
-}
 

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
-import { SchemaRegistry, validateScript } from '../schemas';
+import { GameManifestSchema, SchemaRegistry, validateScript } from '../schemas';
 import { waitCommand } from '../test-utils/scriptBuilders';
 
 describe('schemas', () => {
@@ -37,5 +37,40 @@ describe('schemas', () => {
 
         expect(parsedCustom.success).toBe(true);
         expect(parsedUnknown.success).toBe(true);
+    });
+
+    it('GameManifestSchema accepts project metadata fields', () => {
+        const parsed = GameManifestSchema.parse({
+            $schema: 'zerith/manifest',
+            author: 'Ada Lovelace',
+            description: 'A courtroom mystery.',
+            license: 'MIT',
+            scenes: {
+                intro: '/scenes/intro.json',
+            },
+            startScene: 'intro',
+            title: 'Case One',
+            version: '1.2.3',
+        });
+
+        expect(parsed.author).toBe('Ada Lovelace');
+        expect(parsed.description).toBe('A courtroom mystery.');
+        expect(parsed.license).toBe('MIT');
+        expect(parsed.version).toBe('1.2.3');
+    });
+
+    it('GameManifestSchema remains backward compatible with missing metadata', () => {
+        const parsed = GameManifestSchema.parse({
+            scenes: {
+                intro: '/scenes/intro.json',
+            },
+            startScene: 'intro',
+            title: 'Legacy Game',
+        });
+
+        expect(parsed.author).toBeUndefined();
+        expect(parsed.description).toBeUndefined();
+        expect(parsed.license).toBeUndefined();
+        expect(parsed.version).toBeUndefined();
     });
 });

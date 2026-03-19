@@ -3,22 +3,27 @@ import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { editorTheme as t } from '../../theme/editorTheme';
 import {
+    beginDrawDrag,
+    beginPanDrag,
+    beginSliceDrag,
     clampZoom,
+    createDrawDragState,
+    createPanDragState,
+    createSliceDragState,
     findFrameAtPoint,
     findSliceHandleAtPoint,
+    finishDrawDrag,
+    getCursorForMode,
     type Point,
     type SliceHandle,
     toImagePoint,
     toLocalPoint,
+    updateDrawDrag,
+    updatePanDrag,
+    updateSliceDrag,
 } from './spritesheetCanvasInteraction';
-import {
-    type ManualFrameRect,
-    type ManualSliceAxis,
-    type ManualSliceLines,
-    normalizeManualDragFrame,
-} from './spritesheetEditorModel';
-
-type ManualTool = 'draw' | 'select' | 'slice';
+import { drawFrameOverlays, drawGrid, drawSelection, drawSliceLines } from './spritesheetCanvasRenderer';
+import { type ManualFrameRect, type ManualSliceAxis, type ManualSliceLines, type ManualTool } from './spritesheetEditorModel';
 
 type SpritesheetCanvasProperties = {
     chromaKey?: string;
@@ -42,6 +47,7 @@ type SpritesheetCanvasProperties = {
     uiScale: number;
     zoom: number;
 };
+
 export function SpritesheetCanvas({
     chromaKey,
     chromaTolerance,
@@ -71,28 +77,23 @@ export function SpritesheetCanvas({
     const [hoveredSliceHandle, setHoveredSliceHandle] = useState<SliceHandle>();
     const [isSpacePressed, setIsSpacePressed] = useState(false);
     const [isPanning, setIsPanning] = useState(false);
-    const dragStateReference = useRef<{ moved: boolean; originMouse: Point; originPan: Point; panning: boolean }>({
-        moved: false,
-        originMouse: { x: 0, y: 0 },
-        originPan: { x: 0, y: 0 },
-        panning: false,
-    });
+    const dragStateReference = useRef(createPanDragState());
+    const sliceDragReference = useRef(createSliceDragState());
+    const drawDragReference = useRef(createDrawDragState());
+    const suppressClickReference = useRef(false);
     const previewSource = useMemo(() => {
         if (!chromaKey) return image;
-        return applyChromaKey(image, chromaKey, chromaTolerance ?? 30);
+        try {
+            return applyChromaKey(image, chromaKey, chromaTolerance ?? 30);
+        } catch (error) {
+            // Cross-origin images can taint the canvas and block pixel reads; keep rendering without chroma key.
+            if (error instanceof DOMException && error.name === 'SecurityError') {
+                return image;
+            }
+            throw error;
+        }
     }, [chromaKey, chromaTolerance, image]);
     const frameEntries = useMemo(() => Object.entries(frames), [frames]);
-    const sliceDragReference = useRef<{ active: boolean; handle: SliceHandle; moved: boolean }>({
-        active: false,
-        handle: { axis: 'vertical', index: 0 },
-        moved: false,
-    });
-    const drawDragReference = useRef<{ active: boolean; current: Point; start: Point }>({
-        active: false,
-        current: { x: 0, y: 0 },
-        start: { x: 0, y: 0 },
-    });
-    const suppressClickReference = useRef(false);
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -141,7 +142,7 @@ export function SpritesheetCanvas({
                 drawGrid(context, image.naturalWidth, image.naturalHeight, frameEntries);
             }
 
-            drawManualSliceOverlay(context, {
+            drawSliceLines(context, {
                 imageHeight: image.naturalHeight,
                 imageWidth: image.naturalWidth,
                 lines: sliceLines,
@@ -151,16 +152,18 @@ export function SpritesheetCanvas({
             });
 
             if (manualRectPreview) {
-                drawManualRectOverlay(context, manualRectPreview, zoom);
+                drawSelection(context, manualRectPreview, zoom);
             }
 
-            for (const [name, frame] of frameEntries) {
-                const isSelected = selectedFrame === name;
-                const isHovered = hoveredFrame === name;
-                drawFrameOverlay(context, name, frame, { isHovered, isSelected, uiScale, zoom });
-            }
+            drawFrameOverlays(context, frameEntries, {
+                hoveredFrame,
+                selectedFrame,
+                uiScale,
+                zoom,
+            });
             context.restore();
         };
+
         draw();
         const resizeObserver = new ResizeObserver(draw);
         resizeObserver.observe(container);
@@ -194,6 +197,35 @@ export function SpritesheetCanvas({
         return findSliceHandleAtPoint(point, { lines: sliceLines, panOffset, zoom });
     };
 
+    useEffect(() => {
+        const canvas = canvasReference.current;
+        if (!canvas) return;
+
+        const handleWheel = (event: WheelEvent) => {
+            const bounds = canvas.getBoundingClientRect();
+            if (bounds.width <= 0 || bounds.height <= 0) return;
+
+            if (event.cancelable) {
+                event.preventDefault();
+            }
+
+            const cursorX = Math.min(Math.max(event.clientX - bounds.left, 0), Math.max(bounds.width, 1));
+            const cursorY = Math.min(Math.max(event.clientY - bounds.top, 0), Math.max(bounds.height, 1));
+            const imagePoint = toImagePoint({ x: cursorX, y: cursorY }, panOffset, zoom);
+            const nextZoom = clampZoom(zoom * (event.deltaY > 0 ? 0.9 : 1.1));
+            setZoom(nextZoom);
+            setPanOffset({
+                x: cursorX - imagePoint.x * nextZoom,
+                y: cursorY - imagePoint.y * nextZoom,
+            });
+        };
+
+        canvas.addEventListener('wheel', handleWheel, { passive: false });
+        return () => {
+            canvas.removeEventListener('wheel', handleWheel);
+        };
+    }, [panOffset, setPanOffset, setZoom, zoom]);
+
     return (
         <div
             onKeyDown={(event) => {
@@ -221,16 +253,12 @@ export function SpritesheetCanvas({
                         suppressClickReference.current = false;
                         return;
                     }
-
                     if (manualTool === 'slice') {
                         const imagePoint = toImagePoint(toCanvasLocalPoint(event), panOffset, zoom);
-                        const axisValue = sliceAxis === 'vertical' ? imagePoint.x : imagePoint.y;
-                        onSliceLineAdd(sliceAxis, axisValue);
+                        onSliceLineAdd(sliceAxis, sliceAxis === 'vertical' ? imagePoint.x : imagePoint.y);
                         return;
                     }
-
                     if (manualTool !== 'select') return;
-
                     const frameName = findFrameAtPoint(frameEntries, toCanvasLocalPoint(event), panOffset, zoom);
                     if (frameName) {
                         onSelectFrame(frameName);
@@ -242,36 +270,23 @@ export function SpritesheetCanvas({
                     const panWithSpaceDrag = event.button === 0 && isSpacePressed;
                     if (panWithMiddleMouse || panWithSpaceDrag) {
                         event.preventDefault();
-                        dragStateReference.current = {
-                            moved: false,
-                            originMouse: { x: event.clientX, y: event.clientY },
-                            originPan: panOffset,
-                            panning: true,
-                        };
+                        dragStateReference.current = beginPanDrag({ x: event.clientX, y: event.clientY }, panOffset);
                         setIsPanning(true);
                         return;
                     }
-
                     if (event.button !== 0) return;
                     const localPoint = toCanvasLocalPoint(event);
-
                     if (manualTool === 'slice') {
                         const handle = findSliceHandleForCurrentMode(localPoint);
                         if (handle) {
                             event.preventDefault();
-                            sliceDragReference.current.active = true;
-                            sliceDragReference.current.handle = handle;
-                            sliceDragReference.current.moved = false;
+                            sliceDragReference.current = beginSliceDrag(handle);
                             setActiveSliceHandle(handle);
                         }
                         return;
                     }
-
                     if (manualTool === 'draw') {
-                        const imagePoint = toImagePoint(localPoint, panOffset, zoom);
-                        drawDragReference.current.active = true;
-                        drawDragReference.current.current = imagePoint;
-                        drawDragReference.current.start = imagePoint;
+                        drawDragReference.current = beginDrawDrag(toImagePoint(localPoint, panOffset, zoom));
                         onSetManualRectPreview();
                     }
                 }}
@@ -279,87 +294,58 @@ export function SpritesheetCanvas({
                     setHoveredFrame(undefined);
                     setHoveredSliceHandle(undefined);
                     dragStateReference.current.panning = false;
-                    sliceDragReference.current.active = false;
+                    sliceDragReference.current = createSliceDragState();
                     setActiveSliceHandle(undefined);
                     setIsPanning(false);
                 }}
                 onMouseMove={(event) => {
                     if (dragStateReference.current.panning) {
-                        const deltaX = event.clientX - dragStateReference.current.originMouse.x;
-                        const deltaY = event.clientY - dragStateReference.current.originMouse.y;
-                        if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
-                            dragStateReference.current.moved = true;
-                        }
-
-                        setPanOffset({
-                            x: dragStateReference.current.originPan.x + deltaX,
-                            y: dragStateReference.current.originPan.y + deltaY,
-                        });
+                        const next = updatePanDrag(dragStateReference.current, { x: event.clientX, y: event.clientY });
+                        dragStateReference.current.moved = next.moved;
+                        setPanOffset(next.panOffset);
                         return;
                     }
-
                     if (sliceDragReference.current.active) {
-                        const localPoint = toCanvasLocalPoint(event);
-                        const imagePoint = toImagePoint(localPoint, panOffset, zoom);
-                        const { axis, index } = sliceDragReference.current.handle;
-                        onSliceLineMove(axis, index, axis === 'vertical' ? imagePoint.x : imagePoint.y);
+                        const next = updateSliceDrag(sliceDragReference.current, toCanvasLocalPoint(event), { panOffset, zoom });
+                        onSliceLineMove(next.axis, next.index, next.value);
                         sliceDragReference.current.moved = true;
                         suppressClickReference.current = true;
                         return;
                     }
-
                     if (drawDragReference.current.active) {
-                        const localPoint = toCanvasLocalPoint(event);
-                        const imagePoint = toImagePoint(localPoint, panOffset, zoom);
-                        drawDragReference.current.current = imagePoint;
-                        const rect = normalizeManualDragFrame(drawDragReference.current.start, imagePoint, {
+                        const imagePoint = toImagePoint(toCanvasLocalPoint(event), panOffset, zoom);
+                        const next = updateDrawDrag(drawDragReference.current, imagePoint, {
                             height: image.naturalHeight,
                             width: image.naturalWidth,
                         });
-                        onSetManualRectPreview(rect);
+                        drawDragReference.current = next.nextState;
+                        onSetManualRectPreview(next.rect);
                         suppressClickReference.current = true;
                         return;
                     }
-
                     setHoveredSliceHandle(findSliceHandleForCurrentMode(toCanvasLocalPoint(event)));
                     if (manualTool !== 'select') {
                         setHoveredFrame(undefined);
                         return;
                     }
-
                     setHoveredFrame(findFrameAtPoint(frameEntries, toCanvasLocalPoint(event), panOffset, zoom));
                 }}
                 onMouseUp={() => {
                     dragStateReference.current.panning = false;
                     setIsPanning(false);
-
                     if (sliceDragReference.current.active && sliceDragReference.current.moved) {
                         suppressClickReference.current = true;
                     }
-                    sliceDragReference.current.active = false;
+                    sliceDragReference.current = createSliceDragState();
                     setActiveSliceHandle(undefined);
-
                     if (drawDragReference.current.active) {
-                        const rect = normalizeManualDragFrame(drawDragReference.current.start, drawDragReference.current.current, {
+                        const next = finishDrawDrag(drawDragReference.current, {
                             height: image.naturalHeight,
                             width: image.naturalWidth,
                         });
-                        onSetManualRectPreview(rect);
-                        drawDragReference.current.active = false;
+                        onSetManualRectPreview(next.rect);
+                        drawDragReference.current = next.nextState;
                     }
-                }}
-                onWheel={(event) => {
-                    event.preventDefault();
-                    const bounds = event.currentTarget.getBoundingClientRect();
-                    const cursorX = event.clientX - bounds.left;
-                    const cursorY = event.clientY - bounds.top;
-                    const imagePoint = toImagePoint({ x: cursorX, y: cursorY }, panOffset, zoom);
-                    const nextZoom = clampZoom(zoom * (event.deltaY > 0 ? 0.9 : 1.1));
-                    setZoom(nextZoom);
-                    setPanOffset({
-                        x: cursorX - imagePoint.x * nextZoom,
-                        y: cursorY - imagePoint.y * nextZoom,
-                    });
                 }}
                 ref={canvasReference}
                 style={{
@@ -376,131 +362,3 @@ export function SpritesheetCanvas({
         </div>
     );
 }
-
-function drawFrameOverlay(
-    context: CanvasRenderingContext2D,
-    name: string,
-    frame: SpriteFrame,
-    options: { isHovered: boolean; isSelected: boolean; uiScale: number; zoom: number },
-) {
-    const lineWidth = 1 / options.zoom;
-    const fillColor = options.isSelected ? 'rgba(79, 70, 229, 0.25)' : (options.isHovered ? 'rgba(59, 130, 246, 0.18)' : 'rgba(255, 255, 255, 0.06)');
-    const strokeColor = options.isSelected ? t.accent.primary : (options.isHovered ? t.accent.blue : 'rgba(255, 255, 255, 0.35)');
-
-    context.fillStyle = fillColor;
-    context.strokeStyle = strokeColor;
-    context.lineWidth = lineWidth;
-    context.fillRect(frame.x, frame.y, frame.w, frame.h);
-    context.strokeRect(frame.x, frame.y, frame.w, frame.h);
-
-    const fontSize = Math.max(10 / options.zoom, 9 * (options.uiScale / options.zoom));
-    context.font = `${fontSize}px sans-serif`;
-    context.textBaseline = 'top';
-
-    const textWidth = context.measureText(name).width;
-    const labelX = frame.x + 2 / options.zoom;
-    const labelY = frame.y + 2 / options.zoom;
-    const labelHeight = fontSize + 4 / options.zoom;
-    const labelWidth = textWidth + 6 / options.zoom;
-    context.fillStyle = 'rgba(15, 23, 42, 0.75)';
-    context.fillRect(labelX, labelY, Math.min(labelWidth, frame.w), Math.min(labelHeight, frame.h));
-    context.fillStyle = '#f8fafc';
-    context.fillText(name, labelX + 3 / options.zoom, labelY + 2 / options.zoom, Math.max(0, frame.w - 6 / options.zoom));
-}
-
-function drawGrid(context: CanvasRenderingContext2D, imageWidth: number, imageHeight: number, entries: Array<[string, SpriteFrame]>) {
-    if (entries.length === 0) return;
-
-    const frame = entries[0][1];
-    if (frame.w <= 0 || frame.h <= 0) return;
-
-    context.save();
-    context.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-    context.lineWidth = 1;
-
-    for (let x = 0; x <= imageWidth; x += frame.w) {
-        context.beginPath();
-        context.moveTo(x + 0.5, 0);
-        context.lineTo(x + 0.5, imageHeight);
-        context.stroke();
-    }
-
-    for (let y = 0; y <= imageHeight; y += frame.h) {
-        context.beginPath();
-        context.moveTo(0, y + 0.5);
-        context.lineTo(imageWidth, y + 0.5);
-        context.stroke();
-    }
-
-    context.restore();
-}
-
-function drawManualRectOverlay(context: CanvasRenderingContext2D, rect: ManualFrameRect, zoom: number) {
-    context.save();
-    context.lineWidth = Math.max(1 / zoom, 0.75 / zoom);
-    context.strokeStyle = 'rgba(245, 158, 11, 0.95)';
-    context.fillStyle = 'rgba(245, 158, 11, 0.22)';
-    context.fillRect(rect.x, rect.y, rect.w, rect.h);
-    context.strokeRect(rect.x, rect.y, rect.w, rect.h);
-    context.restore();
-}
-
-function drawManualSliceOverlay(
-    context: CanvasRenderingContext2D,
-    options: {
-        imageHeight: number;
-        imageWidth: number;
-        lines: ManualSliceLines;
-        previewFrames: ManualFrameRect[];
-        selectedHandle?: SliceHandle;
-        zoom: number;
-    },
-) {
-    const lineWidth = 1 / options.zoom;
-
-    context.save();
-    context.lineWidth = lineWidth;
-
-    for (const frame of options.previewFrames) {
-        context.fillStyle = 'rgba(245, 158, 11, 0.12)';
-        context.strokeStyle = 'rgba(245, 158, 11, 0.18)';
-        context.fillRect(frame.x, frame.y, frame.w, frame.h);
-        context.strokeRect(frame.x, frame.y, frame.w, frame.h);
-    }
-
-    for (let index = 0; index < options.lines.vertical.length; index += 1) {
-        const x = options.lines.vertical[index];
-        context.strokeStyle = options.selectedHandle?.axis === 'vertical' && options.selectedHandle.index === index
-            ? 'rgba(249, 115, 22, 0.95)'
-            : 'rgba(251, 191, 36, 0.95)';
-        context.beginPath();
-        context.moveTo(x + lineWidth * 0.5, 0);
-        context.lineTo(x + lineWidth * 0.5, options.imageHeight);
-        context.stroke();
-    }
-
-    for (let index = 0; index < options.lines.horizontal.length; index += 1) {
-        const y = options.lines.horizontal[index];
-        context.strokeStyle = options.selectedHandle?.axis === 'horizontal' && options.selectedHandle.index === index
-            ? 'rgba(249, 115, 22, 0.95)'
-            : 'rgba(251, 191, 36, 0.95)';
-        context.beginPath();
-        context.moveTo(0, y + lineWidth * 0.5);
-        context.lineTo(options.imageWidth, y + lineWidth * 0.5);
-        context.stroke();
-    }
-
-    context.restore();
-}
-
-function getCursorForMode(manualTool: ManualTool, hoveredSliceHandle?: SliceHandle, draggingSliceHandle?: SliceHandle): string {
-    if (manualTool === 'draw') {
-        return 'crosshair';
-    }
-    const activeHandle = draggingSliceHandle ?? hoveredSliceHandle;
-    if (manualTool === 'slice' && activeHandle) {
-        return activeHandle.axis === 'vertical' ? 'ew-resize' : 'ns-resize';
-    }
-    return manualTool === 'slice' ? 'copy' : 'crosshair';
-}
-

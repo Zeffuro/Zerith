@@ -50,25 +50,46 @@ import { runAllSettingsReset, runCurrentPanelReset } from './settingsResetRoutin
 export function SettingsModal() {
     const autosaveEnabled = useEditorStore((state) => state.autosaveEnabled);
     const autosaveIntervalMs = useEditorStore((state) => state.autosaveIntervalMs);
+    const captureDockLayoutJson = useEditorStore((state) => state.captureDockLayoutJson);
     const closeSettingsModal = useEditorStore((state) => state.closeSettingsModal);
     const isMuted = useEditorStore((state) => state.isMuted);
     const isSettingsModalOpen = useEditorStore((state) => state.isSettingsModalOpen);
+    const moveQuickCommandType = useEditorStore((state) => state.moveQuickCommandType);
+    const quickCommandTypes = useEditorStore((state) => state.quickCommandTypes);
+    const resetDockLayout = useEditorStore((state) => state.resetDockLayout);
     const setAutosaveEnabled = useEditorStore((state) => state.setAutosaveEnabled);
     const setAutosaveIntervalMs = useEditorStore((state) => state.setAutosaveIntervalMs);
+    const setDockLayoutJson = useEditorStore((state) => state.setDockLayoutJson);
+    const setQuickCommandTypes = useEditorStore((state) => state.setQuickCommandTypes);
     const setThemeKey = useEditorStore((state) => state.setThemeKey);
     const setUiScale = useEditorStore((state) => state.setUiScale);
     const themeKey = useEditorStore((state) => state.themeKey);
+    const toggleQuickCommandType = useEditorStore((state) => state.toggleQuickCommandType);
     const toggleMute = useEditorStore((state) => state.toggleMute);
     const uiScale = useEditorStore((state) => state.uiScale);
     const addCustomTheme = useSettingsStore((state) => state.addCustomTheme);
+    const activeDockLayoutPresetId = useSettingsStore((state) => state.activeDockLayoutPresetId);
     const audiosheetShortcutTargetMode = useSettingsStore((state) => state.audiosheetShortcutTargetMode);
     const customThemes = useSettingsStore((state) => state.customThemes);
+    const deleteDockLayoutPreset = useSettingsStore((state) => state.deleteDockLayoutPreset);
+    const dockLayoutPresets = useSettingsStore((state) => state.dockLayoutPresets);
     const deleteCustomTheme = useSettingsStore((state) => state.deleteCustomTheme);
     const keymapOverrides = useSettingsStore((state) => state.keymapOverrides);
+    const saveDockLayoutPreset = useSettingsStore((state) => state.saveDockLayoutPreset);
     const setCustomThemes = useSettingsStore((state) => state.setCustomThemes);
+    const setActiveDockLayoutPresetId = useSettingsStore((state) => state.setActiveDockLayoutPresetId);
     const setAudiosheetShortcutTargetMode = useSettingsStore((state) => state.setAudiosheetShortcutTargetMode);
+    const setDockLayoutPresets = useSettingsStore((state) => state.setDockLayoutPresets);
     const setKeymapOverrides = useSettingsStore((state) => state.setKeymapOverrides);
     const setSettingsMuted = useSettingsStore((state) => state.setIsMuted);
+    const timelineScale = useSettingsStore((state) => state.timelineScale);
+    const inspectorScale = useSettingsStore((state) => state.inspectorScale);
+    const explorerScale = useSettingsStore((state) => state.explorerScale);
+    const editorScale = useSettingsStore((state) => state.editorScale);
+    const setTimelineScale = useSettingsStore((state) => state.setTimelineScale);
+    const setInspectorScale = useSettingsStore((state) => state.setInspectorScale);
+    const setExplorerScale = useSettingsStore((state) => state.setExplorerScale);
+    const setEditorScale = useSettingsStore((state) => state.setEditorScale);
     const updateCustomTheme = useSettingsStore((state) => state.updateCustomTheme);
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -95,31 +116,83 @@ export function SettingsModal() {
     const conflictActionSequence = useMemo(() => buildConflictActionSequence(keymapRows), [keymapRows]);
 
     const matchedControlIds = useMemo(
-        () => getMatchedSettingsControlIds(searchQuery, { audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, themeKey, uiScale }),
-        [audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, searchQuery, themeKey, uiScale],
+        () => getMatchedSettingsControlIds(searchQuery, {
+            activeDockLayoutPresetId,
+            audiosheetShortcutTargetMode,
+            autosaveEnabled,
+            autosaveIntervalMs,
+            customThemes,
+            dockLayoutPresets,
+            editorScale,
+            explorerScale,
+            inspectorScale,
+            isMuted,
+            quickCommandTypes,
+            themeKey,
+            timelineScale,
+            uiScale,
+        }),
+        [activeDockLayoutPresetId, audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, dockLayoutPresets, editorScale, explorerScale, inspectorScale, isMuted, quickCommandTypes, searchQuery, themeKey, timelineScale, uiScale],
     );
 
     const changedControlIds = useMemo(
         () => getChangedSettingsControlIds(
-            { audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, themeKey, uiScale },
             {
+                activeDockLayoutPresetId,
+                audiosheetShortcutTargetMode,
+                autosaveEnabled,
+                autosaveIntervalMs,
+                customThemes,
+                dockLayoutPresets,
+                editorScale,
+                explorerScale,
+                inspectorScale,
+                isMuted,
+                quickCommandTypes,
+                themeKey,
+                timelineScale,
+                uiScale,
+            },
+            {
+                activeDockLayoutPresetId: defaultSettings.activeDockLayoutPresetId,
                 audiosheetShortcutTargetMode: defaultSettings.audiosheetShortcutTargetMode,
                 autosaveEnabled: defaultSettings.autosaveEnabled,
                 autosaveIntervalMs: defaultSettings.autosaveIntervalMs,
                 customThemes: defaultSettings.customThemes,
+                dockLayoutPresets: defaultSettings.dockLayoutPresets,
+                editorScale: defaultSettings.editorScale,
+                explorerScale: defaultSettings.explorerScale,
+                inspectorScale: defaultSettings.inspectorScale,
                 isMuted: defaultSettings.isMuted,
+                quickCommandTypes: defaultSettings.quickCommandTypes,
                 themeKey: defaultSettings.themeKey,
+                timelineScale: defaultSettings.timelineScale,
                 uiScale: defaultSettings.uiScale,
             },
         ),
-        [audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, themeKey, uiScale],
+        [activeDockLayoutPresetId, audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, dockLayoutPresets, editorScale, explorerScale, inspectorScale, isMuted, quickCommandTypes, themeKey, timelineScale, uiScale],
     );
 
     const contentMatchedPanelIds = useMemo(() => {
-        const panelIds = getMatchedSettingsPanelIds(searchQuery, { audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, themeKey, uiScale });
+        const panelIds = getMatchedSettingsPanelIds(searchQuery, {
+            activeDockLayoutPresetId,
+            audiosheetShortcutTargetMode,
+            autosaveEnabled,
+            autosaveIntervalMs,
+            customThemes,
+            dockLayoutPresets,
+            editorScale,
+            explorerScale,
+            inspectorScale,
+            isMuted,
+            quickCommandTypes,
+            themeKey,
+            timelineScale,
+            uiScale,
+        });
         if (filteredKeymapRows.length > 0) panelIds.add('keymap');
         return panelIds;
-    }, [audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, filteredKeymapRows.length, isMuted, searchQuery, themeKey, uiScale]);
+    }, [activeDockLayoutPresetId, audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, dockLayoutPresets, editorScale, explorerScale, filteredKeymapRows.length, inspectorScale, isMuted, quickCommandTypes, searchQuery, themeKey, timelineScale, uiScale]);
 
     const filteredNodes = useMemo(() => {
         if (searchQuery.trim().length === 0) return baseFilteredNodes;
@@ -136,14 +209,36 @@ export function SettingsModal() {
 
     const changedLeafCounts = useMemo(() => {
         const counts = getChangedSettingsLeafPanelCounts(
-            { audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, themeKey, uiScale },
             {
+                activeDockLayoutPresetId,
+                audiosheetShortcutTargetMode,
+                autosaveEnabled,
+                autosaveIntervalMs,
+                customThemes,
+                dockLayoutPresets,
+                editorScale,
+                explorerScale,
+                inspectorScale,
+                isMuted,
+                quickCommandTypes,
+                themeKey,
+                timelineScale,
+                uiScale,
+            },
+            {
+                activeDockLayoutPresetId: defaultSettings.activeDockLayoutPresetId,
                 audiosheetShortcutTargetMode: defaultSettings.audiosheetShortcutTargetMode,
                 autosaveEnabled: defaultSettings.autosaveEnabled,
                 autosaveIntervalMs: defaultSettings.autosaveIntervalMs,
                 customThemes: defaultSettings.customThemes,
+                dockLayoutPresets: defaultSettings.dockLayoutPresets,
+                editorScale: defaultSettings.editorScale,
+                explorerScale: defaultSettings.explorerScale,
+                inspectorScale: defaultSettings.inspectorScale,
                 isMuted: defaultSettings.isMuted,
+                quickCommandTypes: defaultSettings.quickCommandTypes,
                 themeKey: defaultSettings.themeKey,
+                timelineScale: defaultSettings.timelineScale,
                 uiScale: defaultSettings.uiScale,
             },
         );
@@ -151,7 +246,7 @@ export function SettingsModal() {
         const keymapChangedCount = Object.keys(keymapOverrides).length;
         if (keymapChangedCount > 0) counts.keymap = keymapChangedCount;
         return counts;
-    }, [audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, isMuted, keymapOverrides, themeKey, uiScale]);
+    }, [activeDockLayoutPresetId, audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, dockLayoutPresets, editorScale, explorerScale, inspectorScale, isMuted, keymapOverrides, quickCommandTypes, themeKey, timelineScale, uiScale]);
 
     const changedNodeCounts = useMemo(() => buildSettingsNodeCountMap(filteredNodes, changedLeafCounts), [changedLeafCounts, filteredNodes]);
     const settingsTreeBadgeCounts = treeBadgeMode === 'changed' ? changedNodeCounts : filteredNodeLeafCounts;
@@ -270,9 +365,29 @@ export function SettingsModal() {
             setFocusedRowAction(undefined);
         }, 0);
     }, [conflictActionSequence, focusedRowAction]);
-    if (!isSettingsModalOpen) return;
-
     const showKeymapPanel = selectedPanelId === 'keymap';
+
+    const saveCurrentDockLayoutPreset = useCallback((name: string) => {
+        const nextName = name.trim();
+        if (!nextName) return;
+
+        const nextLayoutJson = captureDockLayoutJson();
+        if (!nextLayoutJson || typeof nextLayoutJson !== 'object') return;
+
+        saveDockLayoutPreset(nextName, nextLayoutJson);
+    }, [captureDockLayoutJson, saveDockLayoutPreset]);
+
+    const loadDockLayoutPreset = useCallback((presetId: string) => {
+        const preset = dockLayoutPresets.find((entry) => entry.id === presetId);
+        if (!preset) return;
+        setDockLayoutJson(preset.layoutJson);
+        setActiveDockLayoutPresetId(preset.id);
+    }, [dockLayoutPresets, setActiveDockLayoutPresetId, setDockLayoutJson]);
+
+    const resetDockLayoutToDefault = useCallback(() => {
+        resetDockLayout();
+        setActiveDockLayoutPresetId(undefined);
+    }, [resetDockLayout, setActiveDockLayoutPresetId]);
 
     const resetCurrentPanel = () => {
         runCurrentPanelReset(selectedPanelId, getPanelSettingsControls, {
@@ -284,8 +399,18 @@ export function SettingsModal() {
             resetAutosaveEnabled: () => setAutosaveEnabled(defaultSettings.autosaveEnabled),
             resetAutosaveIntervalMs: () => setAutosaveIntervalMs(defaultSettings.autosaveIntervalMs),
             resetCustomThemes: () => setCustomThemes(defaultSettings.customThemes),
+            resetDockLayoutPresets: () => {
+                setActiveDockLayoutPresetId(defaultSettings.activeDockLayoutPresetId);
+                setDockLayoutPresets(defaultSettings.dockLayoutPresets);
+                resetDockLayout();
+            },
+            resetEditorScale: () => setEditorScale(defaultSettings.editorScale),
+            resetExplorerScale: () => setExplorerScale(defaultSettings.explorerScale),
+            resetInspectorScale: () => setInspectorScale(defaultSettings.inspectorScale),
             resetKeymapOverrides: () => setKeymapOverrides(defaultSettings.keymapOverrides),
+            resetQuickCommandTypes: () => setQuickCommandTypes(defaultSettings.quickCommandTypes),
             resetTheme: () => setThemeKey(defaultSettings.themeKey),
+            resetTimelineScale: () => setTimelineScale(defaultSettings.timelineScale),
             resetUiScale: () => setUiScale(defaultSettings.uiScale),
         });
     };
@@ -300,11 +425,23 @@ export function SettingsModal() {
             resetAutosaveEnabled: () => setAutosaveEnabled(defaultSettings.autosaveEnabled),
             resetAutosaveIntervalMs: () => setAutosaveIntervalMs(defaultSettings.autosaveIntervalMs),
             resetCustomThemes: () => setCustomThemes(defaultSettings.customThemes),
+            resetDockLayoutPresets: () => {
+                setActiveDockLayoutPresetId(defaultSettings.activeDockLayoutPresetId);
+                setDockLayoutPresets(defaultSettings.dockLayoutPresets);
+                resetDockLayout();
+            },
+            resetEditorScale: () => setEditorScale(defaultSettings.editorScale),
+            resetExplorerScale: () => setExplorerScale(defaultSettings.explorerScale),
+            resetInspectorScale: () => setInspectorScale(defaultSettings.inspectorScale),
             resetKeymapOverrides: () => setKeymapOverrides(defaultSettings.keymapOverrides),
+            resetQuickCommandTypes: () => setQuickCommandTypes(defaultSettings.quickCommandTypes),
             resetTheme: () => setThemeKey(defaultSettings.themeKey),
+            resetTimelineScale: () => setTimelineScale(defaultSettings.timelineScale),
             resetUiScale: () => setUiScale(defaultSettings.uiScale),
         });
     };
+
+    if (!isSettingsModalOpen) return;
 
     return (
         <>
@@ -326,6 +463,7 @@ export function SettingsModal() {
                         />
                         <SettingsModalMainPane
                             activeConflictIndex={focusedRowAction ? conflictActionSequence.indexOf(focusedRowAction) : -1}
+                            activeDockLayoutPresetId={activeDockLayoutPresetId}
                             audiosheetShortcutTargetMode={audiosheetShortcutTargetMode}
                             autosaveEnabled={autosaveEnabled}
                             autosaveIntervalMs={autosaveIntervalMs}
@@ -335,18 +473,25 @@ export function SettingsModal() {
                             conflictEntries={conflictEntries}
                             customThemes={customThemes}
                             detailContainerReference={detailContainerReference}
+                            dockLayoutPresets={dockLayoutPresets}
+                            editorScale={editorScale}
+                            explorerScale={explorerScale}
                             filteredKeymapRows={filteredKeymapRows}
                             focusedControlId={focusedControlId}
                             focusedRowAction={focusedRowAction}
+                            inspectorScale={inspectorScale}
                             isMuted={isMuted}
                             matchedControlIds={matchedControlIds}
+                            moveQuickCommandType={moveQuickCommandType}
                             onAddCustomTheme={addCustomTheme}
                             onBeginDrag={beginDrag}
                             onClose={closeSettingsModal}
                             onDeleteCustomTheme={deleteCustomTheme}
+                            onDeleteDockLayoutPreset={deleteDockLayoutPreset}
                             onFixAllConflicts={() => setKeymapOverrides(resolveAllKeymapConflicts(keymapDisplayBindings, keymapOverrides))}
                             onFocusActionRow={focusActionRow}
                             onJumpToConflict={jumpToConflict}
+                            onLoadDockLayoutPreset={loadDockLayoutPreset}
                             onRequestResetAllDefaults={() => {
                                 requestResetConfirmation(createResetAllKeymapOverridesConfirmation(() => {
                                     setKeymapOverrides({});
@@ -363,9 +508,11 @@ export function SettingsModal() {
                                     setKeymapOverrides(setKeymapOverride(keymapOverrides, action, ''));
                                 }));
                             }}
+                            onResetDockLayoutToDefault={resetDockLayoutToDefault}
                             onResolveConflictForAction={(action) => {
                                 setKeymapOverrides(resolveConflictsForAction(keymapDisplayBindings, keymapOverrides, action));
                             }}
+                            onSaveCurrentDockLayoutPreset={saveCurrentDockLayoutPreset}
                             onSetDetailRowReference={setDetailRowReference}
                             onSetRowReference={setKeymapRowReference}
                             onSetShowChangedOnlySettings={setShowChangedOnlySettings}
@@ -374,19 +521,26 @@ export function SettingsModal() {
                             onUpdateShortcut={(action, nextValue) => {
                                 setKeymapOverrides(setKeymapOverride(keymapOverrides, action, nextValue));
                             }}
+                            quickCommandTypes={quickCommandTypes}
                             rowsContainerReference={rowsContainerReference}
                             searchQuery={searchQuery}
                             selectedPanelId={selectedPanelId}
                             setAudiosheetShortcutTargetMode={setAudiosheetShortcutTargetMode}
                             setAutosaveEnabled={setAutosaveEnabled}
                             setAutosaveIntervalMs={setAutosaveIntervalMs}
+                            setEditorScale={setEditorScale}
+                            setExplorerScale={setExplorerScale}
+                            setInspectorScale={setInspectorScale}
                             setThemeKey={setThemeKey}
+                            setTimelineScale={setTimelineScale}
                             setUiScale={setUiScale}
                             showChangedOnlySettings={showChangedOnlySettings}
                             showCustomizedOnly={showCustomizedOnly}
                             showKeymapPanel={showKeymapPanel}
                             themeKey={themeKey}
+                            timelineScale={timelineScale}
                             toggleMute={toggleMute}
+                            toggleQuickCommandType={toggleQuickCommandType}
                             uiScale={uiScale}
                         />
                     </>

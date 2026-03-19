@@ -9,6 +9,8 @@ export const settingsCatalog: SettingsCategoryNode[] = [
         children: [
             { id: 'general-playback', label: 'Playback' },
             { id: 'general-autosave', label: 'Autosave' },
+            { id: 'general-layout', label: 'Layout' },
+            { id: 'general-quickbuttons', label: 'Quick Buttons' },
         ],
         id: 'general',
         label: 'General',

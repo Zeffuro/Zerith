@@ -19,10 +19,12 @@ describe('SettingsSchema', () => {
     it('returns defaults for invalid persisted values', () => {
         expect(mergeSettings()).toEqual(defaultSettings);
         expect(mergeSettings({ audiosheetShortcutTargetMode: 'invalid' })).toEqual(defaultSettings);
+        expect(mergeSettings({ activeDockLayoutPresetId: '   ' })).toEqual(defaultSettings);
         expect(mergeSettings({ autosaveEnabled: 'yes' })).toEqual(defaultSettings);
         expect(mergeSettings({ autosaveIntervalMs: 0 })).toEqual(defaultSettings);
         expect(mergeSettings({ autosaveIntervalMs: Number.NaN })).toEqual(defaultSettings);
         expect(mergeSettings({ customThemes: 'invalid' })).toEqual(defaultSettings);
+        expect(mergeSettings({ dockLayoutPresets: 'invalid' })).toEqual(defaultSettings);
         expect(mergeSettings({ isMuted: 'yes' })).toEqual(defaultSettings);
         expect(mergeSettings({ keymapOverrides: 'invalid' })).toEqual(defaultSettings);
         expect(mergeSettings({ recentProjects: 'invalid' })).toEqual(defaultSettings);
@@ -31,6 +33,10 @@ describe('SettingsSchema', () => {
         expect(mergeSettings({ uiScale: 0 })).toEqual(defaultSettings);
         expect(mergeSettings({ uiScale: -1 })).toEqual(defaultSettings);
         expect(mergeSettings({ uiScale: Number.NaN })).toEqual(defaultSettings);
+        expect(mergeSettings({ timelineScale: 0 })).toEqual(defaultSettings);
+        expect(mergeSettings({ inspectorScale: -1 })).toEqual(defaultSettings);
+        expect(mergeSettings({ explorerScale: Number.NaN })).toEqual(defaultSettings);
+        expect(mergeSettings({ editorScale: 0 })).toEqual(defaultSettings);
         expect(mergeSettings({ windowState: { height: 200, width: 300, x: 0, y: 0 } })).toEqual(defaultSettings);
     });
 
@@ -62,8 +68,27 @@ describe('SettingsSchema', () => {
         expect(mergeSettings({ uiScale: 1.25 })).toEqual({ ...defaultSettings, uiScale: 1.25 });
     });
 
+    it('accepts per-component scale overrides', () => {
+        expect(mergeSettings({ editorScale: 1.05, explorerScale: 1.2, inspectorScale: 0.9, timelineScale: 1.1 })).toEqual({
+            ...defaultSettings,
+            editorScale: 1.05,
+            explorerScale: 1.2,
+            inspectorScale: 0.9,
+            timelineScale: 1.1,
+        });
+    });
+
     it('accepts valid isMuted values', () => {
         expect(mergeSettings({ isMuted: true })).toEqual({ ...defaultSettings, isMuted: true });
+    });
+
+    it('accepts and sanitizes quick command types', () => {
+        expect(mergeSettings({ quickCommandTypes: [' dialogue ', 'wait', 'invalid', 'wait', 42] })).toEqual({
+            ...defaultSettings,
+            quickCommandTypes: ['dialogue', 'wait'],
+        });
+
+        expect(mergeSettings({ quickCommandTypes: [] })).toEqual(defaultSettings);
     });
 
     it('accepts and sanitizes customThemes entries', () => {
@@ -160,6 +185,43 @@ describe('SettingsSchema', () => {
         });
     });
 
+    it('accepts and sanitizes dock layout presets', () => {
+        expect(mergeSettings({
+            activeDockLayoutPresetId: ' layout-a ',
+            dockLayoutPresets: [
+                {
+                    id: ' layout-a ',
+                    layoutJson: { global: { splitterSize: 4 }, layout: { children: [], type: 'row' } },
+                    name: ' Main Layout ',
+                    updatedAt: 2.9,
+                },
+                {
+                    id: 'layout-a',
+                    layoutJson: { global: { splitterSize: 8 }, layout: { children: [], type: 'row' } },
+                    name: 'Main Layout Latest',
+                    updatedAt: 5,
+                },
+                {
+                    id: 'bad',
+                    layoutJson: { layout: { children: [], type: 'row' } },
+                    name: 'Bad Layout',
+                    updatedAt: 3,
+                },
+            ],
+        })).toEqual({
+            ...defaultSettings,
+            activeDockLayoutPresetId: 'layout-a',
+            dockLayoutPresets: [
+                {
+                    id: 'layout-a',
+                    layoutJson: { global: { splitterSize: 8 }, layout: { children: [], type: 'row' } },
+                    name: 'Main Layout Latest',
+                    updatedAt: 5,
+                },
+            ],
+        });
+    });
+
     it('caps recentProjects to 12 after sanitization', () => {
         const input = Array.from({ length: 15 }, (_, index) => ({
             lastOpened: index,
@@ -180,12 +242,16 @@ describe('SettingsSchema', () => {
 
     it('extracts only valid persisted settings', () => {
         expect(extractPersistedSettings({ autosaveEnabled: true })).toEqual({ autosaveEnabled: true });
+        expect(extractPersistedSettings({ activeDockLayoutPresetId: 'layout-a' })).toEqual({ activeDockLayoutPresetId: 'layout-a' });
+        expect(extractPersistedSettings({ activeDockLayoutPresetId: '' })).toEqual({});
         expect(extractPersistedSettings({ audiosheetShortcutTargetMode: 'cursor' })).toEqual({ audiosheetShortcutTargetMode: 'cursor' });
         expect(extractPersistedSettings({ audiosheetShortcutTargetMode: 'bad' })).toEqual({});
         expect(extractPersistedSettings({ autosaveIntervalMs: 4500.5 })).toEqual({ autosaveIntervalMs: 5000 });
         expect(extractPersistedSettings({ autosaveIntervalMs: -1 })).toEqual({});
         expect(extractPersistedSettings({ isMuted: true })).toEqual({ isMuted: true });
         expect(extractPersistedSettings({ isMuted: 'yes' })).toEqual({});
+        expect(extractPersistedSettings({ quickCommandTypes: ['wait', 'wait', 'unknown'] })).toEqual({ quickCommandTypes: ['wait'] });
+        expect(extractPersistedSettings({ quickCommandTypes: ['unknown'] })).toEqual({});
         expect(extractPersistedSettings({ keymapOverrides: { save: 'ctrl+k', unknownAction: 'x' } }))
             .toEqual({ keymapOverrides: { save: 'mod+k' } });
         expect(extractPersistedSettings({ keymapOverrides: 'invalid' })).toEqual({});
@@ -198,10 +264,21 @@ describe('SettingsSchema', () => {
             customThemes: [{ key: 'custom-1', label: 'Custom 1', vars: { '--editor-bg-app': '#000000' } }],
         });
         expect(extractPersistedSettings({ customThemes: 'invalid' })).toEqual({});
+        expect(extractPersistedSettings({
+            dockLayoutPresets: [{ id: 'layout-a', layoutJson: { global: {}, layout: {} }, name: 'Layout A', updatedAt: 7 }],
+        })).toEqual({
+            dockLayoutPresets: [{ id: 'layout-a', layoutJson: { global: {}, layout: {} }, name: 'Layout A', updatedAt: 7 }],
+        });
+        expect(extractPersistedSettings({ dockLayoutPresets: 'invalid' })).toEqual({});
         expect(extractPersistedSettings({ themeKey: 'classicSoft' })).toEqual({ themeKey: 'classicSoft' });
         expect(extractPersistedSettings({ themeKey: '' })).toEqual({});
         expect(extractPersistedSettings({ uiScale: 1.5 })).toEqual({ uiScale: 1.5 });
         expect(extractPersistedSettings({ uiScale: 0 })).toEqual({});
+        expect(extractPersistedSettings({ timelineScale: 1.3 })).toEqual({ timelineScale: 1.3 });
+        expect(extractPersistedSettings({ timelineScale: 0 })).toEqual({});
+        expect(extractPersistedSettings({ inspectorScale: 1.1 })).toEqual({ inspectorScale: 1.1 });
+        expect(extractPersistedSettings({ explorerScale: 1.2 })).toEqual({ explorerScale: 1.2 });
+        expect(extractPersistedSettings({ editorScale: 0 })).toEqual({});
         expect(extractPersistedSettings({ windowState: { height: 700, maximized: false, width: 1200, x: 10, y: 20 } }))
             .toEqual({ windowState: { height: 700, maximized: false, width: 1200, x: 10, y: 20 } });
         expect(extractPersistedSettings({ windowState: { height: 200, width: 300, x: 0, y: 0 } })).toEqual({});

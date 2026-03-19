@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { EngineConfigSchema } from '../EngineConfig';
+import { parseEngineConfig } from '../EngineConfig';
+import { EngineConfigSchema } from '../schemas/index';
 
 describe('EngineConfigSchema', () => {
     it('accepts valid display and theme overrides', () => {
@@ -35,6 +36,17 @@ describe('EngineConfigSchema', () => {
         });
 
         expect(parsed.success).toBe(false);
+    });
+
+    it('parses config through parseEngineConfig helper', () => {
+        const parsed = parseEngineConfig({
+            audio: {
+                masterVolume: 0.5,
+                muted: false,
+            },
+        });
+
+        expect(parsed.success).toBe(true);
     });
 });
 

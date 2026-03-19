@@ -7,14 +7,12 @@ export type PersistedEditorState = Pick<
     | 'breakpoints'
     | 'dockLayoutJson'
     | 'dockLayoutVersion'
-    | 'quickCommandTypes'
 >;
 
 export const persistedEditorStateKeys: (keyof PersistedEditorState)[] = [
     'breakpoints',
     'dockLayoutJson',
     'dockLayoutVersion',
-    'quickCommandTypes',
 ];
 
 export function extractPersistedEditorState(value: unknown): Partial<PersistedEditorState> {

@@ -1,4 +1,5 @@
 export const DOCK_PANELS = {
+    assetDependencies: 'asset_dependencies',
     console: 'console',
     editor: 'editor',
     explorer: 'explorer',

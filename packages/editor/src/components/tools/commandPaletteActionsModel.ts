@@ -1,20 +1,35 @@
 export type CommandPaletteActionDeps = {
+    activeDockLayoutPresetId: string | undefined;
     activeFile: string | undefined;
+            deleteDockLayoutPreset: (id: string) => void;
+            dockLayoutPresets: Array<{ id: string; name: string; layoutJson: unknown }>;
     addRecentProject: (manifestPath: string) => void;
+    availableThemeKeys: string[];
+    captureDockLayoutJson: () => unknown;
     clearAllBreakpoints: () => void;
     closeProject: () => void;
     isPlaybackPaused: boolean;
     isRunning: boolean;
     markManualSave: () => void;
+    openExportGameModal: () => void;
     openGlobalSearchPopup: (mode?: 'find' | 'replace') => void;
     openGlobalSearchReplacePopup: () => void;
     openInitialProjectEntry: () => Promise<void>;
+    openNewProjectModal: () => void;
+    openProjectFolder: () => Promise<void>;
     openProjectFromManifest: (manifestPath: string) => Promise<void>;
     openSettingsModal: () => void;
+            saveDockLayoutPreset: (name: string, layoutJson: unknown) => void;
+            setActiveDockLayoutPresetId: (id: string | undefined) => void;
+            setDockLayoutJson: (json: unknown) => void;
+    projectPath: string | undefined;
     recentProjects: RecentProjectLike[] | undefined;
     resetDockLayout: () => void;
     saveActiveFileFromCurrentScript: () => Promise<unknown>;
     saveAllDirtyFiles: () => Promise<unknown>;
+    saveProjectAs: () => Promise<void>;
+    setThemeKey: (key: string) => void;
+    themeKey: string;
     triggerPause: () => void;
     triggerPlay: () => void;
     triggerResume: () => void;
@@ -23,11 +38,11 @@ export type CommandPaletteActionDeps = {
 };
 
 export type PaletteAction = {
-    execute: () => Promise<void> | void;
-    hint?: string;
+    action: () => Promise<void> | void;
     id: string;
     keywords: string;
     label: string;
+    shortcut?: string;
 };
 
 type RecentProjectLike = {
@@ -38,46 +53,93 @@ type RecentProjectLike = {
 export function buildBasePaletteActions(deps: CommandPaletteActionDeps): PaletteAction[] {
     return [
         {
-            execute: () => {
+            action: () => {
                 deps.openGlobalSearchPopup('find');
             },
-            hint: 'Ctrl+Shift+F',
             id: 'find-project',
             keywords: 'find search project global',
             label: 'Find in Project',
+            shortcut: 'Ctrl+Shift+F',
         },
         {
-            execute: () => {
+            action: () => {
                 deps.openGlobalSearchReplacePopup();
             },
-            hint: 'Ctrl+Shift+G',
             id: 'replace-project',
             keywords: 'find replace all project global',
             label: 'Find and Replace in Project',
+            shortcut: 'Ctrl+Shift+G',
         },
         {
-            execute: async () => {
+            action: async () => {
                 if (!deps.activeFile) return;
                 deps.markManualSave();
                 await deps.saveActiveFileFromCurrentScript();
             },
-            hint: 'Ctrl+S',
             id: 'save',
             keywords: 'save file write',
             label: 'Save Active File',
+            shortcut: 'Ctrl+S',
         },
         {
-            execute: async () => {
+            action: async () => {
                 deps.markManualSave();
                 await deps.saveAllDirtyFiles();
             },
-            hint: 'Ctrl+Shift+S',
             id: 'save-all',
             keywords: 'save all files write',
-            label: 'Save All Dirty Files',
+            label: 'Save All Files',
+            shortcut: 'Ctrl+Shift+S',
         },
         {
-            execute: () => {
+            action: async () => {
+                await deps.saveProjectAs();
+            },
+            id: 'save-project-as',
+            keywords: 'save project as duplicate clone workspace',
+            label: 'Save Project As...',
+            shortcut: 'Ctrl+Alt+Shift+S',
+        },
+        {
+            action: () => {
+                deps.openNewProjectModal();
+            },
+            id: 'new-project',
+            keywords: 'new project create scaffold',
+            label: 'New Project...',
+            shortcut: 'Ctrl+Shift+N',
+        },
+        {
+            action: () => {
+                if (!deps.projectPath) return;
+                deps.openExportGameModal();
+            },
+            id: 'export-game',
+            keywords: 'export game build package zip',
+            label: 'Export Game...',
+        },
+        {
+            action: async () => {
+                if (!deps.projectPath) return;
+                await deps.openProjectFolder();
+            },
+            id: 'open-project-folder',
+            keywords: 'open project folder explorer shell reveal',
+            label: 'Open Project Folder',
+            shortcut: 'Ctrl+Alt+O',
+        },
+        {
+            action: () => {
+                const nextThemeKey = resolveNextThemeKey(deps.themeKey, deps.availableThemeKeys);
+                deps.setThemeKey(nextThemeKey);
+            },
+            id: 'toggle-theme',
+            keywords: 'toggle switch cycle theme appearance',
+            label: 'Toggle Theme',
+            shortcut: 'Ctrl+Alt+T',
+        },
+        {
+            action: () => {
                 deps.closeProject();
             },
             id: 'close-project',
@@ -85,64 +147,64 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
             label: 'Close Project',
         },
         {
-            execute: () => {
+            action: () => {
                 deps.openSettingsModal();
             },
-            hint: 'Ctrl+Alt+S',
             id: 'open-settings',
             keywords: 'settings preferences keymap theme autosave',
             label: 'Open Settings',
+            shortcut: 'Ctrl+Alt+S',
         },
         {
-            execute: () => {
+            action: () => {
                 deps.triggerPlay();
             },
-            hint: 'F5',
             id: 'playback-play',
             keywords: 'play preview run start',
             label: 'Playback: Play',
+            shortcut: 'F5',
         },
         {
-            execute: () => {
+            action: () => {
                 deps.triggerStop();
             },
-            hint: 'Shift+F5',
             id: 'playback-stop',
             keywords: 'stop preview playback',
             label: 'Playback: Stop',
+            shortcut: 'Shift+F5',
         },
         {
-            execute: () => {
+            action: () => {
                 if (!deps.isRunning || deps.isPlaybackPaused) return;
                 deps.triggerPause();
             },
-            hint: 'F6',
             id: 'playback-pause',
             keywords: 'pause preview playback',
             label: 'Playback: Pause',
+            shortcut: 'F6',
         },
         {
-            execute: () => {
+            action: () => {
                 if (!deps.isRunning || !deps.isPlaybackPaused) return;
                 deps.triggerResume();
             },
-            hint: 'F5',
             id: 'playback-resume',
             keywords: 'resume continue preview playback',
             label: 'Playback: Resume',
+            shortcut: 'F5',
         },
         {
-            execute: () => {
+            action: () => {
                 if (!deps.isRunning || !deps.isPlaybackPaused) return;
                 deps.triggerStep();
             },
-            hint: 'F10',
             id: 'playback-step',
             keywords: 'step over debug playback',
             label: 'Playback: Step Over',
+            shortcut: 'F10',
         },
         {
-            execute: () => {
+            action: () => {
                 deps.clearAllBreakpoints();
             },
             id: 'clear-breakpoints',
@@ -150,13 +212,43 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
             label: 'Debug: Clear All Breakpoints',
         },
         {
-            execute: () => {
+            action: () => {
                 deps.resetDockLayout();
+                deps.setActiveDockLayoutPresetId(undefined);
             },
             id: 'reset-layout',
             keywords: 'layout reset panels dock',
             label: 'Reset Layout',
         },
+        {
+            action: () => {
+                const promptForName = globalThis.prompt;
+                if (typeof promptForName !== 'function') return;
+                const layoutName = promptForName('Save current layout as preset', 'My Layout')?.trim();
+                if (!layoutName) return;
+                deps.saveDockLayoutPreset(layoutName, deps.captureDockLayoutJson());
+            },
+            id: 'save-layout-preset',
+            keywords: 'layout save preset dock panels',
+            label: 'Save Layout Preset...',
+        },
+        ...deps.dockLayoutPresets.map((preset) => ({
+            action: () => {
+                deps.setDockLayoutJson(preset.layoutJson);
+                deps.setActiveDockLayoutPresetId(preset.id);
+            },
+            id: `load-layout-${preset.id}`,
+            keywords: `layout load preset dock ${preset.name}`,
+            label: `Load Layout: ${preset.name}${deps.activeDockLayoutPresetId === preset.id ? ' (Active)' : ''}`,
+        })),
+        ...deps.dockLayoutPresets.map((preset) => ({
+            action: () => {
+                deps.deleteDockLayoutPreset(preset.id);
+            },
+            id: `delete-layout-${preset.id}`,
+            keywords: `layout delete preset dock ${preset.name}`,
+            label: `Delete Layout Preset: ${preset.name}`,
+        })),
     ];
 }
 
@@ -169,7 +261,7 @@ export function buildCommandPaletteActions(deps: CommandPaletteActionDeps): Pale
 
 export function buildRecentProjectPaletteActions(deps: CommandPaletteActionDeps): PaletteAction[] {
     return (deps.recentProjects ?? []).map((project) => ({
-        execute: async () => {
+        action: async () => {
             await executeRecentProjectOpenSequence(project.path, deps);
         },
         id: `open-recent-${project.path}`,
@@ -185,5 +277,13 @@ export async function executeRecentProjectOpenSequence(
     await deps.openProjectFromManifest(projectPath);
     deps.addRecentProject(projectPath);
     await deps.openInitialProjectEntry();
+}
+
+function resolveNextThemeKey(currentThemeKey: string, availableThemeKeys: string[]): string {
+    if (availableThemeKeys.length === 0) return 'classic';
+
+    const currentIndex = availableThemeKeys.indexOf(currentThemeKey);
+    if (currentIndex === -1) return availableThemeKeys[0];
+    return availableThemeKeys[(currentIndex + 1) % availableThemeKeys.length];
 }
 

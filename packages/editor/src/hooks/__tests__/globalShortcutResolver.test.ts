@@ -25,7 +25,11 @@ describe('resolveGlobalShortcutAction', () => {
 
     it('resolves save, settings, and find chords', () => {
         expect(resolve(buildContext({ ctrlKey: true, key: 's', shiftKey: true }))?.action).toBe('saveAll');
+        expect(resolve(buildContext({ altKey: true, ctrlKey: true, key: 's', shiftKey: true }))?.action).toBe('saveProjectAs');
+        expect(resolve(buildContext({ ctrlKey: true, key: 'N', shiftKey: true }))?.action).toBe('openNewProjectModal');
         expect(resolve(buildContext({ altKey: true, ctrlKey: true, key: 's' }))?.action).toBe('openSettingsModal');
+        expect(resolve(buildContext({ altKey: true, ctrlKey: true, key: 'o' }))?.action).toBe('openProjectFolder');
+        expect(resolve(buildContext({ altKey: true, ctrlKey: true, key: 't' }))?.action).toBe('toggleTheme');
         expect(resolve(buildContext({ ctrlKey: true, key: 's' }))?.action).toBe('save');
         expect(resolve(buildContext({ ctrlKey: true, key: 'F', shiftKey: true }))?.action).toBe('openGlobalSearchFind');
         expect(resolve(buildContext({ ctrlKey: true, key: '=' }))?.action).toBe('zoomIn');

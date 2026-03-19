@@ -11,6 +11,12 @@ import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { SpritesheetAnimationEditor } from './SpritesheetAnimationEditor';
+import {
+    applySpritesheetButtonHover,
+    applySpritesheetButtonPressed,
+    resetSpritesheetButtonBackground,
+    spritesheetButtonStyle,
+} from './spritesheetButtonStyles';
 import { SpritesheetCanvas } from './SpritesheetCanvas';
 import {
     addSliceLine,
@@ -20,12 +26,12 @@ import {
     type ManualFrameRect,
     type ManualSliceAxis,
     type ManualSliceLines,
+    type ManualTool,
     mergeFrameUpdates,
     moveSliceLine,
 } from './spritesheetEditorModel';
 import { SpritesheetFrameList } from './SpritesheetFrameList';
 
-type ManualTool = 'draw' | 'select' | 'slice';
 
 type SpritesheetEditorPanelProperties = {
     tab: WorkbenchTab;
@@ -149,6 +155,9 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
         if (!imageUrl) return;
         let disposed = false;
         const element = new Image();
+        if (shouldUseAnonymousCrossOrigin(imageUrl)) {
+            element.crossOrigin = 'anonymous';
+        }
         setIsImageLoading(true);
         setImageError(undefined);
         element.addEventListener('load', () => {
@@ -293,19 +302,34 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
                 <strong style={{ color: t.text.primary, marginRight: 'auto' }}>Spritesheet Editor</strong>
                 <button
                     onClick={() => setManualTool('select')}
-                    style={{ background: manualTool === 'select' ? t.bg.selected : undefined }}
+                    onMouseDown={(event) => applySpritesheetButtonPressed(event, false, manualTool === 'select')}
+                    onMouseEnter={(event) => applySpritesheetButtonHover(event, false, manualTool === 'select')}
+                    onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, manualTool === 'select')}
+                    onMouseUp={(event) => applySpritesheetButtonHover(event, false, manualTool === 'select')}
+                    style={spritesheetButtonStyle({ active: manualTool === 'select' })}
+                    type="button"
                 >
                     Select
                 </button>
                 <button
                     onClick={() => setManualTool('draw')}
-                    style={{ background: manualTool === 'draw' ? t.bg.selected : undefined }}
+                    onMouseDown={(event) => applySpritesheetButtonPressed(event, false, manualTool === 'draw')}
+                    onMouseEnter={(event) => applySpritesheetButtonHover(event, false, manualTool === 'draw')}
+                    onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, manualTool === 'draw')}
+                    onMouseUp={(event) => applySpritesheetButtonHover(event, false, manualTool === 'draw')}
+                    style={spritesheetButtonStyle({ active: manualTool === 'draw' })}
+                    type="button"
                 >
                     Draw Frame
                 </button>
                 <button
                     onClick={() => setManualTool('slice')}
-                    style={{ background: manualTool === 'slice' ? t.bg.selected : undefined }}
+                    onMouseDown={(event) => applySpritesheetButtonPressed(event, false, manualTool === 'slice')}
+                    onMouseEnter={(event) => applySpritesheetButtonHover(event, false, manualTool === 'slice')}
+                    onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, manualTool === 'slice')}
+                    onMouseUp={(event) => applySpritesheetButtonHover(event, false, manualTool === 'slice')}
+                    style={spritesheetButtonStyle({ active: manualTool === 'slice' })}
+                    type="button"
                 >
                     Slice Lines
                 </button>
@@ -313,31 +337,91 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
                     <>
                         <button
                             onClick={() => setSliceAxis('vertical')}
-                            style={{ background: sliceAxis === 'vertical' ? t.bg.selected : undefined }}
+                            onMouseDown={(event) => applySpritesheetButtonPressed(event, false, sliceAxis === 'vertical')}
+                            onMouseEnter={(event) => applySpritesheetButtonHover(event, false, sliceAxis === 'vertical')}
+                            onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, sliceAxis === 'vertical')}
+                            onMouseUp={(event) => applySpritesheetButtonHover(event, false, sliceAxis === 'vertical')}
+                            style={spritesheetButtonStyle({ active: sliceAxis === 'vertical' })}
+                            type="button"
                         >
                             Vertical
                         </button>
                         <button
                             onClick={() => setSliceAxis('horizontal')}
-                            style={{ background: sliceAxis === 'horizontal' ? t.bg.selected : undefined }}
+                            onMouseDown={(event) => applySpritesheetButtonPressed(event, false, sliceAxis === 'horizontal')}
+                            onMouseEnter={(event) => applySpritesheetButtonHover(event, false, sliceAxis === 'horizontal')}
+                            onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, sliceAxis === 'horizontal')}
+                            onMouseUp={(event) => applySpritesheetButtonHover(event, false, sliceAxis === 'horizontal')}
+                            style={spritesheetButtonStyle({ active: sliceAxis === 'horizontal' })}
+                            type="button"
                         >
                             Horizontal
                         </button>
-                        <button disabled={slicePreviewFrames.length === 0} onClick={handleApplySliceLines}>Apply Slices</button>
+                        <button
+                            disabled={slicePreviewFrames.length === 0}
+                            onClick={handleApplySliceLines}
+                            onMouseDown={(event) => applySpritesheetButtonPressed(event, slicePreviewFrames.length === 0, false)}
+                            onMouseEnter={(event) => applySpritesheetButtonHover(event, slicePreviewFrames.length === 0, false)}
+                            onMouseLeave={(event) => resetSpritesheetButtonBackground(event, slicePreviewFrames.length === 0, false)}
+                            onMouseUp={(event) => applySpritesheetButtonHover(event, slicePreviewFrames.length === 0, false)}
+                            style={spritesheetButtonStyle({ disabled: slicePreviewFrames.length === 0 })}
+                            type="button"
+                        >
+                            Apply Slices
+                        </button>
                         <button
                             onClick={() => {
                                 setSliceLines({ horizontal: [], vertical: [] });
                                 setManualRectPreview(undefined);
                             }}
+                            onMouseDown={(event) => applySpritesheetButtonPressed(event, false, false)}
+                            onMouseEnter={(event) => applySpritesheetButtonHover(event, false, false)}
+                            onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, false)}
+                            onMouseUp={(event) => applySpritesheetButtonHover(event, false, false)}
+                            style={spritesheetButtonStyle()}
+                            type="button"
                         >
                             Clear Slices
                         </button>
                     </>
                 ) : undefined}
-                {manualTool === 'draw' ? <button disabled={!manualRectPreview} onClick={() => handleCreateManualFrame(manualRectPreview)}>Commit Drawn Frame</button> : undefined}
-                <button onClick={() => setZoomLevel((value) => Math.max(0.25, value - 0.25))}>-</button>
+                {manualTool === 'draw' ? (
+                    <button
+                        disabled={!manualRectPreview}
+                        onClick={() => handleCreateManualFrame(manualRectPreview)}
+                        onMouseDown={(event) => applySpritesheetButtonPressed(event, !manualRectPreview, false)}
+                        onMouseEnter={(event) => applySpritesheetButtonHover(event, !manualRectPreview, false)}
+                        onMouseLeave={(event) => resetSpritesheetButtonBackground(event, !manualRectPreview, false)}
+                        onMouseUp={(event) => applySpritesheetButtonHover(event, !manualRectPreview, false)}
+                        style={spritesheetButtonStyle({ disabled: !manualRectPreview })}
+                        type="button"
+                    >
+                        Commit Drawn Frame
+                    </button>
+                ) : undefined}
+                <button
+                    onClick={() => setZoomLevel((value) => Math.max(0.25, value - 0.25))}
+                    onMouseDown={(event) => applySpritesheetButtonPressed(event, false, false)}
+                    onMouseEnter={(event) => applySpritesheetButtonHover(event, false, false)}
+                    onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, false)}
+                    onMouseUp={(event) => applySpritesheetButtonHover(event, false, false)}
+                    style={spritesheetButtonStyle()}
+                    type="button"
+                >
+                    -
+                </button>
                 <span style={{ color: t.text.muted, width: 60 }}>{Math.round(zoomLevel * 100)}%</span>
-                <button onClick={() => setZoomLevel((value) => Math.min(8, value + 0.25))}>+</button>
+                <button
+                    onClick={() => setZoomLevel((value) => Math.min(8, value + 0.25))}
+                    onMouseDown={(event) => applySpritesheetButtonPressed(event, false, false)}
+                    onMouseEnter={(event) => applySpritesheetButtonHover(event, false, false)}
+                    onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, false)}
+                    onMouseUp={(event) => applySpritesheetButtonHover(event, false, false)}
+                    style={spritesheetButtonStyle()}
+                    type="button"
+                >
+                    +
+                </button>
                 <label style={{ color: t.text.muted }}>
                     <input checked={showGrid} onChange={(event) => setShowGrid(event.target.checked)} type="checkbox" /> Grid
                 </label>
@@ -350,7 +434,18 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
                     />
                     Chroma
                 </label>
-                <button disabled={!descriptor || isSaving} onClick={() => void handleSave()}>{isSaving ? 'Saving...' : 'Save'}</button>
+                <button
+                    disabled={!descriptor || isSaving}
+                    onClick={() => void handleSave()}
+                    onMouseDown={(event) => applySpritesheetButtonPressed(event, !descriptor || isSaving, false)}
+                    onMouseEnter={(event) => applySpritesheetButtonHover(event, !descriptor || isSaving, false)}
+                    onMouseLeave={(event) => resetSpritesheetButtonBackground(event, !descriptor || isSaving, false)}
+                    onMouseUp={(event) => applySpritesheetButtonHover(event, !descriptor || isSaving, false)}
+                    style={spritesheetButtonStyle({ disabled: !descriptor || isSaving })}
+                    type="button"
+                >
+                    {isSaving ? 'Saving...' : 'Save'}
+                </button>
             </div>
 
             <div style={{ display: 'grid', gap: 12, gridTemplateColumns: '240px minmax(0, 1fr) 300px', minHeight: 0 }}>
@@ -458,6 +553,10 @@ async function resolveImagePath(descriptorPath: string, source: string): Promise
     return fsJoin(parent, source);
 }
 
+function shouldUseAnonymousCrossOrigin(url: string): boolean {
+    return url.startsWith('http://') || url.startsWith('https://');
+}
+
 const panelStyle = {
     background: t.bg.panelAlt,
     border: `1px solid ${t.border.subtle}`,
@@ -466,3 +565,5 @@ const panelStyle = {
     overflow: 'auto',
     padding: 10,
 } as const;
+
+

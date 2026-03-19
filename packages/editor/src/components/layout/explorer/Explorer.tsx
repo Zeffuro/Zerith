@@ -13,8 +13,10 @@ import { type FsDirectoryEntry, fsDirname, fsJoin, fsReadDirectory, fsReadTextFi
 import { openAudiosheetEntry, openProjectEntry } from '../../../services/openProjectEntry';
 import { useProjectStore } from '../../../store/storeBootstrap';
 import { useEditorStore } from '../../../store/useEditorStore';
+import { useReferenceStore } from '../../../store/useReferenceStore';
+import { useSettingsStore } from '../../../store/useSettingsStore';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
-import { editorTheme as t } from '../../../theme/editorTheme';
+import { resolveComponentScale, editorTheme as t } from '../../../theme/editorTheme';
 import { getSheetDescriptorPath, isSheetDescriptor } from '../../../utils/assetDescriptorUtilities';
 import { AUDIO_EXT, getExtension, IMG_EXT } from '../../../utils/assetTypes';
 import { ConfirmDialog } from '../../ConfirmDialog';
@@ -26,12 +28,14 @@ import { InlineNameInput } from './InlineNameInput';
 
 export function Explorer() {
     const { files, projectPath, treeRevision } = useProjectStore();
-    const { uiScale } = useEditorStore();
+    const globalUiScale = useEditorStore((state) => state.uiScale);
+    const explorerScale = useSettingsStore((state) => state.explorerScale);
+    const uiScale = resolveComponentScale(globalUiScale, explorerScale);
 
     return (
         <div
             className="zerith-scrollbar"
-            style={{ backgroundColor: t.bg.panel, height: '100%', overflowY: 'auto', padding: `${12 * uiScale}px 0` }}
+            style={{ backgroundColor: t.bg.panel, fontSize: `${12 * uiScale}px`, height: '100%', overflowY: 'auto', padding: `${12 * uiScale}px 0` }}
         >
             <div
                 style={{
@@ -107,9 +111,12 @@ function FileNode({
     const [createDraft, setCreateDraft] = useState('');
     const [createTargetDirectory, setCreateTargetDirectory] = useState<string>();
 
-    const { expandedPaths, setPathExpanded, treeRevision } = useProjectStore();
+    const { expandedPaths, projectPath, setPathExpanded, treeRevision } = useProjectStore();
     const activeTab = useWorkbenchStore((state) => state.activeTab());
-    const { uiScale } = useEditorStore();
+    const getAssetReferenceCountForFilePath = useReferenceStore((state) => state.getAssetReferenceCountForFilePath);
+    const globalUiScale = useEditorStore((state) => state.uiScale);
+    const explorerScale = useSettingsStore((state) => state.explorerScale);
+    const uiScale = resolveComponentScale(globalUiScale, explorerScale);
     const isOpen = entry.isDirectory && !!fullPath && expandedPaths.includes(fullPath);
 
     useEffect(() => {
@@ -326,6 +333,12 @@ function FileNode({
     };
 
     const isSelected = activeTab?.path === fullPath;
+    const assetReferenceCount = entry.isDirectory
+        ? 0
+        : getAssetReferenceCountForFilePath(fullPath, projectPath);
+    const deleteMessage = assetReferenceCount > 0
+        ? `Delete "${entry.name}"? Warning: this asset is referenced ${assetReferenceCount} time(s) in scripts/macros.`
+        : `Delete "${entry.name}"? This cannot be undone.`;
     const iconSize = 14 * uiScale;
     const { descriptorChildrenByParent, topLevelEntries } = groupCompanionDescriptors(children);
 
@@ -390,7 +403,7 @@ function FileNode({
                 cancelText="Cancel"
                 confirmText="Delete"
                 danger
-                message={`Delete "${entry.name}"? This cannot be undone.`}
+                message={deleteMessage}
                 onCancel={() => setConfirmDeleteOpen(false)}
                 onConfirm={() => {
                     setConfirmDeleteOpen(false);

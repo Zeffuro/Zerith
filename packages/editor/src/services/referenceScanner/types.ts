@@ -1,5 +1,16 @@
 import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
+export type AssetDependencyGraph = {
+    missing: AssetUsageEntry[];
+    unused: string[];
+    used: AssetUsageEntry[];
+};
+
+export type AssetUsageEntry = {
+    assetUrl: string;
+    references: ReferenceLocation[];
+};
+
 export type InferredVariableType = 'boolean' | 'mixed' | 'number' | 'string' | 'unknown';
 
 export type ReferenceLocation = {
@@ -10,10 +21,12 @@ export type ReferenceLocation = {
 };
 
 export type ReferenceScannerResult = {
+    assetFiles: Record<string, ReferenceLocation[]>;
     assets: Record<string, ReferenceLocation[]>;
     characters: Record<string, ReferenceLocation[]>;
     variables: Record<string, VariableReferenceStats>;
 };
+
 
 export type VariableReferenceStats = {
     inferredType: InferredVariableType;

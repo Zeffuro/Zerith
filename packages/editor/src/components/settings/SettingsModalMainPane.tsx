@@ -5,7 +5,8 @@ import {
     type RefObject,
 } from 'react';
 
-import type { CustomThemeEntry } from '../../store/settings/SettingsSchema';
+import type { NonMacroEditorCommandType } from '../../plugins/types';
+import type { CustomThemeEntry, DockLayoutPreset } from '../../store/settings/SettingsSchema';
 
 import { editorTheme as t } from '../../theme/editorTheme';
 import { type SettingsControlId } from './settingsControlRegistry';
@@ -13,35 +14,52 @@ import { SettingsDetailPanel } from './SettingsDetailPanel';
 import { SettingsKeymapPanel } from './SettingsKeymapPanel';
 
 export type SettingsModalMainPaneProperties = {
+    activeDockLayoutPresetId: string | undefined;
     audiosheetShortcutTargetMode: 'cursor' | 'playhead';
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
     changedControlIds: ReadonlySet<string>;
     customThemes: CustomThemeEntry[];
     detailContainerReference: RefObject<HTMLDivElement | null>;
+    dockLayoutPresets: DockLayoutPreset[];
+    editorScale: number | undefined;
+    explorerScale: number | undefined;
     focusedControlId: SettingsControlId | undefined;
+    inspectorScale: number | undefined;
     isMuted: boolean;
     matchedControlIds: ReadonlySet<string>;
+    moveQuickCommandType: (type: NonMacroEditorCommandType, direction: 'left' | 'right') => void;
     onAddCustomTheme: (theme: CustomThemeEntry) => void;
     onBeginDrag: (event: ReactMouseEvent<HTMLDivElement>) => void;
     onClose: () => void;
     onDeleteCustomTheme: (key: string) => void;
+    onDeleteDockLayoutPreset: (id: string) => void;
+    onLoadDockLayoutPreset: (presetId: string) => void;
     onRequestResetAllSettings: () => void;
     onRequestResetCurrentPanel: () => void;
+    onResetDockLayoutToDefault: () => void;
+    onSaveCurrentDockLayoutPreset: (name: string) => void;
     onSetDetailRowReference: (controlId: SettingsControlId, element: HTMLDivElement | null) => void;
     onSetShowChangedOnlySettings: (nextValue: boolean) => void;
     onUpdateCustomTheme: (key: string, updates: Partial<Omit<CustomThemeEntry, 'key'>>) => void;
+    quickCommandTypes: NonMacroEditorCommandType[];
     searchQuery: string;
     selectedPanelId: string;
     setAudiosheetShortcutTargetMode: (mode: 'cursor' | 'playhead') => void;
     setAutosaveEnabled: (enabled: boolean) => void;
     setAutosaveIntervalMs: (intervalMs: number) => void;
+    setEditorScale: (scale: number | undefined) => void;
+    setExplorerScale: (scale: number | undefined) => void;
+    setInspectorScale: (scale: number | undefined) => void;
     setThemeKey: (key: string) => void;
+    setTimelineScale: (scale: number | undefined) => void;
     setUiScale: (scale: number) => void;
     showChangedOnlySettings: boolean;
     showKeymapPanel: boolean;
     themeKey: string;
+    timelineScale: number | undefined;
     toggleMute: () => void;
+    toggleQuickCommandType: (type: NonMacroEditorCommandType) => void;
     uiScale: number;
 } & Pick<ComponentProps<typeof SettingsKeymapPanel>,
     | 'activeConflictIndex'
@@ -72,12 +90,15 @@ const panelDescriptions: Record<string, string> = {
     'editor-monaco': 'Code editor features, fonts, and diagnostics.',
     general: 'Global runtime and project behavior.',
     'general-autosave': 'Autosave cadence and safe-save behavior.',
+    'general-layout': 'Manage docked panel layout presets.',
     'general-playback': 'Playback defaults for preview and debugging.',
+    'general-quickbuttons': 'Configure which timeline quick buttons are shown and how they are ordered.',
     keymap: 'Customize keyboard shortcuts by action.',
 };
 
 export function SettingsModalMainPane({
     activeConflictIndex,
+    activeDockLayoutPresetId,
     audiosheetShortcutTargetMode,
     autosaveEnabled,
     autosaveIntervalMs,
@@ -87,42 +108,58 @@ export function SettingsModalMainPane({
     conflictEntries,
     customThemes,
     detailContainerReference,
+    dockLayoutPresets,
+    editorScale,
+    explorerScale,
     filteredKeymapRows,
     focusedControlId,
     focusedRowAction,
+    inspectorScale,
     isMuted,
     matchedControlIds,
+    moveQuickCommandType,
     onAddCustomTheme,
     onBeginDrag,
     onClose,
     onDeleteCustomTheme,
+    onDeleteDockLayoutPreset,
     onFixAllConflicts,
     onFocusActionRow,
     onJumpToConflict,
+    onLoadDockLayoutPreset,
     onRequestResetAllDefaults,
     onRequestResetAllSettings,
     onRequestResetCurrentPanel,
     onRequestResetShortcut,
+    onResetDockLayoutToDefault,
     onResolveConflictForAction,
+    onSaveCurrentDockLayoutPreset,
     onSetDetailRowReference,
     onSetRowReference,
     onSetShowChangedOnlySettings,
     onSetShowCustomizedOnly,
     onUpdateCustomTheme,
     onUpdateShortcut,
+    quickCommandTypes,
     rowsContainerReference,
     searchQuery,
     selectedPanelId,
     setAudiosheetShortcutTargetMode,
     setAutosaveEnabled,
     setAutosaveIntervalMs,
+    setEditorScale,
+    setExplorerScale,
+    setInspectorScale,
     setThemeKey,
+    setTimelineScale,
     setUiScale,
     showChangedOnlySettings,
     showCustomizedOnly,
     showKeymapPanel,
     themeKey,
+    timelineScale,
     toggleMute,
+    toggleQuickCommandType,
     uiScale,
 }: SettingsModalMainPaneProperties) {
     const selectedDescription = panelDescriptions[selectedPanelId] ?? 'Settings panel in progress.';
@@ -230,29 +267,46 @@ export function SettingsModalMainPane({
                 </div>
             ) : (
                 <SettingsDetailPanel
+                    activeDockLayoutPresetId={activeDockLayoutPresetId}
                     audiosheetShortcutTargetMode={audiosheetShortcutTargetMode}
                     autosaveEnabled={autosaveEnabled}
                     autosaveIntervalMs={autosaveIntervalMs}
                     changedControlIds={changedControlIds}
                     customThemes={customThemes}
                     detailContainerReference={detailContainerReference}
+                    dockLayoutPresets={dockLayoutPresets}
+                    editorScale={editorScale}
+                    explorerScale={explorerScale}
                     focusedControlId={focusedControlId}
+                    inspectorScale={inspectorScale}
                     isMuted={isMuted}
                     matchedControlIds={matchedControlIds}
+                    moveQuickCommandType={moveQuickCommandType}
                     onAddCustomTheme={onAddCustomTheme}
                     onDeleteCustomTheme={onDeleteCustomTheme}
+                    onDeleteDockLayoutPreset={onDeleteDockLayoutPreset}
+                    onLoadDockLayoutPreset={onLoadDockLayoutPreset}
+                    onResetDockLayoutToDefault={onResetDockLayoutToDefault}
+                    onSaveCurrentDockLayoutPreset={onSaveCurrentDockLayoutPreset}
                     onSetDetailRowReference={onSetDetailRowReference}
                     onUpdateCustomTheme={onUpdateCustomTheme}
                     panelId={selectedPanelId}
+                    quickCommandTypes={quickCommandTypes}
                     searchQuery={searchQuery}
                     setAudiosheetShortcutTargetMode={setAudiosheetShortcutTargetMode}
                     setAutosaveEnabled={setAutosaveEnabled}
                     setAutosaveIntervalMs={setAutosaveIntervalMs}
+                    setEditorScale={setEditorScale}
+                    setExplorerScale={setExplorerScale}
+                    setInspectorScale={setInspectorScale}
                     setThemeKey={setThemeKey}
+                    setTimelineScale={setTimelineScale}
                     setUiScale={setUiScale}
                     showChangedOnly={showChangedOnlySettings}
                     themeKey={themeKey}
+                    timelineScale={timelineScale}
                     toggleMute={toggleMute}
+                    toggleQuickCommandType={toggleQuickCommandType}
                     uiScale={uiScale}
                 />
             )}

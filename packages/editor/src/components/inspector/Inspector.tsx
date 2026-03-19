@@ -5,14 +5,16 @@ import { useProjectStore } from '../../store/storeBootstrap';
 import { useScriptStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import { editorTheme as t } from '../../theme/editorTheme';
+import { resolveComponentScale, editorTheme as t } from '../../theme/editorTheme';
 import { styles } from '../../theme/styleHelpers';
 import { getAtPath } from '../../utils/scriptPathUtilities';
 import { isRecord } from '../../utils/typeGuards';
 import { SchemaFallbackInspector } from './SchemaFallbackInspector';
 
 export function Inspector() {
-    const uiScale = useSettingsStore((state) => state.uiScale);
+    const globalUiScale = useSettingsStore((state) => state.uiScale);
+    const inspectorScale = useSettingsStore((state) => state.inspectorScale);
+    const uiScale = resolveComponentScale(globalUiScale, inspectorScale);
     const selectedNodePaths = useEditorStore((s) => s.selectedNodePaths);
 
     const { getActiveScript, getNodeAtPath, selectedNodeIndex, selectedNodePath } = useScriptStore();
@@ -45,7 +47,7 @@ export function Inspector() {
 
     if (!node) {
         return (
-            <div style={{ backgroundColor: t.bg.app, height: '100%', padding: `${16 * uiScale}px` }}>
+            <div style={{ backgroundColor: t.bg.app, fontSize: `${12 * uiScale}px`, height: '100%', padding: `${16 * uiScale}px` }}>
                 <p
                     style={{
                         color: t.text.faint,
@@ -69,6 +71,7 @@ export function Inspector() {
             className="zerith-scrollbar"
             style={{
                 backgroundColor: t.bg.app,
+                fontSize: `${12 * uiScale}px`,
                 height: '100%',
                 overflowY: 'auto',
                 padding: `${16 * uiScale}px`

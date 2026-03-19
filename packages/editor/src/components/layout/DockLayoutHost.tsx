@@ -9,7 +9,9 @@ import { useDismissiblePopup } from '../../hooks/useDismissiblePopup';
 import { useScriptStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
+import { clamp } from '../../utils/math';
 import { Inspector } from '../inspector/Inspector';
+import { AssetDependencyPanel } from '../tools/AssetDependencyPanel';
 import { CommandPalette } from '../tools/CommandPalette';
 import { ConsolePanel } from '../tools/ConsolePanel';
 import { GlobalSearchContent, GlobalSearchPanel } from '../tools/GlobalSearchPanel';
@@ -73,6 +75,7 @@ export function DockLayoutHost() {
     const isCommandPaletteOpen = useEditorStore((s) => s.isCommandPaletteOpen);
     const isGlobalSearchPopupOpen = useEditorStore((s) => s.isGlobalSearchPopupOpen);
     const setDockLayoutJson = useEditorStore((s) => s.setDockLayoutJson);
+    const registerDockLayoutJsonSnapshotProvider = useEditorStore((s) => s.registerDockLayoutJsonSnapshotProvider);
     const uiScale = useEditorStore((s) => s.uiScale);
     const rootScript = useScriptStore((s) => s.rootScript);
     const activeWorkbenchTabId = useWorkbenchStore((s) => s.activeTabId);
@@ -191,6 +194,11 @@ export function DockLayoutHost() {
     }, []);
 
     useEffect(() => {
+        registerDockLayoutJsonSnapshotProvider(() => model.toJson());
+        return () => registerDockLayoutJsonSnapshotProvider();
+    }, [model, registerDockLayoutJsonSnapshotProvider]);
+
+    useEffect(() => {
         if (!activeWorkbenchTabId) return;
         const tabNode = model.getNodeById(DOCK_PANELS.editor) as TabNode | undefined;
         if (!tabNode) return;
@@ -214,6 +222,9 @@ export function DockLayoutHost() {
         const comp = node.getComponent() as string;
 
         switch (comp) {
+            case DOCK_PANELS.assetDependencies: {
+                return <AssetDependencyPanel />;
+            }
             case DOCK_PANELS.console: {
                 return <ConsolePanel />;
             }
@@ -307,9 +318,6 @@ export function DockLayoutHost() {
 }
 
 
-function clamp(value: number, min: number, max: number): number {
-    return Math.max(min, Math.min(max, value));
-}
 
 function createInitialModelState(layoutJson: unknown): InitialModelState {
     const fallbackLayout = createDefaultDockLayout() as IJsonModel;

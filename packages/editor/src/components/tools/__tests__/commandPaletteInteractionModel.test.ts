@@ -44,12 +44,12 @@ describe('commandPaletteInteractionModel', () => {
     });
 
     it('executes selected action and closes on success', async () => {
-        const execute = vi.fn(async () => {});
+        const action = vi.fn(async () => {});
         const close = vi.fn();
 
-        await executeSelectedAction([{ execute }], 0, close);
+        await executeSelectedAction([{ action }], 0, close);
 
-        expect(execute).toHaveBeenCalledTimes(1);
+        expect(action).toHaveBeenCalledTimes(1);
         expect(close).toHaveBeenCalledTimes(1);
     });
 

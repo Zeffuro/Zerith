@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseAudiosheetDescriptor, parseSpritesheetDescriptor } from '../schemas/descriptorSchemas';
+import { parseAudiosheetDescriptor, parseSheetDescriptor, parseSpritesheetDescriptor } from '../schemas/descriptorSchemas';
 import { audiosheetDescriptor, spritesheetDescriptor } from '../test-utils/scriptBuilders';
 
 describe('descriptorSchemas', () => {
@@ -140,6 +140,20 @@ describe('descriptorSchemas', () => {
         if (!parsed.success) {
             expect(parsed.error).toContain('cues.stinger.start');
         }
+    });
+
+    it('parses canonical sheet descriptors for spritesheets and audiosheets', () => {
+        const parsedSpritesheet = parseSheetDescriptor(spritesheetDescriptor());
+        const parsedAudiosheet = parseSheetDescriptor(audiosheetDescriptor());
+
+        expect(parsedSpritesheet.success).toBe(true);
+        expect(parsedAudiosheet.success).toBe(true);
+    });
+
+    it('returns an error for non-sheet payloads in canonical sheet parser', () => {
+        const parsed = parseSheetDescriptor({ source: 'asset.bin' });
+
+        expect(parsed.success).toBe(false);
     });
 });
 

@@ -1,3 +1,5 @@
+import type { SheetDescriptorBase, SpritesheetDescriptor } from './SpritesheetDescriptor';
+
 export interface AudioCue {
     duration?: number;
     loop?: boolean;
@@ -5,8 +7,9 @@ export interface AudioCue {
     volume?: number;
 }
 
-export interface AudiosheetDescriptor {
+export interface AudiosheetDescriptor extends SheetDescriptorBase {
     cues: Record<string, AudioCue>;
-    meta?: Record<string, unknown>;
-    source: string;
 }
+
+export type SheetDescriptor = AudiosheetDescriptor | SpritesheetDescriptor;
+

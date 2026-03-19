@@ -61,4 +61,14 @@ export const editorTheme = {
     },
 } as const;
 
+export type EditorRegionScaleOverride = number | undefined;
+
 export type EditorTheme = typeof editorTheme;
+
+export function resolveComponentScale(globalUiScale: number, override: EditorRegionScaleOverride): number {
+    return override ?? globalUiScale;
+}
+
+export function scaled(size: number, uiScale: number, multiplier = 1): number {
+    return size * uiScale * multiplier;
+}

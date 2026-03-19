@@ -3,8 +3,9 @@ import { lazy, type ReactNode, Suspense } from 'react';
 import type { ScriptViewMode, WorkbenchResourceKind } from '../../store/workbench/types';
 
 import { useEditorStore } from '../../store/useEditorStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
-import { editorTheme as t } from '../../theme/editorTheme';
+import { resolveComponentScale, editorTheme as t } from '../../theme/editorTheme';
 import { AssetPreviewPanel } from '../tools/AssetPreviewPanel';
 import { Timeline } from './timeline/Timeline';
 
@@ -27,7 +28,9 @@ type ViewToggleToolbarProperties = {
 
 
 export function EditorSurface() {
-    const uiScale = useEditorStore((s) => s.uiScale);
+    const globalUiScale = useEditorStore((s) => s.uiScale);
+    const editorScale = useSettingsStore((state) => state.editorScale);
+    const uiScale = resolveComponentScale(globalUiScale, editorScale);
     const activeTab = useWorkbenchStore((s) => s.activeTab());
     const lastScriptView = useWorkbenchStore((s) => s.lastScriptView);
     const lastMacrosView = useWorkbenchStore((s) => s.lastMacrosView);

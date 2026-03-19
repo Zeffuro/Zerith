@@ -271,6 +271,24 @@ describe('openProjectEntry', () => {
         });
     });
 
+    it('routes legacy .atlas.json descriptors through standard JSON heuristics', async () => {
+        const descriptor = '{"format":"atlas","source":"hero.png","frames":{}}';
+        openProjectEntryMocks.fsReadTextFile.mockResolvedValueOnce(descriptor);
+
+        await openProjectEntry('/project/assets/sprites/hero.atlas.json', 'hero.atlas.json');
+
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenCalledWith({
+            action: 'openTab',
+            tab: {
+                id: 'macros:/project/assets/sprites/hero.atlas.json',
+                kind: 'macros',
+                path: '/project/assets/sprites/hero.atlas.json',
+                preferredView: 'timeline',
+                title: 'hero.atlas.json',
+            },
+        });
+    });
+
     it('opens .sheet.json files as audiosheet tabs when descriptor payload is audiosheet-shaped', async () => {
         const descriptor = '{"source":"blip.wav","cues":{}}';
         openProjectEntryMocks.fsReadTextFile

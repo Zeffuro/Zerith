@@ -1,7 +1,11 @@
 import type { OpenProjectEntryOptions } from './contracts';
 
 import { DOCK_PANELS } from '../../components/layout/dock/dockPanelIds';
-import { detectDescriptorType, getSheetDescriptorPath, isSheetDescriptor } from '../../utils/assetDescriptorUtilities';
+import {
+    detectDescriptorType,
+    getSheetDescriptorPath,
+    isSheetDescriptor,
+} from '../../utils/assetDescriptorUtilities';
 import { AUDIO_EXT, getExtension, IMG_EXT, TEXT_EXT } from '../../utils/assetTypes';
 import { fsReadTextFile } from '../fs';
 import { openJsonEntry } from './jsonCoordinator';
@@ -41,21 +45,21 @@ export async function openProjectEntry(fullPath: string, entryName: string, opti
         }
 
         if (IMG_EXT.has(extension)) {
-            const descriptorPath = getSheetDescriptorPath(fullPath);
-            try {
-                await fsReadTextFile(descriptorPath);
+            const descriptorPath = await findExistingDescriptorPath(fullPath);
+            if (descriptorPath) {
                 await openSpritesheetEntry(descriptorPath);
                 return;
-            } catch {
-                if (options?.openInSpritesheetEditor) {
-                    const handled = await onMissingSpritesheetDescriptor?.({
-                        entryName,
-                        imagePath: fullPath,
-                    });
 
-                    if (handled) {
-                        return;
-                    }
+            }
+
+            if (options?.openInSpritesheetEditor) {
+                const handled = await onMissingSpritesheetDescriptor?.({
+                    entryName,
+                    imagePath: fullPath,
+                });
+
+                if (handled) {
+                    return;
                 }
             }
 
@@ -64,13 +68,10 @@ export async function openProjectEntry(fullPath: string, entryName: string, opti
         }
 
         if (AUDIO_EXT.has(extension)) {
-            const descriptorPath = getSheetDescriptorPath(fullPath);
-            try {
-                await fsReadTextFile(descriptorPath);
+            const descriptorPath = await findExistingDescriptorPath(fullPath);
+            if (descriptorPath) {
                 await openAudiosheetEntry(descriptorPath);
                 return;
-            } catch {
-                // Missing companion descriptor should not block regular asset opening.
             }
 
             openAssetEntry(fullPath);
@@ -96,6 +97,21 @@ export async function openProjectEntry(fullPath: string, entryName: string, opti
 
 export function setMissingSpritesheetDescriptorHandler(handler: MissingSpritesheetDescriptorHandler | undefined): void {
     onMissingSpritesheetDescriptor = handler;
+}
+
+async function findExistingDescriptorPath(assetPath: string): Promise<string | undefined> {
+    const candidates = [getSheetDescriptorPath(assetPath)];
+
+    for (const candidatePath of candidates) {
+        try {
+            await fsReadTextFile(candidatePath);
+            return candidatePath;
+        } catch {
+            // Try the next descriptor candidate.
+        }
+    }
+
+    return undefined;
 }
 
 function focusMainEditorFor(kind: 'asset' | 'scriptLike' | 'text') {

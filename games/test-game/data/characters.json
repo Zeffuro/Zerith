@@ -8,7 +8,7 @@
     "displayName": "Phoenix Wright",
     "nameColor": "#3399ff",
     "spritesheet": {
-      "atlasUrl": "/assets/sprites/phoenixsheet.atlas.json",
+      "atlasUrl": "/assets/sprites/phoenixsheet.sheet.json",
       "chromaKey": "#009a00",
       "chromaTolerance": 60
     },

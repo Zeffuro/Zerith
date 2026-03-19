@@ -1,3 +1,8 @@
+export interface SheetDescriptorBase {
+    meta?: Record<string, unknown>;
+    source: string;
+}
+
 export interface SpriteFrame {
     anchorX?: number;
     anchorY?: number;
@@ -8,7 +13,7 @@ export interface SpriteFrame {
     y: number;
 }
 
-export interface SpritesheetDescriptor {
+export interface SpritesheetDescriptor extends SheetDescriptorBase {
     animations?: Record<string, string[]>;
     atlasJsonPath?: string;
     chromaKey?: string;
@@ -18,8 +23,6 @@ export interface SpritesheetDescriptor {
     frames?: Record<string, SpriteFrame>;
     frameWidth?: number;
     margin?: number;
-    meta?: Record<string, unknown>;
-    source: string;
     spacing?: number;
 }
 

@@ -1,20 +1,15 @@
 import type { NonMacroEditorCommandType } from '../../../plugins/types';
 import type { EditorSet, PlaybackQuickCommandsSlice } from '../types';
 
-const DEFAULT_QUICK: NonMacroEditorCommandType[] = [
-    'dialogue',
-    'background',
-    'sprite',
-    'choice',
-    'if',
-    'while',
-    'for',
-    'jump',
-    'call',
-    'bgm',
-];
+import { DEFAULT_QUICK_COMMAND_TYPES } from '../../settings/SettingsSchema';
+import { useSettingsStore } from '../../useSettingsStore';
 
 export function createPlaybackQuickCommandsSlice(set: EditorSet): PlaybackQuickCommandsSlice {
+    const settings = useSettingsStore.getState();
+    const initialQuickCommandTypes = settings.quickCommandTypes.length > 0
+        ? [...settings.quickCommandTypes]
+        : [...DEFAULT_QUICK_COMMAND_TYPES];
+
     return {
         activeExecutionPath: undefined,
         breakpoints: {},
@@ -29,13 +24,14 @@ export function createPlaybackQuickCommandsSlice(set: EditorSet): PlaybackQuickC
                 const nextIndex = direction === 'left' ? index - 1 : index + 1;
                 if (nextIndex < 0 || nextIndex >= list.length) return {};
                 [list[index], list[nextIndex]] = [list[nextIndex], list[index]];
+                settings.setQuickCommandTypes(list);
                 return { quickCommandTypes: list };
             }),
         pauseTrigger: 0,
         playFromIndex: undefined,
         playTrigger: 0,
 
-        quickCommandTypes: DEFAULT_QUICK,
+        quickCommandTypes: initialQuickCommandTypes,
 
         resumeTrigger: 0,
 
@@ -43,8 +39,11 @@ export function createPlaybackQuickCommandsSlice(set: EditorSet): PlaybackQuickC
 
         setPlaybackPaused: (paused) => set({ isPlaybackPaused: paused }),
 
-        setQuickCommandTypes: (types) =>
-            set({ quickCommandTypes: [...new Set(types.filter(Boolean))] }),
+        setQuickCommandTypes: (types) => {
+            const nextQuickCommandTypes = [...new Set(types.filter(Boolean))];
+            settings.setQuickCommandTypes(nextQuickCommandTypes);
+            set({ quickCommandTypes: nextQuickCommandTypes });
+        },
 
         stepTrigger: 0,
 
@@ -69,10 +68,12 @@ export function createPlaybackQuickCommandsSlice(set: EditorSet): PlaybackQuickC
             set((state) => {
                 const has = Array.isArray(state.quickCommandTypes)
                     && state.quickCommandTypes.includes(type);
+                const nextQuickCommandTypes = has
+                    ? state.quickCommandTypes.filter((t: NonMacroEditorCommandType) => t !== type)
+                    : [...state.quickCommandTypes, type];
+                settings.setQuickCommandTypes(nextQuickCommandTypes);
                 return {
-                    quickCommandTypes: has
-                        ? state.quickCommandTypes.filter((t: NonMacroEditorCommandType) => t !== type)
-                        : [...state.quickCommandTypes, type],
+                    quickCommandTypes: nextQuickCommandTypes,
                 };
             }),
 

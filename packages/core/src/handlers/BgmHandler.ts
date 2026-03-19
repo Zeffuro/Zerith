@@ -3,6 +3,8 @@ import type { SaveState } from '../managers/SaveManager';
 import type { BaseCommand, CommandHandler } from '../types';
 import type { Logger } from '../utils/Logger';
 
+import { parseAudiosheetDescriptor } from '../schemas';
+
 export interface BgmCommand extends BaseCommand {
     action: 'pause' | 'play' | 'resume' | 'stop';
     assetUrl?: string;
@@ -10,6 +12,12 @@ export interface BgmCommand extends BaseCommand {
     type: 'bgm';
     volume?: number;
 }
+
+type CueReference = {
+    cueName: string;
+    sheetUrl: string;
+};
+
 
 export class BgmHandler implements CommandHandler<BgmCommand> {
     public autoNext = true;
@@ -81,20 +89,26 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
             const url = command.assetUrl;
             if (!url) return;
 
-            const resolvedUrl = this.assets.resolve(url);
-
             try {
-                if (!this.audio.audioExists(resolvedUrl)) {
-                    await this.audio.preloadAudio(resolvedUrl);
-                }
-
-                if (this.audio.currentBgmUrl && this.audio.currentBgmUrl !== resolvedUrl) {
-                    this.audio.stopBgm();
-                }
-
+                const cueReference = this.parseCueReference(url);
                 this.isPaused = false;
 
-                await this.audio.playBgm(resolvedUrl, command.loop ?? true, command.volume ?? 0.5);
+                if (cueReference) {
+                    await this.playCue(cueReference, command);
+                } else {
+                    const resolvedUrl = this.assets.resolve(url);
+
+                    if (!this.audio.audioExists(resolvedUrl)) {
+                        await this.audio.preloadAudio(resolvedUrl);
+                    }
+
+                    if (this.audio.currentBgmUrl && this.audio.currentBgmUrl !== resolvedUrl) {
+                        this.audio.stopBgm();
+                    }
+
+                    await this.audio.playBgm(resolvedUrl, command.loop ?? true, command.volume ?? 0.5);
+                }
+
                 this.state.system.bgm = url;
 
                 this.logger.info(`Playing BGM: ${url}`);
@@ -113,4 +127,59 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
         if (!saveData.system.bgm) return;
         void this.execute({ action: 'play', assetUrl: saveData.system.bgm, type: 'bgm' });
     };
+
+    private parseCueReference(assetUrl: string): CueReference | undefined {
+        if (!assetUrl.includes(':') || isHttpUrl(assetUrl)) {
+            return undefined;
+        }
+
+        const separatorIndex = assetUrl.lastIndexOf(':');
+        if (separatorIndex <= 0 || separatorIndex >= assetUrl.length - 1) {
+            return undefined;
+        }
+
+        const sheetUrl = assetUrl.slice(0, separatorIndex);
+        const cueName = assetUrl.slice(separatorIndex + 1);
+
+        if (sheetUrl.length === 0 || cueName.length === 0) {
+            return undefined;
+        }
+
+        return { cueName, sheetUrl };
+    }
+
+    private async playCue(cueReference: CueReference, command: BgmCommand): Promise<void> {
+        const descriptorData = await this.assets.load<unknown>(cueReference.sheetUrl);
+        const parsedDescriptor = parseAudiosheetDescriptor(descriptorData);
+
+        if (!parsedDescriptor.success) {
+            throw new Error(`Invalid audiosheet descriptor '${cueReference.sheetUrl}': ${parsedDescriptor.error}`);
+        }
+
+        const sourceAssetUrl = resolveSheetSource(cueReference.sheetUrl, parsedDescriptor.data.source);
+
+        await this.audio.loadAudiosheet(cueReference.sheetUrl, {
+            ...parsedDescriptor.data,
+            source: this.assets.resolve(sourceAssetUrl),
+        });
+        await this.audio.playCue(cueReference.sheetUrl, cueReference.cueName, {
+            channel: 'bgm',
+            loop: command.loop,
+            volume: command.volume ?? 0.5,
+        });
+    }
 }
+
+function isHttpUrl(assetUrl: string): boolean {
+    return /^[a-z][a-z+.-]*:\/\//i.test(assetUrl);
+}
+
+function resolveSheetSource(sheetUrl: string, source: string): string {
+    if (source.startsWith('/') || isHttpUrl(source)) {
+        return source;
+    }
+
+    const directory = sheetUrl.slice(0, Math.max(0, sheetUrl.lastIndexOf('/') + 1));
+    return `${directory}${source}`;
+}
+

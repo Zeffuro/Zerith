@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { AudioCue, AudiosheetDescriptor, SpriteFrame, SpritesheetDescriptor } from '../types';
+import type { AudioCue, AudiosheetDescriptor, SheetDescriptor, SpriteFrame, SpritesheetDescriptor } from '../types';
 
 const nonNegativeNumberSchema = z.float64().nonnegative();
 const positiveNumberSchema = z.float64().positive();
@@ -61,8 +61,17 @@ export const audiosheetDescriptorSchema: z.ZodType<AudiosheetDescriptor> = z.obj
     source: z.string().min(1),
 });
 
+export const sheetDescriptorSchema: z.ZodType<SheetDescriptor> = z.union([
+    spritesheetDescriptorSchema,
+    audiosheetDescriptorSchema,
+]);
+
 type ParseAudiosheetDescriptorResult =
     | { data: AudiosheetDescriptor; success: true }
+    | { error: string; success: false };
+
+type ParseSheetDescriptorResult =
+    | { data: SheetDescriptor; success: true }
     | { error: string; success: false };
 
 type ParseSpritesheetDescriptorResult =
@@ -71,6 +80,14 @@ type ParseSpritesheetDescriptorResult =
 
 export function parseAudiosheetDescriptor(data: unknown): ParseAudiosheetDescriptorResult {
     const parsed = audiosheetDescriptorSchema.safeParse(data);
+
+    return parsed.success
+        ? { data: parsed.data, success: true }
+        : { error: formatError(parsed.error), success: false };
+}
+
+export function parseSheetDescriptor(data: unknown): ParseSheetDescriptorResult {
+    const parsed = sheetDescriptorSchema.safeParse(data);
 
     return parsed.success
         ? { data: parsed.data, success: true }

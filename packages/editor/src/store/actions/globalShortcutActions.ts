@@ -6,6 +6,9 @@ import type { EditorNode } from '../../types/EditorNode';
 import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
 import { dispatchAudiosheetShortcut } from '../../services/audiosheetShortcuts';
+import { fsOpenPath } from '../../services/fs';
+import { saveProjectAs } from '../../services/saveProjectAs';
+import { getThemeRegistry } from '../../theme/themeRegistry';
 import { isRecord } from '../../utils/typeGuards';
 import { useProjectStore, useScriptStore } from '../storeBootstrap';
 import { useEditorStore } from '../useEditorStore';
@@ -24,12 +27,15 @@ export type GlobalShortcutAction =
     | 'moveSelectionUp'
     | 'openGlobalSearchFind'
     | 'openGlobalSearchReplace'
+    | 'openNewProjectModal'
+    | 'openProjectFolder'
     | 'pasteSelection'
     | 'pausePlayback'
     | 'redo'
     | 'requestDelete'
     | 'save'
     | 'saveAll'
+    | 'saveProjectAs'
     | 'stepIntoPlayback'
     | 'stepOutPlayback'
     | 'stepPlayback'
@@ -37,6 +43,7 @@ export type GlobalShortcutAction =
     | 'toggleBreakpoint'
     | 'toggleCommandPalette'
     | 'toggleGlobalSearch'
+    | 'toggleTheme'
     | 'undo'
     | 'zoomIn'
     | 'zoomOut'
@@ -116,6 +123,19 @@ export async function executeGlobalShortcutAction(action: GlobalShortcutAction):
             return true;
         }
 
+        case 'openNewProjectModal': {
+            useEditorStore.getState().openNewProjectModal();
+            return true;
+        }
+
+        case 'openProjectFolder': {
+            const projectPath = useProjectStore.getState().projectPath;
+            if (!projectPath) return false;
+
+            await fsOpenPath(projectPath);
+            return true;
+        }
+
         case 'pasteSelection': {
             return pasteClipboardSelection();
         }
@@ -146,6 +166,26 @@ export async function executeGlobalShortcutAction(action: GlobalShortcutAction):
             useEditorStore.getState().markManualSave();
             await useProjectStore.getState().saveAllDirtyFiles();
             return true;
+        }
+
+        case 'saveProjectAs': {
+            try {
+                const project = useProjectStore.getState();
+                if (!project.projectPath) return false;
+
+                useEditorStore.getState().markManualSave();
+                await project.saveAllDirtyFiles();
+
+                const result = await saveProjectAs(project.projectPath);
+                if (!result) return false;
+
+                await project.openProjectFromManifest(result.manifestPath);
+                useEditorStore.getState().addRecentProject(result.manifestPath);
+                return true;
+            } catch (error) {
+                console.error('Save Project As shortcut failed:', error);
+                return false;
+            }
         }
 
         case 'stepIntoPlayback': {
@@ -188,6 +228,21 @@ export async function executeGlobalShortcutAction(action: GlobalShortcutAction):
             return true;
         }
 
+        case 'toggleTheme': {
+            const settings = useSettingsStore.getState();
+            const themes = getThemeRegistry(settings.customThemes);
+            if (themes.length === 0) return false;
+
+            const index = themes.findIndex((theme) => theme.key === settings.themeKey);
+            const nextTheme = index === -1
+                ? themes[0]
+                : themes[(index + 1) % themes.length];
+
+            if (!nextTheme) return false;
+            useEditorStore.getState().setThemeKey(nextTheme.key);
+            return true;
+        }
+
         case 'undo': {
             useScriptStore.getState().undo();
             return true;
@@ -204,16 +259,16 @@ export async function executeGlobalShortcutAction(action: GlobalShortcutAction):
         }
 
         case 'zoomReset': {
-            useSettingsStore.getState().setUiScale(UI_SCALE_DEFAULT);
+            useEditorStore.getState().setUiScale(UI_SCALE_DEFAULT);
             return true;
         }
     }
 }
 
 function adjustUiScale(delta: number): void {
-    const settings = useSettingsStore.getState();
-    const nextUiScale = clampUiScale(Math.round((settings.uiScale + delta) * 10) / 10);
-    settings.setUiScale(nextUiScale);
+    const editor = useEditorStore.getState();
+    const nextUiScale = clampUiScale(Math.round((editor.uiScale + delta) * 10) / 10);
+    editor.setUiScale(nextUiScale);
 }
 
 function clampUiScale(value: number): number {

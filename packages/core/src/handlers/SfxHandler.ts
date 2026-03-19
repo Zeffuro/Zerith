@@ -1,6 +1,5 @@
-import type { IAssetManager, IAudioManager, SfxPlaybackOptions } from '../interfaces/managers';
+import type { IAssetManager, IAudioManager } from '../interfaces/managers';
 import type { BaseCommand, CommandHandler } from '../types';
-import type { AudioCue, AudiosheetDescriptor } from '../types';
 import type { Logger } from '../utils/Logger';
 
 import { parseAudiosheetDescriptor } from '../schemas';
@@ -55,11 +54,11 @@ export class SfxHandler implements CommandHandler<SfxCommand> {
     };
 
     private parseCueReference(assetUrl: string): CueReference | undefined {
-        if (!assetUrl.includes(':') || assetUrl.startsWith('http') || assetUrl.startsWith('/')) {
+        if (!assetUrl.includes(':') || isHttpUrl(assetUrl)) {
             return undefined;
         }
 
-        const separatorIndex = assetUrl.indexOf(':');
+        const separatorIndex = assetUrl.lastIndexOf(':');
         if (separatorIndex <= 0 || separatorIndex >= assetUrl.length - 1) {
             return undefined;
         }
@@ -82,33 +81,26 @@ export class SfxHandler implements CommandHandler<SfxCommand> {
             throw new Error(`Invalid audiosheet descriptor '${cueReference.sheetUrl}': ${parsedDescriptor.error}`);
         }
 
-        const cue = parsedDescriptor.data.cues[cueReference.cueName];
-        if (!cue) {
-            throw new Error(`Cue '${cueReference.cueName}' not found in '${cueReference.sheetUrl}'`);
-        }
+        const sourceAssetUrl = resolveSheetSource(cueReference.sheetUrl, parsedDescriptor.data.source);
 
-        const sourceAssetUrl = resolveSheetSource(cueReference.sheetUrl, parsedDescriptor.data);
-        const resolvedSourceUrl = this.assets.resolve(sourceAssetUrl);
-        const cueOptions = toSfxPlaybackOptions(cue);
-        const cueVolume = cue.volume === undefined ? commandVolume : commandVolume * cue.volume;
-
-        await this.audio.playSfx(resolvedSourceUrl, cueVolume, cueOptions);
+        await this.audio.loadAudiosheet(cueReference.sheetUrl, {
+            ...parsedDescriptor.data,
+            source: this.assets.resolve(sourceAssetUrl),
+        });
+        await this.audio.playCue(cueReference.sheetUrl, cueReference.cueName, { volume: commandVolume });
     }
 }
 
-function resolveSheetSource(sheetUrl: string, descriptor: AudiosheetDescriptor): string {
-    if (descriptor.source.startsWith('/') || descriptor.source.startsWith('http')) {
-        return descriptor.source;
+function isHttpUrl(assetUrl: string): boolean {
+    return /^[a-z][a-z+.-]*:\/\//i.test(assetUrl);
+}
+
+function resolveSheetSource(sheetUrl: string, source: string): string {
+    if (source.startsWith('/') || isHttpUrl(source)) {
+        return source;
     }
 
     const directory = sheetUrl.slice(0, Math.max(0, sheetUrl.lastIndexOf('/') + 1));
-    return `${directory}${descriptor.source}`;
+    return `${directory}${source}`;
 }
 
-function toSfxPlaybackOptions(cue: AudioCue): SfxPlaybackOptions {
-    return {
-        duration: cue.duration,
-        loop: cue.loop,
-        start: cue.start,
-    };
-}

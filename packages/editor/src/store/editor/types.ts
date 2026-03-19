@@ -14,8 +14,11 @@ export interface ClipboardValidationAssetSlice {
 export type DeleteRequestSource = 'click' | 'keyboard';
 
 export interface DockLayoutSlice {
+    captureDockLayoutJson: () => unknown;
     dockLayoutJson: unknown;
     dockLayoutVersion: number;
+    getDockLayoutJsonSnapshot: (() => unknown) | undefined;
+    registerDockLayoutJsonSnapshotProvider: (provider?: () => unknown) => void;
     resetDockLayout: () => void;
     setDockLayoutJson: (json: unknown) => void;
 }
@@ -99,6 +102,7 @@ export interface UiPrefsSlice {
     clearRecentProjects: () => void;
     closeCommandPalette: () => void;
     closeExportGameModal: () => void;
+    closeNewProjectModal: () => void;
     closeGlobalSearchPopup: () => void;
     closeSettingsModal: () => void;
     globalSearchLaunchMode: GlobalSearchLaunchMode;
@@ -106,12 +110,14 @@ export interface UiPrefsSlice {
     isExportGameModalOpen: boolean;
     isGlobalSearchPopupOpen: boolean;
     isMuted: boolean;
+    isNewProjectModalOpen: boolean;
     isProjectCloseRequested: boolean;
     isSettingsModalOpen: boolean;
     lastManualSaveAt: number;
     markManualSave: () => void;
     openCommandPalette: () => void;
     openExportGameModal: () => void;
+    openNewProjectModal: () => void;
     openGlobalSearchPopup: (mode?: GlobalSearchLaunchMode) => void;
     openGlobalSearchReplacePopup: () => void;
     openSettingsModal: () => void;
@@ -127,6 +133,7 @@ export interface UiPrefsSlice {
     toggleExportGameModal: () => void;
     toggleGlobalSearchPopup: () => void;
     toggleMute: () => void;
+    toggleNewProjectModal: () => void;
     toggleSettingsModal: () => void;
     uiScale: number;
     windowState: EditorWindowState;

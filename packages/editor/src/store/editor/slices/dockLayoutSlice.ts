@@ -6,6 +6,16 @@ import { isRecord } from '../../../utils/typeGuards';
 export function createDockLayoutSlice(set: EditorSet): DockLayoutSlice {
     return {
         ...normalizeDockLayoutState({}),
+        captureDockLayoutJson: () => {
+            let capturedJson: unknown;
+            set((state) => {
+                capturedJson = state.getDockLayoutJsonSnapshot?.() ?? state.dockLayoutJson;
+                return {};
+            });
+            return capturedJson;
+        },
+        getDockLayoutJsonSnapshot: undefined,
+        registerDockLayoutJsonSnapshotProvider: (provider) => set({ getDockLayoutJsonSnapshot: provider }),
         resetDockLayout: () =>
             set({
                 dockLayoutJson: createDefaultDockLayout(),

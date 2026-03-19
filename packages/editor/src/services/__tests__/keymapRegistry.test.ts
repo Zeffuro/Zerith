@@ -8,7 +8,7 @@ describe('globalShortcutBindings', () => {
             .filter((binding) => binding.keys.includes('s'))
             .map((binding) => binding.action);
 
-        expect(actionsInOrder).toEqual(['saveAll', 'openSettingsModal', 'save']);
+        expect(actionsInOrder).toEqual(['saveAll', 'saveProjectAs', 'openSettingsModal', 'save']);
     });
 
     it('contains both playback and editor shortcut phases', () => {
@@ -30,10 +30,42 @@ describe('globalShortcutBindings', () => {
         expect(isGlobalShortcutCommand('audiosheetTogglePlayPause')).toBe(true);
         expect(isGlobalShortcutCommand('audiosheetSetLeftBoundary')).toBe(true);
         expect(isGlobalShortcutCommand('audiosheetSetRightBoundary')).toBe(true);
+        expect(isGlobalShortcutCommand('openNewProjectModal')).toBe(true);
+        expect(isGlobalShortcutCommand('saveProjectAs')).toBe(true);
+        expect(isGlobalShortcutCommand('openProjectFolder')).toBe(true);
+        expect(isGlobalShortcutCommand('toggleTheme')).toBe(true);
         expect(isGlobalShortcutCommand('zoomIn')).toBe(true);
         expect(isGlobalShortcutCommand('zoomOut')).toBe(true);
         expect(isGlobalShortcutCommand('zoomReset')).toBe(true);
         expect(isGlobalShortcutCommand('not-real')).toBe(false);
+    });
+
+    it('includes default new project key binding', () => {
+        const binding = globalShortcutBindings.find((candidate) => candidate.action === 'openNewProjectModal');
+        expect(binding?.keys[0]).toBe('n');
+        expect(binding?.requireMod).toBe(true);
+        expect(binding?.requireShift).toBe(true);
+    });
+
+    it('includes default save project as key binding', () => {
+        const binding = globalShortcutBindings.find((candidate) => candidate.action === 'saveProjectAs');
+        expect(binding?.keys[0]).toBe('s');
+        expect(binding?.requireAlt).toBe(true);
+        expect(binding?.requireMod).toBe(true);
+        expect(binding?.requireShift).toBe(true);
+    });
+
+    it('includes default project folder and theme toggle bindings', () => {
+        const openProjectFolderBinding = globalShortcutBindings.find((candidate) => candidate.action === 'openProjectFolder');
+        const toggleThemeBinding = globalShortcutBindings.find((candidate) => candidate.action === 'toggleTheme');
+
+        expect(openProjectFolderBinding?.keys[0]).toBe('o');
+        expect(openProjectFolderBinding?.requireAlt).toBe(true);
+        expect(openProjectFolderBinding?.requireMod).toBe(true);
+
+        expect(toggleThemeBinding?.keys[0]).toBe('t');
+        expect(toggleThemeBinding?.requireAlt).toBe(true);
+        expect(toggleThemeBinding?.requireMod).toBe(true);
     });
 
     it('includes default audiosheet key bindings', () => {

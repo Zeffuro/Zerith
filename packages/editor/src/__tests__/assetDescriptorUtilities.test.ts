@@ -4,6 +4,7 @@ import { createSliceHarness } from '../test-utils/createSliceHarness';
 import {
     detectDescriptorType,
     getAssetPathFromDescriptor,
+    getSheetDescriptorCandidatePaths,
     getSheetDescriptorPath,
     isSheetDescriptor,
 } from '../utils/assetDescriptorUtilities';
@@ -21,8 +22,17 @@ describe('assetDescriptorUtilities', () => {
         expect(getAssetPathFromDescriptor('sprites/hero.sheet.json')).toBe('sprites/hero');
     });
 
-    it('isSheetDescriptor returns true only for .sheet.json names', () => {
+    it('getAssetPathFromDescriptor leaves non-canonical descriptor suffixes unchanged', () => {
+        expect(getAssetPathFromDescriptor('sprites/hero.atlas.json')).toBe('sprites/hero.atlas.json');
+    });
+
+    it('getSheetDescriptorCandidatePaths returns only canonical descriptor paths', () => {
+        expect(getSheetDescriptorCandidatePaths('sprites/hero.png')).toEqual(['sprites/hero.sheet.json']);
+    });
+
+    it('isSheetDescriptor returns true only for canonical descriptor names', () => {
         expect(isSheetDescriptor('hero.sheet.json')).toBe(true);
+        expect(isSheetDescriptor('hero.atlas.json')).toBe(false);
         expect(isSheetDescriptor('hero.json')).toBe(false);
         expect(isSheetDescriptor('hero.png')).toBe(false);
     });

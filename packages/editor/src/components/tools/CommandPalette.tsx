@@ -1,11 +1,14 @@
 import { type KeyboardEventHandler, useCallback, useState } from 'react';
 
+import { fsOpenPath } from '../../services/fs';
 import { openProjectEntry } from '../../services/openProjectEntry';
+import { saveProjectAs } from '../../services/saveProjectAs';
 import { executeCloseProjectAction } from '../../store/actions/projectOpenActions';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { editorTheme as t } from '../../theme/editorTheme';
+import { getThemeRegistry } from '../../theme/themeRegistry';
 import { buildCommandPaletteActions } from './commandPaletteActionsModel';
 import { executeSelectedAction, reduceCommandPaletteKey } from './commandPaletteInteractionModel';
 import {
@@ -27,16 +30,29 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
 
     const activeFile = useProjectStore((state) => state.activeFile);
     const openProjectFromManifest = useProjectStore((state) => state.openProjectFromManifest);
+    const projectPath = useProjectStore((state) => state.projectPath);
     const saveActiveFileFromCurrentScript = useProjectStore((state) => state.saveActiveFileFromCurrentScript);
     const saveAllDirtyFiles = useProjectStore((state) => state.saveAllDirtyFiles);
 
     const clearAllBreakpoints = useEditorStore((state) => state.clearAllBreakpoints);
+    const captureDockLayoutJson = useEditorStore((state) => state.captureDockLayoutJson);
     const isPlaybackPaused = useEditorStore((state) => state.isPlaybackPaused);
     const markManualSave = useEditorStore((state) => state.markManualSave);
+    const openExportGameModal = useEditorStore((state) => state.openExportGameModal);
     const openGlobalSearchPopup = useEditorStore((state) => state.openGlobalSearchPopup);
     const openGlobalSearchReplacePopup = useEditorStore((state) => state.openGlobalSearchReplacePopup);
+    const openNewProjectModal = useEditorStore((state) => state.openNewProjectModal);
     const openSettingsModal = useEditorStore((state) => state.openSettingsModal);
+    const setDockLayoutJson = useEditorStore((state) => state.setDockLayoutJson);
+    const setThemeKey = useEditorStore((state) => state.setThemeKey);
+    const themeKey = useEditorStore((state) => state.themeKey);
+    const activeDockLayoutPresetId = useSettingsStore((state) => state.activeDockLayoutPresetId);
     const recentProjects = useSettingsStore((state) => state.recentProjects);
+    const customThemes = useSettingsStore((state) => state.customThemes);
+    const deleteDockLayoutPreset = useSettingsStore((state) => state.deleteDockLayoutPreset);
+    const dockLayoutPresets = useSettingsStore((state) => state.dockLayoutPresets);
+    const saveDockLayoutPreset = useSettingsStore((state) => state.saveDockLayoutPreset);
+    const setActiveDockLayoutPresetId = useSettingsStore((state) => state.setActiveDockLayoutPresetId);
     const resetDockLayout = useEditorStore((state) => state.resetDockLayout);
     const addRecentProject = useEditorStore((state) => state.addRecentProject);
     const triggerPause = useEditorStore((state) => state.triggerPause);
@@ -48,6 +64,7 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
     const stopTrigger = useEditorStore((state) => state.stopTrigger);
 
     const isRunning = playTrigger > stopTrigger;
+    const availableThemeKeys = getThemeRegistry(customThemes).map((theme) => theme.key);
 
     const handleOpenInitialProjectEntry = useCallback(async () => {
         const { expandToPath, manifest, projectPath } = useProjectStore.getState();
@@ -59,23 +76,66 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
         });
     }, []);
 
+    const handleSaveProjectAs = useCallback(async () => {
+        if (!projectPath) return;
+
+        try {
+            markManualSave();
+            await saveAllDirtyFiles();
+
+            const result = await saveProjectAs(projectPath);
+            if (!result) return;
+
+            await openProjectFromManifest(result.manifestPath);
+            addRecentProject(result.manifestPath);
+            await handleOpenInitialProjectEntry();
+        } catch (error) {
+            console.error('Save Project As from command palette failed:', error);
+        }
+    }, [addRecentProject, handleOpenInitialProjectEntry, markManualSave, openProjectFromManifest, projectPath, saveAllDirtyFiles]);
+
+    const handleOpenProjectFolder = useCallback(async () => {
+        if (!projectPath) return;
+
+        try {
+            await fsOpenPath(projectPath);
+        } catch (error) {
+            console.error('Open project folder from command palette failed:', error);
+        }
+    }, [projectPath]);
+
     const actionDeps = {
+        activeDockLayoutPresetId,
         activeFile,
         addRecentProject,
+        availableThemeKeys,
+        captureDockLayoutJson,
         clearAllBreakpoints,
         closeProject: executeCloseProjectAction,
+        deleteDockLayoutPreset,
+        dockLayoutPresets,
         isPlaybackPaused,
         isRunning,
         markManualSave,
+        openExportGameModal,
         openGlobalSearchPopup,
         openGlobalSearchReplacePopup,
         openInitialProjectEntry: handleOpenInitialProjectEntry,
+        openNewProjectModal,
+        openProjectFolder: handleOpenProjectFolder,
         openProjectFromManifest,
         openSettingsModal,
+        projectPath,
         recentProjects,
         resetDockLayout,
+        saveDockLayoutPreset,
         saveActiveFileFromCurrentScript,
         saveAllDirtyFiles,
+        saveProjectAs: handleSaveProjectAs,
+        setActiveDockLayoutPresetId,
+        setDockLayoutJson,
+        setThemeKey,
+        themeKey,
         triggerPause,
         triggerPlay,
         triggerResume,

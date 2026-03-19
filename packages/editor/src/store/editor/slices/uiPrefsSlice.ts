@@ -39,6 +39,7 @@ export function createUiPrefsSlice(set: EditorSet): UiPrefsSlice {
         },
         closeCommandPalette: () => set({ isCommandPaletteOpen: false }),
         closeExportGameModal: () => set({ isExportGameModalOpen: false }),
+        closeNewProjectModal: () => set({ isNewProjectModalOpen: false }),
         closeGlobalSearchPopup: () => set({ isGlobalSearchPopupOpen: false }),
         closeSettingsModal: () => set({ isSettingsModalOpen: false }),
         globalSearchLaunchMode: 'find',
@@ -46,12 +47,14 @@ export function createUiPrefsSlice(set: EditorSet): UiPrefsSlice {
         isExportGameModalOpen: false,
         isGlobalSearchPopupOpen: false,
         isMuted,
+        isNewProjectModalOpen: false,
         isProjectCloseRequested: false,
         isSettingsModalOpen: false,
         lastManualSaveAt: 0,
         markManualSave: () => set({ lastManualSaveAt: Date.now() }),
         openCommandPalette: () => set({ isCommandPaletteOpen: true }),
         openExportGameModal: () => set({ isExportGameModalOpen: true }),
+        openNewProjectModal: () => set({ isNewProjectModalOpen: true }),
         openGlobalSearchPopup: (globalSearchLaunchMode = 'find') =>
             set((state) => state.isSettingsModalOpen ? {} : { globalSearchLaunchMode, isGlobalSearchPopupOpen: true }),
         openGlobalSearchReplacePopup: () =>
@@ -90,6 +93,7 @@ export function createUiPrefsSlice(set: EditorSet): UiPrefsSlice {
             getSettingsSnapshot().setIsMuted(nextIsMuted);
             return { isMuted: nextIsMuted };
         }),
+        toggleNewProjectModal: () => set((state) => ({ isNewProjectModalOpen: !state.isNewProjectModalOpen })),
         toggleSettingsModal: () => set((state) => ({ isSettingsModalOpen: !state.isSettingsModalOpen })),
         uiScale,
         windowState,

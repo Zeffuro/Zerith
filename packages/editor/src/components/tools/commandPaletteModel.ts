@@ -38,10 +38,17 @@ export function filterActions<T extends CommandPaletteSearchableAction>(actions:
     const normalizedQuery = query.trim().toLowerCase();
     if (normalizedQuery.length === 0) return actions;
 
-    return actions.filter((action) => {
-        const haystack = `${action.label} ${action.keywords}`.toLowerCase();
-        return haystack.includes(normalizedQuery);
-    });
+    return actions
+        .map((action) => ({
+            action,
+            score: scoreAction(action, normalizedQuery),
+        }))
+        .filter((entry) => entry.score > 0)
+        .toSorted((a, b) => {
+            if (a.score !== b.score) return b.score - a.score;
+            return a.action.label.localeCompare(b.action.label);
+        })
+        .map((entry) => entry.action);
 }
 
 export function nextSelectionIndex(current: number, length: number, delta: -1 | 1): number {
@@ -91,9 +98,51 @@ export function shouldShowEmptyActions(actionCount: number): boolean {
 
 export function toRenderableActions(actions: PaletteAction[]): RenderablePaletteAction[] {
     return actions.map((action) => ({
-        hintText: action.hint ?? '',
+        hintText: action.shortcut ?? '',
         id: action.id,
         label: action.label,
     }));
+}
+
+function scoreAction(action: CommandPaletteSearchableAction, normalizedQuery: string): number {
+    const haystack = `${action.label} ${action.keywords}`.toLowerCase();
+    const label = action.label.toLowerCase();
+
+    if (label.startsWith(normalizedQuery)) return 1000 - label.indexOf(normalizedQuery);
+
+    const exactIndex = haystack.indexOf(normalizedQuery);
+    if (exactIndex !== -1) return 800 - exactIndex;
+
+    const compactQuery = normalizedQuery.replaceAll(/\s+/g, '');
+    if (compactQuery.length === 0) return 0;
+
+    const labelFuzzy = subsequenceScore(label, compactQuery);
+    const haystackFuzzy = subsequenceScore(haystack, compactQuery);
+    return Math.max(labelFuzzy, haystackFuzzy);
+}
+
+function subsequenceScore(target: string, query: string): number {
+    let score = 0;
+    let previousIndex = -1;
+    let consecutiveMatches = 0;
+
+    for (const character of query) {
+        const index = target.indexOf(character, previousIndex + 1);
+        if (index === -1) return 0;
+
+        if (index === previousIndex + 1) {
+            consecutiveMatches += 1;
+            score += 4 + consecutiveMatches;
+        } else {
+            consecutiveMatches = 0;
+            score += 2;
+        }
+
+        if (index <= 2) score += 2;
+
+        previousIndex = index;
+    }
+
+    return score;
 }
 

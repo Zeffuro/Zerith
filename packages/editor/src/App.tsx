@@ -4,6 +4,7 @@ import { ConfirmDialog } from './components/ConfirmDialog';
 import { SpritesheetAutoSliceDialog } from './components/editors/SpritesheetAutoSliceDialog';
 import { ExportGameModal } from './components/export/ExportGameModal';
 import { DockLayoutHost } from './components/layout/DockLayoutHost';
+import { NewProjectModal } from './components/project/NewProjectModal';
 import { SettingsModal } from './components/settings/SettingsModal';
 import './App.css';
 import { useAutosave } from './hooks/useAutosave';
@@ -11,6 +12,7 @@ import { useAutoSliceDialog } from './hooks/useAutoSliceDialog';
 import { useClosePrompt } from './hooks/useClosePrompt';
 import { useGlobalEditorShortcuts } from './hooks/useGlobalEditorShortcuts';
 import { useLiveScriptValidation } from './hooks/useLiveScriptValidation';
+import { useProjectFileWatcher } from './hooks/useProjectFileWatcher';
 import { useReferenceScanner } from './hooks/useReferenceScanner';
 import { useScriptDirtyTracking } from './hooks/useScriptDirtyTracking';
 import { useWindowStateRestore } from './hooks/useWindowStateRestore';
@@ -45,6 +47,7 @@ function App() {
     useGlobalEditorShortcuts();
     useLiveScriptValidation(rootScript);
     useAutosave();
+    useProjectFileWatcher();
     useReferenceScanner();
     useScriptDirtyTracking();
     useWindowStateRestore();
@@ -64,6 +67,7 @@ function App() {
             <DockLayoutHost />
             <SettingsModal />
             <ExportGameModal />
+            <NewProjectModal />
             <ConfirmDialog
                 cancelText="Cancel"
                 confirmText={isClosingWithSave ? 'Saving...' : 'Save All'}

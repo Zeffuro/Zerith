@@ -12,7 +12,10 @@ import { SettingsThemeEditor } from './SettingsThemeEditor';
 type SettingsAppearancePanelProperties = {
     changedControlIds: ReadonlySet<string>;
     customThemes: CustomThemeEntry[];
+    editorScale: number | undefined;
+    explorerScale: number | undefined;
     focusedControlId: SettingsControlId | undefined;
+    inspectorScale: number | undefined;
     matchedControlIds: ReadonlySet<string>;
     onAddCustomTheme: (theme: CustomThemeEntry) => void;
     onDeleteCustomTheme: (key: string) => void;
@@ -20,10 +23,15 @@ type SettingsAppearancePanelProperties = {
     onUpdateCustomTheme: (key: string, updates: Partial<Omit<CustomThemeEntry, 'key'>>) => void;
     panelId: string;
     searchQuery: string;
+    setEditorScale: (scale: number | undefined) => void;
+    setExplorerScale: (scale: number | undefined) => void;
+    setInspectorScale: (scale: number | undefined) => void;
     setThemeKey: (key: string) => void;
+    setTimelineScale: (scale: number | undefined) => void;
     setUiScale: (scale: number) => void;
     showChangedOnly: boolean;
     themeKey: string;
+    timelineScale: number | undefined;
     uiScale: number;
 };
 
@@ -47,7 +55,10 @@ const previewVariableOrder = [
 export function SettingsAppearancePanel({
     changedControlIds,
     customThemes,
+    editorScale,
+    explorerScale,
     focusedControlId,
+    inspectorScale,
     matchedControlIds,
     onAddCustomTheme,
     onDeleteCustomTheme,
@@ -55,10 +66,15 @@ export function SettingsAppearancePanel({
     onUpdateCustomTheme,
     panelId,
     searchQuery,
+    setEditorScale,
+    setExplorerScale,
+    setInspectorScale,
     setThemeKey,
+    setTimelineScale,
     setUiScale,
     showChangedOnly,
     themeKey,
+    timelineScale,
     uiScale,
 }: SettingsAppearancePanelProperties) {
     const themes = useMemo(() => getThemeRegistry(customThemes), [customThemes]);
@@ -67,14 +83,30 @@ export function SettingsAppearancePanel({
     const themeChanged = changedControlIds.has('theme');
     const customThemesChanged = changedControlIds.has('customThemes');
     const scaleChanged = changedControlIds.has('uiScale');
+    const timelineScaleChanged = changedControlIds.has('timelineScale');
+    const inspectorScaleChanged = changedControlIds.has('inspectorScale');
+    const explorerScaleChanged = changedControlIds.has('explorerScale');
+    const editorScaleChanged = changedControlIds.has('editorScale');
 
     const showThemeRow = visibleControlIds.has('theme') && matchedControlIds.has('theme') && (!showChangedOnly || themeChanged);
     const showCustomThemesRow = visibleControlIds.has('customThemes')
         && matchedControlIds.has('customThemes')
         && (!showChangedOnly || customThemesChanged);
     const showScaleRow = visibleControlIds.has('uiScale') && matchedControlIds.has('uiScale') && (!showChangedOnly || scaleChanged);
+    const showTimelineScaleRow = visibleControlIds.has('timelineScale')
+        && matchedControlIds.has('timelineScale')
+        && (!showChangedOnly || timelineScaleChanged);
+    const showInspectorScaleRow = visibleControlIds.has('inspectorScale')
+        && matchedControlIds.has('inspectorScale')
+        && (!showChangedOnly || inspectorScaleChanged);
+    const showExplorerScaleRow = visibleControlIds.has('explorerScale')
+        && matchedControlIds.has('explorerScale')
+        && (!showChangedOnly || explorerScaleChanged);
+    const showEditorScaleRow = visibleControlIds.has('editorScale')
+        && matchedControlIds.has('editorScale')
+        && (!showChangedOnly || editorScaleChanged);
 
-    if (!showThemeRow && !showCustomThemesRow && !showScaleRow) {
+    if (!showThemeRow && !showCustomThemesRow && !showScaleRow && !showTimelineScaleRow && !showInspectorScaleRow && !showExplorerScaleRow && !showEditorScaleRow) {
         return (
             <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
                 {showChangedOnly
@@ -232,6 +264,58 @@ export function SettingsAppearancePanel({
                     </div>
                 </EditableSettingRow>
             ) : undefined}
+
+            {showTimelineScaleRow ? (
+                <PerComponentScaleRow
+                    controlId="timelineScale"
+                    focusedControlId={focusedControlId}
+                    isChanged={timelineScaleChanged}
+                    label="Timeline Scale"
+                    onSetDetailRowReference={onSetDetailRowReference}
+                    scale={timelineScale}
+                    setScale={setTimelineScale}
+                    uiScale={uiScale}
+                />
+            ) : undefined}
+
+            {showInspectorScaleRow ? (
+                <PerComponentScaleRow
+                    controlId="inspectorScale"
+                    focusedControlId={focusedControlId}
+                    isChanged={inspectorScaleChanged}
+                    label="Inspector Scale"
+                    onSetDetailRowReference={onSetDetailRowReference}
+                    scale={inspectorScale}
+                    setScale={setInspectorScale}
+                    uiScale={uiScale}
+                />
+            ) : undefined}
+
+            {showExplorerScaleRow ? (
+                <PerComponentScaleRow
+                    controlId="explorerScale"
+                    focusedControlId={focusedControlId}
+                    isChanged={explorerScaleChanged}
+                    label="Explorer Scale"
+                    onSetDetailRowReference={onSetDetailRowReference}
+                    scale={explorerScale}
+                    setScale={setExplorerScale}
+                    uiScale={uiScale}
+                />
+            ) : undefined}
+
+            {showEditorScaleRow ? (
+                <PerComponentScaleRow
+                    controlId="editorScale"
+                    focusedControlId={focusedControlId}
+                    isChanged={editorScaleChanged}
+                    label="Editor Surface Scale"
+                    onSetDetailRowReference={onSetDetailRowReference}
+                    scale={editorScale}
+                    setScale={setEditorScale}
+                    uiScale={uiScale}
+                />
+            ) : undefined}
         </>
     );
 }
@@ -322,6 +406,58 @@ function getThemeSwatches(variables: ThemeVariables): ThemeSwatch[] {
             }]
             : [];
     });
+}
+
+function PerComponentScaleRow({
+    controlId,
+    focusedControlId,
+    isChanged,
+    label,
+    onSetDetailRowReference,
+    scale,
+    setScale,
+    uiScale,
+}: {
+    controlId: 'editorScale' | 'explorerScale' | 'inspectorScale' | 'timelineScale';
+    focusedControlId: SettingsControlId | undefined;
+    isChanged: boolean;
+    label: string;
+    onSetDetailRowReference: (controlId: SettingsControlId, element: HTMLDivElement | null) => void;
+    scale: number | undefined;
+    setScale: (scale: number | undefined) => void;
+    uiScale: number;
+}) {
+    const effectiveScale = scale ?? uiScale;
+
+    return (
+        <EditableSettingRow
+            controlId={controlId}
+            isChanged={isChanged}
+            isFocused={focusedControlId === controlId}
+            label={label}
+            onSetDetailRowReference={onSetDetailRowReference}
+            uiScale={uiScale}
+        >
+            <div style={{ display: 'grid', gap: `${8 * uiScale}px` }}>
+                <select
+                    onChange={(event) => {
+                        const value = event.currentTarget.value;
+                        setScale(value === 'global' ? undefined : Number(value));
+                    }}
+                    style={settingsInputStyle(uiScale)}
+                    value={scale === undefined ? 'global' : String(scale)}
+                >
+                    <option value="global">Follow global ({Math.round(uiScale * 100)}%)</option>
+                    {[0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.4, 1.5].map((value) => (
+                        <option key={value} value={String(value)}>{Math.round(value * 100)}%</option>
+                    ))}
+                </select>
+                <span style={{ color: t.text.muted, fontSize: `${11 * uiScale}px` }}>
+                    Effective scale: {Math.round(effectiveScale * 100)}%
+                </span>
+            </div>
+        </EditableSettingRow>
+    );
 }
 
 function settingsInputStyle(uiScale: number): CSSProperties {

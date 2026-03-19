@@ -6,6 +6,7 @@ import type {
 } from './types';
 
 import { isRecord } from '../../utils/typeGuards';
+import { normalizeAssetReference } from './assets';
 import { getCommandFieldHints } from './schemaHints';
 import {
     extractTemplateVariables,
@@ -29,6 +30,11 @@ export function scanCommandReferences(
         const value = command[field];
         if (typeof value === 'string' && value) {
             pushListReference(result.assets, value, location);
+
+            const normalizedAssetPath = normalizeAssetReference(value);
+            if (normalizedAssetPath) {
+                pushListReference(result.assetFiles, normalizedAssetPath, location);
+            }
         }
     }
 

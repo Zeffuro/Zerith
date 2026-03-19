@@ -1,3 +1,5 @@
+const CANONICAL_DESCRIPTOR_SUFFIX = '.sheet.json';
+
 export function detectDescriptorType(data: unknown): 'audiosheet' | 'spritesheet' | 'unknown' {
     if (typeof data !== 'object' || data === null) {
         return 'unknown';
@@ -22,17 +24,24 @@ export function detectDescriptorType(data: unknown): 'audiosheet' | 'spritesheet
 }
 
 export function getAssetPathFromDescriptor(descriptorPath: string): string {
-    return descriptorPath.endsWith('.sheet.json')
-        ? descriptorPath.slice(0, -'.sheet.json'.length)
-        : descriptorPath;
+    if (descriptorPath.endsWith(CANONICAL_DESCRIPTOR_SUFFIX)) {
+        return descriptorPath.slice(0, -CANONICAL_DESCRIPTOR_SUFFIX.length);
+    }
+
+    return descriptorPath;
 }
 
 export function getSheetDescriptorPath(assetPath: string): string {
-    return `${stripTrailingExtension(assetPath)}.sheet.json`;
+    return `${stripTrailingExtension(assetPath)}${CANONICAL_DESCRIPTOR_SUFFIX}`;
+}
+
+export function getSheetDescriptorCandidatePaths(assetPath: string): string[] {
+    const basePath = stripTrailingExtension(assetPath);
+    return [`${basePath}${CANONICAL_DESCRIPTOR_SUFFIX}`];
 }
 
 export function isSheetDescriptor(filename: string): boolean {
-    return filename.endsWith('.sheet.json');
+    return filename.endsWith(CANONICAL_DESCRIPTOR_SUFFIX);
 }
 
 function stripTrailingExtension(path: string): string {

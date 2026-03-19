@@ -12,14 +12,12 @@ describe('extractPersistedEditorState', () => {
     it('keeps editor-owned persisted keys only', () => {
         const value = {
             breakpoints: { '/scripts/intro.json': [1, 3] },
-            quickCommandTypes: ['wait'],
             recentProjects: [{ lastOpened: 7, name: 'A', path: '/a' }],
         };
 
         const output = extractPersistedEditorState(value);
 
         expect(output.breakpoints).toEqual({ '/scripts/intro.json': [1, 3] });
-        expect(output.quickCommandTypes).toEqual(['wait']);
         expect(output).not.toHaveProperty('recentProjects');
         expect(output).not.toHaveProperty('windowState');
     });

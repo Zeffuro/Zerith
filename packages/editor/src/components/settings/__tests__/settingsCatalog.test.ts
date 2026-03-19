@@ -60,7 +60,9 @@ describe('filterSettingsTree', () => {
             'editor-monaco': 0,
             general: 0,
             'general-autosave': 0,
+            'general-layout': 0,
             'general-playback': 0,
+            'general-quickbuttons': 0,
             keymap: 3,
         });
     });

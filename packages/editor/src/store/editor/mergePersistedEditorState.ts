@@ -20,7 +20,6 @@ export function mergePersistedEditorState(
         breakpoints: persistedState.breakpoints ?? current.breakpoints,
         dockLayoutJson: normalized.dockLayoutJson,
         dockLayoutVersion: normalized.dockLayoutVersion,
-        quickCommandTypes: persistedState.quickCommandTypes ?? current.quickCommandTypes,
     };
 }
 

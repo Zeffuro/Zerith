@@ -3,6 +3,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { editorTheme as t } from '../../theme/editorTheme';
 import { ConfirmDialog } from '../ConfirmDialog';
+import {
+    applySpritesheetButtonHover,
+    applySpritesheetButtonPressed,
+    resetSpritesheetButtonBackground,
+    spritesheetButtonStyle,
+} from './spritesheetButtonStyles';
 import { computeThumbnailCanvasMetrics } from './spritesheetEditorModel';
 
 const FRAME_MIME = 'application/x-zerith-frame';
@@ -59,19 +65,20 @@ export function SpritesheetFrameList({
                                     event.dataTransfer.setData(FRAME_MIME, name);
                                     event.dataTransfer.setData('text/plain', name);
                                 }}
+                                onMouseDown={(event) => applySpritesheetButtonPressed(event, false, isSelected)}
+                                onMouseEnter={(event) => applySpritesheetButtonHover(event, false, isSelected)}
+                                onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, isSelected)}
+                                onMouseUp={(event) => applySpritesheetButtonHover(event, false, isSelected)}
                                 style={{
                                     alignItems: 'center',
-                                    background: isSelected ? t.bg.selected : t.bg.panel,
-                                    border: `1px solid ${isSelected ? t.accent.primary : t.border.input}`,
-                                    borderRadius: t.radius.sm,
-                                    color: t.text.normal,
-                                    cursor: 'pointer',
                                     display: 'grid',
                                     gap: 8,
                                     gridTemplateColumns: '56px minmax(0, 1fr)',
                                     padding: 6,
                                     textAlign: 'left',
+                                    ...spritesheetButtonStyle({ active: isSelected }),
                                 }}
+                                type="button"
                             >
                                 <FrameThumbnail frame={frame} image={image} uiScale={uiScale} />
                                 <div style={{ minWidth: 0 }}>
@@ -86,14 +93,36 @@ export function SpritesheetFrameList({
 
             {(onAddFrame || onRemoveFrame) ? (
                 <div style={{ display: 'flex', gap: 8 }}>
-                    <button disabled={!onAddFrame} onClick={() => onAddFrame?.()} style={{ flex: 1 }}>Add Frame</button>
+                    <button
+                        disabled={!onAddFrame}
+                        onClick={() => onAddFrame?.()}
+                        onMouseDown={(event) => applySpritesheetButtonPressed(event, !onAddFrame, false)}
+                        onMouseEnter={(event) => applySpritesheetButtonHover(event, !onAddFrame, false)}
+                        onMouseLeave={(event) => resetSpritesheetButtonBackground(event, !onAddFrame, false)}
+                        onMouseUp={(event) => applySpritesheetButtonHover(event, !onAddFrame, false)}
+                        style={{
+                            flex: 1,
+                            ...spritesheetButtonStyle({ disabled: !onAddFrame }),
+                        }}
+                        type="button"
+                    >
+                        Add Frame
+                    </button>
                     <button
                         disabled={!onRemoveFrame || !selectedFrame}
                         onClick={() => {
                             if (!selectedFrame || !onRemoveFrame) return;
                             setPendingFrameRemoval(selectedFrame);
                         }}
-                        style={{ flex: 1 }}
+                        onMouseDown={(event) => applySpritesheetButtonPressed(event, !onRemoveFrame || !selectedFrame, false)}
+                        onMouseEnter={(event) => applySpritesheetButtonHover(event, !onRemoveFrame || !selectedFrame, false)}
+                        onMouseLeave={(event) => resetSpritesheetButtonBackground(event, !onRemoveFrame || !selectedFrame, false)}
+                        onMouseUp={(event) => applySpritesheetButtonHover(event, !onRemoveFrame || !selectedFrame, false)}
+                        style={{
+                            flex: 1,
+                            ...spritesheetButtonStyle({ disabled: !onRemoveFrame || !selectedFrame }),
+                        }}
+                        type="button"
                     >
                         Remove Frame
                     </button>

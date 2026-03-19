@@ -1,46 +1,69 @@
-import { type CSSProperties, type ReactNode } from 'react';
+import { type CSSProperties, type ReactNode, useMemo } from 'react';
 
+import type { NonMacroEditorCommandType } from '../../plugins/types';
+import type { DockLayoutPreset } from '../../store/settings/SettingsSchema';
+
+import { getAllPlugins } from '../../plugins/commandPlugins';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { getVisibleSettingsControls, type SettingsControlId } from './settingsControlRegistry';
 
 type SettingsGeneralPanelProperties = {
+    activeDockLayoutPresetId: string | undefined;
     audiosheetShortcutTargetMode: 'cursor' | 'playhead';
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
     changedControlIds: ReadonlySet<string>;
+    dockLayoutPresets: DockLayoutPreset[];
     focusedControlId: SettingsControlId | undefined;
     isMuted: boolean;
     matchedControlIds: ReadonlySet<string>;
+    moveQuickCommandType: (type: NonMacroEditorCommandType, direction: 'left' | 'right') => void;
     onSetDetailRowReference: (controlId: SettingsControlId, element: HTMLDivElement | null) => void;
+    onDeleteDockLayoutPreset: (id: string) => void;
+    onLoadDockLayoutPreset: (presetId: string) => void;
+    onResetDockLayoutToDefault: () => void;
+    onSaveCurrentDockLayoutPreset: (name: string) => void;
     panelId: string;
+    quickCommandTypes: NonMacroEditorCommandType[];
     searchQuery: string;
     setAudiosheetShortcutTargetMode: (mode: 'cursor' | 'playhead') => void;
     setAutosaveEnabled: (enabled: boolean) => void;
     setAutosaveIntervalMs: (intervalMs: number) => void;
     showChangedOnly: boolean;
     toggleMute: () => void;
+    toggleQuickCommandType: (type: NonMacroEditorCommandType) => void;
     uiScale: number;
 };
 
 export function SettingsGeneralPanel({
+    activeDockLayoutPresetId,
     audiosheetShortcutTargetMode,
     autosaveEnabled,
     autosaveIntervalMs,
     changedControlIds,
+    dockLayoutPresets,
     focusedControlId,
     isMuted,
     matchedControlIds,
+    moveQuickCommandType,
     onSetDetailRowReference,
+    onDeleteDockLayoutPreset,
+    onLoadDockLayoutPreset,
+    onResetDockLayoutToDefault,
+    onSaveCurrentDockLayoutPreset,
     panelId,
+    quickCommandTypes,
     searchQuery,
     setAudiosheetShortcutTargetMode,
     setAutosaveEnabled,
     setAutosaveIntervalMs,
     showChangedOnly,
     toggleMute,
+    toggleQuickCommandType,
     uiScale,
 }: SettingsGeneralPanelProperties) {
     const visibleControlIds = new Set(getVisibleSettingsControls(panelId));
+    const quickCommandPlugins = useMemo(() => getAllPlugins(), []);
     const autosaveIntervalSeconds = Math.max(5, Math.round(autosaveIntervalMs / 1000));
     const autosaveIntervalLabel = `Autosave interval: ${autosaveIntervalSeconds}s`;
 
@@ -48,6 +71,8 @@ export function SettingsGeneralPanel({
     const autosaveIntervalChanged = changedControlIds.has('autosaveIntervalMs');
     const audioChanged = changedControlIds.has('audio');
     const audiosheetShortcutTargetModeChanged = changedControlIds.has('audiosheetShortcutTargetMode');
+    const dockLayoutPresetsChanged = changedControlIds.has('dockLayoutPresets');
+    const quickCommandTypesChanged = changedControlIds.has('quickCommandTypes');
 
     const showAutosaveRow = visibleControlIds.has('autosaveEnabled') && matchedControlIds.has('autosaveEnabled') && (!showChangedOnly || autosaveChanged);
     const showAutosaveIntervalRow = visibleControlIds.has('autosaveIntervalMs') && matchedControlIds.has('autosaveIntervalMs') && (!showChangedOnly || autosaveIntervalChanged);
@@ -56,8 +81,16 @@ export function SettingsGeneralPanel({
         visibleControlIds.has('audiosheetShortcutTargetMode')
         && matchedControlIds.has('audiosheetShortcutTargetMode')
         && (!showChangedOnly || audiosheetShortcutTargetModeChanged);
+    const showDockLayoutPresetsRow =
+        visibleControlIds.has('dockLayoutPresets')
+        && matchedControlIds.has('dockLayoutPresets')
+        && (!showChangedOnly || dockLayoutPresetsChanged);
+    const showQuickCommandTypesRow =
+        visibleControlIds.has('quickCommandTypes')
+        && matchedControlIds.has('quickCommandTypes')
+        && (!showChangedOnly || quickCommandTypesChanged);
 
-    if (!showAutosaveRow && !showAutosaveIntervalRow && !showAudioRow && !showAudiosheetShortcutTargetModeRow) {
+    if (!showAutosaveRow && !showAutosaveIntervalRow && !showAudioRow && !showAudiosheetShortcutTargetModeRow && !showDockLayoutPresetsRow && !showQuickCommandTypesRow) {
         return (
             <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
                 {showChangedOnly
@@ -172,6 +205,136 @@ export function SettingsGeneralPanel({
                     </select>
                 </EditableSettingRow>
             ) : undefined}
+
+            {showQuickCommandTypesRow ? (
+                <EditableSettingRow
+                    controlId="quickCommandTypes"
+                    isChanged={quickCommandTypesChanged}
+                    isFocused={focusedControlId === 'quickCommandTypes'}
+                    label="Quick Buttons"
+                    onSetDetailRowReference={onSetDetailRowReference}
+                    uiScale={uiScale}
+                >
+                    <div style={{ display: 'grid', gap: `${6 * uiScale}px` }}>
+                        {quickCommandPlugins.map((plugin) => {
+                            const isActive = quickCommandTypes.includes(plugin.type);
+                            return (
+                                <div
+                                    key={plugin.type}
+                                    style={{
+                                        alignItems: 'center',
+                                        background: isActive ? t.bg.hover : 'transparent',
+                                        borderRadius: t.radius.sm,
+                                        display: 'grid',
+                                        gap: `${6 * uiScale}px`,
+                                        gridTemplateColumns: '1fr auto auto auto',
+                                        padding: `${6 * uiScale}px`,
+                                    }}
+                                >
+                                    <button
+                                        onClick={() => toggleQuickCommandType(plugin.type)}
+                                        style={{
+                                            alignItems: 'center',
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: isActive ? t.text.primary : t.text.muted,
+                                            cursor: 'pointer',
+                                            display: 'inline-flex',
+                                            gap: `${8 * uiScale}px`,
+                                            padding: 0,
+                                            textAlign: 'left',
+                                        }}
+                                        type="button"
+                                    >
+                                        {plugin.icon(14 * uiScale)}
+                                        <span>{plugin.label}</span>
+                                        <span style={{ color: t.text.faint, fontSize: `${11 * uiScale}px` }}>({plugin.type})</span>
+                                    </button>
+                                    <button
+                                        disabled={!isActive}
+                                        onClick={() => moveQuickCommandType(plugin.type, 'left')}
+                                        style={quickMoveButtonStyle(isActive, uiScale)}
+                                        title="Move left"
+                                        type="button"
+                                    >
+                                        {'<'}
+                                    </button>
+                                    <button
+                                        disabled={!isActive}
+                                        onClick={() => moveQuickCommandType(plugin.type, 'right')}
+                                        style={quickMoveButtonStyle(isActive, uiScale)}
+                                        title="Move right"
+                                        type="button"
+                                    >
+                                        {'>'}
+                                    </button>
+                                    <span style={{ color: isActive ? t.accent.green : t.text.faint, fontSize: `${11 * uiScale}px` }}>
+                                        {isActive ? 'ON' : 'OFF'}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </EditableSettingRow>
+            ) : undefined}
+
+            {showDockLayoutPresetsRow ? (
+                <EditableSettingRow
+                    controlId="dockLayoutPresets"
+                    isChanged={dockLayoutPresetsChanged}
+                    isFocused={focusedControlId === 'dockLayoutPresets'}
+                    label="Dock Layout"
+                    onSetDetailRowReference={onSetDetailRowReference}
+                    uiScale={uiScale}
+                >
+                    <div style={{ display: 'grid', gap: `${8 * uiScale}px` }}>
+                        <div style={{ display: 'grid', gap: `${6 * uiScale}px`, gridTemplateColumns: '1fr auto auto auto' }}>
+                            <select
+                                onChange={(event) => onLoadDockLayoutPreset(event.currentTarget.value)}
+                                style={settingsInputStyle(uiScale)}
+                                value={activeDockLayoutPresetId ?? ''}
+                            >
+                                <option value="">Current (unsaved)</option>
+                                {dockLayoutPresets.map((preset) => (
+                                    <option key={preset.id} value={preset.id}>{preset.name}</option>
+                                ))}
+                            </select>
+                            <button
+                                onClick={() => {
+                                    const nextName = globalThis.prompt('Save current layout as preset', 'My Layout')?.trim();
+                                    if (!nextName) return;
+                                    onSaveCurrentDockLayoutPreset(nextName);
+                                }}
+                                style={settingsActionButtonStyle(uiScale)}
+                                type="button"
+                            >
+                                Save Layout
+                            </button>
+                            <button
+                                disabled={!activeDockLayoutPresetId}
+                                onClick={() => {
+                                    if (!activeDockLayoutPresetId) return;
+                                    onDeleteDockLayoutPreset(activeDockLayoutPresetId);
+                                }}
+                                style={settingsActionButtonStyle(uiScale)}
+                                type="button"
+                            >
+                                Delete
+                            </button>
+                            <button
+                                onClick={onResetDockLayoutToDefault}
+                                style={settingsActionButtonStyle(uiScale)}
+                                type="button"
+                            >
+                                Reset to Default
+                            </button>
+                        </div>
+                        <span style={{ color: t.text.muted, fontSize: `${11 * uiScale}px` }}>
+                            Save the current panel arrangement, switch presets, or return to the default layout.
+                        </span>
+                    </div>
+                </EditableSettingRow>
+            ) : undefined}
         </>
     );
 }
@@ -235,6 +398,31 @@ function EditableSettingRow({
             <div>{children}</div>
         </div>
     );
+}
+
+function settingsActionButtonStyle(uiScale: number): CSSProperties {
+    return {
+        background: t.bg.popup,
+        border: `1px solid ${t.border.normal}`,
+        borderRadius: t.radius.md,
+        color: t.text.primary,
+        cursor: 'pointer',
+        fontSize: `${12 * uiScale}px`,
+        padding: `${6 * uiScale}px ${8 * uiScale}px`,
+        whiteSpace: 'nowrap',
+    };
+}
+
+function quickMoveButtonStyle(isActive: boolean, uiScale: number): CSSProperties {
+    return {
+        background: 'transparent',
+        border: 'none',
+        color: t.text.muted,
+        cursor: isActive ? 'pointer' : 'not-allowed',
+        fontSize: `${12 * uiScale}px`,
+        opacity: isActive ? 1 : 0.35,
+        padding: `${4 * uiScale}px`,
+    };
 }
 
 function settingsInputStyle(uiScale: number): CSSProperties {

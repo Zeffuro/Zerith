@@ -1,4 +1,5 @@
-import type { CustomThemeEntry } from '../../store/settings/SettingsSchema';
+import type { NonMacroEditorCommandType } from '../../plugins/types';
+import type { CustomThemeEntry, DockLayoutPreset } from '../../store/settings/SettingsSchema';
 
 export type SettingsControlDefaults = SettingsControlSearchState;
 
@@ -8,16 +9,29 @@ export type SettingsControlId =
     | 'autosaveEnabled'
     | 'autosaveIntervalMs'
     | 'customThemes'
+    | 'dockLayoutPresets'
+    | 'editorScale'
+    | 'explorerScale'
+    | 'inspectorScale'
+    | 'quickCommandTypes'
     | 'theme'
+    | 'timelineScale'
     | 'uiScale';
 
 export type SettingsControlSearchState = {
+    activeDockLayoutPresetId: string | undefined;
     audiosheetShortcutTargetMode: 'cursor' | 'playhead';
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
     customThemes: CustomThemeEntry[];
+    dockLayoutPresets: DockLayoutPreset[];
+    editorScale: number | undefined;
+    explorerScale: number | undefined;
+    inspectorScale: number | undefined;
     isMuted: boolean;
+    quickCommandTypes: NonMacroEditorCommandType[];
     themeKey: string;
+    timelineScale: number | undefined;
     uiScale: number;
 };
 
@@ -26,7 +40,9 @@ export type SettingsPanelId =
     | 'appearance-theme'
     | 'appearance'
     | 'general-autosave'
+    | 'general-layout'
     | 'general-playback'
+    | 'general-quickbuttons'
     | 'general';
 
 type SettingsControlDefinition = {
@@ -70,11 +86,67 @@ const settingsControlRegistry: Record<SettingsControlId, SettingsControlDefiniti
         },
         panelIds: ['appearance', 'appearance-theme'],
     },
+    dockLayoutPresets: {
+        badgePanelId: 'general-layout',
+        changed: (state, defaults) => serializeDockLayoutPresets(state.dockLayoutPresets) !== serializeDockLayoutPresets(defaults.dockLayoutPresets)
+            || state.activeDockLayoutPresetId !== defaults.activeDockLayoutPresetId,
+        keywords: (state) => {
+            const presetNames = state.dockLayoutPresets.map((preset) => preset.name);
+            return `layout dock panels preset save load reset ${presetNames.join(' ')}`;
+        },
+        panelIds: ['general', 'general-layout'],
+    },
+    editorScale: {
+        badgePanelId: 'appearance-scale',
+        changed: (state, defaults) => state.editorScale !== defaults.editorScale,
+        keywords: (state) => {
+            const current = state.editorScale ?? state.uiScale;
+            const source = state.editorScale === undefined ? 'follow global inherited default' : 'override independent';
+            return `editor scale surface ${source} ${Math.round(current * 100)} percent zoom appearance`;
+        },
+        panelIds: ['appearance', 'appearance-scale'],
+    },
+    explorerScale: {
+        badgePanelId: 'appearance-scale',
+        changed: (state, defaults) => state.explorerScale !== defaults.explorerScale,
+        keywords: (state) => {
+            const current = state.explorerScale ?? state.uiScale;
+            const source = state.explorerScale === undefined ? 'follow global inherited default' : 'override independent';
+            return `explorer scale ${source} ${Math.round(current * 100)} percent zoom appearance`;
+        },
+        panelIds: ['appearance', 'appearance-scale'],
+    },
+    inspectorScale: {
+        badgePanelId: 'appearance-scale',
+        changed: (state, defaults) => state.inspectorScale !== defaults.inspectorScale,
+        keywords: (state) => {
+            const current = state.inspectorScale ?? state.uiScale;
+            const source = state.inspectorScale === undefined ? 'follow global inherited default' : 'override independent';
+            return `inspector scale ${source} ${Math.round(current * 100)} percent zoom appearance`;
+        },
+        panelIds: ['appearance', 'appearance-scale'],
+    },
+    quickCommandTypes: {
+        badgePanelId: 'general-quickbuttons',
+        changed: (state, defaults) => serializeQuickCommandTypes(state.quickCommandTypes) !== serializeQuickCommandTypes(defaults.quickCommandTypes),
+        keywords: (state) => `quick buttons commands toolbar timeline ${state.quickCommandTypes.join(' ')}`,
+        panelIds: ['general', 'general-quickbuttons'],
+    },
     theme: {
         badgePanelId: 'appearance-theme',
         changed: (state, defaults) => state.themeKey !== defaults.themeKey,
         keywords: (state) => `theme ${state.themeKey} classic classic soft appearance`,
         panelIds: ['general', 'appearance', 'appearance-theme'],
+    },
+    timelineScale: {
+        badgePanelId: 'appearance-scale',
+        changed: (state, defaults) => state.timelineScale !== defaults.timelineScale,
+        keywords: (state) => {
+            const current = state.timelineScale ?? state.uiScale;
+            const source = state.timelineScale === undefined ? 'follow global inherited default' : 'override independent';
+            return `timeline scale ${source} ${Math.round(current * 100)} percent zoom appearance`;
+        },
+        panelIds: ['appearance', 'appearance-scale'],
     },
     uiScale: {
         badgePanelId: 'appearance-scale',
@@ -154,5 +226,21 @@ function serializeCustomThemes(customThemes: CustomThemeEntry[]): string {
             }))
             .toSorted((a, b) => a.key.localeCompare(b.key)),
     );
+}
+
+function serializeDockLayoutPresets(dockLayoutPresets: DockLayoutPreset[]): string {
+    return JSON.stringify(
+        dockLayoutPresets
+            .map((preset) => ({
+                id: preset.id,
+                name: preset.name,
+                updatedAt: preset.updatedAt,
+            }))
+            .toSorted((a, b) => a.id.localeCompare(b.id)),
+    );
+}
+
+function serializeQuickCommandTypes(quickCommandTypes: NonMacroEditorCommandType[]): string {
+    return quickCommandTypes.join('|');
 }
 

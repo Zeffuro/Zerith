@@ -58,5 +58,24 @@ describe('dockLayoutSlice', () => {
         expect(state.dockLayoutVersion).toBe(DOCK_LAYOUT_VERSION);
         expect(state.dockLayoutJson).toEqual(createDefaultDockLayout());
     });
+
+    it('captures a live dock layout snapshot when a provider is registered', () => {
+        let state: Record<string, unknown> = {};
+        const set = (
+            partial: ((current: Record<string, unknown>) => Record<string, unknown>) | Record<string, unknown>,
+        ) => {
+            const patch = typeof partial === 'function' ? partial(state) : partial;
+            state = { ...state, ...patch };
+        };
+
+        const slice = createDockLayoutSlice(set as never);
+        slice.setDockLayoutJson({ global: { splitterSize: 1 }, layout: { children: [] } });
+
+        slice.registerDockLayoutJsonSnapshotProvider(() => ({ global: { splitterSize: 9 }, layout: { children: ['a'] } }));
+        expect(slice.captureDockLayoutJson()).toEqual({ global: { splitterSize: 9 }, layout: { children: ['a'] } });
+
+        slice.registerDockLayoutJsonSnapshotProvider();
+        expect(slice.captureDockLayoutJson()).toEqual({ global: { splitterSize: 1 }, layout: { children: [] } });
+    });
 });
 

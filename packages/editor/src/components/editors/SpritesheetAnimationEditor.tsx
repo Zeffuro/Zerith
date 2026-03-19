@@ -3,6 +3,12 @@ import { type DragEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { editorTheme as t } from '../../theme/editorTheme';
 import { ConfirmDialog } from '../ConfirmDialog';
+import {
+    applySpritesheetButtonHover,
+    applySpritesheetButtonPressed,
+    resetSpritesheetButtonBackground,
+    spritesheetButtonStyle,
+} from './spritesheetButtonStyles';
 import { computeThumbnailCanvasMetrics, insertFrameAtIndex, reorderSequence } from './spritesheetEditorModel';
 
 const FRAME_MIME = 'application/x-zerith-frame';
@@ -98,18 +104,18 @@ export function SpritesheetAnimationEditor({ animations, frames, image, onUpdate
                             setPlaying(false);
                             setPreviewIndex(0);
                         }}
+                        onMouseDown={(event) => applySpritesheetButtonPressed(event, false, selected === name)}
+                        onMouseEnter={(event) => applySpritesheetButtonHover(event, false, selected === name)}
+                        onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, selected === name)}
+                        onMouseUp={(event) => applySpritesheetButtonHover(event, false, selected === name)}
                         style={{
-                            background: selected === name ? t.bg.selected : t.bg.panel,
-                            border: `1px solid ${selected === name ? t.accent.primary : t.border.input}`,
-                            borderRadius: t.radius.sm,
-                            color: t.text.normal,
-                            cursor: 'pointer',
                             overflow: 'hidden',
-                            padding: '6px 8px',
                             textAlign: 'left',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
+                            ...spritesheetButtonStyle({ active: selected === name }),
                         }}
+                        type="button"
                     >{name}</button>
                 ))}
             </div>
@@ -121,8 +127,29 @@ export function SpritesheetAnimationEditor({ animations, frames, image, onUpdate
                     style={{ flex: 1, minWidth: 0 }}
                     value={newName}
                 />
-                <button onClick={addAnimation}>Add Animation</button>
-                <button disabled={!selected} onClick={removeAnimation}>Remove Animation</button>
+                <button
+                    onClick={addAnimation}
+                    onMouseDown={(event) => applySpritesheetButtonPressed(event, false, false)}
+                    onMouseEnter={(event) => applySpritesheetButtonHover(event, false, false)}
+                    onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, false)}
+                    onMouseUp={(event) => applySpritesheetButtonHover(event, false, false)}
+                    style={spritesheetButtonStyle()}
+                    type="button"
+                >
+                    Add Animation
+                </button>
+                <button
+                    disabled={!selected}
+                    onClick={removeAnimation}
+                    onMouseDown={(event) => applySpritesheetButtonPressed(event, !selected, false)}
+                    onMouseEnter={(event) => applySpritesheetButtonHover(event, !selected, false)}
+                    onMouseLeave={(event) => resetSpritesheetButtonBackground(event, !selected, false)}
+                    onMouseUp={(event) => applySpritesheetButtonHover(event, !selected, false)}
+                    style={spritesheetButtonStyle({ disabled: !selected })}
+                    type="button"
+                >
+                    Remove Animation
+                </button>
             </div>
 
             <div style={{ display: 'grid', gap: 8, minHeight: 0 }}>
@@ -144,8 +171,18 @@ export function SpritesheetAnimationEditor({ animations, frames, image, onUpdate
                                 event.dataTransfer.setData(SEQ_INDEX_MIME, `${index}`);
                             }}
                             onDrop={(event) => handleDrop(event, index)}
-                            style={{ background: previewIndex === index ? t.bg.selected : t.bg.panelAlt, border: `1px solid ${previewIndex === index ? t.accent.primary : t.border.subtle}`, borderRadius: t.radius.sm, cursor: 'pointer', flex: '0 0 auto', minWidth: 56, padding: 4 }}
+                            onMouseDown={(event) => applySpritesheetButtonPressed(event, false, previewIndex === index)}
+                            onMouseEnter={(event) => applySpritesheetButtonHover(event, false, previewIndex === index)}
+                            onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, previewIndex === index)}
+                            onMouseUp={(event) => applySpritesheetButtonHover(event, false, previewIndex === index)}
+                            style={{
+                                flex: '0 0 auto',
+                                minWidth: 56,
+                                padding: 4,
+                                ...spritesheetButtonStyle({ active: previewIndex === index }),
+                            }}
                             title={frameName}
+                            type="button"
                         >
                             <FrameThumb frame={frames[frameName]} image={image} uiScale={uiScale} />
                         </button>
@@ -158,11 +195,33 @@ export function SpritesheetAnimationEditor({ animations, frames, image, onUpdate
                     <label style={{ color: t.text.muted }}><input checked={loop} onChange={(event) => setLoop(event.target.checked)} type="checkbox" /> Loop</label>
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
-                    <button disabled={!selectedAnimationName || sequence.length === 0} onClick={() => setPlaying((value) => !value)}>{playing ? 'Pause' : 'Play'}</button>
-                    <button disabled={!selectedAnimationName || sequence.length === 0} onClick={() => {
-                        setPlaying(false);
-                        setPreviewIndex(0);
-                    }}>Stop</button>
+                    <button
+                        disabled={!selectedAnimationName || sequence.length === 0}
+                        onClick={() => setPlaying((value) => !value)}
+                        onMouseDown={(event) => applySpritesheetButtonPressed(event, !selectedAnimationName || sequence.length === 0, false)}
+                        onMouseEnter={(event) => applySpritesheetButtonHover(event, !selectedAnimationName || sequence.length === 0, false)}
+                        onMouseLeave={(event) => resetSpritesheetButtonBackground(event, !selectedAnimationName || sequence.length === 0, false)}
+                        onMouseUp={(event) => applySpritesheetButtonHover(event, !selectedAnimationName || sequence.length === 0, false)}
+                        style={spritesheetButtonStyle({ disabled: !selectedAnimationName || sequence.length === 0 })}
+                        type="button"
+                    >
+                        {playing ? 'Pause' : 'Play'}
+                    </button>
+                    <button
+                        disabled={!selectedAnimationName || sequence.length === 0}
+                        onClick={() => {
+                            setPlaying(false);
+                            setPreviewIndex(0);
+                        }}
+                        onMouseDown={(event) => applySpritesheetButtonPressed(event, !selectedAnimationName || sequence.length === 0, false)}
+                        onMouseEnter={(event) => applySpritesheetButtonHover(event, !selectedAnimationName || sequence.length === 0, false)}
+                        onMouseLeave={(event) => resetSpritesheetButtonBackground(event, !selectedAnimationName || sequence.length === 0, false)}
+                        onMouseUp={(event) => applySpritesheetButtonHover(event, !selectedAnimationName || sequence.length === 0, false)}
+                        style={spritesheetButtonStyle({ disabled: !selectedAnimationName || sequence.length === 0 })}
+                        type="button"
+                    >
+                        Stop
+                    </button>
                 </div>
                 <PreviewBox frame={frames[sequence[activePreviewIndex]]} image={image} uiScale={uiScale} />
             </div>

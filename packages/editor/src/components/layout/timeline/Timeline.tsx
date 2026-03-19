@@ -9,8 +9,9 @@ import { executeTimelineContextAction } from '../../../store/actions/timelineCon
 import { useProjectStore } from '../../../store/storeBootstrap';
 import { useScriptStore } from '../../../store/storeBootstrap';
 import { useEditorStore } from '../../../store/useEditorStore';
+import { useSettingsStore } from '../../../store/useSettingsStore';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
-import { editorTheme as t } from '../../../theme/editorTheme';
+import { resolveComponentScale, editorTheme as t } from '../../../theme/editorTheme';
 import { ConfirmDialog } from '../../ConfirmDialog';
 import { TimelineCommandBar } from './TimelineCommandBar';
 import { type CommandContextMenuState, TimelineCommandContextMenu } from './TimelineCommandContextMenu';
@@ -41,7 +42,9 @@ type TimelineBranch = {
 
 
 export function Timeline() {
-    const uiScale = useEditorStore((state) => state.uiScale);
+    const globalUiScale = useEditorStore((state) => state.uiScale);
+    const timelineScale = useSettingsStore((state) => state.timelineScale);
+    const uiScale = resolveComponentScale(globalUiScale, timelineScale);
     const activeExecutionPath = useEditorStore((state) => state.activeExecutionPath);
     const breakpoints = useEditorStore((state) => state.breakpoints);
     const toggleBreakpoint = useEditorStore((state) => state.toggleBreakpoint);
@@ -484,6 +487,7 @@ export function Timeline() {
                 backgroundColor: t.bg.app,
                 display: 'flex',
                 flexDirection: 'column',
+                fontSize: `${12 * uiScale}px`,
                 height: '100%',
                 minHeight: 0,
                 outline: 'none',

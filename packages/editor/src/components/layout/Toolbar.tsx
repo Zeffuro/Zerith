@@ -1,6 +1,5 @@
 import { open } from '@tauri-apps/plugin-dialog';
-import { FolderOpen, MonitorDot, Pause, Play, Save, SkipForward, Square, Star, Volume2, VolumeX, ZoomIn, ZoomOut } from 'lucide-react';
-import { useState } from 'react';
+import { FolderOpen, MonitorDot, Pause, Play, Save, SkipForward, Square, Volume2, VolumeX, ZoomIn, ZoomOut } from 'lucide-react';
 
 import { openProjectEntry } from '../../services/openProjectEntry';
 import { useProjectStore } from '../../store/storeBootstrap';
@@ -8,7 +7,6 @@ import { useEditorStore } from '../../store/useEditorStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { openInitialProjectEntry as openInitialProjectEntryModel } from '../tools/commandPaletteModel';
-import { QuickCommandsMenu } from './menus/QuickCommandsMenu';
 import { ThemeMenu } from './menus/ThemeMenu';
 
 export function Toolbar() {
@@ -16,27 +14,22 @@ export function Toolbar() {
     const isMuted = useSettingsStore((state) => state.isMuted);
     const setIsMuted = useSettingsStore((state) => state.setIsMuted);
     const setThemeKey = useSettingsStore((state) => state.setThemeKey);
-    const setUiScale = useSettingsStore((state) => state.setUiScale);
     const customThemes = useSettingsStore((state) => state.customThemes);
     const themeKey = useSettingsStore((state) => state.themeKey);
-    const uiScale = useSettingsStore((state) => state.uiScale);
     const {
         addRecentProject,
         isPlaybackPaused,
-        moveQuickCommandType,
         playTrigger,
-        quickCommandTypes,
         resetDockLayout,
+        setUiScale,
         stopTrigger,
-        toggleQuickCommandType,
         triggerPause,
         triggerPlay,
         triggerResume,
         triggerStep,
         triggerStop,
+        uiScale,
     } = useEditorStore();
-
-    const [quickOpen, setQuickOpen] = useState(false);
 
     const handleOpenInitialProjectEntry = async () => {
         const { expandToPath, manifest, projectPath } = useProjectStore.getState();
@@ -103,21 +96,10 @@ export function Toolbar() {
                 <Save size={iconSize} />
             </button>
 
-            <button className="toolbar-btn" onClick={() => setQuickOpen(v => !v)} style={{ padding: pad }} title="Quick Buttons Configuration">
-                <Star size={iconSize} />
-            </button>
             <button className="toolbar-btn" onClick={resetDockLayout} style={{ padding: pad }} title="Reset UI Layout">
                 <MonitorDot size={iconSize} />
             </button>
 
-            <QuickCommandsMenu
-                moveQuickCommandType={moveQuickCommandType}
-                onClose={() => setQuickOpen(false)}
-                open={quickOpen}
-                quickCommandTypes={quickCommandTypes}
-                toggleQuickCommandType={toggleQuickCommandType}
-                uiScale={uiScale}
-            />
 
             <div style={{ alignItems: 'center', display: 'flex', marginLeft: '4px' }}>
                 <ThemeMenu customThemes={customThemes} onSelect={setThemeKey} selectedKey={themeKey} uiScale={uiScale} />

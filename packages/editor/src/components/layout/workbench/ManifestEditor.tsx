@@ -15,10 +15,11 @@ type ParsedManifestTab = {
     manifest: Record<string, unknown>;
 };
 
-type SettingsSection = 'general' | 'paths' | 'scenes' | 'variables';
+type SettingsSection = 'general' | 'metadata' | 'paths' | 'scenes' | 'variables';
 
 const SECTION_LABELS: Record<SettingsSection, string> = {
     general: 'General',
+    metadata: 'Project Metadata',
     paths: 'Paths',
     scenes: 'Scenes',
     variables: 'Discovered Variables',
@@ -60,7 +61,10 @@ export function ManifestEditor({ uiScale }: { uiScale: number }) {
         setStatus('');
     };
 
-    const setManifestStringField = (key: 'characters' | 'items' | 'macros' | 'startScene' | 'title' | 'version', value: string) => {
+    const setManifestStringField = (
+        key: 'author' | 'characters' | 'description' | 'items' | 'license' | 'macros' | 'startScene' | 'title' | 'version',
+        value: string,
+    ) => {
         updateManifest((current) => {
             const next = { ...current };
             writeOptionalString(next, key, value);
@@ -143,9 +147,6 @@ export function ManifestEditor({ uiScale }: { uiScale: number }) {
                             <Field label="Title">
                                 <input onChange={(event) => setManifestStringField('title', event.target.value)} style={sharedStyles.input(uiScale)} value={readString(manifest.title)} />
                             </Field>
-                            <Field label="Version">
-                                <input onChange={(event) => setManifestStringField('version', event.target.value)} style={sharedStyles.input(uiScale)} value={readString(manifest.version)} />
-                            </Field>
                             <Field label="Start Scene">
                                 <select onChange={(event) => setManifestStringField('startScene', event.target.value)} style={sharedStyles.input(uiScale)} value={readString(manifest.startScene)}>
                                     <option value="">(none)</option>
@@ -153,6 +154,28 @@ export function ManifestEditor({ uiScale }: { uiScale: number }) {
                                         <option key={sceneKey} value={sceneKey}>{sceneKey}</option>
                                     ))}
                                 </select>
+                            </Field>
+                        </div>
+                    )}
+
+                    {activeSection === 'metadata' && (
+                        <div style={{ display: 'grid', gap: `${10 * uiScale}px`, gridTemplateColumns: '1fr 1fr' }}>
+                            <Field label="Author">
+                                <input onChange={(event) => setManifestStringField('author', event.target.value)} style={sharedStyles.input(uiScale)} value={readString(manifest.author)} />
+                            </Field>
+                            <Field label="Version">
+                                <input onChange={(event) => setManifestStringField('version', event.target.value)} style={sharedStyles.input(uiScale)} value={readString(manifest.version)} />
+                            </Field>
+                            <Field label="License">
+                                <input onChange={(event) => setManifestStringField('license', event.target.value)} style={sharedStyles.input(uiScale)} value={readString(manifest.license)} />
+                            </Field>
+                            <Field label="Description">
+                                <textarea
+                                    onChange={(event) => setManifestStringField('description', event.target.value)}
+                                    rows={4}
+                                    style={sharedStyles.textArea(uiScale)}
+                                    value={readString(manifest.description)}
+                                />
                             </Field>
                         </div>
                     )}

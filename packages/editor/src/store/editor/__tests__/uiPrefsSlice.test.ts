@@ -243,6 +243,17 @@ describe('createUiPrefsSlice', () => {
         expect(set).toHaveBeenNthCalledWith(2, { isExportGameModalOpen: false });
     });
 
+    it('opens and closes new project modal through direct actions', () => {
+        const set = vi.fn();
+        const slice = createUiPrefsSlice(set as never);
+
+        slice.openNewProjectModal();
+        slice.closeNewProjectModal();
+
+        expect(set).toHaveBeenNthCalledWith(1, { isNewProjectModalOpen: true });
+        expect(set).toHaveBeenNthCalledWith(2, { isNewProjectModalOpen: false });
+    });
+
     it('toggles settings modal visibility with a state updater', () => {
         const set = vi.fn(
             (

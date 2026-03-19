@@ -20,11 +20,29 @@ function createResetActions(order: string[]): SettingsResetActions {
         resetCustomThemes: vi.fn(() => {
             order.push('customThemes');
         }),
+        resetDockLayoutPresets: vi.fn(() => {
+            order.push('dockLayoutPresets');
+        }),
+        resetEditorScale: vi.fn(() => {
+            order.push('editorScale');
+        }),
+        resetExplorerScale: vi.fn(() => {
+            order.push('explorerScale');
+        }),
+        resetInspectorScale: vi.fn(() => {
+            order.push('inspectorScale');
+        }),
         resetKeymapOverrides: vi.fn(() => {
             order.push('keymap');
         }),
+        resetQuickCommandTypes: vi.fn(() => {
+            order.push('quickCommandTypes');
+        }),
         resetTheme: vi.fn(() => {
             order.push('theme');
+        }),
+        resetTimelineScale: vi.fn(() => {
+            order.push('timelineScale');
         }),
         resetUiScale: vi.fn(() => {
             order.push('uiScale');
@@ -70,10 +88,16 @@ describe('settingsResetRoutingModel', () => {
             'theme',
             'customThemes',
             'uiScale',
+            'timelineScale',
+            'inspectorScale',
+            'explorerScale',
+            'editorScale',
             'autosaveEnabled',
             'autosaveIntervalMs',
             'audio',
             'audiosheetShortcutTargetMode',
+            'dockLayoutPresets',
+            'quickCommandTypes',
             'keymap',
         ]);
     });

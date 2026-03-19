@@ -12,7 +12,7 @@ import {
 } from '../commandPaletteModel';
 
 describe('commandPaletteModel', () => {
-    it('filters actions by normalized query', () => {
+    it('filters actions by normalized query with fuzzy matching', () => {
         const actions = [
             { id: 'save', keywords: 'write file', label: 'Save Active File' },
             { id: 'settings', keywords: 'preferences keymap', label: 'Open Settings' },
@@ -20,6 +20,7 @@ describe('commandPaletteModel', () => {
 
         expect(filterActions(actions, '  save ')).toEqual([actions[0]]);
         expect(filterActions(actions, 'KEYMAP')).toEqual([actions[1]]);
+        expect(filterActions(actions, 'svaf')).toEqual([actions[0]]);
         expect(filterActions(actions, '   ')).toEqual(actions);
     });
 
@@ -57,8 +58,8 @@ describe('commandPaletteModel', () => {
 
     it('maps actions into renderable rows with hint fallback', () => {
         const actions = [
-            { execute: () => {}, hint: 'Ctrl+S', id: 'save', keywords: 'save', label: 'Save' },
-            { execute: () => {}, id: 'play', keywords: 'play', label: 'Play' },
+            { action: () => {}, id: 'save', keywords: 'save', label: 'Save', shortcut: 'Ctrl+S' },
+            { action: () => {}, id: 'play', keywords: 'play', label: 'Play' },
         ];
 
         const renderable = toRenderableActions(actions);

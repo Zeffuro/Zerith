@@ -1,15 +1,24 @@
 import type { AudioConfig } from '../../managers/AudioManager';
+import type { AudiosheetDescriptor } from '../../types';
 import type { IBaseManager } from './IBaseManager';
+
+export interface CuePlaybackOptions {
+    channel?: 'bgm' | 'sfx';
+    loop?: boolean;
+    volume?: number;
+}
 
 export interface IAudioManager extends IBaseManager {
     audioExists(url: string): boolean;
     bgmVolume: number;
     currentBgmUrl: string | undefined;
     getVolumes(): Required<AudioConfig>;
+    loadAudiosheet(sheetName: string, descriptor: AudiosheetDescriptor): Promise<void>;
     masterVolume: number;
     muted: boolean;
     pauseBgm(): void;
     playBgm(url: string, loop: boolean, volume?: number): Promise<void>;
+    playCue(sheetName: string, cueName: string, options?: CuePlaybackOptions): Promise<void>;
     playSfx(url: string, volume?: number, options?: SfxPlaybackOptions): Promise<void>;
     playVoice(url: string): Promise<void>;
     preloadAudio(url: string): Promise<void>;
@@ -27,3 +36,5 @@ export interface SfxPlaybackOptions {
     loop?: boolean;
     start?: number;
 }
+
+

@@ -2,12 +2,28 @@ import { z } from 'zod';
 
 import type { BaseCommand } from '../types';
 
-export { parseAudiosheetDescriptor, parseSpritesheetDescriptor } from './descriptorSchemas';
+export { parseAudiosheetDescriptor, parseSheetDescriptor, parseSpritesheetDescriptor } from './descriptorSchemas';
+export * from './engineConfigSchemas';
 
 
 export const BaseCommandSchema = z.object({
     type: z.string(),
 }).catchall(z.unknown());
+
+export const GameManifestSchema = z.looseObject({
+    $schema: z.string().optional(),
+    author: z.string().optional(),
+    characters: z.record(z.string(), z.unknown()).optional(),
+    description: z.string().optional(),
+    items: z.record(z.string(), z.unknown()).optional(),
+    license: z.string().optional(),
+    macros: z.record(z.string(), z.array(z.lazy(() => CommandSchema))).optional(),
+    scenes: z.record(z.string(), z.union([z.string(), z.array(z.lazy(() => CommandSchema))])).optional(),
+    startScene: z.string().optional(),
+    title: z.string().optional(),
+    variables: z.record(z.string(), z.unknown()).optional(),
+    version: z.string().optional(),
+});
 
 /* Dialogue */
 
