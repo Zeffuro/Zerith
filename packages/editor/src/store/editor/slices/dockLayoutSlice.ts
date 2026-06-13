@@ -1,6 +1,6 @@
 import type { DockLayoutSlice, EditorSet } from '../types';
 
-import { createDefaultDockLayout, DOCK_LAYOUT_VERSION } from '../../../components/layout/dock/defaultDockLayout';
+import { createDefaultDockLayout, DOCK_LAYOUT_VERSION, normalizeDockLayoutJsonForFlexLayout } from '../../../components/layout/dock/defaultDockLayout';
 import { isRecord } from '../../../utils/typeGuards';
 
 export function createDockLayoutSlice(set: EditorSet): DockLayoutSlice {
@@ -12,16 +12,12 @@ export function createDockLayoutSlice(set: EditorSet): DockLayoutSlice {
                 capturedJson = state.getDockLayoutJsonSnapshot?.() ?? state.dockLayoutJson;
                 return {};
             });
-            return capturedJson;
+            return normalizeDockLayoutJson(capturedJson).dockLayoutJson;
         },
         getDockLayoutJsonSnapshot: undefined,
         registerDockLayoutJsonSnapshotProvider: (provider) => set({ getDockLayoutJsonSnapshot: provider }),
-        resetDockLayout: () =>
-            set({
-                dockLayoutJson: createDefaultDockLayout(),
-                dockLayoutVersion: DOCK_LAYOUT_VERSION,
-            }),
-        setDockLayoutJson: (json) => set({ dockLayoutJson: json }),
+        resetDockLayout: () => set(normalizeDockLayoutJson(createDefaultDockLayout())),
+        setDockLayoutJson: (json) => set(normalizeDockLayoutJson(json)),
     };
 }
 
@@ -37,26 +33,24 @@ export function normalizeDockLayoutState(
 
     const persistedVersion = typeof state.dockLayoutVersion === 'number' ? state.dockLayoutVersion : undefined;
     const hasValidVersion = persistedVersion === DOCK_LAYOUT_VERSION;
-    const hasLayout = isLikelyDockLayoutJson(state.dockLayoutJson);
+    const normalizedLayout = normalizeDockLayoutJsonForFlexLayout(state.dockLayoutJson);
 
-    if (hasValidVersion && hasLayout) {
+    if (hasValidVersion && normalizedLayout) {
         return {
-            dockLayoutJson: state.dockLayoutJson,
+            dockLayoutJson: normalizedLayout,
             dockLayoutVersion: persistedVersion,
         };
     }
 
-    return {
-        dockLayoutJson: createDefaultDockLayout(),
-        dockLayoutVersion: DOCK_LAYOUT_VERSION,
-    };
+    return normalizeDockLayoutJson();
 }
 
-function isLikelyDockLayoutJson(value: unknown): boolean {
-    if (!isRecord(value)) return false;
-    const hasGlobal = isRecord(value.global);
-    const hasLayout = isRecord(value.layout);
-    return hasGlobal && hasLayout;
+function normalizeDockLayoutJson(json?: unknown): Pick<DockLayoutSlice, 'dockLayoutJson' | 'dockLayoutVersion'> {
+    const normalizedLayout = normalizeDockLayoutJsonForFlexLayout(json);
+    return {
+        dockLayoutJson: normalizedLayout ?? createDefaultDockLayout(),
+        dockLayoutVersion: DOCK_LAYOUT_VERSION,
+    };
 }
 
 

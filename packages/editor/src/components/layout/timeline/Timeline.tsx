@@ -143,7 +143,7 @@ export function Timeline() {
             const commandIndex = path.length === 1 && typeof path[0] === 'number' ? path[0] : undefined;
 
             return {
-                color: plugin.quickColor?.bg ?? t.bg.panelAlt,
+                color: plugin.quickColor?.border ?? getMinimapFallbackColor(node.type),
                 hasBreakpoint: commandIndex !== undefined && activeBreakpointSet.has(commandIndex),
                 index,
                 isActiveExecution: samePath(path, activeExecutionPath ?? []),
@@ -666,6 +666,23 @@ function flattenRenderedNodes(
     }
 
     return output;
+}
+
+function getMinimapFallbackColor(type: string): string {
+    const colors = [
+        t.accent.blue,
+        t.accent.teal,
+        t.accent.purple,
+        t.accent.orange,
+        t.accent.yellow,
+        t.accent.green,
+        t.accent.red,
+    ];
+    let hash = 0;
+    for (const char of type) {
+        hash = (hash * 31 + (char.codePointAt(0) ?? 0)) >>> 0;
+    }
+    return colors[hash % colors.length];
 }
 
 function macroNode(name: string, commands: PluginNode[]) {

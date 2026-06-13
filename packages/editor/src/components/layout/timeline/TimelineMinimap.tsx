@@ -41,7 +41,7 @@ export function TimelineMinimap({
 
     const markers = useMemo(() => {
         const total = Math.max(1, rows.length);
-        const rowHeightPercent = Math.max(100 / total, 0.35);
+        const rowHeightPercent = Math.max(100 / total, 0.45);
 
         return rows.map((row) => ({
             ...row,
@@ -119,22 +119,45 @@ export function TimelineMinimap({
                 ref={trackReference}
                 style={{
                     background: t.bg.app,
+                    border: `1px solid ${t.border.subtle}`,
                     borderRadius: `${2 * uiScale}px`,
+                    boxSizing: 'border-box',
                     cursor: 'pointer',
                     flex: 1,
                     minHeight: 0,
+                    overflow: 'hidden',
                     position: 'relative',
                 }}
                 title="Timeline minimap"
             >
+                {rows.length === 0 ? (
+                    <div
+                        style={{
+                            alignItems: 'center',
+                            color: t.text.faint,
+                            display: 'flex',
+                            fontSize: `${10 * uiScale}px`,
+                            height: '100%',
+                            justifyContent: 'center',
+                            padding: `${4 * uiScale}px`,
+                            textAlign: 'center',
+                        }}
+                    >
+                        No commands
+                    </div>
+                ) : undefined}
+
                 {markers.map((marker) => (
                     <div
                         key={marker.pathKey}
                         style={{
                             background: marker.isActiveExecution ? t.accent.green : marker.color,
+                            borderLeft: marker.isActiveExecution ? `2px solid ${t.text.primary}` : undefined,
+                            boxShadow: marker.hasBreakpoint ? `inset -${2 * uiScale}px 0 0 ${t.accent.red}` : undefined,
                             height: `${marker.heightPercent}%`,
                             left: 0,
-                            opacity: marker.isActiveExecution ? 1 : 0.8,
+                            minHeight: `${1 * uiScale}px`,
+                            opacity: marker.isActiveExecution ? 1 : 0.9,
                             position: 'absolute',
                             top: `${marker.topPercent}%`,
                             width: '100%',
@@ -161,7 +184,7 @@ export function TimelineMinimap({
 
                 <div
                     style={{
-                        border: `1px solid ${t.border.accent}`,
+                        border: `2px solid ${t.border.accent}`,
                         borderRadius: `${2 * uiScale}px`,
                         boxSizing: 'border-box',
                         height: `${safeViewportHeightRatio * 100}%`,

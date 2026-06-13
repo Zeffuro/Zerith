@@ -9,6 +9,7 @@ import { useProjectStore } from '../../store/storeBootstrap';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../theme/editorTheme';
+import { computeAudioPeaks } from '../../utils/audio';
 import { clamp } from '../../utils/math';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { createCueOperations } from './audiosheetCueCrud';
@@ -18,7 +19,7 @@ import { AudiosheetEditorToolbar } from './AudiosheetEditorToolbar';
 import { type AudiosheetPlaybackReferences, decodeAudiosheetSource, pauseAudiosheetPlayback, playAudiosheetRange, stopAudiosheetPlayback } from './audiosheetPlayback';
 import { AudiosheetTransportBar } from './AudiosheetTransportBar';
 import { applyZoomAtRatio, handleWaveformPointerDown, handleWaveformPointerMove, handleWaveformPointerUp, handleWaveformWheel, type WaveformDragState } from './audiosheetWaveformInteraction';
-import { type ActiveWaveformHandle, computeWaveformPeaks } from './AudioWaveformCanvas';
+import { type ActiveWaveformHandle } from './AudioWaveformCanvas';
 
 const WAVEFORM_BINS = 640;
 type AudiosheetEditorPanelProperties = { tab: WorkbenchTab };
@@ -100,7 +101,7 @@ export function AudiosheetEditorPanel({ tab }: AudiosheetEditorPanelProperties) 
         const endIndex = Math.ceil((clipEndSeconds / audioBuffer.duration) * channelData.length);
         const safeStartIndex = clamp(startIndex, 0, channelData.length - 1);
         const safeEndIndex = clamp(endIndex, safeStartIndex + 1, channelData.length);
-        return computeWaveformPeaks(channelData.subarray(safeStartIndex, safeEndIndex), WAVEFORM_BINS);
+        return computeAudioPeaks(channelData.subarray(safeStartIndex, safeEndIndex), WAVEFORM_BINS);
     }, [audioBuffer, waveformViewport.duration, waveformViewport.start]);
 
     useEffect(() => setWaveformViewportStart((current) => clamp(current, 0, maxViewportStart)), [maxViewportStart]);

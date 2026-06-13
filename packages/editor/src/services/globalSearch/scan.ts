@@ -71,7 +71,7 @@ export function scanScriptNodes(matches: GlobalSearchMatch[], options: ScanScrip
             value: node,
         });
 
-        const branches = getPlugin(node.type).getBranches?.(node as never) ?? [];
+        const branches = getPlugin(node.type).getBranches?.(node) ?? [];
         for (const branch of branches) {
             scanBranchNodes(matches, {
                 basePath: [...nodePath, ...branch.path],

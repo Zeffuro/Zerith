@@ -80,7 +80,7 @@ export function createFlowManagerHarness(script: BaseCommand[]): FlowManagerHarn
             ['wait', { autoNext: true, execute, type: 'wait' }],
         ]),
         logger: logger as never,
-        scenes: sceneManager as never,
+        scenes: sceneManager,
     });
 
     return {

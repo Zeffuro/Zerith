@@ -162,7 +162,7 @@ function sanitizeQuickCommandTypes(value: unknown): NonMacroEditorCommandType[] 
         if (typeof entry !== 'string') continue;
         const trimmed = entry.trim();
         if (!builtInCommandTypeSet.has(trimmed)) continue;
-        const commandType = trimmed as NonMacroEditorCommandType;
+        const commandType = trimmed;
         if (output.includes(commandType)) continue;
         output.push(commandType);
     }

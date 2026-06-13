@@ -33,7 +33,7 @@ describe('globalSearch searchService facade', () => {
     it('returns no matches for whitespace-only queries', () => {
         const localProjectData = createGlobalSearchProjectData();
 
-        expect(searchProjectContentFacade('   ', localProjectData)).toEqual([]);
+        expect(searchProjectContentFacade(' '.repeat(3), localProjectData)).toEqual([]);
     });
 });
 
@@ -62,7 +62,7 @@ describe('globalSearch replaceService facade', () => {
     it('returns no files for whitespace-only replacement queries', () => {
         const localProjectData = createGlobalSearchProjectData();
 
-        expect(replaceProjectContentFacade('   ', 'champion', [], localProjectData)).toEqual([]);
+        expect(replaceProjectContentFacade(' '.repeat(3), 'champion', [], localProjectData)).toEqual([]);
     });
 });
 

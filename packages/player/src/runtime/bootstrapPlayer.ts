@@ -80,7 +80,7 @@ export async function bootstrapPlayer(options: PlayerBootstrapOptions): Promise<
 
     const validatedScenes: Record<string, Script> = {};
     for (const [name, script] of Object.entries(scenes)) {
-        validatedScenes[name] = validateScript(script as unknown[]) as Script;
+        validatedScenes[name] = validateScript(script as unknown[]);
     }
 
     const engine = await bootstrapEngine({

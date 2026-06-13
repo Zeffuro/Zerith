@@ -22,7 +22,7 @@ import {
     updatePanDrag,
     updateSliceDrag,
 } from './spritesheetCanvasInteraction';
-import { drawFrameOverlays, drawGrid, drawSelection, drawSliceLines } from './spritesheetCanvasRenderer';
+import { drawFrameOverlays, drawGrid, drawImageBackdrop, drawSelection, drawSliceLines } from './spritesheetCanvasRenderer';
 import { type ManualFrameRect, type ManualSliceAxis, type ManualSliceLines, type ManualTool } from './spritesheetEditorModel';
 
 type SpritesheetCanvasProperties = {
@@ -80,6 +80,7 @@ export function SpritesheetCanvas({
     const dragStateReference = useRef(createPanDragState());
     const sliceDragReference = useRef(createSliceDragState());
     const drawDragReference = useRef(createDrawDragState());
+    const pointerOverCanvasReference = useRef(false);
     const suppressClickReference = useRef(false);
     const previewSource = useMemo(() => {
         if (!chromaKey) return image;
@@ -98,6 +99,11 @@ export function SpritesheetCanvas({
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.code === 'Space') {
+                const activeElement = document.activeElement;
+                const canvasIsActive = activeElement instanceof Node && Boolean(containerReference.current?.contains(activeElement));
+                if ((pointerOverCanvasReference.current || canvasIsActive) && !isEditableKeyboardTarget(event.target)) {
+                    event.preventDefault();
+                }
                 setIsSpacePressed(true);
             }
         };
@@ -136,6 +142,7 @@ export function SpritesheetCanvas({
             context.save();
             context.translate(panOffset.x, panOffset.y);
             context.scale(zoom, zoom);
+            drawImageBackdrop(context, image.naturalWidth, image.naturalHeight, zoom);
             context.drawImage(previewSource, 0, 0);
 
             if (showGrid) {
@@ -266,9 +273,11 @@ export function SpritesheetCanvas({
                 }}
                 onContextMenu={(event) => event.preventDefault()}
                 onMouseDown={(event) => {
+                    containerReference.current?.focus();
                     const panWithMiddleMouse = event.button === 1;
+                    const panWithRightMouse = event.button === 2;
                     const panWithSpaceDrag = event.button === 0 && isSpacePressed;
-                    if (panWithMiddleMouse || panWithSpaceDrag) {
+                    if (panWithMiddleMouse || panWithRightMouse || panWithSpaceDrag) {
                         event.preventDefault();
                         dragStateReference.current = beginPanDrag({ x: event.clientX, y: event.clientY }, panOffset);
                         setIsPanning(true);
@@ -290,7 +299,11 @@ export function SpritesheetCanvas({
                         onSetManualRectPreview();
                     }
                 }}
+                onMouseEnter={() => {
+                    pointerOverCanvasReference.current = true;
+                }}
                 onMouseLeave={() => {
+                    pointerOverCanvasReference.current = false;
                     setHoveredFrame(undefined);
                     setHoveredSliceHandle(undefined);
                     dragStateReference.current.panning = false;
@@ -361,4 +374,11 @@ export function SpritesheetCanvas({
             />
         </div>
     );
+}
+
+function isEditableKeyboardTarget(target: EventTarget | null): boolean {
+    if (!(target instanceof HTMLElement)) return false;
+    if (target.isContentEditable) return true;
+    const tagName = target.tagName.toLowerCase();
+    return ['input', 'select', 'textarea'].includes(tagName);
 }

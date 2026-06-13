@@ -80,16 +80,16 @@ export function createEventBusMock(overrides: Partial<IEventBus> = {}): IEventBu
             for (const listener of eventListeners) {
                 listener(...arguments_);
             }
-        }) as IEventBus['emit'],
+        }),
         off: vi.fn((event: keyof EngineEventMap, listener: (...arguments_: unknown[]) => void) => {
             listeners.get(event)?.delete(listener);
-        }) as IEventBus['off'],
+        }),
         on: vi.fn((event: keyof EngineEventMap, listener: (...arguments_: unknown[]) => void) => {
             if (!listeners.has(event)) {
                 listeners.set(event, new Set());
             }
             listeners.get(event)?.add(listener);
-        }) as IEventBus['on'],
+        }),
         once: vi.fn((event: keyof EngineEventMap, listener: (...arguments_: unknown[]) => void) => {
             const wrapper = (...arguments_: unknown[]) => {
                 listener(...arguments_);
@@ -100,7 +100,7 @@ export function createEventBusMock(overrides: Partial<IEventBus> = {}): IEventBu
                 listeners.set(event, new Set());
             }
             listeners.get(event)?.add(wrapper);
-        }) as IEventBus['once'],
+        }),
     };
 
     return { ...base, ...overrides };
@@ -158,10 +158,10 @@ export function createStateManagerMock(overrides: Partial<IStateManager> = {}): 
         }),
         set: vi.fn((key: string, value: Serializable) => {
             state[key] = value;
-        }) as IStateManager['set'],
+        }),
         setPersistent: vi.fn((key: string, value: Serializable) => {
             persistentState[key] = value;
-        }) as IStateManager['setPersistent'],
+        }),
         state,
         system,
     };

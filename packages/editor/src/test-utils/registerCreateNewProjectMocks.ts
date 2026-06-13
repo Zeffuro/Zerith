@@ -1,9 +1,9 @@
 import { vi } from 'vitest';
 
 const createNewProjectMocks = vi.hoisted(() => ({
-    fsJoin: vi.fn(async (...parts: string[]) => parts.join('/')),
-    fsMkdir: vi.fn(async () => {}),
-    fsWriteTextFile: vi.fn(async () => {}),
+    fsJoin: vi.fn((...parts: string[]) => Promise.resolve(parts.join('/'))),
+    fsMkdir: vi.fn(() => Promise.resolve()),
+    fsWriteTextFile: vi.fn(() => Promise.resolve()),
 }));
 
 export function getCreateNewProjectMocks() {
@@ -15,7 +15,7 @@ export function resetCreateNewProjectMocks(): void {
     createNewProjectMocks.fsMkdir.mockClear();
     createNewProjectMocks.fsWriteTextFile.mockClear();
 
-    createNewProjectMocks.fsJoin.mockImplementation(async (...parts: string[]) => parts.join('/'));
+    createNewProjectMocks.fsJoin.mockImplementation((...parts: string[]) => Promise.resolve(parts.join('/')));
 }
 
 vi.mock('../services/fs', () => ({

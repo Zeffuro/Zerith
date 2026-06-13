@@ -21,7 +21,7 @@ describe('commandPaletteModel', () => {
         expect(filterActions(actions, '  save ')).toEqual([actions[0]]);
         expect(filterActions(actions, 'KEYMAP')).toEqual([actions[1]]);
         expect(filterActions(actions, 'svaf')).toEqual([actions[0]]);
-        expect(filterActions(actions, '   ')).toEqual(actions);
+        expect(filterActions(actions, ' '.repeat(3))).toEqual(actions);
     });
 
     it('clamps next selection index at list bounds', () => {

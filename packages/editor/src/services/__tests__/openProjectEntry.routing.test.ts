@@ -445,7 +445,7 @@ describe('openProjectEntry', () => {
                 scenes: {
                     intro: 'scripts/intro.json',
                 },
-            } as GameManifest,
+            },
             projectPath: '/project',
         });
 
@@ -476,7 +476,7 @@ describe('openProjectEntry', () => {
                 scenes: {
                     intro: 'scripts/intro.json',
                 },
-            } as GameManifest,
+            },
             projectPath: '/project',
         });
 

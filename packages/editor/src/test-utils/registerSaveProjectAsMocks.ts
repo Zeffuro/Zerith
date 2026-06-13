@@ -8,14 +8,14 @@ type MockDirectoryEntry = {
 };
 
 const saveProjectAsMocks = vi.hoisted(() => ({
-    fsJoin: vi.fn(async (...parts: string[]) => parts.join('/')),
-    fsMkdir: vi.fn(async () => {}),
-    fsReadBinaryFile: vi.fn<(_path: string) => Promise<Uint8Array>>(async (_path: string) => new Uint8Array()),
+    fsJoin: vi.fn((...parts: string[]) => Promise.resolve(parts.join('/'))),
+    fsMkdir: vi.fn(() => Promise.resolve()),
+    fsReadBinaryFile: vi.fn<(_path: string) => Promise<Uint8Array>>(() => Promise.resolve(new Uint8Array())),
     fsReadDirectory: vi.fn<(_path: string) => Promise<MockDirectoryEntry[]>>(
-        async (_path: string): Promise<MockDirectoryEntry[]> => [],
+        () => Promise.resolve([]),
     ),
-    fsWriteBinaryFile: vi.fn(async () => {}),
-    openDialog: vi.fn(async (_options?: unknown) => undefined as string | undefined),
+    fsWriteBinaryFile: vi.fn(() => Promise.resolve()),
+    openDialog: vi.fn<(_options?: unknown) => Promise<string | undefined>>(() => Promise.resolve(undefined)),
 }));
 
 export function getSaveProjectAsMocks() {
@@ -30,10 +30,10 @@ export function resetSaveProjectAsMocks(): void {
     saveProjectAsMocks.fsWriteBinaryFile.mockClear();
     saveProjectAsMocks.openDialog.mockClear();
 
-    saveProjectAsMocks.fsJoin.mockImplementation(async (...parts: string[]) => parts.join('/'));
-    saveProjectAsMocks.fsReadDirectory.mockImplementation(async (_path: string): Promise<MockDirectoryEntry[]> => []);
-    saveProjectAsMocks.fsReadBinaryFile.mockImplementation(async (_path: string) => new Uint8Array());
-    saveProjectAsMocks.openDialog.mockImplementation(async (_options?: unknown) => undefined as string | undefined);
+    saveProjectAsMocks.fsJoin.mockImplementation((...parts: string[]) => Promise.resolve(parts.join('/')));
+    saveProjectAsMocks.fsReadDirectory.mockImplementation(() => Promise.resolve([]));
+    saveProjectAsMocks.fsReadBinaryFile.mockImplementation(() => Promise.resolve(new Uint8Array()));
+    saveProjectAsMocks.openDialog.mockImplementation(() => Promise.resolve(undefined as string | undefined));
 }
 
 vi.mock('../services/fs', () => ({

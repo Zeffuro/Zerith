@@ -9,10 +9,11 @@ import type { OverlayConfig } from './managers/OverlayManager';
 import type { StartScreenConfig } from './managers/StartScreenManager';
 import type { SceneNavigationCommandType } from './types';
 import type { Theme } from './utils/Theme';
+
 import { EngineConfigSchema } from './schemas';
 
-export type { SceneNavigationCommandType } from './types';
-export { EngineConfigSchema };
+export {EngineConfigSchema} from './schemas';
+
 
 export interface EngineConfig {
     audio?: AudioConfig;
@@ -33,8 +34,9 @@ export interface EngineConfig {
 
 export type EngineConfigFile = z.infer<typeof EngineConfigSchema>;
 
+export type SceneNavigationAction = 'execute' | 'skip';
+
 export function parseEngineConfig(config: unknown) {
     return EngineConfigSchema.safeParse(config);
 }
-
-export type SceneNavigationAction = 'execute' | 'skip';
+export type { SceneNavigationCommandType } from './types';

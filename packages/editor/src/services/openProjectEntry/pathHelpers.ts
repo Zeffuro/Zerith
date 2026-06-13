@@ -4,12 +4,12 @@ export function basenameFromPath(path: string): string {
     return lastSlash === -1 ? normalized : normalized.slice(lastSlash + 1);
 }
 
-export function isManifestFilePath(path: string): boolean {
-    return basenameFromPath(path).toLowerCase() === 'game.json';
-}
-
 export function isEngineConfigFilePath(path: string): boolean {
     return basenameFromPath(path).toLowerCase() === 'engine.config.json';
+}
+
+export function isManifestFilePath(path: string): boolean {
+    return basenameFromPath(path).toLowerCase() === 'game.json';
 }
 
 export function normalizeFilePath(path: string): string {

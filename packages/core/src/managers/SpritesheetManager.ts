@@ -97,6 +97,41 @@ export class SpritesheetManager {
         return sheet;
     }
 
+    private isAbsoluteImagePath(path: string): boolean {
+        return path.startsWith('/')
+            || /^[a-zA-Z]+:\/\//.test(path)
+            || /^[a-zA-Z]:[\\/]/.test(path);
+    }
+
+    private loadImage(url: string): Promise<HTMLImageElement> {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.addEventListener('load', () => resolve(img));
+            img.addEventListener('error', () => reject(new Error(`Failed to load image: ${url}`)));
+            img.src = url;
+        });
+    }
+
+    private resolveImageName(atlasData: SpritesheetData): string | undefined {
+        const candidate = atlasData as {
+            meta?: { image?: unknown } & SpritesheetData['meta'];
+            source?: unknown;
+        } & SpritesheetData;
+
+        if (typeof candidate.meta?.image === 'string' && candidate.meta.image.length > 0) {
+            return candidate.meta.image;
+        }
+
+        if (typeof candidate.source === 'string' && candidate.source.length > 0) {
+            return candidate.source;
+        }
+
+        return undefined;
+    }
+
+    private resolver: AssetResolver = (url) => url;
+
     private toPixiAtlasData(rawData: unknown): SpritesheetData {
         if (!isRecord(rawData)) {
             throw new Error('Spritesheet descriptor must be a JSON object.');
@@ -160,41 +195,6 @@ export class SpritesheetManager {
             frames: normalizedFrames,
         } as SpritesheetData;
     }
-
-    private resolveImageName(atlasData: SpritesheetData): string | undefined {
-        const candidate = atlasData as SpritesheetData & {
-            meta?: SpritesheetData['meta'] & { image?: unknown };
-            source?: unknown;
-        };
-
-        if (typeof candidate.meta?.image === 'string' && candidate.meta.image.length > 0) {
-            return candidate.meta.image;
-        }
-
-        if (typeof candidate.source === 'string' && candidate.source.length > 0) {
-            return candidate.source;
-        }
-
-        return undefined;
-    }
-
-    private isAbsoluteImagePath(path: string): boolean {
-        return path.startsWith('/')
-            || /^[a-zA-Z]+:\/\//.test(path)
-            || /^[a-zA-Z]:[\\/]/.test(path);
-    }
-
-    private loadImage(url: string): Promise<HTMLImageElement> {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.addEventListener('load', () => resolve(img));
-            img.addEventListener('error', () => reject(new Error(`Failed to load image: ${url}`)));
-            img.src = url;
-        });
-    }
-
-    private resolver: AssetResolver = (url) => url;
 }
 
 function buildAnchor(frame: Record<string, unknown>): { x?: number; y?: number } | undefined {

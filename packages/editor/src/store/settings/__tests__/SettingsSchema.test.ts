@@ -19,7 +19,7 @@ describe('SettingsSchema', () => {
     it('returns defaults for invalid persisted values', () => {
         expect(mergeSettings()).toEqual(defaultSettings);
         expect(mergeSettings({ audiosheetShortcutTargetMode: 'invalid' })).toEqual(defaultSettings);
-        expect(mergeSettings({ activeDockLayoutPresetId: '   ' })).toEqual(defaultSettings);
+        expect(mergeSettings({ activeDockLayoutPresetId: ' '.repeat(3) })).toEqual(defaultSettings);
         expect(mergeSettings({ autosaveEnabled: 'yes' })).toEqual(defaultSettings);
         expect(mergeSettings({ autosaveIntervalMs: 0 })).toEqual(defaultSettings);
         expect(mergeSettings({ autosaveIntervalMs: Number.NaN })).toEqual(defaultSettings);
@@ -29,7 +29,7 @@ describe('SettingsSchema', () => {
         expect(mergeSettings({ keymapOverrides: 'invalid' })).toEqual(defaultSettings);
         expect(mergeSettings({ recentProjects: 'invalid' })).toEqual(defaultSettings);
         expect(mergeSettings({ themeKey: '' })).toEqual(defaultSettings);
-        expect(mergeSettings({ themeKey: '   ' })).toEqual(defaultSettings);
+        expect(mergeSettings({ themeKey: ' '.repeat(3) })).toEqual(defaultSettings);
         expect(mergeSettings({ uiScale: 0 })).toEqual(defaultSettings);
         expect(mergeSettings({ uiScale: -1 })).toEqual(defaultSettings);
         expect(mergeSettings({ uiScale: Number.NaN })).toEqual(defaultSettings);
@@ -101,7 +101,7 @@ describe('SettingsSchema', () => {
                     vars: {
                         '--editor-bg-app': ' #050505 ',
                         '--editor-text-primary': '#f0f0f0',
-                        '--invalid-empty': '   ',
+                        '--invalid-empty': ' '.repeat(3),
                     },
                 },
                 {

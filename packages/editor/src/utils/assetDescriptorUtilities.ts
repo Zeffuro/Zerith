@@ -31,13 +31,13 @@ export function getAssetPathFromDescriptor(descriptorPath: string): string {
     return descriptorPath;
 }
 
-export function getSheetDescriptorPath(assetPath: string): string {
-    return `${stripTrailingExtension(assetPath)}${CANONICAL_DESCRIPTOR_SUFFIX}`;
-}
-
 export function getSheetDescriptorCandidatePaths(assetPath: string): string[] {
     const basePath = stripTrailingExtension(assetPath);
     return [`${basePath}${CANONICAL_DESCRIPTOR_SUFFIX}`];
+}
+
+export function getSheetDescriptorPath(assetPath: string): string {
+    return `${stripTrailingExtension(assetPath)}${CANONICAL_DESCRIPTOR_SUFFIX}`;
 }
 
 export function isSheetDescriptor(filename: string): boolean {

@@ -28,7 +28,7 @@ export function isCustomTheme(key: string, customThemes: CustomThemeEntry[]): bo
 
 export function normalizeTheme(module_: unknown): ThemeFile | undefined {
     const data = (module_ && typeof module_ === 'object' && 'default' in module_)
-        ? (module_ as { default: unknown }).default
+        ? (module_).default
         : module_;
 
     if (!data || typeof data !== 'object') return undefined;

@@ -102,8 +102,8 @@ export interface UiPrefsSlice {
     clearRecentProjects: () => void;
     closeCommandPalette: () => void;
     closeExportGameModal: () => void;
-    closeNewProjectModal: () => void;
     closeGlobalSearchPopup: () => void;
+    closeNewProjectModal: () => void;
     closeSettingsModal: () => void;
     globalSearchLaunchMode: GlobalSearchLaunchMode;
     isCommandPaletteOpen: boolean;
@@ -117,9 +117,9 @@ export interface UiPrefsSlice {
     markManualSave: () => void;
     openCommandPalette: () => void;
     openExportGameModal: () => void;
-    openNewProjectModal: () => void;
     openGlobalSearchPopup: (mode?: GlobalSearchLaunchMode) => void;
     openGlobalSearchReplacePopup: () => void;
+    openNewProjectModal: () => void;
     openSettingsModal: () => void;
     recentProjects: RecentProject[];
     requestProjectClose: () => void;

@@ -196,7 +196,7 @@ function normalizeCharacterDefinition(id: string, value: unknown): CharacterDefi
         ...source,
         displayName: value.displayName,
         name: typeof value.name === 'string' ? value.name : id,
-    } as unknown as CharacterDefinition;
+    };
 }
 
 function parseActiveTab(activeTab: ActiveTab): ParsedCharactersTab {

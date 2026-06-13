@@ -1,4 +1,8 @@
+import type { IJsonModel } from 'flexlayout-react';
+
 import { deepClone } from 'core';
+
+import { DOCK_PANELS } from './dockPanelIds';
 
 export const DOCK_LAYOUT_VERSION = 8 as const;
 
@@ -41,7 +45,7 @@ export const DEFAULT_DOCK_LAYOUT = {
                                         weight: 55,
                                     },
                                 ],
-                                type: 'column',
+                                type: 'row',
                                 weight: 35,
                             },
                         ],
@@ -51,13 +55,13 @@ export const DEFAULT_DOCK_LAYOUT = {
                     {
                         children:[
                             { component: 'console', id: 'console', name: 'Console', type: 'tab' },
-                            { component: 'global_search', id: 'global_search', name: 'Search', type: 'tab' }
-                        ],
-                        type: 'tabset',
-                        weight: 25,
-                    }
-                ],
-                type: 'column',
+                        { component: 'global_search', id: 'global_search', name: 'Search', type: 'tab' }
+                    ],
+                    type: 'tabset',
+                    weight: 25,
+                }
+            ],
+                type: 'row',
                 weight: 80,
             }
         ],
@@ -68,4 +72,67 @@ export const DEFAULT_DOCK_LAYOUT = {
 
 export function createDefaultDockLayout() {
     return deepClone(DEFAULT_DOCK_LAYOUT);
+}
+
+export function isUsableDockLayoutJson(value: unknown): value is IJsonModel {
+    if (!isRecord(value) || !isRecord(value.global) || !isRecord(value.layout)) {
+        return false;
+    }
+
+    const rootChildren = value.layout.children;
+    if (!Array.isArray(rootChildren) || rootChildren.length === 0) {
+        return false;
+    }
+
+    const components = new Set<string>();
+    const validation = collectDockComponents(value.layout, components);
+    return validation.valid && components.has(DOCK_PANELS.explorer) && components.has(DOCK_PANELS.editor);
+}
+
+export function normalizeDockLayoutJsonForFlexLayout(value: unknown): IJsonModel | undefined {
+    const normalized = normalizeLegacyDockNode(value);
+    return isUsableDockLayoutJson(normalized) ? normalized : undefined;
+}
+
+function collectDockComponents(node: unknown, components: Set<string>): { valid: boolean } {
+    if (!isRecord(node)) return { valid: false };
+
+    if (typeof node.type === 'string' && !['border', 'row', 'tab', 'tabset'].includes(node.type)) {
+        return { valid: false };
+    }
+
+    if (typeof node.component === 'string') {
+        components.add(node.component);
+    }
+
+    if (!Array.isArray(node.children)) return { valid: true };
+    for (const child of node.children) {
+        const validation = collectDockComponents(child, components);
+        if (!validation.valid) return validation;
+    }
+
+    return { valid: true };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value) && typeof value === 'object';
+}
+
+function normalizeLegacyDockNode(value: unknown): unknown {
+    if (Array.isArray(value)) {
+        return value.map((child) => normalizeLegacyDockNode(child));
+    }
+
+    if (!isRecord(value)) {
+        return value;
+    }
+
+    const normalized: Record<string, unknown> = {};
+    for (const [key, childValue] of Object.entries(value)) {
+        normalized[key] = key === 'type' && childValue === 'column'
+            ? 'row'
+            : normalizeLegacyDockNode(childValue);
+    }
+
+    return normalized;
 }

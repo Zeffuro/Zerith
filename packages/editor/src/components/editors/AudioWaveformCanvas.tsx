@@ -17,12 +17,14 @@ type AudioWaveformCanvasProperties = {
     activeHandle?: ActiveWaveformHandle;
     cues: WaveformCueMarker[];
     durationSeconds: number;
-    onClick: (event: MouseEvent<HTMLCanvasElement>) => void;
-    onContextMenu: (event: MouseEvent<HTMLCanvasElement>) => void;
-    onPointerDown: (event: PointerEvent<HTMLCanvasElement>) => void;
-    onPointerMove: (event: PointerEvent<HTMLCanvasElement>) => void;
-    onPointerUp: (event: PointerEvent<HTMLCanvasElement>) => void;
-    onWheel: (event: WheelEvent<HTMLCanvasElement>) => void;
+    height?: number;
+    onClick?: (event: MouseEvent<HTMLCanvasElement>) => void;
+    onContextMenu?: (event: MouseEvent<HTMLCanvasElement>) => void;
+    onPointerCancel?: (event: PointerEvent<HTMLCanvasElement>) => void;
+    onPointerDown?: (event: PointerEvent<HTMLCanvasElement>) => void;
+    onPointerMove?: (event: PointerEvent<HTMLCanvasElement>) => void;
+    onPointerUp?: (event: PointerEvent<HTMLCanvasElement>) => void;
+    onWheel?: (event: WheelEvent<HTMLCanvasElement>) => void;
     peaks: number[];
     scrubSeconds: number;
     selectedCue: string | undefined;
@@ -33,8 +35,10 @@ export function AudioWaveformCanvas({
     activeHandle,
     cues,
     durationSeconds,
+    height = 180,
     onClick,
     onContextMenu,
+    onPointerCancel,
     onPointerDown,
     onPointerMove,
     onPointerUp,
@@ -62,29 +66,15 @@ export function AudioWaveformCanvas({
         <canvas
             onClick={onClick}
             onContextMenu={onContextMenu}
-            onPointerCancel={onPointerUp}
+            onPointerCancel={onPointerCancel ?? onPointerUp}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onWheel={onWheel}
             ref={canvasReference}
-            style={{ cursor: 'pointer', display: 'block', height: 180, touchAction: 'none', width: '100%' }}
+            style={{ cursor: onClick || onPointerDown ? 'pointer' : 'default', display: 'block', height, touchAction: 'none', width: '100%' }}
         />
     );
-}
-
-export function computeWaveformPeaks(channelData: Float32Array, bins: number): number[] {
-    if (channelData.length === 0 || bins <= 0) return [];
-    const samplesPerBin = Math.max(1, Math.floor(channelData.length / bins));
-    const peaks = Array.from({ length: bins }, (_, index) => {
-        const start = index * samplesPerBin;
-        const end = index === bins - 1 ? channelData.length : start + samplesPerBin;
-        let max = 0;
-        for (let pointer = start; pointer < end; pointer += 1) max = Math.max(max, Math.abs(channelData[pointer] ?? 0));
-        return max;
-    });
-    const maxPeak = Math.max(...peaks, 0.0001);
-    return peaks.map((peak) => peak / maxPeak);
 }
 
 function drawHandle(context: CanvasRenderingContext2D, x: number, height: number, color: string): void {

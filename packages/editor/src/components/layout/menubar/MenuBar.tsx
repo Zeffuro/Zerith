@@ -344,7 +344,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
 
     const helpItems = useMemo<MenuItem[]>(
         () =>[
-            { label: 'GitHub Repository', onClick: handleOpenRepository },
+            { label: 'GitHub Repository', onClick: () => { void handleOpenRepository(); } },
             { disabled: true, label: 'About Zerith Editor' },
         ],
         [handleOpenRepository]

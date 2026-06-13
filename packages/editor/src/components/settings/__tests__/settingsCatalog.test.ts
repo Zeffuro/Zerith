@@ -4,7 +4,7 @@ import { buildSettingsLeafCountMap, buildSettingsNodeCountMap, filterSettingsTre
 
 describe('filterSettingsTree', () => {
     it('returns full catalog for blank search', () => {
-        const result = filterSettingsTree(settingsCatalog, '   ');
+        const result = filterSettingsTree(settingsCatalog, ' '.repeat(3));
 
         expect(result).toHaveLength(settingsCatalog.length);
         expect(result).toEqual(settingsCatalog);

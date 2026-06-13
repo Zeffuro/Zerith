@@ -116,6 +116,22 @@ export function buildFramesFromSliceLines(lines: ManualSliceLines, bounds: Image
     return frames;
 }
 
+export function clampFrameRectToBounds(rect: ManualFrameRect, bounds: ImageBounds): ManualFrameRect {
+    const width = Math.max(1, Math.floor(bounds.width));
+    const height = Math.max(1, Math.floor(bounds.height));
+    const x = clampFrameStart(rect.x, width);
+    const y = clampFrameStart(rect.y, height);
+    const maxWidth = Math.max(1, width - x);
+    const maxHeight = Math.max(1, height - y);
+
+    return {
+        h: Math.max(1, Math.min(maxHeight, Math.round(rect.h))),
+        w: Math.max(1, Math.min(maxWidth, Math.round(rect.w))),
+        x,
+        y,
+    };
+}
+
 export function computeThumbnailCanvasMetrics(
     frame: Pick<SpriteFrame, 'h' | 'w'>,
     maxSize: number,
@@ -135,6 +151,33 @@ export function computeThumbnailCanvasMetrics(
     };
 }
 
+export function duplicateFrame(
+    descriptor: SpritesheetDescriptor,
+    existingFrames: Record<string, SpriteFrame>,
+    frameName: string,
+): { descriptor: SpritesheetDescriptor; frameName: string } | undefined {
+    const frame = existingFrames[frameName];
+    if (!frame) return undefined;
+    const name = nextCopyFrameName(frameName, existingFrames);
+    const nextFrames = mergeFrameUpdates(existingFrames, {
+        [name]: {
+            h: frame.h,
+            w: frame.w,
+            x: frame.x,
+            y: frame.y,
+        },
+    });
+
+    return {
+        descriptor: {
+            ...descriptor,
+            format: 'atlas',
+            frames: nextFrames,
+        },
+        frameName: name,
+    };
+}
+
 export function frameAtPoint(entries: Array<[string, SpriteFrame]>, x: number, y: number): string | undefined {
     for (const [name, frame] of entries) {
         if (x >= frame.x && x <= frame.x + frame.w && y >= frame.y && y <= frame.y + frame.h) {
@@ -149,6 +192,19 @@ export function insertFrameAtIndex(sequence: string[], targetIndex: number, fram
     const clampedIndex = Math.max(0, Math.min(targetIndex, next.length));
     next.splice(clampedIndex, 0, frameName);
     return next;
+}
+
+export function mergeFrameRectUpdate(
+    existingFrames: Record<string, SpriteFrame>,
+    frameName: string,
+    update: Partial<ManualFrameRect>,
+    bounds: ImageBounds,
+): Record<string, SpriteFrame> {
+    const frame = existingFrames[frameName];
+    if (!frame) return existingFrames;
+    return mergeFrameUpdates(existingFrames, {
+        [frameName]: clampFrameRectToBounds({ ...frame, ...update }, bounds),
+    });
 }
 
 export function mergeFrameUpdates(
@@ -174,6 +230,18 @@ export function mergeFrameUpdates(
     return next;
 }
 
+export function moveSequenceFrame(sequence: string[], sourceIndex: number, direction: -1 | 1): string[] {
+    const targetIndex = sourceIndex + direction;
+    if (sourceIndex < 0 || sourceIndex >= sequence.length || targetIndex < 0 || targetIndex >= sequence.length) {
+        return sequence;
+    }
+
+    const next = [...sequence];
+    const [moved] = next.splice(sourceIndex, 1);
+    next.splice(targetIndex, 0, moved);
+    return next;
+}
+
 export function moveSliceLine(
     lines: ManualSliceLines,
     axis: ManualSliceAxis,
@@ -192,6 +260,17 @@ export function moveSliceLine(
         ...lines,
         [key]: sortUnique(current),
     };
+}
+
+export function nextCopyFrameName(frameName: string, frames: Record<string, SpriteFrame>): string {
+    const baseName = `${frameName}_copy`;
+    if (!frames[baseName]) return baseName;
+
+    let candidate = 2;
+    while (frames[`${baseName}_${candidate}`]) {
+        candidate += 1;
+    }
+    return `${baseName}_${candidate}`;
 }
 
 export function nextManualFrameName(frames: Record<string, SpriteFrame>): string {
@@ -232,6 +311,16 @@ export function normalizeManualDragFrame(start: Point, end: Point, bounds: Image
     };
 }
 
+export function removeFrameAtIndex(sequence: string[], index: number): string[] {
+    if (index < 0 || index >= sequence.length) return sequence;
+    return sequence.filter((_frameName, currentIndex) => currentIndex !== index);
+}
+
+export function removeMatchingSequenceFrames(sequence: string[], frameName: string): string[] {
+    const next = sequence.filter((candidate) => candidate !== frameName);
+    return next.length === sequence.length ? sequence : next;
+}
+
 export function reorderSequence(sequence: string[], sourceIndex: number, targetIndex: number): string[] {
     if (sourceIndex < 0 || sourceIndex >= sequence.length || targetIndex < 0 || targetIndex > sequence.length) {
         return sequence;
@@ -248,8 +337,21 @@ export function reorderSequence(sequence: string[], sourceIndex: number, targetI
     return next;
 }
 
+export function replaceFrameAtIndex(sequence: string[], index: number, frameName: string): string[] {
+    if (index < 0 || index >= sequence.length) return sequence;
+    const next = [...sequence];
+    next[index] = frameName;
+    return next;
+}
+
 function clampAxis(value: number, size: number): number {
     const clamped = Math.max(0, Math.min(size, value));
+    return Math.round(clamped);
+}
+
+function clampFrameStart(value: number, size: number): number {
+    if (size <= 1) return 0;
+    const clamped = Math.max(0, Math.min(size - 1, value));
     return Math.round(clamped);
 }
 

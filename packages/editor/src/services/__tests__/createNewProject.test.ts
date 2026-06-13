@@ -73,7 +73,7 @@ describe('createNewProject', () => {
 
     it('omits author when not provided', async () => {
         await createNewProject({
-            author: '   ',
+            author: ' '.repeat(3),
             directory: '/projects/case-two',
             name: 'Case Two',
         });
@@ -85,11 +85,11 @@ describe('createNewProject', () => {
     });
 
     it('throws when required fields are blank', async () => {
-        await expect(createNewProject({ author: '', directory: '   ', name: 'Case' }))
+        await expect(createNewProject({ author: '', directory: ' '.repeat(3), name: 'Case' }))
             .rejects
             .toThrow('Project directory is required.');
 
-        await expect(createNewProject({ author: '', directory: '/projects/case', name: '   ' }))
+        await expect(createNewProject({ author: '', directory: '/projects/case', name: ' '.repeat(3) }))
             .rejects
             .toThrow('Project name is required.');
     });

@@ -62,7 +62,7 @@ function createProjectBridge(overrides?: Partial<PathOpsProjectBridge>): PathOps
 }
 
 function createWait(duration: number): Command {
-    return { duration, type: 'wait' } as Command;
+    return { duration, type: 'wait' };
 }
 
 function readWaitDurations(commands: Command[]): number[] {

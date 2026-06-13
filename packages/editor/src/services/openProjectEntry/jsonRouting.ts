@@ -15,10 +15,12 @@ type RouteJsonEntryOptions = {
     isMacrosObject: (value: unknown) => boolean;
 };
 
+const RESOURCE_HINT_KINDS = new Set<string>(['characters', 'engineConfig', 'items', 'manifest']);
+
 export function routeJsonEntry(options: RouteJsonEntryOptions): JsonRoute {
     const { data, filePath, hintedKind, isMacrosObject } = options;
 
-    if (hintedKind === 'manifest' || hintedKind === 'items' || hintedKind === 'characters' || hintedKind === 'engineConfig') {
+    if (isResourceHintKind(hintedKind)) {
         return { kind: 'resource', resourceKind: hintedKind };
     }
 
@@ -42,3 +44,6 @@ export function routeJsonEntry(options: RouteJsonEntryOptions): JsonRoute {
     return { kind: 'unknownJson', tabKind: isManifestFile ? 'manifest' : 'json' };
 }
 
+function isResourceHintKind(kind: JsonHintKind): kind is JsonResourceKind {
+    return typeof kind === 'string' && RESOURCE_HINT_KINDS.has(kind);
+}

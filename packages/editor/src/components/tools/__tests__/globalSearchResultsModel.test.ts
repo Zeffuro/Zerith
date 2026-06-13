@@ -62,7 +62,7 @@ describe('globalSearchResultsModel', () => {
     it('returns an empty preview map when query or replacement is blank', () => {
         const match = makeMatch();
 
-        expect(buildReplacePreviewMap([match], '   ', 'champion', { caseSensitive: false, regex: false }).size).toBe(0);
+        expect(buildReplacePreviewMap([match], ' '.repeat(3), 'champion', { caseSensitive: false, regex: false }).size).toBe(0);
         expect(buildReplacePreviewMap([match], 'hero', '', { caseSensitive: false, regex: false }).size).toBe(0);
     });
 });

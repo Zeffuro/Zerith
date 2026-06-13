@@ -51,7 +51,7 @@ describe('settingsControlRegistry', () => {
     });
 
     it('returns all controls for blank query', () => {
-        const matched = [...getMatchedSettingsControlIds('   ', state)];
+        const matched = [...getMatchedSettingsControlIds(' '.repeat(3), state)];
 
         expect(matched).toEqual(['audio', 'audiosheetShortcutTargetMode', 'autosaveEnabled', 'autosaveIntervalMs', 'customThemes', 'dockLayoutPresets', 'editorScale', 'explorerScale', 'inspectorScale', 'quickCommandTypes', 'theme', 'timelineScale', 'uiScale']);
     });

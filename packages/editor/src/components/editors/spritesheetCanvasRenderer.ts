@@ -56,6 +56,26 @@ export function drawGrid(
     context.restore();
 }
 
+export function drawImageBackdrop(
+    context: CanvasRenderingContext2D,
+    imageWidth: number,
+    imageHeight: number,
+    zoom: number,
+): void {
+    const tileSize = 16;
+    context.save();
+    for (let y = 0; y < imageHeight; y += tileSize) {
+        for (let x = 0; x < imageWidth; x += tileSize) {
+            context.fillStyle = ((x / tileSize + y / tileSize) % 2 === 0) ? '#171a20' : '#20242c';
+            context.fillRect(x, y, Math.min(tileSize, imageWidth - x), Math.min(tileSize, imageHeight - y));
+        }
+    }
+    context.strokeStyle = 'rgba(255, 255, 255, 0.28)';
+    context.lineWidth = Math.max(1 / zoom, 0.5 / zoom);
+    context.strokeRect(0, 0, imageWidth, imageHeight);
+    context.restore();
+}
+
 export function drawSelection(context: CanvasRenderingContext2D, rect: ManualFrameRect, zoom: number): void {
     context.save();
     context.lineWidth = Math.max(1 / zoom, 0.75 / zoom);

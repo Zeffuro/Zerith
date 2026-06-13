@@ -76,7 +76,7 @@ export function EngineConfigEditor({ uiScale }: { uiScale: number }) {
         updateConfig((current) => {
             const nextDisplay = { ...readRecord(current.display) };
             if (value) {
-                nextDisplay.scaleMode = value as DisplayScaleMode;
+                nextDisplay.scaleMode = value;
             } else {
                 delete nextDisplay.scaleMode;
             }

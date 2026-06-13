@@ -13,6 +13,7 @@ type AssetOption = {
 };
 
 const BG_EXT = IMG_EXT;
+const AUDIO_KINDS = new Set<AssetKind>(['audio', 'bgm', 'sfx']);
 const SPRITE_EXT = IMG_EXT;
 
 export function useAssetOptions(kind: AssetKind = 'all') {
@@ -88,7 +89,7 @@ function matchKind(path: string, kind: AssetKind) {
     if (kind === 'bg') return BG_EXT.has(extension);
     if (kind === 'font') return FONT_EXT.has(extension);
     if (kind === 'sprite') return SPRITE_EXT.has(extension);
-    if (kind === 'audio' || kind === 'bgm' || kind === 'sfx') return AUDIO_EXT.has(extension);
+    if (AUDIO_KINDS.has(kind)) return AUDIO_EXT.has(extension);
     return true;
 }
 

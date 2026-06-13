@@ -34,7 +34,7 @@ export class StartScreenManager {
             backgroundColor: 0x00_00_00,
             fontFamily: 'Arial',
             fontSize: 36,
-            fontWeight: 'bold' as TextStyleFontWeight,
+            fontWeight: 'bold',
             pulseMax: 1,
             pulseMin: 0.6,
             pulseSpeed: 500,

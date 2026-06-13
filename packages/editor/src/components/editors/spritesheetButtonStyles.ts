@@ -28,11 +28,15 @@ export function resetSpritesheetButtonBackground(event: MouseEvent<HTMLButtonEle
 export function spritesheetButtonStyle(options: SpritesheetButtonStyleOptions = {}): CSSProperties {
     const { active = false, disabled = false } = options;
     return {
+        alignItems: 'center',
         background: active ? t.bg.selected : t.bg.panel,
         border: `1px solid ${active ? t.accent.primary : t.border.button}`,
         borderRadius: t.radius.sm,
         color: t.text.normal,
         cursor: disabled ? 'not-allowed' : 'pointer',
+        display: 'inline-flex',
+        gap: 6,
+        justifyContent: 'center',
         opacity: disabled ? 0.6 : 1,
         padding: '4px 10px',
     };

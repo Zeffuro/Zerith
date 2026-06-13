@@ -79,8 +79,10 @@ export function shortcutChordFromEvent(event: ShortcutEventLike): ShortcutChord 
     };
 }
 
+const MODULE_TOKENS = new Set(['cmd', 'control', 'ctrl', 'meta', 'mod']);
+
 function isModuleToken(value: string): boolean {
-    return value === 'control' || value === 'ctrl' || value === 'cmd' || value === 'meta' || value === 'mod';
+    return MODULE_TOKENS.has(value);
 }
 
 function normalizeEventKey(key: string): string | undefined {

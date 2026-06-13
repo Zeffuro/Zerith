@@ -26,7 +26,7 @@ type CoreSliceState = {
     undo: () => void;
 };
 
-const waitNode = (duration: number): EditorNode => ({ duration, type: 'wait' } as EditorNode);
+const waitNode = (duration: number): EditorNode => ({ duration, type: 'wait' });
 
 const createLegacyIfNode = (): EditorNode =>
     JSON.parse('{"type":"if","then":[]}') as EditorNode;

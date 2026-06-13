@@ -11,7 +11,7 @@ describe('saveProjectAs', () => {
     });
 
     it('returns undefined when the directory picker is cancelled', async () => {
-        serviceMocks.openDialog.mockResolvedValueOnce(undefined);
+        serviceMocks.openDialog.mockImplementationOnce(() => Promise.resolve(undefined));
 
         const result = await saveProjectAs('/project/source');
 
@@ -31,7 +31,7 @@ describe('saveProjectAs', () => {
                 { isDirectory: false, isFile: true, isSymlink: false, name: 'logo.png' },
             ] as never[]);
 
-        serviceMocks.fsReadBinaryFile.mockImplementation(async (path?: string) => new TextEncoder().encode(path ?? ''));
+        serviceMocks.fsReadBinaryFile.mockImplementation((path?: string) => Promise.resolve(new TextEncoder().encode(path ?? '')));
 
         const result = await saveProjectAs('/project/source');
 

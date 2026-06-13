@@ -32,5 +32,5 @@ export function waitCommand(overrides: Partial<BaseCommand> = {}): BaseCommand {
         duration: 0,
         type: 'wait',
         ...overrides,
-    } as BaseCommand;
+    };
 }

@@ -28,7 +28,7 @@ type UnknownCommandPlugin = {
 const editorCommandTypeSet = new Set<EditorCommandType>([...BuiltInCommandTypes, 'macro_header']);
 
 function isEditorCommandType(type: string): type is EditorCommandType {
-    return editorCommandTypeSet.has(type as EditorCommandType);
+    return editorCommandTypeSet.has(type);
 }
 
 export const COMMAND_TYPES: EditorCommandType[] = [...new Set([
@@ -42,7 +42,7 @@ export const COMMAND_PLUGINS: Record<EditorCommandType, CommandPlugin> = Object.
         return [
             type,
             {
-                createDefault: o.createDefault ?? (() => ({ type } as EditorNodeByType<EditorCommandType>)),
+                createDefault: o.createDefault ?? (() => ({ type })),
                 getBranches: o.getBranches,
                 getSummary: o.getSummary,
                 icon: o.icon ?? FALLBACK_ICON,
@@ -59,7 +59,7 @@ const typedCommandTypes = [...COMMAND_TYPES];
 
 export const pluginApi: PluginAPI = {
     createDefaultCommand<TType extends EditorCommandType>(type: TType) {
-        return this.getPlugin(type).createDefault?.() ?? ({ type } as EditorNodeByType<TType>);
+        return pluginApi.getPlugin(type).createDefault?.() ?? ({ type } as EditorNodeByType<TType>);
     },
     getAllPlugins() {
         return typedCommandTypes

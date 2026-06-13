@@ -51,7 +51,7 @@ function createTabsState() {
     });
 
     harness.setState({
-        ...createWorkbenchTabsSlice(harness.set as never, harness.get as never),
+        ...createWorkbenchTabsSlice(harness.set, harness.get),
     });
 
     return harness;

@@ -46,8 +46,8 @@ describe('themeEditorDraftModel', () => {
         const harness = createSliceHarness({
             baseThemeKey: 'classic',
             key: undefined as string | undefined,
-            label: '   ',
-            vars: { '--editor-text-primary': '#ffffff' } as Record<string, string>,
+            label: ' '.repeat(3),
+            vars: { '--editor-text-primary': '#ffffff' },
         });
 
         harness.set((state) => ({

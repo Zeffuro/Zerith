@@ -59,7 +59,7 @@ describe('normalizeNode', () => {
     it('normalizes each node when normalizing a script array', () => {
         const normalized = normalizeScript([
             createLegacyIfNode() as never,
-            { type: 'while' } as never,
+            { type: 'while' },
         ]);
 
         expect(normalized).toHaveLength(2);

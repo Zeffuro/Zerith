@@ -1,6 +1,7 @@
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { generateGridFrames, parseSpritesheetDescriptor, type SpritesheetDescriptor } from 'core';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, Columns3, Copy, Grid3x3, type LucideIcon, MousePointer2, Pipette, RotateCcw, Rows3, Save, Scissors, SquareDashedMousePointer, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
+import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { WorkbenchTab } from '../../store/workbench/types';
 
@@ -11,22 +12,19 @@ import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { SpritesheetAnimationEditor } from './SpritesheetAnimationEditor';
-import {
-    applySpritesheetButtonHover,
-    applySpritesheetButtonPressed,
-    resetSpritesheetButtonBackground,
-    spritesheetButtonStyle,
-} from './spritesheetButtonStyles';
+import { spritesheetButtonStyle } from './spritesheetButtonStyles';
 import { SpritesheetCanvas } from './SpritesheetCanvas';
 import {
     addSliceLine,
     applyManualFrame,
     applySliceLineFrames,
     buildFramesFromSliceLines,
+    duplicateFrame,
     type ManualFrameRect,
     type ManualSliceAxis,
     type ManualSliceLines,
     type ManualTool,
+    mergeFrameRectUpdate,
     mergeFrameUpdates,
     moveSliceLine,
 } from './spritesheetEditorModel';
@@ -35,6 +33,17 @@ import { SpritesheetFrameList } from './SpritesheetFrameList';
 
 type SpritesheetEditorPanelProperties = {
     tab: WorkbenchTab;
+};
+
+type ToolButtonProperties = {
+    active?: boolean;
+    disabled?: boolean;
+    icon: LucideIcon;
+    label: string;
+    onClick: () => void;
+    primary?: boolean;
+    title?: string;
+    uiScale: number;
 };
 
 export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties) {
@@ -82,6 +91,8 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
         });
     }, [descriptor, image]);
     const frameNames = Object.keys(frames);
+    const selectedFrame = selectedFrameName ? frames[selectedFrameName] : undefined;
+    const canEditAtlasFrames = descriptor?.format === 'atlas';
     const slicePreviewFrames = useMemo(() => {
         if (!image) return [];
         return buildFramesFromSliceLines(sliceLines, {
@@ -296,159 +307,88 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
         applyDescriptorUpdate({ ...descriptor, frames: nextFrames });
     };
 
+    const handleDuplicateFrame = (name: string) => {
+        if (!descriptor) return;
+        const result = duplicateFrame(descriptor, frames, name);
+        if (!result) return;
+        applyDescriptorUpdate(result.descriptor);
+        setSelectedFrameName(result.frameName);
+    };
+
+    const handleSelectedFrameRectUpdate = (update: Partial<ManualFrameRect>) => {
+        if (!descriptor || !image || !selectedFrameName || descriptor.format !== 'atlas') return;
+        const nextFrames = mergeFrameRectUpdate(frames, selectedFrameName, update, {
+            height: image.naturalHeight,
+            width: image.naturalWidth,
+        });
+        if (nextFrames === frames) return;
+        applyDescriptorUpdate({ ...descriptor, frames: nextFrames });
+    };
+
+    const handleSelectedFrameNudge = (dx: number, dy: number) => {
+        if (!selectedFrame) return;
+        handleSelectedFrameRectUpdate({ x: selectedFrame.x + dx, y: selectedFrame.y + dy });
+    };
+
+    const resetViewport = () => {
+        setZoomLevel(1);
+        setPanOffset({ x: 0, y: 0 });
+    };
+
     return (
-        <div style={{ display: 'grid', gap: 12, gridTemplateRows: 'auto 1fr', height: '100%', padding: 12 }}>
-            <div style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
-                <strong style={{ color: t.text.primary, marginRight: 'auto' }}>Spritesheet Editor</strong>
-                <button
-                    onClick={() => setManualTool('select')}
-                    onMouseDown={(event) => applySpritesheetButtonPressed(event, false, manualTool === 'select')}
-                    onMouseEnter={(event) => applySpritesheetButtonHover(event, false, manualTool === 'select')}
-                    onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, manualTool === 'select')}
-                    onMouseUp={(event) => applySpritesheetButtonHover(event, false, manualTool === 'select')}
-                    style={spritesheetButtonStyle({ active: manualTool === 'select' })}
-                    type="button"
-                >
-                    Select
-                </button>
-                <button
-                    onClick={() => setManualTool('draw')}
-                    onMouseDown={(event) => applySpritesheetButtonPressed(event, false, manualTool === 'draw')}
-                    onMouseEnter={(event) => applySpritesheetButtonHover(event, false, manualTool === 'draw')}
-                    onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, manualTool === 'draw')}
-                    onMouseUp={(event) => applySpritesheetButtonHover(event, false, manualTool === 'draw')}
-                    style={spritesheetButtonStyle({ active: manualTool === 'draw' })}
-                    type="button"
-                >
-                    Draw Frame
-                </button>
-                <button
-                    onClick={() => setManualTool('slice')}
-                    onMouseDown={(event) => applySpritesheetButtonPressed(event, false, manualTool === 'slice')}
-                    onMouseEnter={(event) => applySpritesheetButtonHover(event, false, manualTool === 'slice')}
-                    onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, manualTool === 'slice')}
-                    onMouseUp={(event) => applySpritesheetButtonHover(event, false, manualTool === 'slice')}
-                    style={spritesheetButtonStyle({ active: manualTool === 'slice' })}
-                    type="button"
-                >
-                    Slice Lines
-                </button>
+        <div style={{ background: t.bg.app, display: 'grid', gap: 10, gridTemplateRows: 'auto minmax(0, 1fr) auto', height: '100%', padding: 12 }}>
+            <div style={{ ...toolbarStyle, gap: `${10 * uiScale}px` }}>
+                <div style={{ minWidth: 0 }}>
+                    <strong style={{ color: t.text.primary }}>Spritesheet Editor</strong>
+                    <div style={{ color: t.text.faint, fontSize: `${12 * uiScale}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {descriptor ? `${descriptor.format.toUpperCase()} | ${frameNames.length} frames | ${Object.keys(descriptor.animations ?? {}).length} animations` : 'No descriptor loaded'}
+                    </div>
+                </div>
+
+                <ToolbarGroup>
+                    <ToolButton active={manualTool === 'select'} icon={MousePointer2} label="Select" onClick={() => setManualTool('select')} uiScale={uiScale} />
+                    <ToolButton active={manualTool === 'draw'} icon={SquareDashedMousePointer} label="Draw" onClick={() => setManualTool('draw')} uiScale={uiScale} />
+                    <ToolButton active={manualTool === 'slice'} icon={Scissors} label="Slice" onClick={() => setManualTool('slice')} uiScale={uiScale} />
+                </ToolbarGroup>
+
                 {manualTool === 'slice' ? (
-                    <>
-                        <button
-                            onClick={() => setSliceAxis('vertical')}
-                            onMouseDown={(event) => applySpritesheetButtonPressed(event, false, sliceAxis === 'vertical')}
-                            onMouseEnter={(event) => applySpritesheetButtonHover(event, false, sliceAxis === 'vertical')}
-                            onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, sliceAxis === 'vertical')}
-                            onMouseUp={(event) => applySpritesheetButtonHover(event, false, sliceAxis === 'vertical')}
-                            style={spritesheetButtonStyle({ active: sliceAxis === 'vertical' })}
-                            type="button"
-                        >
-                            Vertical
-                        </button>
-                        <button
-                            onClick={() => setSliceAxis('horizontal')}
-                            onMouseDown={(event) => applySpritesheetButtonPressed(event, false, sliceAxis === 'horizontal')}
-                            onMouseEnter={(event) => applySpritesheetButtonHover(event, false, sliceAxis === 'horizontal')}
-                            onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, sliceAxis === 'horizontal')}
-                            onMouseUp={(event) => applySpritesheetButtonHover(event, false, sliceAxis === 'horizontal')}
-                            style={spritesheetButtonStyle({ active: sliceAxis === 'horizontal' })}
-                            type="button"
-                        >
-                            Horizontal
-                        </button>
-                        <button
-                            disabled={slicePreviewFrames.length === 0}
-                            onClick={handleApplySliceLines}
-                            onMouseDown={(event) => applySpritesheetButtonPressed(event, slicePreviewFrames.length === 0, false)}
-                            onMouseEnter={(event) => applySpritesheetButtonHover(event, slicePreviewFrames.length === 0, false)}
-                            onMouseLeave={(event) => resetSpritesheetButtonBackground(event, slicePreviewFrames.length === 0, false)}
-                            onMouseUp={(event) => applySpritesheetButtonHover(event, slicePreviewFrames.length === 0, false)}
-                            style={spritesheetButtonStyle({ disabled: slicePreviewFrames.length === 0 })}
-                            type="button"
-                        >
-                            Apply Slices
-                        </button>
-                        <button
+                    <ToolbarGroup>
+                        <ToolButton active={sliceAxis === 'vertical'} icon={Columns3} label="Vertical" onClick={() => setSliceAxis('vertical')} uiScale={uiScale} />
+                        <ToolButton active={sliceAxis === 'horizontal'} icon={Rows3} label="Horizontal" onClick={() => setSliceAxis('horizontal')} uiScale={uiScale} />
+                        <ToolButton disabled={slicePreviewFrames.length === 0} icon={Check} label={`Apply ${slicePreviewFrames.length}`} onClick={handleApplySliceLines} uiScale={uiScale} />
+                        <ToolButton
+                            icon={Trash2}
+                            label="Clear"
                             onClick={() => {
                                 setSliceLines({ horizontal: [], vertical: [] });
                                 setManualRectPreview(undefined);
                             }}
-                            onMouseDown={(event) => applySpritesheetButtonPressed(event, false, false)}
-                            onMouseEnter={(event) => applySpritesheetButtonHover(event, false, false)}
-                            onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, false)}
-                            onMouseUp={(event) => applySpritesheetButtonHover(event, false, false)}
-                            style={spritesheetButtonStyle()}
-                            type="button"
-                        >
-                            Clear Slices
-                        </button>
-                    </>
+                            uiScale={uiScale}
+                        />
+                    </ToolbarGroup>
                 ) : undefined}
+
                 {manualTool === 'draw' ? (
-                    <button
-                        disabled={!manualRectPreview}
-                        onClick={() => handleCreateManualFrame(manualRectPreview)}
-                        onMouseDown={(event) => applySpritesheetButtonPressed(event, !manualRectPreview, false)}
-                        onMouseEnter={(event) => applySpritesheetButtonHover(event, !manualRectPreview, false)}
-                        onMouseLeave={(event) => resetSpritesheetButtonBackground(event, !manualRectPreview, false)}
-                        onMouseUp={(event) => applySpritesheetButtonHover(event, !manualRectPreview, false)}
-                        style={spritesheetButtonStyle({ disabled: !manualRectPreview })}
-                        type="button"
-                    >
-                        Commit Drawn Frame
-                    </button>
+                    <ToolbarGroup>
+                        <ToolButton disabled={!manualRectPreview} icon={Check} label="Commit" onClick={() => handleCreateManualFrame(manualRectPreview)} uiScale={uiScale} />
+                    </ToolbarGroup>
                 ) : undefined}
-                <button
-                    onClick={() => setZoomLevel((value) => Math.max(0.25, value - 0.25))}
-                    onMouseDown={(event) => applySpritesheetButtonPressed(event, false, false)}
-                    onMouseEnter={(event) => applySpritesheetButtonHover(event, false, false)}
-                    onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, false)}
-                    onMouseUp={(event) => applySpritesheetButtonHover(event, false, false)}
-                    style={spritesheetButtonStyle()}
-                    type="button"
-                >
-                    -
-                </button>
-                <span style={{ color: t.text.muted, width: 60 }}>{Math.round(zoomLevel * 100)}%</span>
-                <button
-                    onClick={() => setZoomLevel((value) => Math.min(8, value + 0.25))}
-                    onMouseDown={(event) => applySpritesheetButtonPressed(event, false, false)}
-                    onMouseEnter={(event) => applySpritesheetButtonHover(event, false, false)}
-                    onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, false)}
-                    onMouseUp={(event) => applySpritesheetButtonHover(event, false, false)}
-                    style={spritesheetButtonStyle()}
-                    type="button"
-                >
-                    +
-                </button>
-                <label style={{ color: t.text.muted }}>
-                    <input checked={showGrid} onChange={(event) => setShowGrid(event.target.checked)} type="checkbox" /> Grid
-                </label>
-                <label style={{ color: t.text.muted }}>
-                    <input
-                        checked={showChromaPreview}
-                        disabled={!descriptor?.chromaKey}
-                        onChange={(event) => setShowChromaPreview(event.target.checked)}
-                        type="checkbox"
-                    />
-                    Chroma
-                </label>
-                <button
-                    disabled={!descriptor || isSaving}
-                    onClick={() => void handleSave()}
-                    onMouseDown={(event) => applySpritesheetButtonPressed(event, !descriptor || isSaving, false)}
-                    onMouseEnter={(event) => applySpritesheetButtonHover(event, !descriptor || isSaving, false)}
-                    onMouseLeave={(event) => resetSpritesheetButtonBackground(event, !descriptor || isSaving, false)}
-                    onMouseUp={(event) => applySpritesheetButtonHover(event, !descriptor || isSaving, false)}
-                    style={spritesheetButtonStyle({ disabled: !descriptor || isSaving })}
-                    type="button"
-                >
-                    {isSaving ? 'Saving...' : 'Save'}
-                </button>
+
+                <ToolbarGroup style={{ marginLeft: 'auto' }}>
+                    <ToolButton icon={ZoomOut} label="-" onClick={() => setZoomLevel((value) => Math.max(0.25, value - 0.25))} title="Zoom out" uiScale={uiScale} />
+                    <span style={{ color: t.text.muted, minWidth: 48, textAlign: 'center' }}>{Math.round(zoomLevel * 100)}%</span>
+                    <ToolButton icon={ZoomIn} label="+" onClick={() => setZoomLevel((value) => Math.min(8, value + 0.25))} title="Zoom in" uiScale={uiScale} />
+                    <ToolButton icon={RotateCcw} label="Reset" onClick={resetViewport} title="Reset view" uiScale={uiScale} />
+                </ToolbarGroup>
+
+                <ToolbarGroup>
+                    <ToggleButton active={showGrid} disabled={descriptor?.format !== 'grid'} icon={Grid3x3} label="Grid" onClick={() => setShowGrid((value) => !value)} uiScale={uiScale} />
+                    <ToggleButton active={showChromaPreview} disabled={!descriptor?.chromaKey} icon={Pipette} label="Chroma" onClick={() => setShowChromaPreview((value) => !value)} uiScale={uiScale} />
+                    <ToolButton disabled={!descriptor || isSaving} icon={Save} label={isSaving ? 'Saving' : 'Save'} onClick={() => void handleSave()} primary uiScale={uiScale} />
+                </ToolbarGroup>
             </div>
 
-            <div style={{ display: 'grid', gap: 12, gridTemplateColumns: '240px minmax(0, 1fr) 300px', minHeight: 0 }}>
+            <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(220px, 280px) minmax(0, 1fr) minmax(300px, 360px)', minHeight: 0 }}>
                 <section className="zerith-scrollbar" style={panelStyle}>
                     {image ? undefined : <div style={{ color: t.text.muted }}>Load source image to preview frames.</div>}
                     {image ? (
@@ -464,10 +404,15 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
                     ) : undefined}
                 </section>
 
-                <section className="zerith-scrollbar" style={panelStyle}>
+                <section className="zerith-scrollbar" style={{ ...panelStyle, display: 'grid', gap: 8, gridTemplateRows: 'auto minmax(0, 1fr)' }}>
                     {isImageLoading ? <div style={{ color: t.text.muted }}>Loading source image...</div> : undefined}
                     {!isImageLoading && imageError ? <div style={{ color: t.text.muted }}>{imageError}</div> : undefined}
-                    {!isImageLoading && !imageError && imagePath ? <div style={{ color: t.text.muted }}>{imagePath}</div> : undefined}
+                    {!isImageLoading && !imageError && imagePath ? (
+                        <div style={{ alignItems: 'center', color: t.text.muted, display: 'flex', fontSize: `${12 * uiScale}px`, gap: 10, minWidth: 0 }}>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{imagePath}</span>
+                            {image ? <span style={{ marginLeft: 'auto', whiteSpace: 'nowrap' }}>{image.naturalWidth}x{image.naturalHeight}</span> : undefined}
+                        </div>
+                    ) : undefined}
                     {!isImageLoading && !imageError && image && imagePath ? (
                         <SpritesheetCanvas
                             chromaKey={showChromaPreview ? descriptor?.chromaKey : undefined}
@@ -506,17 +451,31 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
                     ) : undefined}
                 </section>
 
-                <section className="zerith-scrollbar" style={panelStyle}>
-                    {descriptor && image ? (
-                        <SpritesheetAnimationEditor
-                            animations={descriptor.animations ?? {}}
-                            frames={frames}
-                            image={image}
-                            onUpdateAnimations={(animations) => applyDescriptorUpdate({ ...descriptor, animations })}
-                            uiScale={uiScale}
-                        />
-                    ) : <div style={{ color: t.text.muted }}>Load source image to edit animations.</div>}
-                </section>
+                <aside style={{ display: 'grid', gap: 10, gridTemplateRows: 'auto minmax(0, 1fr)', minHeight: 0 }}>
+                    <FrameInspector
+                        canEdit={Boolean(canEditAtlasFrames && selectedFrame && selectedFrameName)}
+                        frame={selectedFrame}
+                        image={image}
+                        name={selectedFrameName}
+                        onDuplicate={selectedFrameName ? () => handleDuplicateFrame(selectedFrameName) : undefined}
+                        onNudge={handleSelectedFrameNudge}
+                        onRemove={selectedFrameName && canEditAtlasFrames ? () => handleRemoveFrame(selectedFrameName) : undefined}
+                        onUpdate={handleSelectedFrameRectUpdate}
+                        uiScale={uiScale}
+                    />
+                    <section className="zerith-scrollbar" style={panelStyle}>
+                        {descriptor && image ? (
+                            <SpritesheetAnimationEditor
+                                animations={descriptor.animations ?? {}}
+                                frames={frames}
+                                image={image}
+                                onUpdateAnimations={(animations) => applyDescriptorUpdate({ ...descriptor, animations })}
+                                selectedFrameName={selectedFrameName}
+                                uiScale={uiScale}
+                            />
+                        ) : <div style={{ color: t.text.muted }}>Load source image to edit animations.</div>}
+                    </section>
+                </aside>
             </div>
 
             {(descriptorError || saveError) ? (
@@ -540,8 +499,116 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
     );
 }
 
+function FrameInspector({
+    canEdit,
+    frame,
+    image,
+    name,
+    onDuplicate,
+    onNudge,
+    onRemove,
+    onUpdate,
+    uiScale,
+}: {
+    canEdit: boolean;
+    frame: ManualFrameRect | undefined;
+    image: HTMLImageElement | undefined;
+    name: string | undefined;
+    onDuplicate: (() => void) | undefined;
+    onNudge: (dx: number, dy: number) => void;
+    onRemove: (() => void) | undefined;
+    onUpdate: (update: Partial<ManualFrameRect>) => void;
+    uiScale: number;
+}) {
+    const iconSize = Math.max(14, Math.round(15 * uiScale));
+    const disabled = !canEdit || !frame;
+
+    return (
+        <section style={{ ...panelStyle, display: 'grid', gap: 10 }}>
+            <div style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
+                <SquareDashedMousePointer color={t.accent.orange} size={iconSize} />
+                <strong style={{ color: t.text.primary }}>Frame Inspector</strong>
+            </div>
+            {frame && name ? (
+                <>
+                    <div style={{ minWidth: 0 }}>
+                        <div style={{ color: t.text.primary, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+                        <div style={{ color: t.text.faint, fontSize: `${12 * uiScale}px` }}>
+                            {frame.w}x{frame.h} @ {frame.x},{frame.y}
+                            {image ? ` | sheet ${image.naturalWidth}x${image.naturalHeight}` : ''}
+                        </div>
+                    </div>
+                    <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+                        <RectNumberField disabled={disabled} label="X" onChange={(x) => onUpdate({ x })} uiScale={uiScale} value={frame.x} />
+                        <RectNumberField disabled={disabled} label="Y" onChange={(y) => onUpdate({ y })} uiScale={uiScale} value={frame.y} />
+                        <RectNumberField disabled={disabled} label="W" min={1} onChange={(w) => onUpdate({ w })} uiScale={uiScale} value={frame.w} />
+                        <RectNumberField disabled={disabled} label="H" min={1} onChange={(h) => onUpdate({ h })} uiScale={uiScale} value={frame.h} />
+                    </div>
+                    <div style={{ display: 'grid', gap: 6, gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+                        <button disabled={disabled} onClick={() => onNudge(0, -1)} style={spritesheetButtonStyle({ disabled })} type="button">Y-</button>
+                        <button disabled={disabled} onClick={() => onNudge(-1, 0)} style={spritesheetButtonStyle({ disabled })} type="button">X-</button>
+                        <button disabled={disabled} onClick={() => onNudge(1, 0)} style={spritesheetButtonStyle({ disabled })} type="button">X+</button>
+                        <button disabled={disabled} onClick={() => onNudge(0, 1)} style={spritesheetButtonStyle({ disabled })} type="button">Y+</button>
+                        <button disabled={disabled || !onDuplicate} onClick={() => onDuplicate?.()} style={spritesheetButtonStyle({ disabled: disabled || !onDuplicate })} type="button">
+                            <Copy size={iconSize} />
+                            Copy
+                        </button>
+                        <button disabled={disabled || !onRemove} onClick={() => onRemove?.()} style={spritesheetButtonStyle({ disabled: disabled || !onRemove })} type="button">
+                            <Trash2 size={iconSize} />
+                            Remove
+                        </button>
+                    </div>
+                </>
+            ) : (
+                <div style={{ color: t.text.muted }}>Select a frame to inspect.</div>
+            )}
+        </section>
+    );
+}
+
+function inputStyle(uiScale: number): CSSProperties {
+    return {
+        background: t.bg.input,
+        border: `1px solid ${t.border.input}`,
+        borderRadius: t.radius.sm,
+        color: t.text.primary,
+        minWidth: 0,
+        padding: `${5 * uiScale}px ${6 * uiScale}px`,
+    };
+}
+
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
     return Boolean(value) && typeof value === 'object';
+}
+
+function RectNumberField({
+    disabled,
+    label,
+    min = 0,
+    onChange,
+    uiScale,
+    value,
+}: {
+    disabled: boolean;
+    label: string;
+    min?: number;
+    onChange: (value: number) => void;
+    uiScale: number;
+    value: number;
+}) {
+    return (
+        <label style={{ color: t.text.muted, display: 'grid', fontSize: `${12 * uiScale}px`, gap: 4 }}>
+            <span>{label}</span>
+            <input
+                disabled={disabled}
+                min={min}
+                onChange={(event) => onChange(Number(event.target.value))}
+                style={inputStyle(uiScale)}
+                type="number"
+                value={value}
+            />
+        </label>
+    );
 }
 
 async function resolveImagePath(descriptorPath: string, source: string): Promise<string> {
@@ -556,6 +623,53 @@ async function resolveImagePath(descriptorPath: string, source: string): Promise
 function shouldUseAnonymousCrossOrigin(url: string): boolean {
     return url.startsWith('http://') || url.startsWith('https://');
 }
+
+function ToggleButton(properties: { active: boolean } & ToolButtonProperties) {
+    return <ToolButton {...properties} title={`${properties.active ? 'Hide' : 'Show'} ${properties.label}`} />;
+}
+
+function ToolbarGroup({ children, style }: { children: ReactNode; style?: CSSProperties }) {
+    return (
+        <div style={{ alignItems: 'center', display: 'flex', gap: 6, ...style }}>
+            {children}
+        </div>
+    );
+}
+
+function ToolButton({ active, disabled, icon: Icon, label, onClick, primary, title, uiScale }: ToolButtonProperties) {
+    const iconSize = Math.max(14, Math.round(15 * uiScale));
+    return (
+        <button
+            disabled={disabled}
+            onClick={onClick}
+            style={{
+                ...spritesheetButtonStyle({ active, disabled }),
+                background: primary ? t.accent.primary : (active ? t.bg.selected : t.bg.panel),
+                border: primary ? `1px solid ${t.border.primaryBtn}` : `1px solid ${active ? t.accent.primary : t.border.button}`,
+                color: primary ? '#fff' : t.text.normal,
+                minHeight: Math.max(28, Math.round(28 * uiScale)),
+                whiteSpace: 'nowrap',
+            }}
+            title={title ?? label}
+            type="button"
+        >
+            <Icon size={iconSize} />
+            <span>{label}</span>
+        </button>
+    );
+}
+
+const toolbarStyle = {
+    alignItems: 'center',
+    background: t.bg.panelAlt,
+    border: `1px solid ${t.border.subtle}`,
+    borderRadius: t.radius.md,
+    display: 'flex',
+    minHeight: 52,
+    minWidth: 0,
+    overflow: 'hidden',
+    padding: '8px 10px',
+} as const;
 
 const panelStyle = {
     background: t.bg.panelAlt,

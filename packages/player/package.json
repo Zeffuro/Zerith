@@ -11,15 +11,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "core": "*",
-    "fflate": "^0.8.2"
+    "core": "file:../core",
+    "fflate": "^0.8.3"
   },
   "devDependencies": {
-    "@types/node": "^25.3.5",
-    "typescript": "~5.9.3",
-    "vite": "^8.0.0-beta.13"
-  },
-  "overrides": {
-    "vite": "^8.0.0-beta.13"
+    "@types/node": "^25.9.3",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16"
   }
 }

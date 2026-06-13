@@ -18,7 +18,7 @@ import { GlobalSearchContent, GlobalSearchPanel } from '../tools/GlobalSearchPan
 import { ReferenceTrackerPanel } from '../tools/ReferenceTrackerPanel';
 import { RuntimeMonitorPanel } from '../tools/RuntimeMonitorPanel';
 import { StateObserverPanel } from '../tools/StateObserverPanel';
-import { createDefaultDockLayout } from './dock/defaultDockLayout';
+import { createDefaultDockLayout, normalizeDockLayoutJsonForFlexLayout } from './dock/defaultDockLayout';
 import { DOCK_PANELS } from './dock/dockPanelIds';
 import { EditorSurface } from './EditorSurface';
 import { Explorer } from './explorer/Explorer';
@@ -86,6 +86,7 @@ export function DockLayoutHost() {
     const [layoutRecoveryKey, setLayoutRecoveryKey] = useState(0);
     const lastJsonReference = useRef<string>(initialModelState.jsonSig);
     const globalSearchPopupReference = useRef<HTMLDivElement>(null);
+    const saveTimerReference = useRef<ReturnType<typeof globalThis.setTimeout> | undefined>(undefined);
 
     useDismissiblePopup(isGlobalSearchPopupOpen, globalSearchPopupReference, closeGlobalSearchPopup);
 
@@ -103,8 +104,19 @@ export function DockLayoutHost() {
             return;
         }
 
+        cancelPendingLayoutSave(saveTimerReference);
+
+        let nextLayout = normalizeDockLayoutJsonForFlexLayout(dockLayoutJson);
+        if (!nextLayout) {
+            console.warn('Dock layout is incomplete, resetting to defaults.');
+            nextLayout = createDefaultDockLayout();
+            setDockLayoutJson(nextLayout);
+        } else if (JSON.stringify(nextLayout) !== incomingSig) {
+            setDockLayoutJson(nextLayout);
+        }
+
         try {
-            const nextModel = Model.fromJson(dockLayoutJson as IJsonModel);
+            const nextModel = Model.fromJson(nextLayout);
             queueMicrotask(() => {
                 setModel(nextModel);
                 setLayoutRecoveryKey((value) => value + 1);
@@ -121,10 +133,8 @@ export function DockLayoutHost() {
             return;
         }
 
-        lastJsonReference.current = incomingSig;
+        lastJsonReference.current = JSON.stringify(nextLayout);
     }, [dockLayoutJson, setDockLayoutJson]);
-
-    const saveTimerReference = useRef<ReturnType<typeof globalThis.setTimeout> | undefined>(undefined);
 
     const handleGlobalSearchPopupDragStart = (event: React.MouseEvent<HTMLDivElement>) => {
         if (event.button !== 0) return;
@@ -169,8 +179,10 @@ export function DockLayoutHost() {
 
     const recoverLayout = () => {
         const fallbackLayout = createDefaultDockLayout() as IJsonModel;
+        cancelPendingLayoutSave(saveTimerReference);
         setDockLayoutJson(fallbackLayout);
         lastJsonReference.current = JSON.stringify(fallbackLayout);
+        setModel(Model.fromJson(fallbackLayout));
         setLayoutRecoveryKey((value) => value + 1);
     };
 
@@ -319,15 +331,25 @@ export function DockLayoutHost() {
 
 
 
+function cancelPendingLayoutSave(saveTimerReference: { current: ReturnType<typeof globalThis.setTimeout> | undefined }): void {
+    if (!saveTimerReference.current) return;
+    globalThis.clearTimeout(saveTimerReference.current);
+    saveTimerReference.current = undefined;
+}
+
 function createInitialModelState(layoutJson: unknown): InitialModelState {
     const fallbackLayout = createDefaultDockLayout() as IJsonModel;
 
     try {
-        const parsed = layoutJson as IJsonModel;
+        const normalizedLayout = normalizeDockLayoutJsonForFlexLayout(layoutJson);
+        if (!normalizedLayout) {
+            throw new Error('Dock layout is incomplete.');
+        }
+        const normalizedSig = JSON.stringify(normalizedLayout);
         return {
-            jsonSig: JSON.stringify(parsed),
-            model: Model.fromJson(parsed),
-            recoveryLayout: undefined,
+            jsonSig: normalizedSig,
+            model: Model.fromJson(normalizedLayout),
+            recoveryLayout: safeJsonSignature(layoutJson) === normalizedSig ? undefined : normalizedLayout,
         };
     } catch (error) {
         console.warn('Invalid dock layout detected, resetting to defaults.', error);
@@ -338,7 +360,6 @@ function createInitialModelState(layoutJson: unknown): InitialModelState {
         };
     }
 }
-
 
 function safeJsonSignature(value: unknown): string | undefined {
     try {

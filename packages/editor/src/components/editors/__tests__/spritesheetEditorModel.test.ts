@@ -6,14 +6,22 @@ import {
     applyManualFrame,
     applySliceLineFrames,
     buildFramesFromSliceLines,
+    clampFrameRectToBounds,
     computeThumbnailCanvasMetrics,
+    duplicateFrame,
     frameAtPoint,
     insertFrameAtIndex,
+    mergeFrameRectUpdate,
     mergeFrameUpdates,
+    moveSequenceFrame,
     moveSliceLine,
+    nextCopyFrameName,
     nextManualFrameName,
     normalizeManualDragFrame,
+    removeFrameAtIndex,
+    removeMatchingSequenceFrames,
     reorderSequence,
+    replaceFrameAtIndex,
 } from '../spritesheetEditorModel';
 
 describe('spritesheetEditorModel', () => {
@@ -83,6 +91,26 @@ describe('spritesheetEditorModel', () => {
         });
     });
 
+    it('edits animation sequences by active index and matching frame', () => {
+        const sequence = ['blink_0', 'blink_1', 'blink_2', 'blink_0'];
+
+        expect(removeFrameAtIndex(sequence, 0)).toEqual(['blink_1', 'blink_2', 'blink_0']);
+        expect(removeFrameAtIndex(sequence, -1)).toBe(sequence);
+        expect(removeMatchingSequenceFrames(sequence, 'blink_0')).toEqual(['blink_1', 'blink_2']);
+        expect(removeMatchingSequenceFrames(sequence, 'missing')).toBe(sequence);
+        expect(replaceFrameAtIndex(sequence, 1, 'idle_0')).toEqual(['blink_0', 'idle_0', 'blink_2', 'blink_0']);
+        expect(replaceFrameAtIndex(sequence, 99, 'idle_0')).toBe(sequence);
+    });
+
+    it('moves animation sequence frames one slot at a time', () => {
+        const sequence = ['a', 'b', 'c'];
+
+        expect(moveSequenceFrame(sequence, 1, -1)).toEqual(['b', 'a', 'c']);
+        expect(moveSequenceFrame(sequence, 1, 1)).toEqual(['a', 'c', 'b']);
+        expect(moveSequenceFrame(sequence, 0, -1)).toBe(sequence);
+        expect(moveSequenceFrame(sequence, 2, 1)).toBe(sequence);
+    });
+
     it('normalizes manual drag rectangles and clamps to image bounds', () => {
         const rect = normalizeManualDragFrame({ x: 32.2, y: 16.8 }, { x: -8, y: 64.1 }, { height: 48, width: 40 });
 
@@ -146,6 +174,45 @@ describe('spritesheetEditorModel', () => {
 
         expect(started.vertical).toEqual([1]);
         expect(moved.vertical).toEqual([99]);
+    });
+
+    it('clamps frame rect edits to source image bounds', () => {
+        const rect = clampFrameRectToBounds({ h: 100, w: 100, x: 48.4, y: -3 }, { height: 40, width: 50 });
+
+        expect(rect).toEqual({ h: 40, w: 2, x: 48, y: 0 });
+    });
+
+    it('merges frame rect edits immutably', () => {
+        const existing: Record<string, SpriteFrame> = {
+            idle: { h: 10, name: 'idle', w: 10, x: 2, y: 3 },
+        };
+
+        const next = mergeFrameRectUpdate(existing, 'idle', { h: 40, x: 18, y: 4 }, { height: 20, width: 24 });
+
+        expect(existing.idle).toEqual({ h: 10, name: 'idle', w: 10, x: 2, y: 3 });
+        expect(next.idle).toEqual({ h: 16, name: 'idle', w: 6, x: 18, y: 4 });
+        expect(mergeFrameRectUpdate(existing, 'missing', { x: 0 }, { height: 20, width: 20 })).toBe(existing);
+    });
+
+    it('duplicates frames with copy names and atlas output', () => {
+        const descriptor: SpritesheetDescriptor = {
+            format: 'grid',
+            frameHeight: 16,
+            frameWidth: 16,
+            source: 'sprites.png',
+        };
+        const existing: Record<string, SpriteFrame> = {
+            idle: { h: 10, name: 'idle', w: 12, x: 2, y: 3 },
+            idle_copy: { h: 10, name: 'idle_copy', w: 12, x: 2, y: 3 },
+        };
+
+        expect(nextCopyFrameName('idle', existing)).toBe('idle_copy_2');
+        const result = duplicateFrame(descriptor, existing, 'idle');
+
+        expect(result?.frameName).toBe('idle_copy_2');
+        expect(result?.descriptor.format).toBe('atlas');
+        expect(result?.descriptor.frames?.idle_copy_2).toEqual({ h: 10, name: 'idle_copy_2', w: 12, x: 2, y: 3 });
+        expect(duplicateFrame(descriptor, existing, 'missing')).toBeUndefined();
     });
 
     it('applies slice line grid frames and keeps descriptor unchanged for empty results', () => {

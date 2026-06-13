@@ -1,4 +1,5 @@
-import { fsDirname, fsJoin, fsReadBinaryFile } from '../../services/fs';
+import { fsDirname, fsJoin } from '../../services/fs';
+import { decodeAudioSource, getAudioContext } from '../../utils/audio';
 import { clamp } from '../../utils/math';
 
 export type AudiosheetPlaybackReferences = {
@@ -21,23 +22,8 @@ export async function decodeAudiosheetSource(
     references: AudiosheetPlaybackReferences,
 ): Promise<{ audioBuffer: AudioBuffer; sourcePath: string }> {
     const sourcePath = await resolveAudioPath(descriptorPath, source);
-    const bytes = await loadAudioBytes(sourcePath);
-    const audioBuffer = await getAudioContext(references.contextReference).decodeAudioData(bytes);
+    const audioBuffer = await decodeAudioSource(sourcePath, references.contextReference);
     return { audioBuffer, sourcePath };
-}
-
-export function getAudioContext(reference: AudiosheetPlaybackReferences['contextReference']): AudioContext {
-    if (!reference.current) reference.current = new AudioContext();
-    return reference.current;
-}
-
-export async function loadAudioBytes(path: string): Promise<ArrayBuffer> {
-    if (/^(?:https?:|data:|blob:|file:)/.test(path)) {
-        const response = await fetch(path);
-        return response.arrayBuffer();
-    }
-    const bytes = await fsReadBinaryFile(path);
-    return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
 export function pauseAudiosheetPlayback(

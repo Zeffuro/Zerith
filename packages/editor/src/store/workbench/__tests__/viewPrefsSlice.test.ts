@@ -37,7 +37,7 @@ function createViewPrefsState() {
     });
 
     harness.setState({
-        ...createWorkbenchViewPrefsSlice(harness.set as never),
+        ...createWorkbenchViewPrefsSlice(harness.set),
     });
 
     return harness;

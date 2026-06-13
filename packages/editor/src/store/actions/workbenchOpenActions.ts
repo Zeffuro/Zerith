@@ -61,14 +61,14 @@ export function getPreferredCharactersView(fallback?: ScriptViewMode): ScriptVie
     return fallback ?? workbench.lastCharactersView;
 }
 
-export function getPreferredItemsView(fallback?: ScriptViewMode): ScriptViewMode {
-    const workbench = useWorkbenchStore.getState();
-    return fallback ?? workbench.lastItemsView;
-}
-
 export function getPreferredEngineConfigView(fallback?: ScriptViewMode): ScriptViewMode {
     const workbench = useWorkbenchStore.getState();
     return fallback ?? workbench.lastEngineConfigView;
+}
+
+export function getPreferredItemsView(fallback?: ScriptViewMode): ScriptViewMode {
+    const workbench = useWorkbenchStore.getState();
+    return fallback ?? workbench.lastItemsView;
 }
 
 export function getPreferredMacrosView(fallback?: ScriptViewMode): ScriptViewMode {

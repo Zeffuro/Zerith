@@ -43,7 +43,7 @@ export class WhileHandler implements CommandHandler<WhileCommand> {
 
     execute = async (command: WhileCommand) => {
         const body = Array.isArray(command.body) ? command.body : [];
-        const maxIterations = Number.isFinite(command.maxIterations as number)
+        const maxIterations = Number.isFinite(command.maxIterations)
             ? Math.max(1, Number(command.maxIterations))
             : 10_000;
 

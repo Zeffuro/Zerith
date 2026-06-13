@@ -39,6 +39,17 @@ type SyncPayload = {
     pretty: string;
 };
 
+const FILE_JSON_TAB_KINDS = new Set<string>([
+    'audiosheet',
+    'characters',
+    'engineConfig',
+    'items',
+    'json',
+    'manifest',
+    'spritesheet',
+]);
+const JSON_EDITOR_MODES = new Set<EditorMode>(['file-json', 'macros', 'script']);
+
 export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
     const rootScript = useScriptStore((s) => s.rootScript);
     const setScript = useScriptStore((s) => s.setScript);
@@ -62,15 +73,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
         if (!activeTab) return 'readonly';
         if (activeTab.kind === 'script') return 'script';
         if (activeTab.kind === 'macros') return 'macros';
-        if (
-            activeTab.kind === 'characters'
-            || activeTab.kind === 'audiosheet'
-            || activeTab.kind === 'engineConfig'
-            || activeTab.kind === 'items'
-            || activeTab.kind === 'manifest'
-            || activeTab.kind === 'json'
-            || activeTab.kind === 'spritesheet'
-        ) return 'file-json';
+        if (FILE_JSON_TAB_KINDS.has(activeTab.kind)) return 'file-json';
         if (activeTab.kind === 'text') return 'file-text';
         return 'readonly';
     },[activeTab]);
@@ -205,7 +208,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
         if (!activeTab) return { ok: false };
 
         try {
-            if (mode === 'script' || mode === 'macros' || mode === 'file-json') {
+            if (JSON_EDITOR_MODES.has(mode)) {
                 const parsed: unknown = JSON.parse(sourceText);
 
                 if (mode === 'macros') {

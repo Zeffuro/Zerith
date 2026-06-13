@@ -1,4 +1,5 @@
 import { type SpriteFrame } from 'core';
+import { Image as ImageIcon, Plus, Search, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { editorTheme as t } from '../../theme/editorTheme';
@@ -39,7 +40,14 @@ export function SpritesheetFrameList({
     uiScale,
 }: SpritesheetFrameListProperties) {
     const frameNames = useMemo(() => Object.keys(frames), [frames]);
+    const [filter, setFilter] = useState('');
     const [pendingFrameRemoval, setPendingFrameRemoval] = useState<string>();
+    const filteredFrameNames = useMemo(() => {
+        const query = filter.trim().toLowerCase();
+        if (!query) return frameNames;
+        return frameNames.filter((name) => name.toLowerCase().includes(query));
+    }, [filter, frameNames]);
+    const iconSize = Math.max(14, Math.round(15 * uiScale));
 
     const confirmRemoveFrame = () => {
         if (!pendingFrameRemoval || !onRemoveFrame) return;
@@ -48,11 +56,37 @@ export function SpritesheetFrameList({
     };
 
     return (
-        <div style={{ display: 'grid', gap: 10, gridTemplateRows: 'minmax(0, 1fr) auto', height: '100%' }}>
+        <div style={{ display: 'grid', gap: 10, gridTemplateRows: 'auto minmax(0, 1fr) auto', height: '100%' }}>
+            <div style={{ display: 'grid', gap: 8 }}>
+                <div style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
+                    <ImageIcon color={t.accent.blue} size={iconSize} />
+                    <strong style={{ color: t.text.primary }}>Frames</strong>
+                    <span style={{ color: t.text.faint, fontSize: `${12 * uiScale}px`, marginLeft: 'auto' }}>
+                        {filteredFrameNames.length}/{frameNames.length}
+                    </span>
+                </div>
+                <label style={{ alignItems: 'center', background: t.bg.input, border: `1px solid ${t.border.input}`, borderRadius: t.radius.sm, display: 'grid', gap: 6, gridTemplateColumns: 'auto minmax(0, 1fr)', padding: `${5 * uiScale}px ${7 * uiScale}px` }}>
+                    <Search color={t.text.faint} size={iconSize} />
+                    <input
+                        onChange={(event) => setFilter(event.target.value)}
+                        placeholder="Filter frames"
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: t.text.primary,
+                            minWidth: 0,
+                            outline: 'none',
+                        }}
+                        value={filter}
+                    />
+                </label>
+            </div>
+
             <div className="zerith-scrollbar" style={{ minHeight: 0, overflow: 'auto' }}>
                 {frameNames.length === 0 ? <div style={{ color: t.text.muted }}>No frames in descriptor.</div> : undefined}
+                {frameNames.length > 0 && filteredFrameNames.length === 0 ? <div style={{ color: t.text.muted }}>No matching frames.</div> : undefined}
                 <div style={{ display: 'grid', gap: 6 }}>
-                    {frameNames.map((name) => {
+                    {filteredFrameNames.map((name) => {
                         const frame = frames[name];
                         const isSelected = name === selectedFrame;
                         return (
@@ -74,6 +108,7 @@ export function SpritesheetFrameList({
                                     display: 'grid',
                                     gap: 8,
                                     gridTemplateColumns: '56px minmax(0, 1fr)',
+                                    minHeight: 66,
                                     padding: 6,
                                     textAlign: 'left',
                                     ...spritesheetButtonStyle({ active: isSelected }),
@@ -83,7 +118,9 @@ export function SpritesheetFrameList({
                                 <FrameThumbnail frame={frame} image={image} uiScale={uiScale} />
                                 <div style={{ minWidth: 0 }}>
                                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
-                                    <div style={{ color: t.text.muted, fontSize: 12 }}>{frame.w}x{frame.h}</div>
+                                    <div style={{ color: t.text.muted, fontSize: 12 }}>
+                                        {frame.w}x{frame.h} @ {frame.x},{frame.y}
+                                    </div>
                                 </div>
                             </button>
                         );
@@ -104,9 +141,11 @@ export function SpritesheetFrameList({
                             flex: 1,
                             ...spritesheetButtonStyle({ disabled: !onAddFrame }),
                         }}
+                        title="Add frame"
                         type="button"
                     >
-                        Add Frame
+                        <Plus size={iconSize} />
+                        Add
                     </button>
                     <button
                         disabled={!onRemoveFrame || !selectedFrame}
@@ -122,9 +161,11 @@ export function SpritesheetFrameList({
                             flex: 1,
                             ...spritesheetButtonStyle({ disabled: !onRemoveFrame || !selectedFrame }),
                         }}
+                        title="Remove selected frame"
                         type="button"
                     >
-                        Remove Frame
+                        <Trash2 size={iconSize} />
+                        Remove
                     </button>
                 </div>
             ) : undefined}

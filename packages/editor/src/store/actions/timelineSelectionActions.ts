@@ -44,7 +44,7 @@ export function executeTimelineNodeClickSelectionAction(
         return;
     }
 
-    const current = [nodePath[0] as number] as ScriptPath;
+    const current = [nodePath[0]] as ScriptPath;
 
     if (
         shift &&

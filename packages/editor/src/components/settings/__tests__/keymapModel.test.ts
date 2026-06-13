@@ -18,14 +18,14 @@ describe('keymapModel', () => {
         expect(normalizeShortcutToken('  K  ')).toBe('k');
         expect(normalizeShortcutToken('Ctrl + Shift + K')).toBe('mod+shift+k');
         expect(normalizeShortcutToken('')).toBeUndefined();
-        expect(normalizeShortcutToken('   ')).toBeUndefined();
+        expect(normalizeShortcutToken(' '.repeat(3))).toBeUndefined();
     });
 
     it('sets and removes action overrides', () => {
         const withSave = setKeymapOverride({}, 'save', ' K ');
         expect(withSave).toEqual({ save: 'k' });
 
-        const withoutSave = setKeymapOverride(withSave, 'save', '   ');
+        const withoutSave = setKeymapOverride(withSave, 'save', ' '.repeat(3));
         expect(withoutSave).toEqual({});
     });
 

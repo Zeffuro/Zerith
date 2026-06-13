@@ -36,7 +36,9 @@ export default [
         rules: {
             "@typescript-eslint/no-explicit-any": "error",
             "unicorn/consistent-function-scoping": "error",
+            "unicorn/better-dom-traversing": "off",
             "unicorn/filename-case": "off",
+            "unicorn/no-array-fill-with-reference-type": "off",
             "unicorn/no-array-reduce": "warn",
             "perfectionist/sort-imports": "error",
         },
@@ -51,6 +53,8 @@ export default [
         rules: {
             ...(reactHooks.configs?.recommended?.rules ?? {}),
             "react-hooks/exhaustive-deps": "error",
+            "react-hooks/refs": "off",
+            "react-hooks/set-state-in-effect": "off",
         },
     },
     {
@@ -67,22 +71,22 @@ export default [
         },
 
         rules: {
-            "boundaries/element-types": [
+            "boundaries/dependencies": [
                 "error",
                 {
                     default: "disallow",
                     rules: [
                         {
-                            from: "editor",
-                            allow: ["core"]
+                            from: { type: "editor" },
+                            allow: { to: { type: "core" } }
                         },
                         {
-                            from: "player",
-                            allow: ["core"]
+                            from: { type: "player" },
+                            allow: { to: { type: "core" } }
                         },
                         {
-                            from: "core",
-                            disallow: ["editor", "player"]
+                            from: { type: "core" },
+                            disallow: { to: { type: ["editor", "player"] } }
                         }
                     ]
                 }

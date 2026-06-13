@@ -18,11 +18,11 @@ type SettingsGeneralPanelProperties = {
     isMuted: boolean;
     matchedControlIds: ReadonlySet<string>;
     moveQuickCommandType: (type: NonMacroEditorCommandType, direction: 'left' | 'right') => void;
-    onSetDetailRowReference: (controlId: SettingsControlId, element: HTMLDivElement | null) => void;
     onDeleteDockLayoutPreset: (id: string) => void;
     onLoadDockLayoutPreset: (presetId: string) => void;
     onResetDockLayoutToDefault: () => void;
     onSaveCurrentDockLayoutPreset: (name: string) => void;
+    onSetDetailRowReference: (controlId: SettingsControlId, element: HTMLDivElement | null) => void;
     panelId: string;
     quickCommandTypes: NonMacroEditorCommandType[];
     searchQuery: string;
@@ -46,11 +46,11 @@ export function SettingsGeneralPanel({
     isMuted,
     matchedControlIds,
     moveQuickCommandType,
-    onSetDetailRowReference,
     onDeleteDockLayoutPreset,
     onLoadDockLayoutPreset,
     onResetDockLayoutToDefault,
     onSaveCurrentDockLayoutPreset,
+    onSetDetailRowReference,
     panelId,
     quickCommandTypes,
     searchQuery,
@@ -400,6 +400,18 @@ function EditableSettingRow({
     );
 }
 
+function quickMoveButtonStyle(isActive: boolean, uiScale: number): CSSProperties {
+    return {
+        background: 'transparent',
+        border: 'none',
+        color: t.text.muted,
+        cursor: isActive ? 'pointer' : 'not-allowed',
+        fontSize: `${12 * uiScale}px`,
+        opacity: isActive ? 1 : 0.35,
+        padding: `${4 * uiScale}px`,
+    };
+}
+
 function settingsActionButtonStyle(uiScale: number): CSSProperties {
     return {
         background: t.bg.popup,
@@ -410,18 +422,6 @@ function settingsActionButtonStyle(uiScale: number): CSSProperties {
         fontSize: `${12 * uiScale}px`,
         padding: `${6 * uiScale}px ${8 * uiScale}px`,
         whiteSpace: 'nowrap',
-    };
-}
-
-function quickMoveButtonStyle(isActive: boolean, uiScale: number): CSSProperties {
-    return {
-        background: 'transparent',
-        border: 'none',
-        color: t.text.muted,
-        cursor: isActive ? 'pointer' : 'not-allowed',
-        fontSize: `${12 * uiScale}px`,
-        opacity: isActive ? 1 : 0.35,
-        padding: `${4 * uiScale}px`,
     };
 }
 

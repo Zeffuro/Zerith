@@ -79,7 +79,7 @@ export function SpriteInspector({ index, node }: { index?: null | number; node: 
                         </div>
                     )}
 
-                    {(node.action === 'show' || node.action === 'pose' || node.action === 'animate') && (
+                    {(['animate', 'pose', 'show'] as readonly string[]).includes(node.action) && (
                         <div>
                             <label style={labelStyle}>Asset Override Util</label>
                             <input

@@ -150,7 +150,7 @@ describe('createUiPrefsSlice', () => {
         const set = vi.fn();
         const slice = createUiPrefsSlice(set as never);
 
-        slice.addRecentProject('   ');
+        slice.addRecentProject(' '.repeat(3));
 
         expect(settingsState.setRecentProjects).not.toHaveBeenCalled();
         expect(set).not.toHaveBeenCalled();

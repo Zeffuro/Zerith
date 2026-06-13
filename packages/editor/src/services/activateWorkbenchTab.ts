@@ -2,6 +2,9 @@ import { useWorkbenchStore } from '../store/useWorkbenchStore';
 import { fsReadTextFile } from './fs';
 import { applyAssetSelection, applyMacrosFile, applyScriptFile, looksLikeMacrosObject } from './projectOpeners';
 
+const FILE_BACKED_TAB_KINDS = new Set<string>(['engineConfig', 'json', 'manifest', 'text']);
+const SHEET_TAB_KINDS = new Set<string>(['audiosheet', 'spritesheet']);
+
 export async function activateWorkbenchTab(tabId: string) {
     const ws = useWorkbenchStore.getState();
     const tab = ws.tabs.find((t) => t.id === tabId);
@@ -30,14 +33,14 @@ export async function activateWorkbenchTab(tabId: string) {
         return;
     }
 
-    if (tab.kind === 'spritesheet' || tab.kind === 'audiosheet') {
+    if (SHEET_TAB_KINDS.has(tab.kind)) {
         if (tab.dirty && tab.textContent !== undefined) return;
         const text = await fsReadTextFile(tab.path);
         ws.updateTabContent(tab.id, text, { markDirty: false });
         return;
     }
 
-    if (tab.kind === 'engineConfig' || tab.kind === 'manifest' || tab.kind === 'json' || tab.kind === 'text') {
+    if (FILE_BACKED_TAB_KINDS.has(tab.kind)) {
         if (tab.dirty && tab.textContent !== undefined) return;
         const text = await fsReadTextFile(tab.path);
         ws.updateTabContent(tab.id, text, { markDirty: false });
