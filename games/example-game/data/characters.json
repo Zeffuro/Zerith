@@ -1,0 +1,177 @@
+{
+  "juno": {
+    "displayName": "Juno Vale",
+    "name": "Juno Vale",
+    "nameColor": "#6ee7b7",
+    "blipUrl": "/assets/sfx/blipSelect.wav",
+    "spritesheet": {
+      "atlasUrl": "/assets/sprites/juno.sheet.json"
+    },
+    "displayDefaults": {
+      "anchorX": 0.5,
+      "anchorY": 1,
+      "scaleX": 0.82,
+      "scaleY": 0.82,
+      "x": 390,
+      "y": 720
+    },
+    "talkAnimation": "talk",
+    "poses": {
+      "angry": "juno_angry",
+      "blink": "juno_blink",
+      "focused": "juno_focused",
+      "normal": "juno_normal",
+      "thinking": "juno_thinking"
+    },
+    "animations": {
+      "blink": {
+        "frames": [
+          "juno_normal",
+          "juno_blink",
+          "juno_normal"
+        ],
+        "loop": false,
+        "speed": 120
+      },
+      "idle": {
+        "frames": [
+          "juno_normal",
+          "juno_thinking",
+          "juno_focused",
+          "juno_thinking",
+          "juno_normal"
+        ],
+        "loop": true,
+        "speed": 520
+      },
+      "snap": {
+        "frames": [
+          "juno_thinking",
+          "juno_angry",
+          "juno_focused",
+          "juno_normal"
+        ],
+        "loop": false,
+        "speed": 90
+      },
+      "talk": {
+        "frames": [
+          "juno_normal",
+          "juno_thinking",
+          "juno_focused",
+          "juno_thinking"
+        ],
+        "loop": true,
+        "speed": 85
+      }
+    }
+  },
+  "may": {
+    "displayName": "May Sable",
+    "name": "May Sable",
+    "nameColor": "#facc15",
+    "blipUrl": "/assets/sfx/blipSelect.wav",
+    "displayDefaults": {
+      "anchorX": 0.5,
+      "anchorY": 1,
+      "scaleX": 1.35,
+      "scaleY": 1.35,
+      "x": 1045,
+      "y": 720
+    },
+    "talkAnimation": "talk",
+    "poses": {
+      "blink": "/assets/sprites/side may eyeclose.png",
+      "bored": "/assets/sprites/side may bored.png",
+      "normal": "/assets/sprites/side may normal.png",
+      "smile": "/assets/sprites/side may normal3.png",
+      "thinking": "/assets/sprites/side may normal2.png"
+    },
+    "animations": {
+      "blink": {
+        "frames": [
+          "/assets/sprites/side may normal.png",
+          "/assets/sprites/side may eyeclose.png",
+          "/assets/sprites/side may normal.png"
+        ],
+        "loop": false,
+        "speed": 120
+      },
+      "idle": {
+        "frames": [
+          "/assets/sprites/side may normal.png",
+          "/assets/sprites/side may normal2.png",
+          "/assets/sprites/side may normal3.png",
+          "/assets/sprites/side may normal2.png",
+          "/assets/sprites/side may normal.png"
+        ],
+        "loop": true,
+        "speed": 520
+      },
+      "talk": {
+        "frames": [
+          "/assets/sprites/side may normal.png",
+          "/assets/sprites/side may normal2.png",
+          "/assets/sprites/side may normal3.png",
+          "/assets/sprites/side may normal2.png"
+        ],
+        "loop": true,
+        "speed": 85
+      }
+    }
+  },
+  "nora": {
+    "displayName": "Nora Finch",
+    "name": "Nora Finch",
+    "nameColor": "#93c5fd",
+    "blipUrl": "/assets/sfx/blipSelect.wav",
+    "displayDefaults": {
+      "anchorX": 0.5,
+      "anchorY": 1,
+      "scaleX": 0.82,
+      "scaleY": 0.82,
+      "x": 885,
+      "y": 720
+    },
+    "talkAnimation": "talk",
+    "poses": {
+      "blink": "/assets/sprites/nor eyeclose.png",
+      "happy": "/assets/sprites/nor happy.png",
+      "normal": "/assets/sprites/nor normal.png",
+      "open": "/assets/sprites/nor normal2.png",
+      "thinking": "/assets/sprites/nor normal3.png"
+    },
+    "animations": {
+      "blink": {
+        "frames": [
+          "/assets/sprites/nor normal.png",
+          "/assets/sprites/nor eyeclose.png",
+          "/assets/sprites/nor normal.png"
+        ],
+        "loop": false,
+        "speed": 120
+      },
+      "idle": {
+        "frames": [
+          "/assets/sprites/nor normal.png",
+          "/assets/sprites/nor normal2.png",
+          "/assets/sprites/nor normal3.png",
+          "/assets/sprites/nor normal2.png",
+          "/assets/sprites/nor normal.png"
+        ],
+        "loop": true,
+        "speed": 520
+      },
+      "talk": {
+        "frames": [
+          "/assets/sprites/nor normal.png",
+          "/assets/sprites/nor normal2.png",
+          "/assets/sprites/nor normal3.png",
+          "/assets/sprites/nor normal2.png"
+        ],
+        "loop": true,
+        "speed": 85
+      }
+    }
+  }
+}

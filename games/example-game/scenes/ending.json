@@ -1,0 +1,75 @@
+[
+  {
+    "name": "clear_weather",
+    "type": "call"
+  },
+  {
+    "action": "fade_out",
+    "duration": 300,
+    "type": "transition"
+  },
+  {
+    "assetUrl": "/assets/bg/office.png",
+    "type": "background"
+  },
+  {
+    "name": "hide_cast",
+    "type": "call"
+  },
+  {
+    "action": "fade_in",
+    "duration": 300,
+    "type": "transition"
+  },
+  {
+    "speaker": "Narrator",
+    "text": "The rain eases. The files are still on the desk. Nothing exploded, which everyone agrees is a useful baseline.",
+    "type": "dialogue"
+  },
+  {
+    "speaker": "Narrator",
+    "text": "The collected notes are in the record panel if you want to check what this route kept.",
+    "type": "dialogue"
+  },
+  {
+    "options": [
+      {
+        "commands": [
+          {
+            "to": "intro",
+            "type": "jump"
+          }
+        ],
+        "label": "Replay intro"
+      },
+      {
+        "commands": [
+          {
+            "to": "weather_lab",
+            "type": "jump"
+          }
+        ],
+        "label": "Weather demo"
+      },
+      {
+        "commands": [
+          {
+            "to": "logic_demo",
+            "type": "jump"
+          }
+        ],
+        "label": "Logic demo"
+      },
+      {
+        "commands": [
+          {
+            "to": "courtroom_demo",
+            "type": "jump"
+          }
+        ],
+        "label": "Staging demo"
+      }
+    ],
+    "type": "choice"
+  }
+]

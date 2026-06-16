@@ -1,0 +1,42 @@
+{
+  "calibration_note": {
+    "description": "A short report from Nora's three office readings.",
+    "name": "Calibration Note",
+    "type": "evidence"
+  },
+  "juno_profile": {
+    "description": "Keeps the room moving and asks questions before anyone is ready.",
+    "name": "Juno Vale",
+    "type": "profile"
+  },
+  "logic_card": {
+    "description": "A small card stamped after the readings and pressure check.",
+    "name": "Logic Card",
+    "type": "evidence"
+  },
+  "maintenance_note": {
+    "description": "A warning note for the pressure rig. May underlined the word soon twice.",
+    "name": "Maintenance Note",
+    "type": "evidence"
+  },
+  "may_profile": {
+    "description": "Practical, dry, and usually the first person to notice a loose wire.",
+    "name": "May Sable",
+    "type": "profile"
+  },
+  "nora_profile": {
+    "description": "Reads the numbers, trusts the notes, and does not enjoy surprises.",
+    "name": "Nora Finch",
+    "type": "profile"
+  },
+  "staging_card": {
+    "description": "A card from the courtroom room test. It smells faintly of dust.",
+    "name": "Staging Card",
+    "type": "evidence"
+  },
+  "weather_card": {
+    "description": "A damp card from the weather test. Somehow still readable.",
+    "name": "Weather Card",
+    "type": "evidence"
+  }
+}

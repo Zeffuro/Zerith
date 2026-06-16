@@ -1,0 +1,34 @@
+{
+  "$schema": "zerith/engine-config",
+  "display": {
+    "height": 720,
+    "layers": [
+      {
+        "id": "weatherBack",
+        "order": 150
+      },
+      {
+        "id": "weatherFront",
+        "order": 320
+      }
+    ],
+    "scaleMode": "fit",
+    "width": 1280
+  },
+  "startScreen": {
+    "fontFamily": "Arial",
+    "fontSize": 32,
+    "text": "CLICK TO START",
+    "textColor": 16777215
+  },
+  "theme": {
+    "accentColor": 16764057,
+    "borderColor": 7361783,
+    "borderWidth": 3,
+    "boxAlpha": 0.88,
+    "boxColor": 987168,
+    "fontFamily": "Arial",
+    "fontSize": 25,
+    "hoverColor": 1919043
+  }
+}

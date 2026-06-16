@@ -1,6 +1,16 @@
+import { Container } from 'pixi.js';
 import { vi } from 'vitest';
 
-import type { EngineEventMap, IAssetManager, IAudioManager, IEventBus, IStateManager, SfxPlaybackOptions } from '../interfaces/managers';
+import type {
+    DisplayLayerName,
+    EngineEventMap,
+    IAssetManager,
+    IAudioManager,
+    IDisplayManager,
+    IEventBus,
+    IStateManager,
+    SfxPlaybackOptions,
+} from '../interfaces/managers';
 import type { Serializable } from '../types';
 import type { Logger } from '../utils/Logger';
 
@@ -17,6 +27,10 @@ const defaultPlaySfxMock: IAudioManager['playSfx'] = (url: string, volume?: numb
     void options;
     return Promise.resolve();
 };
+
+export type DisplayManagerMock = {
+    layers: Record<string, Container>;
+} & IDisplayManager;
 
 export function createAssetManagerMock(overrides: Partial<IAssetManager> = {}): IAssetManager {
     const base: IAssetManager = {
@@ -65,6 +79,39 @@ export function createAudioManagerMock(overrides: Partial<IAudioManager> = {}): 
     };
 
     return { ...base, ...overrides };
+}
+
+export function createDisplayManagerMock(overrides: Partial<IDisplayManager> = {}): DisplayManagerMock {
+    const layers: Record<string, Container> = {
+        background: new Container(),
+        backgroundEffects: new Container(),
+        foregroundEffects: new Container(),
+        overlay: new Container(),
+        sprites: new Container(),
+        ui: new Container(),
+    };
+
+    const base: IDisplayManager = {
+        canvas: undefined,
+        clearLayers: vi.fn(() => {
+            for (const layer of Object.values(layers)) {
+                for (const child of layer.removeChildren()) {
+                    child.destroy({ children: true });
+                }
+            }
+        }),
+        destroy: vi.fn(),
+        getLayer: vi.fn((name: DisplayLayerName) => {
+            const id = String(name);
+            layers[id] ??= new Container();
+            return layers[id];
+        }),
+        height: 600,
+        init: vi.fn(() => Promise.resolve()),
+        width: 800,
+    };
+
+    return { ...base, ...overrides, layers };
 }
 
 export function createEventBusMock(overrides: Partial<IEventBus> = {}): IEventBus {
@@ -131,6 +178,7 @@ export function createStateManagerMock(overrides: Partial<IStateManager> = {}): 
             system.dialogue = defaultSystem.dialogue;
             system.items = [...defaultSystem.items];
             system.sprites = { ...defaultSystem.sprites };
+            system.weather = { ...defaultSystem.weather };
         }),
         destroy: vi.fn(),
         get: vi.fn((key: string) => state[key]) as IStateManager['get'],
@@ -155,6 +203,7 @@ export function createStateManagerMock(overrides: Partial<IStateManager> = {}): 
             system.dialogue = resolvedSystem.dialogue;
             system.items = [...resolvedSystem.items];
             system.sprites = { ...resolvedSystem.sprites };
+            system.weather = { ...resolvedSystem.weather };
         }),
         set: vi.fn((key: string, value: Serializable) => {
             state[key] = value;

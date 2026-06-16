@@ -226,6 +226,38 @@ export const FlashCommandSchema = z.object({
     wait: z.boolean().optional(),
 });
 
+/* Weather */
+
+export const WeatherCommandSchema = z.object({
+    action: z.enum(['start', 'stop', 'clear']).optional(),
+    alpha: z.number().optional(),
+    angle: z.number().optional(),
+    color: z.number().optional(),
+    density: z.number().optional(),
+    fadeIn: z.number().optional(),
+    fadeOut: z.number().optional(),
+    id: z.string().optional(),
+    layer: z.string().trim().min(1).refine((layer) => layer !== 'ui', {
+        message: 'Weather layer cannot target ui.',
+    }).optional(),
+    preset: z.enum([
+        'ash',
+        'ashfall',
+        'blizzard',
+        'drizzle',
+        'embers',
+        'heavy_rain',
+        'rain',
+        'snow',
+        'snowfall',
+        'storm',
+    ]).optional(),
+    size: z.number().optional(),
+    speed: z.number().optional(),
+    type: z.literal('weather'),
+    wind: z.number().optional(),
+});
+
 /* Item */
 
 export const ItemCommandSchema = z.object({
@@ -258,6 +290,7 @@ const BuiltInCommandSchemas = [
     CallCommandSchema,
     SpriteCommandSchema,
     FlashCommandSchema,
+    WeatherCommandSchema,
     ItemCommandSchema,
 ] as const;
 
@@ -284,6 +317,7 @@ const BuiltInCommandSchemaRegistry: Record<string, z.ZodType> = {
     sprite: SpriteCommandSchema,
     transition: TransitionCommandSchema,
     wait: WaitCommandSchema,
+    weather: WeatherCommandSchema,
     while: WhileCommandSchema,
 };
 

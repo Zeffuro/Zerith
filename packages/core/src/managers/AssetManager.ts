@@ -41,11 +41,11 @@ export class AssetManager {
                 }
                 if (cmd.type === 'sfx') {
                     const sfxCmd = cmd as SfxCommand;
-                    if (sfxCmd.assetUrl) audio.add(sfxCmd.assetUrl);
+                    if (sfxCmd.assetUrl && !isCueReference(sfxCmd.assetUrl)) audio.add(sfxCmd.assetUrl);
                 }
                 if (cmd.type === 'bgm') {
                     const bgmCmd = cmd as BgmCommand;
-                    if (bgmCmd.assetUrl) audio.add(bgmCmd.assetUrl);
+                    if (bgmCmd.assetUrl && !isCueReference(bgmCmd.assetUrl)) audio.add(bgmCmd.assetUrl);
                 }
                 if (cmd.type === 'sprite') {
                     const spriteCmd = cmd as SpriteCommand;
@@ -189,4 +189,8 @@ export class AssetManager {
             this.logger.warn(`Failed to preload texture: ${url}`, error);
         }
     }
+}
+
+function isCueReference(assetUrl: string): boolean {
+    return assetUrl.includes(':') && !/^[a-z][a-z+.-]*:\/\//i.test(assetUrl);
 }

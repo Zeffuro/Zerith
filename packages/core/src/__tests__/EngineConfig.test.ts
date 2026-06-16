@@ -9,6 +9,9 @@ describe('EngineConfigSchema', () => {
             $schema: 'zerith/engine-config',
             display: {
                 height: 720,
+                layers: [
+                    { id: 'mist', order: 250 },
+                ],
                 scaleMode: 'fit',
                 width: 1280,
             },

@@ -1,4 +1,5 @@
 import type { SpriteState } from '../handlers/SpriteHandler';
+import type { WeatherEffectState } from '../handlers/WeatherHandler';
 import type { ISaveManager } from '../interfaces/managers';
 import type { IStorageProvider } from '../interfaces/providers';
 import type { Serializable, SystemState } from '../types';
@@ -38,6 +39,19 @@ const LEGACY_SYSTEM_KEYS = new Set([
     '__sys_dialogue',
     '__sys_items',
     '__sys_sprites',
+]);
+
+const WEATHER_PRESET_VALUES: ReadonlySet<unknown> = new Set([
+    'ash',
+    'ashfall',
+    'blizzard',
+    'drizzle',
+    'embers',
+    'heavy_rain',
+    'rain',
+    'snow',
+    'snowfall',
+    'storm',
 ]);
 
 export class SaveManager implements ISaveManager {
@@ -304,6 +318,10 @@ export class SaveManager implements ISaveManager {
             state.sprites = value.sprites as Record<string, SpriteState>;
         }
 
+        if (this.isRecord(value.weather)) {
+            state.weather = this.toWeatherState(value.weather);
+        }
+
         if (
             this.isRecord(value.dialogue)
             && typeof value.dialogue.speaker === 'string'
@@ -323,4 +341,49 @@ export class SaveManager implements ISaveManager {
 
         return state;
     }
+
+    private toWeatherLayer(value: unknown): WeatherEffectState['layer'] {
+        return typeof value === 'string' && value.trim().length > 0 && value !== 'ui'
+            ? value.trim()
+            : undefined;
+    }
+
+    private toWeatherPreset(value: unknown): undefined | WeatherEffectState['preset'] {
+        return isWeatherPreset(value)
+            ? value
+            : undefined;
+    }
+
+    private toWeatherState(value: Record<string, unknown>): Record<string, WeatherEffectState> {
+        const weather: Record<string, WeatherEffectState> = {};
+
+        for (const [key, entry] of Object.entries(value)) {
+            if (!this.isRecord(entry)) continue;
+
+            const id = typeof entry.id === 'string' && entry.id.trim().length > 0
+                ? entry.id.trim()
+                : key;
+            const preset = this.toWeatherPreset(entry.preset);
+            if (!preset) continue;
+
+            weather[id] = {
+                alpha: typeof entry.alpha === 'number' ? entry.alpha : undefined,
+                angle: typeof entry.angle === 'number' ? entry.angle : undefined,
+                color: typeof entry.color === 'number' ? entry.color : undefined,
+                density: typeof entry.density === 'number' ? entry.density : undefined,
+                id,
+                layer: this.toWeatherLayer(entry.layer),
+                preset,
+                size: typeof entry.size === 'number' ? entry.size : undefined,
+                speed: typeof entry.speed === 'number' ? entry.speed : undefined,
+                wind: typeof entry.wind === 'number' ? entry.wind : undefined,
+            };
+        }
+
+        return weather;
+    }
+}
+
+function isWeatherPreset(value: unknown): value is WeatherEffectState['preset'] {
+    return WEATHER_PRESET_VALUES.has(value);
 }

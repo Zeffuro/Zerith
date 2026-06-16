@@ -72,9 +72,9 @@ export function resolveTemplateText(text: string, state: TextStateAccessor): str
 }
 
 export function transformShorthands(text: string): string {
-    // {color:value}...{/color}
+    // {color:value}...{/color} or {color='value'}...{/color}
     text = text.replaceAll(
-        /\{color:([^}]+)}([\s\S]*?)\{\/color}/g,
+        /\{color(?::|=['"]?)([^'"}]+)['"]?}([\s\S]*?)\{\/color}/g,
         (_m, color, content) => `<span style="color: ${color};">${content}</span>`
     );
 
@@ -82,6 +82,12 @@ export function transformShorthands(text: string): string {
     text = text.replaceAll(
         /\{u\s+color=['"](.*?)['"]}([\s\S]*?)\{\/u}/g,
         (_m, color, content) => `<span style="text-decoration: underline; color: ${color};">${content}</span>`
+    );
+
+    // {u}...{/u}
+    text = text.replaceAll(
+        /\{u}([\s\S]*?)\{\/u}/g,
+        (_m, content) => `<span style="text-decoration: underline;">${content}</span>`
     );
 
     // {size:value}...{/size}

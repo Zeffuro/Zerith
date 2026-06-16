@@ -1,0 +1,70 @@
+{
+  "format": "atlas",
+  "source": "juno_sheet.png",
+  "frames": {
+    "juno_normal": {
+      "name": "juno_normal",
+      "x": 0,
+      "y": 0,
+      "w": 640,
+      "h": 720,
+      "anchorX": 0.5,
+      "anchorY": 1
+    },
+    "juno_thinking": {
+      "name": "juno_thinking",
+      "x": 640,
+      "y": 0,
+      "w": 640,
+      "h": 720,
+      "anchorX": 0.5,
+      "anchorY": 1
+    },
+    "juno_focused": {
+      "name": "juno_focused",
+      "x": 1280,
+      "y": 0,
+      "w": 640,
+      "h": 720,
+      "anchorX": 0.5,
+      "anchorY": 1
+    },
+    "juno_blink": {
+      "name": "juno_blink",
+      "x": 1920,
+      "y": 0,
+      "w": 640,
+      "h": 720,
+      "anchorX": 0.5,
+      "anchorY": 1
+    },
+    "juno_angry": {
+      "name": "juno_angry",
+      "x": 2560,
+      "y": 0,
+      "w": 640,
+      "h": 720,
+      "anchorX": 0.5,
+      "anchorY": 1
+    }
+  },
+  "meta": {
+    "image": "juno_sheet.png",
+    "scale": "1"
+  },
+  "animations": {
+    "idle": [
+      "juno_normal",
+      "juno_thinking",
+      "juno_focused",
+      "juno_thinking",
+      "juno_normal"
+    ],
+    "talk": [
+      "juno_normal",
+      "juno_thinking",
+      "juno_focused",
+      "juno_thinking"
+    ]
+  }
+}

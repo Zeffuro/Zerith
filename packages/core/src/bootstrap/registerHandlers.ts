@@ -36,6 +36,7 @@ import {
     SpriteHandler,
     TransitionHandler,
     WaitHandler,
+    WeatherHandler,
     WhileHandler,
 } from '../handlers';
 
@@ -111,13 +112,14 @@ export function registerHandlers(options: RegisterHandlersOptions): RegisterHand
         new SetHandler(state),
         new IfHandler(flow, evidence, state),
         new WhileHandler(flow, logger, evidence, state),
-        new ForHandler(flow, state),
+        new ForHandler(flow),
         new ShakeHandler(animations, display),
         new WaitHandler(),
         new LabelHandler(),
         new GotoHandler(logger, sceneManager),
         new SpriteHandler(assets, display, events, logger, spritesheets, state, () => manifestData),
         new FlashHandler(animations, display),
+        new WeatherHandler(display, state, events),
         new ItemHandler(evidence),
         dialogueHandler,
         new ChoiceHandler(display, events, flow, {

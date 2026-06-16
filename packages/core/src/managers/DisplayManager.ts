@@ -5,9 +5,25 @@ import type { DisplayLayerName } from '../interfaces/managers';
 export interface DisplayConfig {
     backgroundColor: number;
     height: number;
+    layers?: DisplayLayerDefinition[];
     scaleMode: 'fill' | 'fit' | 'fixed' | 'stretch';
     width: number;
 }
+
+export interface DisplayLayerDefinition {
+    id: string;
+    order?: number;
+}
+
+const DEFAULT_DYNAMIC_LAYER_ORDER = 350;
+const DEFAULT_LAYER_DEFINITIONS: Required<DisplayLayerDefinition>[] = [
+    { id: 'background', order: 0 },
+    { id: 'backgroundEffects', order: 100 },
+    { id: 'sprites', order: 200 },
+    { id: 'foregroundEffects', order: 300 },
+    { id: 'ui', order: 400 },
+    { id: 'overlay', order: 500 },
+];
 
 export const DefaultDisplayConfig: DisplayConfig = {
     backgroundColor: 0x11_11_11,
@@ -24,22 +40,19 @@ export class DisplayManager {
     private boundApplyScale: (() => void) | undefined;
 
     private config: DisplayConfig;
-    private readonly layers: Record<DisplayLayerName, Container> = {
-        background: new Container(),
-        overlay: new Container(),
-        sprites: new Container(),
-        ui: new Container(),
-    };
+    private readonly layerDefinitions = new Map<string, number>();
+    private readonly layers = new Map<string, Container>();
 
     private resizeObserver: ResizeObserver | undefined;
 
     constructor(config: Partial<DisplayConfig> = {}) {
         this.app = new Application();
         this.config = { ...DefaultDisplayConfig, ...config };
+        this.configureLayers(this.config.layers);
     }
 
     public clearLayers() {
-        for (const layer of Object.values(this.layers)) {
+        for (const layer of this.layers.values()) {
             for (const child of layer.removeChildren()) child.destroy({ children: true });
         }
     }
@@ -54,7 +67,19 @@ export class DisplayManager {
     }
 
     public getLayer(name: DisplayLayerName): Container {
-        return this.layers[name];
+        const id = String(name);
+        let layer = this.layers.get(id);
+        if (layer) return layer;
+
+        layer = new Container();
+        this.layers.set(id, layer);
+        this.layerDefinitions.set(id, DEFAULT_DYNAMIC_LAYER_ORDER);
+
+        if (this.canvas) {
+            this.app.stage.addChildAt(layer, this.getLayerInsertionIndex(id));
+        }
+
+        return layer;
     }
 
     public async init(canvas: HTMLCanvasElement) {
@@ -69,12 +94,9 @@ export class DisplayManager {
             width: this.config.width
         });
 
-        this.app.stage.addChild(
-            this.layers.background,
-            this.layers.sprites,
-            this.layers.ui,
-            this.layers.overlay
-        );
+        for (const id of this.getOrderedLayerIds()) {
+            this.app.stage.addChild(this.getLayer(id));
+        }
 
         if (this.config.scaleMode !== 'fixed') {
             this.boundApplyScale = () => this.applyScale();
@@ -139,5 +161,55 @@ export class DisplayManager {
         this.canvas.style.position = 'absolute';
         this.canvas.style.left = `${(parentW - cssWidth) / 2}px`;
         this.canvas.style.top = `${(parentH - cssHeight) / 2}px`;
+    }
+
+    private configureLayers(configuredLayers: DisplayLayerDefinition[] | undefined): void {
+        this.layerDefinitions.clear();
+
+        for (const layer of DEFAULT_LAYER_DEFINITIONS) {
+            this.layerDefinitions.set(layer.id, layer.order);
+            this.layers.set(layer.id, this.layers.get(layer.id) ?? new Container());
+        }
+
+        for (const layer of configuredLayers ?? []) {
+            const id = layer.id.trim();
+            if (id.length === 0) continue;
+            const order = typeof layer.order === 'number' && Number.isFinite(layer.order)
+                ? layer.order
+                : DEFAULT_DYNAMIC_LAYER_ORDER;
+
+            this.layerDefinitions.set(id, order);
+            this.layers.set(id, this.layers.get(id) ?? new Container());
+        }
+    }
+
+    private getLayerInsertionIndex(id: string): number {
+        const ids = this.getOrderedLayerIds();
+        const targetIndex = ids.indexOf(id);
+        if (targetIndex === -1) return this.app.stage.children.length;
+
+        const earlierLayerIds = new Set(ids.slice(0, targetIndex));
+        let insertionIndex = 0;
+
+        for (const child of this.app.stage.children) {
+            const childLayerId = findLayerIdByContainer(this.layers, child);
+            if (childLayerId && earlierLayerIds.has(childLayerId)) {
+                insertionIndex += 1;
+            }
+        }
+
+        return insertionIndex;
+    }
+
+    private getOrderedLayerIds(): string[] {
+        return [...this.layerDefinitions.entries()]
+            .toSorted(([idA, orderA], [idB, orderB]) => orderA - orderB || idA.localeCompare(idB))
+            .map(([id]) => id);
+    }
+}
+
+function findLayerIdByContainer(layers: ReadonlyMap<string, Container>, container: Container): string | undefined {
+    for (const [id, layer] of layers) {
+        if (layer === container) return id;
     }
 }

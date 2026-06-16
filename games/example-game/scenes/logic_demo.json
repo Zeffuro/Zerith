@@ -1,0 +1,225 @@
+[
+  {
+    "name": "clear_weather",
+    "type": "call"
+  },
+  {
+    "name": "enter_office",
+    "type": "call"
+  },
+  {
+    "name": "show_cast",
+    "type": "call"
+  },
+  {
+    "action": "add",
+    "id": "logic_card",
+    "type": "item"
+  },
+  {
+    "action": "add",
+    "id": "may_profile",
+    "type": "item"
+  },
+  {
+    "key": "scan_count",
+    "type": "set",
+    "value": 0
+  },
+  {
+    "speaker": "nora",
+    "text": "I need three clean readings. Watch the counter; it should wait for us between each one.",
+    "type": "dialogue"
+  },
+  {
+    "body": [
+      {
+        "key": "scan_count",
+        "op": "add",
+        "type": "set",
+        "value": 1
+      },
+      {
+        "assetUrl": "/assets/sfx/blipSelect.wav",
+        "type": "sfx",
+        "volume": 0.45
+      },
+      {
+        "speaker": "nora",
+        "text": "Reading {scan_step}: logged. Count is {scan_count}.",
+        "type": "dialogue"
+      }
+    ],
+    "from": 1,
+    "iterator": "scan_step",
+    "to": 3,
+    "type": "for"
+  },
+  {
+    "key": "pressure",
+    "type": "set",
+    "value": 0
+  },
+  {
+    "speaker": "may",
+    "text": "Pressure valve next. It opens twice if the state is behaving.",
+    "type": "dialogue"
+  },
+  {
+    "body": [
+      {
+        "key": "pressure",
+        "op": "add",
+        "type": "set",
+        "value": 1
+      },
+      {
+        "speaker": "may",
+        "text": "Pressure notch {pressure}. Still within range.",
+        "type": "dialogue"
+      }
+    ],
+    "key": "pressure",
+    "maxIterations": 5,
+    "op": "lt",
+    "type": "while",
+    "value": 2
+  },
+  {
+    "speaker": "juno",
+    "text": "Your call: pass the rig, or flag it before someone pretends the warning light is decorative.",
+    "type": "dialogue"
+  },
+  {
+    "options": [
+      {
+        "commands": [
+          {
+            "action": "add",
+            "id": "calibration_note",
+            "type": "item"
+          },
+          {
+            "key": "calibration_clean",
+            "type": "set",
+            "value": true
+          }
+        ],
+        "label": "Mark calibration clean"
+      },
+      {
+        "commands": [
+          {
+            "action": "add",
+            "id": "maintenance_note",
+            "type": "item"
+          },
+          {
+            "key": "calibration_clean",
+            "type": "set",
+            "value": false
+          }
+        ],
+        "label": "Flag maintenance issue"
+      }
+    ],
+    "type": "choice"
+  },
+  {
+    "key": "calibration_clean",
+    "onFalse": [
+      {
+        "changes": {
+          "description": "Flagged during the office check. May added three exclamation marks and then crossed one out."
+        },
+        "action": "update",
+        "id": "maintenance_note",
+        "type": "item"
+      },
+      {
+        "action": "pose",
+        "id": "may",
+        "pose": "bored",
+        "type": "sprite"
+      },
+      {
+        "speaker": "may",
+        "text": "Flagged. I'll add a note before this turns into a meeting.",
+        "type": "dialogue"
+      }
+    ],
+    "onTrue": [
+      {
+        "changes": {
+          "description": "Passed after three readings and two pressure notches. Nora initialed the bottom corner."
+        },
+        "action": "update",
+        "id": "calibration_note",
+        "type": "item"
+      },
+      {
+        "action": "pose",
+        "id": "may",
+        "pose": "smile",
+        "type": "sprite"
+      },
+      {
+        "speaker": "may",
+        "text": "Clean. I am choosing to enjoy the rare absence of bad news.",
+        "type": "dialogue"
+      }
+    ],
+    "type": "if"
+  },
+  {
+    "key": "calibration_note",
+    "onFalse": [
+      {
+        "speaker": "nora",
+        "text": "The record drawer has no calibration note. That tells me exactly which way you went.",
+        "type": "dialogue"
+      }
+    ],
+    "onTrue": [
+      {
+        "speaker": "nora",
+        "text": "The calibration note is in the record drawer. Good. I like evidence that can be found twice.",
+        "type": "dialogue"
+      }
+    ],
+    "source": "items",
+    "type": "if"
+  },
+  {
+    "options": [
+      {
+        "commands": [
+          {
+            "to": "weather_lab",
+            "type": "jump"
+          }
+        ],
+        "label": "Go to weather demo"
+      },
+      {
+        "commands": [
+          {
+            "to": "courtroom_demo",
+            "type": "jump"
+          }
+        ],
+        "label": "Go to staging demo"
+      },
+      {
+        "commands": [
+          {
+            "to": "ending",
+            "type": "jump"
+          }
+        ],
+        "label": "Finish showcase"
+      }
+    ],
+    "type": "choice"
+  }
+]

@@ -1,9 +1,14 @@
+import { WEATHER_PRESET_DEFAULTS, type WeatherPreset } from 'core';
+import { CloudRain } from 'lucide-react';
+
 import { FlashInspector } from '../../components/inspector/FlashInspector';
 import { SetInspector } from '../../components/inspector/SetInspector';
 import { ShakeInspector } from '../../components/inspector/ShakeInspector';
 import { TransitionInspector } from '../../components/inspector/TransitionInspector';
 import { WaitInspector } from '../../components/inspector/WaitInspector';
-import { asInspector, type CommandPluginOverrides, readNumber } from './shared';
+import { WeatherInspector } from '../../components/inspector/WeatherInspector';
+import { editorTheme as t } from '../../theme/editorTheme';
+import { asInspector, type CommandPluginOverrides, readNumber, readString } from './shared';
 
 export const effectPluginOverrides: CommandPluginOverrides = {
     flash: {
@@ -32,5 +37,35 @@ export const effectPluginOverrides: CommandPluginOverrides = {
         createDefault: () => ({ duration: 500, type: 'wait' }),
         Inspector: asInspector(WaitInspector),
     },
+    weather: {
+        createDefault: () => ({
+            fadeIn: 300,
+            preset: 'rain',
+            type: 'weather',
+        }),
+        getSummary: (node) => {
+            const action = readString(node, 'action', 'start');
+            if (action === 'clear') return 'clear all';
+
+            const preset = resolveWeatherPreset(readString(node, 'preset', 'rain'));
+            const label = WEATHER_PRESET_DEFAULTS[preset].label;
+            const id = readString(node, 'id', WEATHER_PRESET_DEFAULTS[preset].defaultId);
+            if (action === 'stop') return `stop ${label}`;
+
+            const density = readNumber(node, 'density', WEATHER_PRESET_DEFAULTS[preset].density);
+            return id === WEATHER_PRESET_DEFAULTS[preset].defaultId
+                ? label
+                : `${label} | ${id} | ${density}`;
+        },
+        icon: (size) => <CloudRain color={t.accent.blue} size={size} />,
+        Inspector: asInspector(WeatherInspector),
+        quickColor: { bg: t.bg.panelAlt, border: t.accent.blue },
+    },
 };
+
+function resolveWeatherPreset(value: string): WeatherPreset {
+    return value in WEATHER_PRESET_DEFAULTS
+        ? value as WeatherPreset
+        : 'rain';
+}
 

@@ -17,6 +17,7 @@ export const DEFAULT_QUICK_COMMAND_TYPES: NonMacroEditorCommandType[] = [
     'dialogue',
     'background',
     'sprite',
+    'weather',
     'choice',
     'if',
     'while',

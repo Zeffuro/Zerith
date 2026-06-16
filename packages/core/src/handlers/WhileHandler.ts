@@ -41,23 +41,29 @@ export class WhileHandler implements CommandHandler<WhileCommand> {
         this.state = state;
     }
 
-    execute = async (command: WhileCommand) => {
+    execute = (command: WhileCommand) => {
         const body = Array.isArray(command.body) ? command.body : [];
         const maxIterations = Number.isFinite(command.maxIterations)
             ? Math.max(1, Number(command.maxIterations))
             : 10_000;
 
-        let count = 0;
-        while (this.evaluateCommand(command)) {
-            for (const child of body) {
-                await this.flow.runCommand(child);
-            }
-            count++;
-            if (count >= maxIterations) {
-                this.logger.warn(`[while] maxIterations reached (${maxIterations}); breaking loop.`);
-                break;
-            }
+        if (!this.evaluateCommand(command)) {
+            return;
         }
+
+        if (maxIterations <= 1) {
+            this.logger.warn(`[while] maxIterations reached (${maxIterations}); breaking loop.`);
+            this.flow.injectCommands(body);
+            return;
+        }
+
+        this.flow.injectCommands([
+            ...body,
+            {
+                ...command,
+                maxIterations: maxIterations - 1,
+            },
+        ]);
     };
 
     private evaluateCommand(command: WhileCommand): boolean {

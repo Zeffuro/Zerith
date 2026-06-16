@@ -26,7 +26,7 @@ export class ShakeHandler implements CommandHandler<ShakeCommand> {
     execute = async (command: ShakeCommand) => {
         const duration = (command.duration ?? 500) / 1000;
         const intensity = command.intensity ?? 10;
-        const targets = [this.display.getLayer('background'), this.display.getLayer('sprites')];
+        const targets = this.getShakeTargets();
 
         const tl = this.animations.timeline() as {
             eventCallback(name: 'onComplete', callback: () => void): void;
@@ -52,7 +52,16 @@ export class ShakeHandler implements CommandHandler<ShakeCommand> {
     };
 
     public reset(): void {
-        const targets = [this.display.getLayer('background'), this.display.getLayer('sprites')];
+        const targets = this.getShakeTargets();
         this.animations.set(targets, { x: 0, y: 0 });
+    }
+
+    private getShakeTargets() {
+        return [
+            this.display.getLayer('background'),
+            this.display.getLayer('backgroundEffects'),
+            this.display.getLayer('sprites'),
+            this.display.getLayer('foregroundEffects'),
+        ];
     }
 }

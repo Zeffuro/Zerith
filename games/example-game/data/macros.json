@@ -1,0 +1,151 @@
+{
+  "clear_weather": [
+    {
+      "action": "clear",
+      "fadeOut": 450,
+      "type": "weather"
+    }
+  ],
+  "dramatic_beat": [
+    {
+      "assetUrl": "/assets/sfx/blipSelect.wav",
+      "type": "sfx",
+      "volume": 0.75
+    },
+    {
+      "color": 16777215,
+      "duration": 260,
+      "type": "flash",
+      "wait": false
+    },
+    {
+      "duration": 420,
+      "intensity": 10,
+      "type": "shake",
+      "wait": true
+    }
+  ],
+  "enter_courtroom": [
+    {
+      "action": "fade_out",
+      "duration": 320,
+      "type": "transition"
+    },
+    {
+      "assetUrl": "/assets/bg/courtroom.png",
+      "type": "background"
+    },
+    {
+      "action": "fade_in",
+      "duration": 320,
+      "type": "transition"
+    }
+  ],
+  "enter_office": [
+    {
+      "action": "fade_out",
+      "duration": 320,
+      "type": "transition"
+    },
+    {
+      "assetUrl": "/assets/bg/office.png",
+      "type": "background"
+    },
+    {
+      "action": "fade_in",
+      "duration": 320,
+      "type": "transition"
+    }
+  ],
+  "hide_cast": [
+    {
+      "action": "hide",
+      "duration": 220,
+      "id": "may",
+      "transition": "fade",
+      "type": "sprite"
+    },
+    {
+      "action": "hide",
+      "duration": 220,
+      "id": "juno",
+      "transition": "fade",
+      "type": "sprite"
+    },
+    {
+      "action": "hide",
+      "duration": 220,
+      "id": "nora",
+      "transition": "fade",
+      "type": "sprite"
+    }
+  ],
+  "show_cast": [
+    {
+      "action": "show",
+      "duration": 260,
+      "id": "juno",
+      "pose": "normal",
+      "transition": "fade",
+      "type": "sprite",
+      "x": 300
+    },
+    {
+      "action": "show",
+      "duration": 260,
+      "id": "nora",
+      "pose": "normal",
+      "transition": "fade",
+      "type": "sprite",
+      "x": 690
+    },
+    {
+      "action": "show",
+      "duration": 260,
+      "id": "may",
+      "pose": "normal",
+      "transition": "fade",
+      "type": "sprite",
+      "x": 1035
+    }
+  ],
+  "show_duo": [
+    {
+      "action": "show",
+      "duration": 260,
+      "id": "juno",
+      "pose": "normal",
+      "transition": "fade",
+      "type": "sprite",
+      "x": 390
+    },
+    {
+      "action": "show",
+      "duration": 260,
+      "id": "nora",
+      "pose": "normal",
+      "transition": "fade",
+      "type": "sprite",
+      "x": 885
+    }
+  ],
+  "soft_beat": [
+    {
+      "assetUrl": "/assets/sfx/voices.sheet.json:holdit",
+      "type": "sfx",
+      "volume": 0.45
+    }
+  ],
+  "window_drizzle": [
+    {
+      "alpha": 0.24,
+      "density": 90,
+      "fadeIn": 500,
+      "id": "window_drizzle",
+      "layer": "weatherBack",
+      "preset": "drizzle",
+      "speed": 420,
+      "type": "weather"
+    }
+  ]
+}

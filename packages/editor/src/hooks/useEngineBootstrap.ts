@@ -118,10 +118,7 @@ export function useEngineBootstrap({
             };
 
             const engine = await bootstrapEngine({
-                assetResolver: (url: string) => {
-                    if (projectPath && !url.startsWith('http')) return convertFileSrc(projectPath + url);
-                    return url;
-                },
+                assetResolver: (url: string) => resolvePreviewAssetUrl(url, projectPath),
                 canvas,
                 characters: bootstrapCharacters,
                 config: effectiveConfig,
@@ -194,6 +191,14 @@ export function useEngineBootstrap({
     return engineReference;
 }
 
+function decodeLocalAssetPath(assetUrl: string): string {
+    try {
+        return decodeURIComponent(assetUrl);
+    } catch {
+        return assetUrl;
+    }
+}
+
 function isLikelyMissingFileError(caughtError: unknown): boolean {
     if (!(caughtError instanceof Error)) return false;
     const message = caughtError.message.toLowerCase();
@@ -252,11 +257,13 @@ function resolvePreviewAssetUrl(assetUrl: string, projectPath: string): string {
         return assetUrl;
     }
 
-    if (/^[a-zA-Z]:[\\/]/.test(assetUrl) || assetUrl.startsWith('\\\\')) {
-        return convertFileSrc(assetUrl);
+    const decodedAssetUrl = decodeLocalAssetPath(assetUrl);
+
+    if (/^[a-zA-Z]:[\\/]/.test(decodedAssetUrl) || decodedAssetUrl.startsWith('\\\\')) {
+        return convertFileSrc(decodedAssetUrl);
     }
 
-    const slashPrefixedPath = assetUrl.startsWith('/') ? assetUrl : `/${assetUrl}`;
+    const slashPrefixedPath = decodedAssetUrl.startsWith('/') ? decodedAssetUrl : `/${decodedAssetUrl}`;
     return convertFileSrc(projectPath + slashPrefixedPath);
 }
 

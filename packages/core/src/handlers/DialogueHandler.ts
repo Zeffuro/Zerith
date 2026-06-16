@@ -36,6 +36,13 @@ export interface DialogueConfig {
     typewriterSpeed?: number;
 }
 
+interface TalkingSpriteSnapshot {
+    animation?: string;
+    assetUrl?: string;
+    id: string;
+    pose?: string;
+}
+
 export class DialogueHandler implements CommandHandler<DialogueCommand> {
     public autoNext = false;
     public type = 'dialogue' as const;
@@ -120,10 +127,20 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         };
 
         const fullCharData = speakerKey ? this.config.characters?.[speakerKey] : undefined;
+        let talkingSpriteSnapshot: TalkingSpriteSnapshot | undefined;
         if (fullCharData?.talkAnimation) {
             const spriteState = this.state.system.sprites;
             if (speakerKey && (spriteState?.[speaker] || spriteState?.[speakerKey])) {
                 const spriteId = spriteState[speaker] ? speaker : speakerKey;
+                const currentSprite = spriteState[spriteId];
+                talkingSpriteSnapshot = currentSprite
+                    ? {
+                        animation: currentSprite.animation,
+                        assetUrl: currentSprite.assetUrl,
+                        id: spriteId,
+                        pose: currentSprite.pose,
+                    }
+                    : undefined;
                 const animCommand: SpriteCommand = {
                     action: 'animate',
                     animation: fullCharData.talkAnimation,
@@ -150,29 +167,35 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
 
         this.renderer.clearMessage();
 
-        const transformed = transformShorthands(resolvedText);
-        const tokens = parseTextTags(transformed);
+        try {
+            const transformed = transformShorthands(resolvedText);
+            const tokens = parseTextTags(transformed);
 
-        if (command.instant) {
-            this.renderer.setMessageText(tokens
-                .filter((t): t is { type: 'text'; val: string } => t.type === 'text')
-                .map(t => t.val)
-                .join(''));
-            return;
+            if (command.instant) {
+                this.renderer.setMessageText(tokens
+                    .filter((t): t is { type: 'text'; val: string } => t.type === 'text')
+                    .map(t => t.val)
+                    .join(''));
+                return;
+            }
+
+            await this.typewriter.run({
+                blipUrl: resolvedBlipUrl,
+                consumeSkip: () => this.flow.consumeSkip(),
+                createPromptBlinker: () => this.renderer.createPromptBlinker(),
+                getMessageText: () => this.renderer.getMessageText(),
+                initialSpeed: this.config.typewriterSpeed!,
+                playVoice: (url) => this.audio.playVoice(url),
+                setMessageText: (text) => this.renderer.setMessageText(text),
+                signal,
+                tokens,
+                waitForPromptInput: (abortSignal) => this.waitForPromptInput(this.events, abortSignal),
+            });
+        } finally {
+            if (talkingSpriteSnapshot && !signal.aborted) {
+                await this.restoreTalkingSprite(talkingSpriteSnapshot);
+            }
         }
-
-        await this.typewriter.run({
-            blipUrl: resolvedBlipUrl,
-            consumeSkip: () => this.flow.consumeSkip(),
-            createPromptBlinker: () => this.renderer.createPromptBlinker(),
-            getMessageText: () => this.renderer.getMessageText(),
-            initialSpeed: this.config.typewriterSpeed!,
-            playVoice: (url) => this.audio.playVoice(url),
-            setMessageText: (text) => this.renderer.setMessageText(text),
-            signal,
-            tokens,
-            waitForPromptInput: (abortSignal) => this.waitForPromptInput(this.events, abortSignal),
-        });
 
         if (!signal.aborted && this.autoAdvanceDelay !== undefined) {
             await waitForAbortableDelay(this.autoAdvanceDelay, signal);
@@ -196,6 +219,31 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
 
     public setAutoAdvanceDelay(delay: number | undefined) {
         this.autoAdvanceDelay = delay;
+    }
+
+    private async restoreTalkingSprite(snapshot: TalkingSpriteSnapshot): Promise<void> {
+        const currentSprite = this.state.system.sprites[snapshot.id];
+        if (!currentSprite) return;
+
+        if (snapshot.animation) {
+            await this.flow.runCommand({
+                action: 'animate',
+                animation: snapshot.animation,
+                id: snapshot.id,
+                type: 'sprite',
+            });
+            return;
+        }
+
+        if (snapshot.pose || snapshot.assetUrl) {
+            await this.flow.runCommand({
+                action: 'pose',
+                assetUrl: snapshot.assetUrl,
+                id: snapshot.id,
+                pose: snapshot.pose,
+                type: 'sprite',
+            });
+        }
     }
 
     private async waitForPromptInput(events: IEventBus, signal: AbortSignal): Promise<void> {

@@ -33,8 +33,9 @@ export function AssetPickerField({
                 const trimmed = value.trim();
                 if (!trimmed) return;
 
-                const absolutePath = toAbsoluteProjectPath(projectPath, trimmed);
-                await openProjectEntry(absolutePath, basename(trimmed));
+                const assetPath = stripCueReference(trimmed);
+                const absolutePath = toAbsoluteProjectPath(projectPath, assetPath);
+                await openProjectEntry(absolutePath, basename(assetPath));
             };
 
     return (
@@ -76,6 +77,12 @@ export function AssetPickerField({
 
         function basename(path: string): string {
             return path.split(/[\\/]/).pop() || path;
+        }
+
+        function stripCueReference(assetUrl: string): string {
+            if (/^[a-z][a-z+.-]*:\/\//i.test(assetUrl)) return assetUrl;
+            const separatorIndex = assetUrl.lastIndexOf(':');
+            return separatorIndex > 0 ? assetUrl.slice(0, separatorIndex) : assetUrl;
         }
 
         function toAbsoluteProjectPath(projectPath: string, maybeRelativePath: string): string {

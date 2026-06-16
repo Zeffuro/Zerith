@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { type FsDirectoryEntry, fsReadDirectory } from '../services/fs';
+import { type FsDirectoryEntry, fsReadDirectory, fsReadTextFile } from '../services/fs';
 import { useProjectStore } from '../store/storeBootstrap';
 import { AUDIO_EXT, FONT_EXT, getExtension, IMG_EXT } from '../utils/assetTypes';
 
@@ -43,13 +43,22 @@ export function useAssetOptions(kind: AssetKind = 'all') {
             const assetsRoot = joinPath(projectPath, 'assets');
             const files = await walk(assetsRoot);
 
-            const next = files
-                .filter((p) => matchKind(p, kind))
-                .map((absPath) => {
+            const optionGroups = await Promise.all(files.map(async (absPath) => {
+                    if (!matchKind(absPath, kind)) return [];
+
                     const value = normalizeRelativePath(projectPath, absPath);
                     const label = value.replace(/^\/+/, '');
-                    return { absPath, label, value };
-                })
+                    const option = { absPath, label, value };
+
+                    if (!AUDIO_KINDS.has(kind) && kind !== 'all') {
+                        return [option];
+                    }
+
+                    const cueOptions = await readAudiosheetCueOptions(absPath, projectPath);
+                    return cueOptions.length > 0 ? cueOptions : [option];
+                }));
+            const next = optionGroups
+                .flat()
                 .toSorted((a, b) => a.label.localeCompare(b.label));
 
             if (requestVersion === requestVersionReference.current) {
@@ -78,6 +87,14 @@ export function useAssetOptions(kind: AssetKind = 'all') {
 }
 
 
+function isAudiosheetPath(path: string): boolean {
+    return path.toLowerCase().endsWith('.sheet.json');
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+}
+
 function joinPath(a: string, b: string) {
     if (!a) return b;
     return `${a.replace(/\/+$/, '')}/${b.replace(/^\/+/, '')}`;
@@ -89,7 +106,7 @@ function matchKind(path: string, kind: AssetKind) {
     if (kind === 'bg') return BG_EXT.has(extension);
     if (kind === 'font') return FONT_EXT.has(extension);
     if (kind === 'sprite') return SPRITE_EXT.has(extension);
-    if (AUDIO_KINDS.has(kind)) return AUDIO_EXT.has(extension);
+    if (AUDIO_KINDS.has(kind)) return AUDIO_EXT.has(extension) || isAudiosheetPath(path);
     return true;
 }
 
@@ -101,6 +118,31 @@ function normalizeRelativePath(projectPath: string, absPath: string) {
         return relative.startsWith('/') ? relative : `/${relative}`;
     }
     return absPath;
+}
+
+async function readAudiosheetCueOptions(absPath: string, projectPath: string): Promise<AssetOption[]> {
+    if (!isAudiosheetPath(absPath)) return [];
+
+    let data: unknown;
+    try {
+        data = JSON.parse(await fsReadTextFile(absPath));
+    } catch {
+        return [];
+    }
+
+    if (!isRecord(data) || !isRecord(data.cues)) return [];
+
+    const sheetUrl = normalizeRelativePath(projectPath, absPath);
+    return Object.keys(data.cues)
+        .toSorted((left, right) => left.localeCompare(right))
+        .map((cueName) => {
+            const value = `${sheetUrl}:${cueName}`;
+            return {
+                absPath,
+                label: value.replace(/^\/+/, ''),
+                value,
+            };
+        });
 }
 
 async function walk(directory: string): Promise<string[]> {

@@ -2,7 +2,17 @@ import type { Container } from 'pixi.js';
 
 import type { IBaseManager } from './IBaseManager';
 
-export type DisplayLayerName = 'background' | 'overlay' | 'sprites' | 'ui';
+export const BUILT_IN_DISPLAY_LAYERS = [
+    'background',
+    'backgroundEffects',
+    'sprites',
+    'foregroundEffects',
+    'ui',
+    'overlay',
+] as const;
+
+export type BuiltInDisplayLayerName = typeof BUILT_IN_DISPLAY_LAYERS[number];
+export type DisplayLayerName = ({} & string) | BuiltInDisplayLayerName;
 
 export interface IDisplayManager extends IBaseManager {
     canvas: HTMLCanvasElement | undefined;

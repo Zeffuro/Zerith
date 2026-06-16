@@ -51,6 +51,7 @@ export class StateManager implements IStateManager {
 
         this._system.sprites ??= {};
         this._system.items ??= [];
+        this._system.weather ??= {};
     }
 
     public set(key: string, value: unknown): void {

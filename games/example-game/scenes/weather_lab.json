@@ -1,0 +1,146 @@
+[
+  {
+    "name": "clear_weather",
+    "type": "call"
+  },
+  {
+    "name": "enter_office",
+    "type": "call"
+  },
+  {
+    "name": "show_cast",
+    "type": "call"
+  },
+  {
+    "action": "animate",
+    "animation": "idle",
+    "id": "may",
+    "type": "sprite"
+  },
+  {
+    "speaker": "may",
+    "text": "The roof still leaks. If you hear thunder in a minute, pretend that was part of the plan.",
+    "type": "dialogue"
+  },
+  {
+    "alpha": 0.85,
+    "density": 150,
+    "fadeIn": 500,
+    "id": "back_snow",
+    "layer": "weatherBack",
+    "preset": "snowfall",
+    "speed": 80,
+    "type": "weather",
+    "wind": 15
+  },
+  {
+    "duration": 500,
+    "type": "wait"
+  },
+  {
+    "speaker": "nora",
+    "text": "Snow behind us. Much better than burying everyone's face under white dots.",
+    "type": "dialogue"
+  },
+  {
+    "action": "stop",
+    "fadeOut": 350,
+    "id": "back_snow",
+    "preset": "snowfall",
+    "type": "weather"
+  },
+  {
+    "alpha": 0.85,
+    "density": 55,
+    "fadeIn": 350,
+    "id": "front_embers",
+    "layer": "weatherFront",
+    "preset": "embers",
+    "type": "weather",
+    "wind": 35
+  },
+  {
+    "duration": 500,
+    "type": "wait"
+  },
+  {
+    "speaker": "juno",
+    "text": "Embers in front. A little theatrical, but I can work with theatrical.",
+    "type": "dialogue"
+  },
+  {
+    "action": "stop",
+    "fadeOut": 350,
+    "id": "front_embers",
+    "preset": "embers",
+    "type": "weather"
+  },
+  {
+    "assetUrl": "/assets/bg/courtroom.png",
+    "duration": 700,
+    "type": "scene_change"
+  },
+  {
+    "alpha": 0.68,
+    "density": 340,
+    "fadeIn": 250,
+    "id": "rain_wall",
+    "layer": "weatherFront",
+    "preset": "storm",
+    "type": "weather",
+    "wind": 140
+  },
+  {
+    "duration": 360,
+    "intensity": 8,
+    "type": "shake",
+    "wait": false
+  },
+  {
+    "speaker": "may",
+    "text": "New room, same people. The storm did not ask permission before following us in.",
+    "type": "dialogue"
+  },
+  {
+    "speaker": "nora",
+    "text": "Wind is high enough to make the point, low enough that I can still see the room.",
+    "type": "dialogue"
+  },
+  {
+    "action": "clear",
+    "fadeOut": 550,
+    "type": "weather"
+  },
+  {
+    "options": [
+      {
+        "commands": [
+          {
+            "to": "logic_demo",
+            "type": "jump"
+          }
+        ],
+        "label": "Go to logic demo"
+      },
+      {
+        "commands": [
+          {
+            "to": "courtroom_demo",
+            "type": "jump"
+          }
+        ],
+        "label": "Go to staging demo"
+      },
+      {
+        "commands": [
+          {
+            "to": "ending",
+            "type": "jump"
+          }
+        ],
+        "label": "Finish showcase"
+      }
+    ],
+    "type": "choice"
+  }
+]

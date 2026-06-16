@@ -10,6 +10,11 @@
         "type": "background"
     },
     {
+        "fadeIn": 300,
+        "preset": "heavy_rain",
+        "type": "weather"
+    },
+    {
         "action": "show",
         "id": "phoenix",
         "pose": "default",
@@ -95,6 +100,12 @@
         "speaker": "phoenix",
         "text": "Okay, enough stalling. To the courthouse!",
         "type": "dialogue"
+    },
+    {
+        "action": "stop",
+        "fadeOut": 400,
+        "preset": "heavy_rain",
+        "type": "weather"
     },
     {
         "action": "hide",

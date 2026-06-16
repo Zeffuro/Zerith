@@ -21,6 +21,7 @@ export const BuiltInCommandTypes = [
     'call',
     'sprite',
     'flash',
+    'weather',
     'item',
 ] as const;
 

@@ -2,6 +2,11 @@ import { z } from 'zod';
 
 export const DisplayScaleModeSchema = z.enum(['fill', 'fit', 'fixed', 'stretch']);
 
+export const DisplayLayerSchema = z.strictObject({
+    id: z.string().trim().min(1),
+    order: z.float64().optional(),
+});
+
 export const AudioConfigSchema = z.strictObject({
     bgmVolume: z.float64().optional(),
     masterVolume: z.float64().optional(),
@@ -13,6 +18,7 @@ export const AudioConfigSchema = z.strictObject({
 export const DisplayConfigSchema = z.strictObject({
     backgroundColor: z.int().nonnegative().optional(),
     height: z.int().positive().optional(),
+    layers: z.array(DisplayLayerSchema).optional(),
     scaleMode: DisplayScaleModeSchema.optional(),
     width: z.int().positive().optional(),
 });

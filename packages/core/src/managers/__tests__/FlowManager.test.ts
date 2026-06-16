@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createFlowManagerHarness, flushAsync } from '../../test-utils/flowManagerHarness';
 import { scriptOf, waitCommand } from '../../test-utils/scriptBuilders';
@@ -48,5 +48,32 @@ describe('FlowManager', () => {
         expect(context.emitted.some((entry) => entry.event === 'flow:stepped')).toBe(true);
         expect(context.emitted.filter((entry) => entry.event === 'flow:paused').length).toBeGreaterThan(0);
         expect(context.flow.isPaused).toBe(true);
+    });
+
+    it('stops after an injected non-autoNext command', async () => {
+        const context = createFlowManagerHarness([]);
+        const executeDialogue = vi.fn(async () => {});
+
+        context.flow.registerHandler({
+            autoNext: false,
+            execute: executeDialogue,
+            type: 'dialogue',
+        });
+
+        context.flow.start();
+        await flushAsync();
+
+        context.flow.injectCommands([
+            { speaker: 'Narrator', text: 'Hold here.', type: 'dialogue' },
+            waitCommand(),
+        ]);
+        await context.flow.playNext();
+
+        expect(executeDialogue).toHaveBeenCalledTimes(1);
+        expect(context.execute).not.toHaveBeenCalled();
+
+        await context.flow.playNext();
+
+        expect(context.execute).toHaveBeenCalledTimes(1);
     });
 });

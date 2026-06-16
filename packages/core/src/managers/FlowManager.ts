@@ -128,7 +128,7 @@ export class FlowManager implements IFlowManager {
                 }
 
                 const handler = this.getHandler(command.type);
-                if (handler && !handler.autoNext && !hasInjected) {
+                if (handler && !handler.autoNext) {
                     this._lastSavePoint = this.scenes.getLastOriginalIndex(index);
                     this.isExecuting = false;
                     return;

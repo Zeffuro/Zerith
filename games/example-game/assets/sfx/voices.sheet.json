@@ -1,0 +1,20 @@
+{
+    "source": "voices.wav",
+    "cues": {
+        "objection": {
+            "duration": 1.2151697752974007,
+            "start": 0.42985597493513494,
+            "volume": 0.65
+        },
+        "holdit": {
+            "duration": 0.8721116414549366,
+            "start": 2.0459491114701134,
+            "volume": 0.65
+        },
+        "takethat": {
+            "duration": 0.7830220541440247,
+            "start": 3.566977945855975,
+            "volume": 0.65
+        }
+    }
+}

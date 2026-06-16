@@ -18,5 +18,6 @@ export * from './ShakeHandler';
 export * from './SpriteHandler';
 export * from './TransitionHandler';
 export * from './WaitHandler';
+export * from './WeatherHandler';
 export * from './WhileHandler';
 
