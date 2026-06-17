@@ -17,6 +17,7 @@ function createResult(): ReferenceScannerResult {
         assetFiles: {},
         assets: {},
         characters: {},
+        items: {},
         variables: {},
     };
 }
@@ -172,6 +173,8 @@ describe('referenceScanner', () => {
                     { speaker: 'Phoenix', text: 'Status: {caseFlag}', type: 'dialogue' },
                     { key: 'score', op: 'set', type: 'set', value: 1 },
                     { all: [{ key: 'lives' }, { source: 'score' }], key: 'score', type: 'if' },
+                    { action: 'add', id: 'attorney_badge', type: 'item' },
+                    { key: 'secret_photo', source: 'evidence', type: 'while' },
                 ],
             },
         });
@@ -201,6 +204,8 @@ describe('referenceScanner', () => {
 
         expect(result.variables.lives.reads).toHaveLength(1);
         expect(result.variables.caseFlag.reads).toHaveLength(1);
+        expect(result.items.attorney_badge).toHaveLength(1);
+        expect(result.items.secret_photo).toHaveLength(1);
     });
 
     it('returns an empty reference set when project path is unavailable', () => {
@@ -210,6 +215,7 @@ describe('referenceScanner', () => {
             assetFiles: {},
             assets: {},
             characters: {},
+            items: {},
             variables: {},
         });
     });

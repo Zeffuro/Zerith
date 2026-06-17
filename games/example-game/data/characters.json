@@ -12,8 +12,8 @@
       "anchorY": 1,
       "scaleX": 0.82,
       "scaleY": 0.82,
-      "x": 390,
-      "y": 720
+      "xRatio": 0.3047,
+      "yRatio": 1
     },
     "talkAnimation": "talk",
     "poses": {
@@ -76,8 +76,8 @@
       "anchorY": 1,
       "scaleX": 1.35,
       "scaleY": 1.35,
-      "x": 1045,
-      "y": 720
+      "xRatio": 0.8164,
+      "yRatio": 1
     },
     "talkAnimation": "talk",
     "poses": {
@@ -130,8 +130,8 @@
       "anchorY": 1,
       "scaleX": 0.82,
       "scaleY": 0.82,
-      "x": 885,
-      "y": 720
+      "xRatio": 0.6914,
+      "yRatio": 1
     },
     "talkAnimation": "talk",
     "poses": {

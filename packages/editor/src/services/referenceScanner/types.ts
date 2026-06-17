@@ -24,6 +24,7 @@ export type ReferenceScannerResult = {
     assetFiles: Record<string, ReferenceLocation[]>;
     assets: Record<string, ReferenceLocation[]>;
     characters: Record<string, ReferenceLocation[]>;
+    items: Record<string, ReferenceLocation[]>;
     variables: Record<string, VariableReferenceStats>;
 };
 

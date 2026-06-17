@@ -16,7 +16,9 @@ export interface SpriteCommand extends BaseCommand {
     type: 'sprite';
     wait?: boolean;
     x?: number;
+    xRatio?: number;
     y?: number;
+    yRatio?: number;
 }
 
 export interface SpriteState {
@@ -30,6 +32,8 @@ export interface SpriteState {
     scaleX?: number;
     scaleY?: number;
     x?: number;
+    xRatio?: number;
     y?: number;
+    yRatio?: number;
 }
 

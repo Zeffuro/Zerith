@@ -22,6 +22,7 @@ function createResult(): ReferenceScannerResult {
         assetFiles: {},
         assets: {},
         characters: {},
+        items: {},
         variables: {},
     };
 }

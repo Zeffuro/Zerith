@@ -17,6 +17,7 @@ export function ReferenceTrackerPanel() {
     const [query, setQuery] = useState('');
     const [showAssets, setShowAssets] = useState(true);
     const [showCharacters, setShowCharacters] = useState(true);
+    const [showItems, setShowItems] = useState(true);
     const [showVariables, setShowVariables] = useState(true);
 
     const normalizedQuery = query.trim().toLowerCase();
@@ -42,6 +43,13 @@ export function ReferenceTrackerPanel() {
         [normalizedQuery, scanned.characters],
     );
 
+    const filteredItems = useMemo(
+        () => Object.entries(scanned.items)
+            .filter(([name]) => !normalizedQuery || name.toLowerCase().includes(normalizedQuery))
+            .toSorted(([left], [right]) => left.localeCompare(right)),
+        [normalizedQuery, scanned.items],
+    );
+
     if (!projectPath) {
         return <div style={{ color: t.text.faint, fontStyle: 'italic', padding: `${12 * uiScale}px` }}>Open a project to scan references.</div>;
     }
@@ -64,7 +72,7 @@ export function ReferenceTrackerPanel() {
 
             <input
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Filter variables, assets, characters..."
+                placeholder="Filter variables, items, assets, characters..."
                 style={{
                     background: t.bg.input,
                     border: `1px solid ${t.border.input}`,
@@ -90,6 +98,22 @@ export function ReferenceTrackerPanel() {
                         subtitle={`type: ${stats.inferredType} | reads: ${stats.reads.length} | writes: ${stats.writes.length}`}
                         uiScale={uiScale}
                         writeLocations={stats.writes}
+                    />
+                ))}
+            </section>
+
+            <section style={sectionStyle(uiScale)}>
+                <button className="toolbar-btn" onClick={() => setShowItems((value) => !value)} style={sectionHeaderStyle(uiScale)} type="button">
+                    Items ({filteredItems.length})
+                </button>
+                {showItems && filteredItems.map(([name, locations]) => (
+                    <EntryBlock
+                        key={`item-${name}`}
+                        locations={locations}
+                        name={name}
+                        onOpenLocation={handleOpenLocation}
+                        subtitle={`references: ${locations.length}`}
+                        uiScale={uiScale}
                     />
                 ))}
             </section>

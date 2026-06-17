@@ -26,6 +26,7 @@ function createResult(): ReferenceScannerResult {
         assetFiles: {},
         assets: {},
         characters: {},
+        items: {},
         variables: {},
     };
 }
@@ -165,6 +166,38 @@ describe('referenceScanner command scan', () => {
         expect(result.variables.score.reads.length).toBeGreaterThanOrEqual(1);
         expect(result.variables.lives.reads.length).toBeGreaterThanOrEqual(2);
         expect(result.variables.flag.reads.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('tracks item commands and item/evidence conditions as item references', () => {
+        const result = createResult();
+
+        scanCommandReferences(
+            { action: 'add', id: 'attorney_badge', type: 'item' },
+            'item',
+            [0],
+            '/project/scripts/intro.json',
+            'intro',
+            result,
+        );
+
+        scanCommandReferences(
+            {
+                all: [{ key: 'secret_photo', source: 'items' }],
+                key: 'attorney_badge',
+                source: 'evidence',
+                type: 'if',
+            },
+            'if',
+            [1],
+            '/project/scripts/intro.json',
+            'intro',
+            result,
+        );
+
+        expect(result.items.attorney_badge).toHaveLength(2);
+        expect(result.items.secret_photo).toHaveLength(1);
+        expect(result.variables.attorney_badge).toBeUndefined();
+        expect(result.variables.secret_photo).toBeUndefined();
     });
 });
 

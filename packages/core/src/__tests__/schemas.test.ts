@@ -73,4 +73,16 @@ describe('schemas', () => {
         expect(parsed.license).toBeUndefined();
         expect(parsed.version).toBeUndefined();
     });
+
+    it('SpriteCommandSchema accepts ratio-based placement fields', () => {
+        const parsed = SchemaRegistry.getCommandSchema().safeParse({
+            action: 'show',
+            id: 'juno',
+            type: 'sprite',
+            xRatio: 0.3,
+            yRatio: 1,
+        });
+
+        expect(parsed.success).toBe(true);
+    });
 });

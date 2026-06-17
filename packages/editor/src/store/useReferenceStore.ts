@@ -21,6 +21,7 @@ const EMPTY_RESULT: ReferenceScannerResult = {
     assetFiles: {},
     assets: {},
     characters: {},
+    items: {},
     variables: {},
 };
 

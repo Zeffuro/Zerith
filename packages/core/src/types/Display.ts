@@ -5,5 +5,7 @@ export interface DisplayDefaults {
     scaleX?: number;
     scaleY?: number;
     x?: number;
+    xRatio?: number;
     y?: number;
+    yRatio?: number;
 }

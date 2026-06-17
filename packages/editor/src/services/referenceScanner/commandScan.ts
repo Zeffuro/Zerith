@@ -52,30 +52,18 @@ export function scanCommandReferences(
     }
 
     if (commandType === 'if' || commandType === 'while') {
-        if (commandKey) {
-            pushVariableRead(result.variables, commandKey, location);
-        }
+        scanConditionReference(command, location, result);
 
         const allConditions = Array.isArray(command.all) ? command.all : [];
         const anyConditions = Array.isArray(command.any) ? command.any : [];
         for (const condition of allConditions) {
             if (!isRecord(condition)) continue;
-            if (typeof condition.key === 'string' && condition.key) {
-                pushVariableRead(result.variables, condition.key, location);
-            }
-            if (typeof condition.source === 'string' && condition.source) {
-                pushVariableRead(result.variables, condition.source, location);
-            }
+            scanConditionReference(condition, location, result);
         }
 
         for (const condition of anyConditions) {
             if (!isRecord(condition)) continue;
-            if (typeof condition.key === 'string' && condition.key) {
-                pushVariableRead(result.variables, condition.key, location);
-            }
-            if (typeof condition.source === 'string' && condition.source) {
-                pushVariableRead(result.variables, condition.source, location);
-            }
+            scanConditionReference(condition, location, result);
         }
     }
 
@@ -85,7 +73,11 @@ export function scanCommandReferences(
         }
     }
 
-    if (commandType !== 'set') {
+    if (commandType === 'item' && typeof command.id === 'string' && command.id) {
+        pushListReference(result.items, command.id, location);
+    }
+
+    if (commandType !== 'set' && commandType !== 'if' && commandType !== 'while') {
         for (const field of hints.keyFields) {
             const value = command[field];
             if (typeof value === 'string' && value) {
@@ -107,6 +99,10 @@ function inferVariableTypeFromSet(command: Record<string, unknown>): InferredVar
     return 'unknown';
 }
 
+function isItemSource(value: unknown): boolean {
+    return value === 'items' || value === 'evidence';
+}
+
 function pushListReference(
     map: Record<string, ReferenceLocation[]>,
     name: string,
@@ -116,6 +112,28 @@ function pushListReference(
         map[name] = [];
     }
     map[name].push(location);
+}
+
+function scanConditionReference(
+    condition: Record<string, unknown>,
+    location: ReferenceLocation,
+    result: ReferenceScannerResult,
+): void {
+    const key = typeof condition.key === 'string' ? condition.key : undefined;
+    const source = typeof condition.source === 'string' ? condition.source : undefined;
+
+    if (key && isItemSource(source)) {
+        pushListReference(result.items, key, location);
+        return;
+    }
+
+    if (key) {
+        pushVariableRead(result.variables, key, location);
+    }
+
+    if (source && !isItemSource(source)) {
+        pushVariableRead(result.variables, source, location);
+    }
 }
 
 

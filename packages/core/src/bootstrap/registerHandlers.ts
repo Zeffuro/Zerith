@@ -94,9 +94,21 @@ export function registerHandlers(options: RegisterHandlersOptions): RegisterHand
         logger,
         state,
         {
-            ...theme,
+            backgroundAlpha: theme.boxAlpha,
+            backgroundColor: theme.boxColor,
+            borderColor: theme.borderColor,
+            borderWidth: theme.borderWidth,
             characters,
             defaultBlipUrl,
+            messageStyle: {
+                fontFamily: theme.fontFamily,
+                fontSize: theme.fontSize,
+            },
+            nameStyle: {
+                fontFamily: theme.fontFamily,
+                fontSize: Math.max(theme.fontSize + 4, theme.fontSize * 1.2),
+                fontWeight: 'bold',
+            },
         },
     );
 

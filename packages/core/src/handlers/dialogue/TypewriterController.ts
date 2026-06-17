@@ -2,6 +2,23 @@ import type { Token } from '../../utils/TextParser';
 
 import { waitForAbortableDelay } from '../../utils/AsyncHelpers';
 
+const VOID_HTML_TAGS = new Set([
+    'area',
+    'base',
+    'br',
+    'col',
+    'embed',
+    'hr',
+    'img',
+    'input',
+    'link',
+    'meta',
+    'param',
+    'source',
+    'track',
+    'wbr',
+]);
+
 export interface TypewriterRunOptions {
     blipUrl?: string;
     consumeSkip: () => boolean;
@@ -31,6 +48,7 @@ export class TypewriterController {
         } = options;
 
         let speed = initialSpeed;
+        let currentText = getMessageText();
 
         for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex++) {
             if (signal.aborted) return;
@@ -53,7 +71,8 @@ export class TypewriterController {
                     .filter((t): t is { type: 'text'; val: string } => t.type === 'text')
                     .map((t) => t.val)
                     .join('');
-                setMessageText(getMessageText() + remaining);
+                currentText += remaining;
+                setMessageText(balanceTypewriterHtml(currentText));
                 break;
             }
 
@@ -68,10 +87,10 @@ export class TypewriterController {
             }
 
             if (token.type === 'text') {
-                await this.typeText({
+                currentText = await this.typeText({
                     blipUrl,
                     consumeSkip,
-                    getMessageText,
+                    currentText,
                     playVoice,
                     setMessageText,
                     signal,
@@ -89,7 +108,7 @@ export class TypewriterController {
     private async typeText(options: {
         blipUrl?: string;
         consumeSkip: () => boolean;
-        getMessageText: () => string;
+        currentText: string;
         playVoice: (url: string) => Promise<void>;
         setMessageText: (text: string) => void;
         signal: AbortSignal;
@@ -99,7 +118,7 @@ export class TypewriterController {
         const {
             blipUrl,
             consumeSkip,
-            getMessageText,
+            currentText,
             playVoice,
             setMessageText,
             signal,
@@ -107,16 +126,16 @@ export class TypewriterController {
             text,
         } = options;
 
-        let current = getMessageText();
+        let current = currentText;
         let index = 0;
 
         while (index < text.length) {
-            if (signal.aborted) return;
+            if (signal.aborted) return current;
 
             if (consumeSkip()) {
                 current += text.slice(index);
-                setMessageText(current);
-                return;
+                setMessageText(balanceTypewriterHtml(current));
+                return current;
             }
 
             if (text[index] === '<') {
@@ -138,10 +157,46 @@ export class TypewriterController {
                 index++;
             }
 
-            setMessageText(current);
+            setMessageText(balanceTypewriterHtml(current));
             if (speed > 0) {
                 await this.delay(speed, signal);
             }
         }
+
+        return current;
     }
+}
+
+export function balanceTypewriterHtml(text: string): string {
+    const openTags: string[] = [];
+    const tagPattern = /<\s*(\/?)([a-zA-Z][\w:-]*)(?:\s[^>]*)?>/g;
+
+    for (const match of text.matchAll(tagPattern)) {
+        const rawTag = match[0];
+        const tagName = match[2]?.toLowerCase();
+        if (!tagName) continue;
+
+        if (match[1] === '/') {
+            closeMatchingTag(openTags, tagName);
+            continue;
+        }
+
+        if (VOID_HTML_TAGS.has(tagName) || /\/\s*>$/.test(rawTag)) {
+            continue;
+        }
+
+        openTags.push(tagName);
+    }
+
+    if (openTags.length === 0) {
+        return text;
+    }
+
+    return `${text}${openTags.toReversed().map((tagName) => `</${tagName}>`).join('')}`;
+}
+
+function closeMatchingTag(openTags: string[], tagName: string): void {
+    const index = openTags.lastIndexOf(tagName);
+    if (index === -1) return;
+    openTags.splice(index, 1);
 }

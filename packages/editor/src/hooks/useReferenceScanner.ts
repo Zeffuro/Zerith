@@ -19,7 +19,7 @@ export function useReferenceScanner() {
                 if (!projectPath) {
                     if (cancelled) return;
                     useReferenceStore.getState().setAssetInventory([]);
-                    useReferenceStore.getState().setResult({ assetFiles: {}, assets: {}, characters: {}, variables: {} });
+                    useReferenceStore.getState().setResult({ assetFiles: {}, assets: {}, characters: {}, items: {}, variables: {} });
                     return;
                 }
 

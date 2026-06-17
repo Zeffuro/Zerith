@@ -39,6 +39,7 @@ export function scanReferences(
         assetFiles: {},
         assets: {},
         characters: {},
+        items: {},
         variables: {},
     };
 

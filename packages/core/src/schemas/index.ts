@@ -214,7 +214,9 @@ export const SpriteCommandSchema = z.object({
     type: z.literal('sprite'),
     wait: z.boolean().optional(),
     x: z.number().optional(),
+    xRatio: z.number().optional(),
     y: z.number().optional(),
+    yRatio: z.number().optional(),
 });
 
 /* Flash */

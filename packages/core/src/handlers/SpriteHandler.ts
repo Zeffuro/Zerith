@@ -7,6 +7,7 @@ import type { Logger } from '../utils/Logger';
 import type { SpriteCommand } from './sprite/types';
 
 import { SpriteAnimator } from './sprite/SpriteAnimator';
+import { resolveSpritePlacement } from './sprite/SpriteLayout';
 import { SpriteStateSerializer } from './sprite/SpriteStateSerializer';
 import { SpriteTextureResolver } from './sprite/SpriteTextureResolver';
 
@@ -242,23 +243,26 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
 
         const charData = this.textureResolver.findCharacter(command.id);
         const defaults = charData?.displayDefaults;
+        const placement = resolveSpritePlacement({
+            command,
+            defaults,
+            displayHeight: this.display.height,
+            displayWidth: this.display.width,
+        });
 
         sprite.anchor.set(
-            command.anchorX ?? defaults?.anchorX ?? 0.5,
-            command.anchorY ?? defaults?.anchorY ?? 1
+            placement.anchorX,
+            placement.anchorY
         );
-        sprite.position.set(
-            command.x ?? defaults?.x ?? this.display.width / 2,
-            command.y ?? defaults?.y ?? this.display.height
-        );
+        sprite.position.set(placement.x, placement.y);
 
-        const sX = command.scaleX ?? defaults?.scaleX;
-        const sY = command.scaleY ?? defaults?.scaleY;
+        const sX = placement.scaleX;
+        const sY = placement.scaleY;
         if (sX !== undefined || sY !== undefined) {
             sprite.scale.set(sX ?? sprite.scale.x, sY ?? sprite.scale.y);
         }
 
-        if (command.flip ?? defaults?.flip) {
+        if (placement.flip) {
             sprite.scale.x = -Math.abs(sprite.scale.x);
         }
 
@@ -272,12 +276,14 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             anchorX: sprite.anchor.x,
             anchorY: sprite.anchor.y,
             assetUrl: command.assetUrl,
-            flip: command.flip ?? defaults?.flip ?? false,
+            flip: placement.flip,
             pose: command.pose,
             scaleX: sprite.scale.x,
             scaleY: sprite.scale.y,
             x: sprite.x,
+            xRatio: command.xRatio ?? defaults?.xRatio,
             y: sprite.y,
+            yRatio: command.yRatio ?? defaults?.yRatio,
         });
     }
 }

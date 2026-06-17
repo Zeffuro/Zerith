@@ -2,6 +2,8 @@ import { Container, Graphics, HTMLText, Sprite, Text, type TextStyleOptions, typ
 
 import type { IAnimationManager, IAssetManager, IDisplayManager } from '../../interfaces/managers';
 
+import { calculateDialogueLayout } from './DialogueLayout';
+
 export interface DialogueRendererConfig {
     backgroundAlpha?: number;
     backgroundColor?: number;
@@ -21,6 +23,7 @@ export class DialogueRenderer {
     private readonly config: DialogueRendererConfig;
     private container: Container | undefined;
     private readonly display: IDisplayManager;
+    private messageMask!: Graphics;
     private messageText!: HTMLText;
     private nameText!: Text;
     private portraitSprite!: Sprite;
@@ -64,22 +67,18 @@ export class DialogueRenderer {
     public ensureUI() {
         if (this.container) return;
 
-        const w = this.display.width;
-        const h = this.display.height;
-
-        const margin = 20;
-        const boxWidth = this.config.boxWidth ?? (w - margin * 2);
-        const boxHeight = this.config.boxHeight ?? (h * 0.3);
-        const boxX = this.config.boxX ?? margin;
-        const boxY = this.config.boxY ?? (h - boxHeight - margin);
-        const padding = 20;
+        const layout = calculateDialogueLayout({
+            config: this.config,
+            displayHeight: this.display.height,
+            displayWidth: this.display.width,
+        });
 
         this.container = new Container();
         this.portraitSprite = new Sprite();
         this.display.getLayer('sprites').addChild(this.portraitSprite);
 
         const bg = new Graphics()
-            .roundRect(boxX, boxY, boxWidth, boxHeight, 10)
+            .roundRect(layout.boxX, layout.boxY, layout.boxWidth, layout.boxHeight, 10)
             .fill({
                 alpha: this.config.backgroundAlpha ?? 0.85,
                 color: this.config.backgroundColor ?? 0x00_00_00
@@ -91,33 +90,37 @@ export class DialogueRenderer {
 
         this.nameText = new Text({
             style: {
-                ...this.config.nameStyle,
                 fontFamily: 'Arial',
-                fontSize: 32,
                 fontWeight: 'bold',
+                ...this.config.nameStyle,
+                fontSize: layout.nameFontSize,
             },
             text: ''
         });
-        const nameX = boxX + padding;
-        const nameY = boxY + 15;
-        this.nameText.position.set(nameX, nameY);
+        this.nameText.position.set(layout.nameX, layout.nameY);
 
         this.messageText = new HTMLText({
             style: {
                 align: 'left',
+                breakWords: true,
                 fill: '#ffffff',
                 fontFamily: 'Arial',
-                fontSize: 28,
                 wordWrap: true,
-                wordWrapWidth: boxWidth - (padding * 2),
+                ...this.config.messageStyle,
+                fontSize: layout.messageFontSize,
+                wordWrapWidth: layout.messageWidth,
             },
             text: ''
         });
-        const messageX = boxX + padding;
-        const messageY = boxY + 55;
-        this.messageText.position.set(messageX, messageY);
+        this.messageText.position.set(layout.messageX, layout.messageY);
 
-        this.container.addChild(bg, this.nameText, this.messageText);
+        this.messageMask = new Graphics()
+            .rect(layout.messageX, layout.messageY, layout.messageWidth, layout.messageHeight)
+            .fill(0xFF_FF_FF);
+        this.messageMask.renderable = false;
+        this.messageText.mask = this.messageMask;
+
+        this.container.addChild(bg, this.nameText, this.messageText, this.messageMask);
         this.display.getLayer('ui').addChild(this.container);
     }
 
@@ -149,14 +152,20 @@ export class DialogueRenderer {
         this.portraitSprite.visible = true;
         this.portraitSprite.anchor.set(0.5, 1);
 
-        const w = this.display.width;
-        const boxY = this.config.boxY ?? (this.display.height * 2 / 3);
+        const layout = calculateDialogueLayout({
+            config: this.config,
+            displayHeight: this.display.height,
+            displayWidth: this.display.width,
+        });
         this.portraitSprite.position.set(
-            side === 'right' ? w * 0.8 : w * 0.2,
-            boxY
+            side === 'right' ? layout.portraitRightX : layout.portraitLeftX,
+            layout.portraitBaselineY
         );
 
-        const scale = (boxY * 0.9) / this.portraitSprite.texture.height;
+        const scale = Math.min(
+            layout.portraitMaxHeight / this.portraitSprite.texture.height,
+            layout.portraitMaxWidth / this.portraitSprite.texture.width,
+        );
         this.portraitSprite.scale.set(side === 'right' ? -scale : scale, scale);
     }
 
