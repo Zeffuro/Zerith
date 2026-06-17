@@ -204,10 +204,35 @@ export function handleWaveformWheel(
     if (totalDuration <= 0) return;
     event.preventDefault();
     const bounds = event.currentTarget.getBoundingClientRect();
+    const safeWidth = Math.max(bounds.width, 1);
+    if (event.shiftKey) {
+        const deltaPixels = Math.abs(event.deltaX) > Math.abs(event.deltaY)
+            ? event.deltaX
+            : event.deltaY;
+        references.waveformCursorSecondsReference.current = waveformXToTime(event.clientX - bounds.left, waveformViewportDuration, safeWidth) + waveformViewportStart;
+        setWaveformViewportStart(panWaveformViewportByPixels(deltaPixels, safeWidth, waveformViewportDuration, waveformViewportStart, totalDuration));
+        return;
+    }
+
     const ratio = bounds.width <= 0 ? 0.5 : clamp((event.clientX - bounds.left) / bounds.width, 0, 1);
-    references.waveformCursorSecondsReference.current = waveformXToTime(event.clientX - bounds.left, waveformViewportDuration, Math.max(bounds.width, 1)) + waveformViewportStart;
+    references.waveformCursorSecondsReference.current = waveformXToTime(event.clientX - bounds.left, waveformViewportDuration, safeWidth) + waveformViewportStart;
     const zoomDelta = event.deltaY < 0 ? 1.15 : (1 / 1.15);
     applyZoomAtRatio(waveformZoom * zoomDelta, ratio, totalDuration, waveformZoom, waveformViewportStart, setWaveformZoom, setWaveformViewportStart);
+}
+
+export function panWaveformViewportByPixels(
+    deltaPixels: number,
+    width: number,
+    viewportDuration: number,
+    viewportStart: number,
+    totalDuration: number,
+): number {
+    if (totalDuration <= 0 || viewportDuration <= 0) return viewportStart;
+
+    const safeWidth = Math.max(width, 1);
+    const maxViewportStart = Math.max(0, totalDuration - viewportDuration);
+    const deltaSeconds = (deltaPixels / safeWidth) * viewportDuration;
+    return clamp(viewportStart + deltaSeconds, 0, maxViewportStart);
 }
 
 

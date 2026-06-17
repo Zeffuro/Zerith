@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 
+import { useBackdropDismissal } from '../hooks/useBackdropDismissal';
 import { useEditorStore } from '../store/useEditorStore';
 import { editorTheme as t } from '../theme/editorTheme';
 import { styles } from '../theme/styleHelpers';
@@ -31,11 +32,12 @@ export function ConfirmDialog({ cancelText = 'Cancel', confirmText = 'Confirm', 
         globalThis.addEventListener('keydown', onKey);
         return () => globalThis.removeEventListener('keydown', onKey);
     },[open, onCancel, onConfirm]);
+    const backdropDismissal = useBackdropDismissal(onCancel);
 
     if (!open) return;
 
     return (
-        <div onClick={onCancel} style={{ background: 'rgba(0,0,0,.45)', display: 'grid', inset: 0, placeItems: 'center', position: 'fixed', zIndex }}>
+        <div {...backdropDismissal} style={{ background: 'rgba(0,0,0,.45)', display: 'grid', inset: 0, placeItems: 'center', position: 'fixed', zIndex }}>
             <div onClick={(event) => event.stopPropagation()} style={{ background: t.bg.panel, border: `1px solid ${t.border.normal}`, borderRadius: t.radius.lg, boxShadow: t.shadow.popupStrong, color: t.text.primary, padding: `${16 * uiScale}px`, width: `${380 * uiScale}px` }}>
                 <div style={{ fontSize: `${14 * uiScale}px`, fontWeight: 700, marginBottom: `${8 * uiScale}px` }}>{title}</div>
                 <div style={{ color: t.text.normal, fontSize: `${13 * uiScale}px`, marginBottom: `${16 * uiScale}px`, opacity: .9 }}>{message}</div>

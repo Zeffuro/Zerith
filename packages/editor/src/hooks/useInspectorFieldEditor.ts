@@ -5,6 +5,7 @@ import { useProjectStore } from '../store/storeBootstrap';
 import { useScriptStore } from '../store/storeBootstrap';
 import { useEditorStore } from '../store/useEditorStore';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { editorTheme as t } from '../theme/editorTheme';
 
 export function useInspectorFieldEditor(index?: null | number) {
     const uiScale = useSettingsStore((state) => state.uiScale);
@@ -23,7 +24,7 @@ export function useInspectorFieldEditor(index?: null | number) {
 
     const labelStyle = useMemo(
         () => ({
-            color: '#888',
+            color: t.text.muted,
             display: 'block',
             fontSize: '0.85em',
             marginBottom: `${6 * uiScale}px`,
@@ -33,10 +34,10 @@ export function useInspectorFieldEditor(index?: null | number) {
 
     const inputStyle = useMemo(
         () => ({
-            backgroundColor: '#1e1e1e',
-            border: '1px solid #3c3c3c',
-            borderRadius: '4px',
-            color: '#fff',
+            backgroundColor: t.bg.input,
+            border: `1px solid ${t.border.input}`,
+            borderRadius: t.radius.sm,
+            color: t.text.primary,
             fontSize: 'inherit',
             outline: 'none',
             padding: `${8 * uiScale}px`,

@@ -1,6 +1,7 @@
 import { generateGridFrames, type SpritesheetDescriptor } from 'core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useBackdropDismissal } from '../../hooks/useBackdropDismissal';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { styles } from '../../theme/styleHelpers';
 import {
@@ -138,6 +139,7 @@ export function SpritesheetAutoSliceDialog({
         setRows(suggestion.rows);
         setInputMode('frameSize');
     };
+    const backdropDismissal = useBackdropDismissal(onCancel);
 
     const handleFrameDimensionChange = (nextWidth: number, nextHeight: number) => {
         const nextValues = getGridSizeFromFrameSize(image.naturalWidth, image.naturalHeight, nextWidth, nextHeight);
@@ -156,7 +158,7 @@ export function SpritesheetAutoSliceDialog({
     };
 
     return (
-        <div onClick={onCancel} style={{ background: 'rgba(0,0,0,.45)', display: 'grid', inset: 0, placeItems: 'center', position: 'fixed', zIndex: 2100 }}>
+        <div {...backdropDismissal} style={{ background: 'rgba(0,0,0,.45)', display: 'grid', inset: 0, placeItems: 'center', position: 'fixed', zIndex: 2100 }}>
             <div
                 onClick={(event) => event.stopPropagation()}
                 style={{

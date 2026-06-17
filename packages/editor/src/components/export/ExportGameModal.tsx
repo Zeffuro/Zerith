@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import { useBackdropDismissal } from '../../hooks/useBackdropDismissal';
 import { exportGame } from '../../services/exportGame';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
@@ -68,6 +69,7 @@ export function ExportGameModal() {
             globalThis.removeEventListener('keydown', onKeyDown);
         };
     }, [closeExportGameModal, isExporting, isOpen]);
+    const backdropDismissal = useBackdropDismissal(closeExportGameModal, { disabled: isExporting });
 
     if (!isOpen) {
         return;
@@ -124,11 +126,7 @@ export function ExportGameModal() {
 
     return (
         <div
-            onClick={() => {
-                if (!isExporting) {
-                    closeExportGameModal();
-                }
-            }}
+            {...backdropDismissal}
             style={{
                 background: 'rgba(0, 0, 0, 0.45)',
                 display: 'grid',

@@ -22,6 +22,13 @@ describe('commandPaletteInteractionModel', () => {
             .toEqual({ kind: 'select', nextIndex: 1 });
     });
 
+    it('wraps arrow-key selection around list edges', () => {
+        expect(reduceCommandPaletteKey('ArrowDown', { actionCount: 3, selectedIndex: 2 }))
+            .toEqual({ kind: 'select', nextIndex: 0 });
+        expect(reduceCommandPaletteKey('ArrowUp', { actionCount: 3, selectedIndex: 0 }))
+            .toEqual({ kind: 'select', nextIndex: 2 });
+    });
+
     it('reduces enter and escape keys into execute and close intents', () => {
         expect(reduceCommandPaletteKey('Enter', { actionCount: 2, selectedIndex: 1 }))
             .toEqual({ index: 1, kind: 'execute' });

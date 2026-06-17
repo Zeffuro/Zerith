@@ -24,10 +24,10 @@ describe('commandPaletteModel', () => {
         expect(filterActions(actions, ' '.repeat(3))).toEqual(actions);
     });
 
-    it('clamps next selection index at list bounds', () => {
+    it('wraps next selection index at list bounds', () => {
         expect(nextSelectionIndex(0, 3, 1)).toBe(1);
-        expect(nextSelectionIndex(2, 3, 1)).toBe(2);
-        expect(nextSelectionIndex(0, 3, -1)).toBe(0);
+        expect(nextSelectionIndex(2, 3, 1)).toBe(0);
+        expect(nextSelectionIndex(0, 3, -1)).toBe(2);
         expect(nextSelectionIndex(2, 3, -1)).toBe(1);
         expect(nextSelectionIndex(0, 0, 1)).toBe(0);
     });

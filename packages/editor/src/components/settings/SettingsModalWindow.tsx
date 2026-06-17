@@ -6,6 +6,7 @@ import {
     useState,
 } from 'react';
 
+import { useBackdropDismissal } from '../../hooks/useBackdropDismissal';
 import { editorTheme as t } from '../../theme/editorTheme';
 
 export type SettingsModalWindowLayout = {
@@ -118,15 +119,13 @@ export function SettingsModalWindow({ children, onBackdropClick, uiScale }: Sett
         globalThis.addEventListener('mouseup', onMouseUp);
     };
 
-    const handleBackdropClick = (event: ReactMouseEvent<HTMLDivElement>) => {
-        if (event.currentTarget !== event.target) return;
-        if (Date.now() < ignoreBackdropCloseUntilReference.current) return;
-        onBackdropClick();
-    };
+    const backdropDismissal = useBackdropDismissal(onBackdropClick, {
+        shouldIgnore: () => Date.now() < ignoreBackdropCloseUntilReference.current,
+    });
 
     return (
         <div
-            onClick={handleBackdropClick}
+            {...backdropDismissal}
             style={{
                 background: 'rgba(0, 0, 0, 0.45)',
                 display: 'grid',

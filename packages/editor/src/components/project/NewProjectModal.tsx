@@ -1,6 +1,7 @@
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { useEffect, useState } from 'react';
 
+import { useBackdropDismissal } from '../../hooks/useBackdropDismissal';
 import { createNewProject } from '../../services/createNewProject';
 import { openProjectEntry } from '../../services/openProjectEntry';
 import { closeProject } from '../../store/actions/projectOpenActions';
@@ -51,6 +52,7 @@ export function NewProjectModal() {
             globalThis.removeEventListener('keydown', onKeyDown);
         };
     }, [closeNewProjectModal, isCreating, isOpen]);
+    const backdropDismissal = useBackdropDismissal(closeNewProjectModal, { disabled: isCreating });
 
     if (!isOpen) {
         return;
@@ -120,11 +122,7 @@ export function NewProjectModal() {
 
     return (
         <div
-            onClick={() => {
-                if (!isCreating) {
-                    closeNewProjectModal();
-                }
-            }}
+            {...backdropDismissal}
             style={{
                 background: 'rgba(0, 0, 0, 0.45)',
                 display: 'grid',

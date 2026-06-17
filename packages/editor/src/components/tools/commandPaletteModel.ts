@@ -53,8 +53,10 @@ export function filterActions<T extends CommandPaletteSearchableAction>(actions:
 
 export function nextSelectionIndex(current: number, length: number, delta: -1 | 1): number {
     if (length <= 0) return 0;
-    if (delta > 0) return Math.min(length - 1, current + 1);
-    return Math.max(0, current - 1);
+    const next = current + delta;
+    if (next < 0) return length - 1;
+    if (next >= length) return 0;
+    return next;
 }
 
 export async function openInitialProjectEntry({
