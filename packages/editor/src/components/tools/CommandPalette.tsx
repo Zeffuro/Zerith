@@ -2,6 +2,7 @@ import { type KeyboardEventHandler, useCallback, useState } from 'react';
 
 import { fsOpenPath } from '../../services/fs';
 import { openProjectEntry } from '../../services/openProjectEntry';
+import { isTauriRuntime } from '../../services/runtime/runtimeEnvironment';
 import { saveProjectAs } from '../../services/saveProjectAs';
 import { executeCloseProjectAction } from '../../store/actions/projectOpenActions';
 import { useProjectStore } from '../../store/storeBootstrap';
@@ -87,7 +88,7 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
             if (!result) return;
 
             await openProjectFromManifest(result.manifestPath);
-            addRecentProject(result.manifestPath);
+            if (isTauriRuntime()) addRecentProject(result.manifestPath);
             await handleOpenInitialProjectEntry();
         } catch (error) {
             console.error('Save Project As from command palette failed:', error);
@@ -126,7 +127,7 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
         openProjectFromManifest,
         openSettingsModal,
         projectPath,
-        recentProjects,
+        recentProjects: isTauriRuntime() ? recentProjects : [],
         resetDockLayout,
         saveActiveFileFromCurrentScript,
         saveAllDirtyFiles,

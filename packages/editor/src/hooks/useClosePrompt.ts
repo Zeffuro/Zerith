@@ -1,6 +1,7 @@
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { isTauriRuntime } from '../services/runtime/runtimeEnvironment';
+import { closeEditorWindow, onEditorWindowCloseRequested } from '../services/runtime/windowControls';
 import { closeProject } from '../store/actions/projectOpenActions';
 import { useProjectStore } from '../store/storeBootstrap';
 import { useEditorStore } from '../store/useEditorStore';
@@ -26,28 +27,21 @@ export function useClosePrompt(): UseClosePromptResult {
 
     const closeWindowNow = useCallback(async () => {
         allowCloseBypassReference.current = true;
-        const appWindow = getCurrentWindow();
 
         try {
-            await appWindow.close();
+            await closeEditorWindow();
         } catch (error: unknown) {
-            try {
-                await appWindow.destroy();
-            } catch (destroyError: unknown) {
-                allowCloseBypassReference.current = false;
-                const closeMessage = error instanceof Error ? error.message : String(error);
-                const destroyMessage = destroyError instanceof Error ? destroyError.message : String(destroyError);
-                setClosePromptError(`Close failed: ${closeMessage}. Destroy failed: ${destroyMessage}`);
-                setClosePromptOpen(true);
-            }
+            allowCloseBypassReference.current = false;
+            const closeMessage = error instanceof Error ? error.message : String(error);
+            setClosePromptError(closeMessage);
+            setClosePromptOpen(true);
         }
     }, []);
 
     useEffect(() => {
-        if (!hasTauriInternals()) return;
+        if (!isTauriRuntime()) return;
 
-        const appWindow = getCurrentWindow();
-        const unlistenCloseRequested = appWindow.onCloseRequested((event) => {
+        const unlistenCloseRequested = onEditorWindowCloseRequested((event) => {
             if (allowCloseBypassReference.current) return;
 
             // Intercept once and decide explicitly so normal close still works.
@@ -70,6 +64,21 @@ export function useClosePrompt(): UseClosePromptResult {
             void unlistenCloseRequested.then((f) => f());
         };
     }, [closeWindowNow]);
+
+    useEffect(() => {
+        if (isTauriRuntime()) return;
+
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+            if (useProjectStore.getState().dirtyFiles.size === 0) return;
+            event.preventDefault();
+            event.returnValue = '';
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, []);
 
     useEffect(() => {
         if (closePromptOpen) return;
@@ -168,8 +177,4 @@ export function useClosePrompt(): UseClosePromptResult {
     };
 }
 
-function hasTauriInternals(): boolean {
-    const windowObject = globalThis.window as { __TAURI_INTERNALS__?: unknown } | undefined;
-    return windowObject?.__TAURI_INTERNALS__ !== undefined;
-}
 

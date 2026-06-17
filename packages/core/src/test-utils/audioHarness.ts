@@ -41,7 +41,7 @@ export function createAssetManagerMock(overrides: Partial<IAssetManager> = {}): 
         load: vi.fn(defaultLoadMock) as IAssetManager['load'],
         preloadCharacterAssets: vi.fn(() => Promise.resolve()),
         preloadSceneAssets: vi.fn(() => Promise.resolve()),
-        resolve: vi.fn((url: string) => url),
+        resolve: vi.fn((url: string) => Promise.resolve(url)),
         setResolver: vi.fn(),
     };
 

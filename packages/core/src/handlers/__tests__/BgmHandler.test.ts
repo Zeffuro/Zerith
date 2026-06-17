@@ -32,7 +32,7 @@ const loadIntroCueDescriptor: ReturnType<typeof createAssetManagerMock>['load'] 
 
 describe('BgmHandler', () => {
     it('plays standard bgm urls through playBgm', async () => {
-        const resolveMock = vi.fn((url: string) => `resolved:${url}`);
+        const resolveMock = vi.fn((url: string) => Promise.resolve(`resolved:${url}`));
         const preloadAudioMock = vi.fn(() => Promise.resolve());
         const playBgmMock = vi.fn(() => Promise.resolve());
 
@@ -57,7 +57,7 @@ describe('BgmHandler', () => {
 
     it('loads audiosheet descriptors and plays BGM cues', async () => {
         const loadMock = vi.fn(loadCourtCueDescriptor) as ReturnType<typeof createAssetManagerMock>['load'];
-        const resolveMock = vi.fn((url: string) => `resolved:${url}`);
+        const resolveMock = vi.fn((url: string) => Promise.resolve(`resolved:${url}`));
         const loadAudiosheetMock = vi.fn(() => Promise.resolve());
         const playCueMock = vi.fn(() => Promise.resolve());
         const playBgmMock = vi.fn(() => Promise.resolve());
@@ -101,7 +101,7 @@ describe('BgmHandler', () => {
 
         const assets = createAssetManagerMock({
             load: loadMock,
-            resolve: vi.fn((url: string) => `resolved:${url}`),
+            resolve: vi.fn((url: string) => Promise.resolve(`resolved:${url}`)),
         });
         const audio = createAudioManagerMock({
             loadAudiosheet: loadAudiosheetMock,
@@ -128,7 +128,7 @@ describe('BgmHandler', () => {
 
         const assets = createAssetManagerMock({
             load: loadMock,
-            resolve: vi.fn((url: string) => `resolved:${url}`),
+            resolve: vi.fn((url: string) => Promise.resolve(`resolved:${url}`)),
         });
         const audio = createAudioManagerMock({
             loadAudiosheet: vi.fn(() => Promise.resolve()),

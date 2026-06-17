@@ -38,6 +38,9 @@ export class BackgroundHandler implements CommandHandler<BackgroundCommand> {
 
     execute = async (command: BackgroundCommand) => {
         const texture = await this.assets.load<Texture>(command.assetUrl);
+        if (!texture) {
+            throw new Error(`Failed to load background texture: ${command.assetUrl}`);
+        }
 
         if (this.sprite) {
             this.sprite.texture = texture;

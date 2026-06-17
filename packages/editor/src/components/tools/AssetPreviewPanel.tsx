@@ -1,8 +1,8 @@
-import { convertFileSrc } from '@tauri-apps/api/core';
 import { Pause, Play } from 'lucide-react';
 import { type PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAssetOptions } from '../../hooks/useAssetOptions';
+import { releaseEditorAssetUrl, resolveEditorAssetUrl } from '../../services/runtime/assetUrls';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
 import { editorTheme as t } from '../../theme/editorTheme';
@@ -28,6 +28,7 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
     const [audioLoading, setAudioLoading] = useState(false);
     const [audioScrub, setAudioScrub] = useState(0);
     const [imageSize, setImageSize] = useState<{ height: number; width: number }>();
+    const [resolvedSource, setResolvedSource] = useState('');
 
     useEffect(() => {
         if (!selectedAssetPath) return;
@@ -37,12 +38,6 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
         return () => cancelAnimationFrame(frame);
     }, [selectedAssetPath]);
 
-    const resolvedSource = useMemo(() => {
-        if (!value) return '';
-        if (!projectPath) return value;
-        if (value.startsWith('http')) return value;
-        return convertFileSrc(projectPath + value);
-    }, [value, projectPath]);
     const sourceForDecoding = useMemo(() => resolveAssetSource(value, projectPath), [projectPath, value]);
 
     const extension = getExtension(value);
@@ -83,7 +78,38 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
 
     useEffect(() => {
         setImageSize(undefined);
-    }, [value]);
+        setResolvedSource('');
+        if (!value) {
+            return;
+        }
+
+        let canceled = false;
+        let resolvedUrl: string | undefined;
+
+        void (async () => {
+            try {
+                resolvedUrl = await resolveEditorAssetUrl(resolveAssetSource(value, projectPath));
+                if (canceled) {
+                    releaseEditorAssetUrl(resolvedUrl);
+                    return;
+                }
+                setResolvedSource(resolvedUrl);
+            } catch (error) {
+                if (canceled) return;
+                setResolvedSource('');
+                if (isAudio) {
+                    setAudioError(error instanceof Error ? error.message : 'Failed to resolve audio asset.');
+                }
+            }
+        })();
+
+        return () => {
+            canceled = true;
+            if (resolvedUrl) {
+                releaseEditorAssetUrl(resolvedUrl);
+            }
+        };
+    }, [isAudio, projectPath, value]);
 
     useEffect(() => () => {
         void closeAudioContext(audioContextReference);
@@ -176,7 +202,11 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
             >
                 {!value && <div style={{ color: t.text.faint }}>Pick an asset to preview.</div>}
 
-                {!!value && isImg && (
+                {!!value && isImg && !resolvedSource && (
+                    <div style={{ color: t.text.muted }}>Resolving image...</div>
+                )}
+
+                {!!value && isImg && resolvedSource && (
                     <div style={{ display: 'grid', gap: `${8 * uiScale}px`, justifyItems: 'start' }}>
                         <img
                             alt={value}
@@ -195,7 +225,11 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
                     </div>
                 )}
 
-                {!!value && isAudio && (
+                {!!value && isAudio && !resolvedSource && (
+                    <div style={{ color: t.text.muted }}>Resolving audio...</div>
+                )}
+
+                {!!value && isAudio && resolvedSource && (
                     <div style={{ display: 'grid', gap: `${10 * uiScale}px` }}>
                         <audio
                             onDurationChange={(event) => setAudioScrub(Math.min(audioScrub, event.currentTarget.duration || 0))}

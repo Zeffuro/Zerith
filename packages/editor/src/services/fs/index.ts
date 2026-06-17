@@ -3,6 +3,8 @@ export {
     fsJoin,
     fsMkdir,
     fsOpenPath,
+    fsPickDirectory,
+    fsPickProjectManifest,
     fsReadBinaryFile,
     fsReadDirectory,
     fsReadTextFile,

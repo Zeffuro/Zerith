@@ -153,7 +153,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         }
 
         const blipUrl = charData?.blipUrl || this.config.defaultBlipUrl;
-        const resolvedBlipUrl = blipUrl ? this.assets.resolve(blipUrl) : undefined;
+        const resolvedBlipUrl = blipUrl ? await this.assets.resolve(blipUrl) : undefined;
         if (resolvedBlipUrl) {
             try {
                 if (!this.audio.audioExists(resolvedBlipUrl)) {

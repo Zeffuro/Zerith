@@ -64,7 +64,7 @@ export class SpritesheetManager {
     }
 
     private async doLoad(config: SpritesheetConfig): Promise<Spritesheet> {
-        const resolvedAtlasUrl = this.resolver(config.atlasUrl);
+        const resolvedAtlasUrl = await this.resolve(config.atlasUrl);
         const response = await fetch(resolvedAtlasUrl);
         if (!response.ok) {
             throw new Error(`Failed to fetch spritesheet atlas: ${config.atlasUrl} (${response.status})`);
@@ -78,7 +78,7 @@ export class SpritesheetManager {
         }
         const imagePath = this.isAbsoluteImagePath(imageName) ? imageName : atlasDirectory + imageName;
 
-        const img = await this.loadImage(this.resolver(imagePath));
+        const img = await this.loadImage(await this.resolve(imagePath));
 
         let texture: Texture;
 
@@ -111,6 +111,10 @@ export class SpritesheetManager {
             img.addEventListener('error', () => reject(new Error(`Failed to load image: ${url}`)));
             img.src = url;
         });
+    }
+
+    private async resolve(url: string): Promise<string> {
+        return this.resolver(url);
     }
 
     private resolveImageName(atlasData: SpritesheetData): string | undefined {

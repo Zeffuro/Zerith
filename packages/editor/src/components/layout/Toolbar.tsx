@@ -1,7 +1,8 @@
-import { open } from '@tauri-apps/plugin-dialog';
 import { FolderOpen, MonitorDot, Pause, Play, Save, SkipForward, Square, Volume2, VolumeX, ZoomIn, ZoomOut } from 'lucide-react';
 
+import { fsPickProjectManifest } from '../../services/fs';
 import { openProjectEntry } from '../../services/openProjectEntry';
+import { isTauriRuntime } from '../../services/runtime/runtimeEnvironment';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -43,16 +44,11 @@ export function Toolbar() {
 
     const handleOpenProject = async () => {
         try {
-            const selectedFile = await open({
-                directory: false,
-                filters: [{ extensions: ['json'], name: 'Game Manifest' }],
-                multiple: false,
-                title: 'Select game.json'
-            });
+            const selectedProject = await fsPickProjectManifest();
 
-            if (selectedFile) {
-                await openProjectFromManifest(selectedFile);
-                addRecentProject(selectedFile);
+            if (selectedProject) {
+                await openProjectFromManifest(selectedProject.manifestPath);
+                if (isTauriRuntime()) addRecentProject(selectedProject.manifestPath);
                 await handleOpenInitialProjectEntry();
             }
         } catch (error) {

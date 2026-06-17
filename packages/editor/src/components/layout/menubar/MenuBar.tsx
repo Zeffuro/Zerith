@@ -1,10 +1,10 @@
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { open as openDialog } from '@tauri-apps/plugin-dialog';
-import { openUrl } from '@tauri-apps/plugin-opener';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useDismissiblePopup } from '../../../hooks/useDismissiblePopup';
+import { fsPickProjectManifest } from '../../../services/fs';
 import { openProjectEntry } from '../../../services/openProjectEntry';
+import { isTauriRuntime } from '../../../services/runtime/runtimeEnvironment';
+import { closeEditorWindow, openExternalUrl } from '../../../services/runtime/windowControls';
 import { saveProjectAs } from '../../../services/saveProjectAs';
 import { executeCloseProjectAction } from '../../../store/actions/projectOpenActions';
 import { useProjectStore } from '../../../store/storeBootstrap';
@@ -56,6 +56,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
     const dockLayoutPresets = useSettingsStore((state) => state.dockLayoutPresets);
     const saveDockLayoutPreset = useSettingsStore((state) => state.saveDockLayoutPreset);
     const setActiveDockLayoutPresetId = useSettingsStore((state) => state.setActiveDockLayoutPresetId);
+    const supportsRecentProjects = isTauriRuntime();
 
     const {
         activeFile,
@@ -86,32 +87,27 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
 
     const handleOpenProject = useCallback(async () => {
         try {
-            const selectedFile = await openDialog({
-                directory: false,
-                filters: [{ extensions: ['json'], name: 'Game Manifest' }],
-                multiple: false,
-                title: 'Select game.json',
-            });
+            const selectedProject = await fsPickProjectManifest();
 
-            if (selectedFile) {
-                await openProjectFromManifest(selectedFile);
-                addRecentProject(selectedFile);
+            if (selectedProject) {
+                await openProjectFromManifest(selectedProject.manifestPath);
+                if (supportsRecentProjects) addRecentProject(selectedProject.manifestPath);
                 await handleOpenInitialProjectEntry();
             }
         } catch (error) {
             console.error('Failed to open project dialog:', error);
         }
-    }, [addRecentProject, handleOpenInitialProjectEntry, openProjectFromManifest]);
+    }, [addRecentProject, handleOpenInitialProjectEntry, openProjectFromManifest, supportsRecentProjects]);
 
     const handleOpenRecentProject = useCallback(async (manifestPath: string) => {
         try {
             await openProjectFromManifest(manifestPath);
-            addRecentProject(manifestPath);
+            if (supportsRecentProjects) addRecentProject(manifestPath);
             await handleOpenInitialProjectEntry();
         } catch (error) {
             console.error('Failed to open recent project:', error);
         }
-    }, [addRecentProject, handleOpenInitialProjectEntry, openProjectFromManifest]);
+    }, [addRecentProject, handleOpenInitialProjectEntry, openProjectFromManifest, supportsRecentProjects]);
 
     const handleSave = useCallback(async () => {
         if (!activeFile) return;
@@ -135,7 +131,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
             if (!result) return;
 
             await openProjectFromManifest(result.manifestPath);
-            addRecentProject(result.manifestPath);
+            if (supportsRecentProjects) addRecentProject(result.manifestPath);
             await handleOpenInitialProjectEntry();
         } catch (error) {
             console.error('Failed to save project as:', error);
@@ -147,21 +143,15 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         openProjectFromManifest,
         projectPath,
         saveAllDirtyFiles,
+        supportsRecentProjects,
     ]);
 
     const handleExit = useCallback(() => {
-        void getCurrentWindow().close();
+        void closeEditorWindow();
     }, []);
 
     const handleOpenRepository = useCallback(async () => {
-        try {
-            await openUrl(REPOSITORY_URL);
-            return;
-        } catch {
-            // Fall back for non-Tauri web contexts.
-        }
-
-        globalThis.open?.(REPOSITORY_URL, '_blank');
+        await openExternalUrl(REPOSITORY_URL);
     }, []);
 
     const isRunning = playTrigger > stopTrigger;
@@ -211,7 +201,9 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         return [
             { label: 'New Project…', onClick: openNewProjectModal, shortcut: 'Ctrl+Shift+N' },
             { label: 'Open Project…', onClick: () => { void handleOpenProject(); }, shortcut: 'Ctrl+O' },
-            { children: openRecentChildren, label: `Open Recent (${safeRecentProjects.length})` },
+            ...(supportsRecentProjects
+                ? [{ children: openRecentChildren, label: `Open Recent (${safeRecentProjects.length})` }]
+                : []),
             { label: 'sep-0', separator: true },
             { disabled: !activeFile, label: 'Save', onClick: () => { void handleSave(); }, shortcut: 'Ctrl+S' },
             { disabled: !hasDirtyFiles, label: 'Save All', onClick: () => { void handleSaveAll(); }, shortcut: 'Ctrl+Shift+S' },

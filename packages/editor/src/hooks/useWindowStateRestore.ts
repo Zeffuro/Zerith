@@ -1,52 +1,63 @@
-import { PhysicalPosition, PhysicalSize } from '@tauri-apps/api/dpi';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useEffect } from 'react';
 
+import { isTauriRuntime } from '../services/runtime/runtimeEnvironment';
 import { useSettingsStore } from '../store/useSettingsStore';
 
 export function useWindowStateRestore() {
     useEffect(() => {
-        if (!hasTauriInternals()) return;
+        if (!isTauriRuntime()) return;
 
-        const appWindow = getCurrentWindow();
-        const { setWindowState, windowState } = useSettingsStore.getState();
-        const restoredWindowState = sanitizeRestoredWindowState(windowState);
+        let disposed = false;
+        let onEvent: (() => void) | undefined;
+        let unlistenMove: Promise<() => void> | undefined;
+        let unlistenResize: Promise<() => void> | undefined;
 
-        if (windowState && !restoredWindowState) {
-            setWindowState(undefined);
-        }
+        void (async () => {
+            const [{ PhysicalPosition, PhysicalSize }, { getCurrentWindow }] = await Promise.all([
+                import('@tauri-apps/api/dpi'),
+                import('@tauri-apps/api/window'),
+            ]);
 
-        if (restoredWindowState) {
-            void appWindow.setSize(new PhysicalSize(restoredWindowState.width, restoredWindowState.height));
-            void appWindow.setPosition(new PhysicalPosition(restoredWindowState.x, restoredWindowState.y));
-            if (restoredWindowState.maximized) void appWindow.maximize();
-        }
+            if (disposed) return;
 
-        const saveState = async () => {
-            const size = await appWindow.innerSize();
-            const pos = await appWindow.outerPosition();
-            const max = await appWindow.isMaximized();
+            const appWindow = getCurrentWindow();
+            const { setWindowState, windowState } = useSettingsStore.getState();
+            const restoredWindowState = sanitizeRestoredWindowState(windowState);
 
-            setWindowState({ height: size.height, maximized: max, width: size.width, x: pos.x, y: pos.y });
-        };
+            if (windowState && !restoredWindowState) {
+                setWindowState(undefined);
+            }
 
-        const onEvent = () => { void saveState(); };
+            if (restoredWindowState) {
+                void appWindow.setSize(new PhysicalSize(restoredWindowState.width, restoredWindowState.height));
+                void appWindow.setPosition(new PhysicalPosition(restoredWindowState.x, restoredWindowState.y));
+                if (restoredWindowState.maximized) void appWindow.maximize();
+            }
 
-        const unlistenMove = appWindow.listen('tauri://move', onEvent);
-        const unlistenResize = appWindow.listen('tauri://resize', onEvent);
-        window.addEventListener('beforeunload', onEvent);
+            const saveState = async () => {
+                const size = await appWindow.innerSize();
+                const pos = await appWindow.outerPosition();
+                const max = await appWindow.isMaximized();
+
+                setWindowState({ height: size.height, maximized: max, width: size.width, x: pos.x, y: pos.y });
+            };
+
+            onEvent = () => { void saveState(); };
+
+            unlistenMove = appWindow.listen('tauri://move', onEvent);
+            unlistenResize = appWindow.listen('tauri://resize', onEvent);
+            window.addEventListener('beforeunload', onEvent);
+        })();
 
         return () => {
-            void unlistenMove.then((f) => f());
-            void unlistenResize.then((f) => f());
-            window.removeEventListener('beforeunload', onEvent);
+            disposed = true;
+            void unlistenMove?.then((f) => f());
+            void unlistenResize?.then((f) => f());
+            if (onEvent) {
+                window.removeEventListener('beforeunload', onEvent);
+            }
         };
     }, []);
-}
-
-function hasTauriInternals(): boolean {
-    const windowObject = globalThis.window as { __TAURI_INTERNALS__?: unknown } | undefined;
-    return windowObject?.__TAURI_INTERNALS__ !== undefined;
 }
 
 function sanitizeRestoredWindowState(value: ReturnType<typeof useSettingsStore.getState>['windowState']) {

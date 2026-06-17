@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { isTauriRuntime } from './runtime/runtimeEnvironment';
 
 export type ExportGameOptions = {
     base?: string;
@@ -21,6 +21,11 @@ type ExportGameRequest = {
 };
 
 export async function exportGame(gamePath: string, options: ExportGameOptions = {}): Promise<ExportGameResult> {
+    if (!isTauriRuntime()) {
+        const { exportGameForBrowser } = await import('./browserExportGame');
+        return exportGameForBrowser(gamePath, options);
+    }
+
     const request: ExportGameRequest = {
         base: options.base,
         gamePath,
@@ -29,6 +34,7 @@ export async function exportGame(gamePath: string, options: ExportGameOptions = 
         zipFile: options.zipFile,
     };
 
+    const { invoke } = await import('@tauri-apps/api/core');
     return invoke<ExportGameResult>('export_game', { request });
 }
 

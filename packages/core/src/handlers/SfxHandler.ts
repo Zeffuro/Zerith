@@ -45,7 +45,7 @@ export class SfxHandler implements CommandHandler<SfxCommand> {
                 return;
             }
 
-            const resolvedUrl = this.assets.resolve(url);
+            const resolvedUrl = await this.assets.resolve(url);
             await this.audio.playSfx(resolvedUrl, command.volume ?? 0.8);
             this.logger.info(`Played SFX: ${url}`);
         } catch (error) {
@@ -85,7 +85,7 @@ export class SfxHandler implements CommandHandler<SfxCommand> {
 
         await this.audio.loadAudiosheet(cueReference.sheetUrl, {
             ...parsedDescriptor.data,
-            source: this.assets.resolve(sourceAssetUrl),
+            source: await this.assets.resolve(sourceAssetUrl),
         });
         await this.audio.playCue(cueReference.sheetUrl, cueReference.cueName, { volume: commandVolume });
     }

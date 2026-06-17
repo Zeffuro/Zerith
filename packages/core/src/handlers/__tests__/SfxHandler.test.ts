@@ -17,7 +17,7 @@ const loadMissingCueDescriptor: ReturnType<typeof createAssetManagerMock>['load'
 
 describe('SfxHandler', () => {
     it('plays standard sfx urls without cue parsing', async () => {
-        const resolveMock = vi.fn((url: string) => `resolved:${url}`);
+        const resolveMock = vi.fn((url: string) => Promise.resolve(`resolved:${url}`));
         const playSfxMock = vi.fn(() => Promise.resolve());
         const infoMock = vi.fn();
 
@@ -36,7 +36,7 @@ describe('SfxHandler', () => {
 
     it('resolves audiosheet cue references and plays only cue bounds', async () => {
         const loadMock = vi.fn(loadClickCueDescriptor) as ReturnType<typeof createAssetManagerMock>['load'];
-        const resolveMock = vi.fn((url: string) => `resolved:${url}`);
+        const resolveMock = vi.fn((url: string) => Promise.resolve(`resolved:${url}`));
         const loadAudiosheetMock = vi.fn(() => Promise.resolve());
         const playCueMock = vi.fn(() => Promise.resolve());
         const infoMock = vi.fn();
@@ -76,7 +76,7 @@ describe('SfxHandler', () => {
 
         const assets = createAssetManagerMock({
             load: loadMock,
-            resolve: vi.fn((url: string) => `resolved:${url}`),
+            resolve: vi.fn((url: string) => Promise.resolve(`resolved:${url}`)),
         });
         const audio = createAudioManagerMock({
             loadAudiosheet: loadAudiosheetMock,

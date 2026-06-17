@@ -1,12 +1,12 @@
 import type { CharacterDefinition, Engine, EngineConfig, GameManifest, ItemManifestEntry, SceneMap, Script } from 'core';
 import type { RefObject } from 'react';
 
-import { convertFileSrc } from '@tauri-apps/api/core';
 import { bootstrapEngine, EngineConfigSchema, type EvidenceItem } from 'core';
 import { useEffect, useRef } from 'react';
 
 import { fsJoin, fsReadTextFile } from '../services/fs';
 import { createGamePreviewLogger } from '../services/gamePreviewLoggerBridge';
+import { createProjectAssetResolver, releaseEditorAssetUrl, resolveProjectAssetUrl } from '../services/runtime/assetUrls';
 import { useEditorStore } from '../store/useEditorStore';
 import { useEngineBridgeStore } from '../store/useEngineBridgeStore';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -64,6 +64,7 @@ export function useEngineBootstrap({
     setPreviewLogCaptureEnabled: (enabled: boolean) => void;
 }): WritableReference<Engine | undefined> {
     const detachFlowListenersReference = useRef<(() => void) | undefined>(undefined);
+    const disposeAssetResolverReference = useRef<(() => void) | undefined>(undefined);
     const engineReference = useRef<Engine | undefined>(undefined);
     const { attachDebugBridge } = useDebugBridge();
 
@@ -117,8 +118,11 @@ export function useEngineBootstrap({
                 },
             };
 
+            const assetResolver = createProjectAssetResolver(projectPath);
+            disposeAssetResolverReference.current = assetResolver.dispose;
+
             const engine = await bootstrapEngine({
-                assetResolver: (url: string) => resolvePreviewAssetUrl(url, projectPath),
+                assetResolver: assetResolver.resolve,
                 canvas,
                 characters: bootstrapCharacters,
                 config: effectiveConfig,
@@ -131,6 +135,7 @@ export function useEngineBootstrap({
 
             if (destroyed) {
                 engine.destroy();
+                assetResolver.dispose();
                 return;
             }
 
@@ -172,6 +177,8 @@ export function useEngineBootstrap({
             useEditorStore.getState().setPlaybackPaused(false);
             engineReference.current?.destroy();
             engineReference.current = undefined;
+            disposeAssetResolverReference.current?.();
+            disposeAssetResolverReference.current = undefined;
             useEngineBridgeStore.getState().setEngine(undefined);
         };
     }, [
@@ -191,14 +198,6 @@ export function useEngineBootstrap({
     return engineReference;
 }
 
-function decodeLocalAssetPath(assetUrl: string): string {
-    try {
-        return decodeURIComponent(assetUrl);
-    } catch {
-        return assetUrl;
-    }
-}
-
 function isLikelyMissingFileError(caughtError: unknown): boolean {
     if (!(caughtError instanceof Error)) return false;
     const message = caughtError.message.toLowerCase();
@@ -214,14 +213,19 @@ async function loadPreviewFont(fontFamily: string, fontAssetUrl: string, project
     const cacheKey = `${fontFamily}::${normalizedFontAssetUrl}`;
     if (loadedPreviewFonts.has(cacheKey)) return;
 
+    let resolvedAssetUrl: string | undefined;
     try {
-        const resolvedAssetUrl = resolvePreviewAssetUrl(normalizedFontAssetUrl, projectPath);
+        resolvedAssetUrl = await resolveProjectAssetUrl(normalizedFontAssetUrl, projectPath);
         const fontFace = new FontFace(fontFamily, `url(${JSON.stringify(resolvedAssetUrl)})`);
         const loadedFace = await fontFace.load();
         globalThis.document.fonts.add(loadedFace);
         loadedPreviewFonts.add(cacheKey);
     } catch (caughtError: unknown) {
         console.warn('[preview] Failed to load custom font asset:', caughtError);
+    } finally {
+        if (resolvedAssetUrl) {
+            releaseEditorAssetUrl(resolvedAssetUrl);
+        }
     }
 }
 
@@ -250,21 +254,6 @@ function nextPlaybackRequestId(reference: WritableReference<number>): number {
     const nextValue = reference.current + 1;
     reference.current = nextValue;
     return nextValue;
-}
-
-function resolvePreviewAssetUrl(assetUrl: string, projectPath: string): string {
-    if (/^(?:[a-z]+:)?\/\//i.test(assetUrl) || assetUrl.startsWith('data:')) {
-        return assetUrl;
-    }
-
-    const decodedAssetUrl = decodeLocalAssetPath(assetUrl);
-
-    if (/^[a-zA-Z]:[\\/]/.test(decodedAssetUrl) || decodedAssetUrl.startsWith('\\\\')) {
-        return convertFileSrc(decodedAssetUrl);
-    }
-
-    const slashPrefixedPath = decodedAssetUrl.startsWith('/') ? decodedAssetUrl : `/${decodedAssetUrl}`;
-    return convertFileSrc(projectPath + slashPrefixedPath);
 }
 
 function toEvidenceDefinitions(

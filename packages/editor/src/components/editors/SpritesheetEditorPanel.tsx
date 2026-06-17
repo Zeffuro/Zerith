@@ -1,4 +1,3 @@
-import { convertFileSrc } from '@tauri-apps/api/core';
 import { generateGridFrames, parseSpritesheetDescriptor, type SpritesheetDescriptor } from 'core';
 import { Check, Columns3, Copy, Grid3x3, type LucideIcon, MousePointer2, Pipette, RotateCcw, Rows3, Save, Scissors, SquareDashedMousePointer, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
@@ -6,6 +5,7 @@ import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useStat
 import type { WorkbenchTab } from '../../store/workbench/types';
 
 import { fsDirname, fsJoin, fsWriteTextFile } from '../../services/fs';
+import { releaseEditorAssetUrl, resolveEditorAssetUrl } from '../../services/runtime/assetUrls';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
@@ -141,13 +141,19 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
         }
 
         let disposed = false;
+        let resolvedImageUrl: string | undefined;
         void (async () => {
             try {
                 setImageError(undefined);
                 const resolvedPath = await resolveImagePath(tab.path, descriptor.source);
-                if (disposed) return;
+                const nextImageUrl = await resolveEditorAssetUrl(resolvedPath);
+                resolvedImageUrl = nextImageUrl;
+                if (disposed) {
+                    releaseEditorAssetUrl(nextImageUrl);
+                    return;
+                }
                 setImagePath(resolvedPath);
-                setImageUrl(/^(?:https?:|data:|blob:|file:)/.test(resolvedPath) ? resolvedPath : convertFileSrc(resolvedPath));
+                setImageUrl(nextImageUrl);
             } catch (error) {
                 if (disposed) return;
                 setImage(undefined);
@@ -159,6 +165,9 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
 
         return () => {
             disposed = true;
+            if (resolvedImageUrl) {
+                releaseEditorAssetUrl(resolvedImageUrl);
+            }
         };
     }, [descriptor, tab.path]);
 

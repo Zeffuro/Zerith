@@ -7,6 +7,7 @@ import type { ScriptPath } from '../../utils/scriptPathUtilities';
 
 import { dispatchAudiosheetShortcut } from '../../services/audiosheetShortcuts';
 import { fsOpenPath } from '../../services/fs';
+import { isTauriRuntime } from '../../services/runtime/runtimeEnvironment';
 import { saveProjectAs } from '../../services/saveProjectAs';
 import { getThemeRegistry } from '../../theme/themeRegistry';
 import { isRecord } from '../../utils/typeGuards';
@@ -180,7 +181,7 @@ export async function executeGlobalShortcutAction(action: GlobalShortcutAction):
                 if (!result) return false;
 
                 await project.openProjectFromManifest(result.manifestPath);
-                useEditorStore.getState().addRecentProject(result.manifestPath);
+                if (isTauriRuntime()) useEditorStore.getState().addRecentProject(result.manifestPath);
                 return true;
             } catch (error) {
                 console.error('Save Project As shortcut failed:', error);

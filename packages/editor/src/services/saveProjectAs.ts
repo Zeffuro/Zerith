@@ -1,6 +1,4 @@
-import { open as openDialog } from '@tauri-apps/plugin-dialog';
-
-import { fsJoin, fsMkdir, fsReadBinaryFile, fsReadDirectory, fsWriteBinaryFile } from './fs';
+import { fsJoin, fsMkdir, fsPickDirectory, fsReadBinaryFile, fsReadDirectory, fsWriteBinaryFile } from './fs';
 
 const MANIFEST_FILE_NAME = 'game.json';
 
@@ -24,15 +22,7 @@ const defaultDependencies: SaveProjectAsDependencies = {
     fsReadBinaryFile,
     fsReadDirectory,
     fsWriteBinaryFile,
-    pickTargetDirectory: async () => {
-        const selectedDirectory = await openDialog({
-            directory: true,
-            multiple: false,
-            title: 'Save Project As...',
-        });
-
-        return typeof selectedDirectory === 'string' ? selectedDirectory : undefined;
-    },
+    pickTargetDirectory: () => fsPickDirectory('Save Project As...'),
 };
 
 export async function saveProjectAs(

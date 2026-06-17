@@ -1,7 +1,6 @@
-import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
 import { useEffect } from 'react';
 
+import { isTauriRuntime } from '../services/runtime/runtimeEnvironment';
 import { executeExternalProjectTreeRefreshAction } from '../store/actions/projectTreeActions';
 import { useProjectStore } from '../store/storeBootstrap';
 
@@ -22,7 +21,7 @@ export function useProjectFileWatcher() {
     const projectPath = useProjectStore((state) => state.projectPath);
 
     useEffect(() => {
-        if (!projectPath || !hasTauriInternals()) return;
+        if (!projectPath || !isTauriRuntime()) return;
 
         let isDisposed = false;
         let refreshTimeout: ReturnType<typeof globalThis.setTimeout> | undefined;
@@ -39,6 +38,11 @@ export function useProjectFileWatcher() {
         };
 
         const subscribe = async () => {
+            const [{ invoke }, { listen }] = await Promise.all([
+                import('@tauri-apps/api/core'),
+                import('@tauri-apps/api/event'),
+            ]);
+
             await invoke('start_project_file_watcher', { projectPath });
 
             const unlisteners = await Promise.all(
@@ -54,6 +58,7 @@ export function useProjectFileWatcher() {
                 for (const unlisten of unlisteners) {
                     unlisten();
                 }
+                void invoke('stop_project_file_watcher');
             };
         };
 
@@ -72,13 +77,7 @@ export function useProjectFileWatcher() {
             }
 
             void cleanupPromise.then((cleanup) => cleanup());
-            void invoke('stop_project_file_watcher');
         };
     }, [projectPath]);
-}
-
-function hasTauriInternals(): boolean {
-    const windowObject = globalThis.window as { __TAURI_INTERNALS__?: unknown } | undefined;
-    return windowObject?.__TAURI_INTERNALS__ !== undefined;
 }
 

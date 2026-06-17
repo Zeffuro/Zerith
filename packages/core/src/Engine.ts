@@ -25,7 +25,7 @@ import type { BaseCommand, GameManifest, Serializable } from './types';
 import { Logger } from './utils/Logger';
 import { DefaultTheme, type Theme } from './utils/Theme';
 
-export type AssetResolver = (url: string) => string;
+export type AssetResolver = (url: string) => Promise<string> | string;
 
 export interface EngineDeps {
     animations: IAnimationManager;

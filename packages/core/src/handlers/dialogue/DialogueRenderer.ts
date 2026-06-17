@@ -117,7 +117,7 @@ export class DialogueRenderer {
         this.messageMask = new Graphics()
             .rect(layout.messageX, layout.messageY, layout.messageWidth, layout.messageHeight)
             .fill(0xFF_FF_FF);
-        this.messageMask.renderable = false;
+        // Pixi's stencil mask needs to collect the Graphics geometry; includeInBuild hides it from normal rendering.
         this.messageText.mask = this.messageMask;
 
         this.container.addChild(bg, this.nameText, this.messageText, this.messageMask);

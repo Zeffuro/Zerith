@@ -1,8 +1,8 @@
-import { convertFileSrc } from '@tauri-apps/api/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { fsWriteTextFile } from '../services/fs';
 import { openSpritesheetEntry, setMissingSpritesheetDescriptorHandler } from '../services/openProjectEntry';
+import { releaseEditorAssetUrl, resolveEditorAssetUrl } from '../services/runtime/assetUrls';
 
 type AutoSliceRequest = {
     entryName: string;
@@ -54,10 +54,8 @@ export function useAutoSliceDialog(): UseAutoSliceDialogResult {
         if (!pendingAutoSlice) return;
 
         let disposed = false;
+        let resolvedImageUrl: string | undefined;
         const image = new Image();
-        const source = /^(?:https?:|data:|blob:|file:)/.test(pendingAutoSlice.imagePath)
-            ? pendingAutoSlice.imagePath
-            : convertFileSrc(pendingAutoSlice.imagePath);
 
         image.addEventListener('load', () => {
             if (disposed) return;
@@ -71,10 +69,27 @@ export function useAutoSliceDialog(): UseAutoSliceDialogResult {
             setAutoSliceImage(undefined);
         });
 
-        image.src = source;
+        void (async () => {
+            try {
+                resolvedImageUrl = await resolveEditorAssetUrl(pendingAutoSlice.imagePath);
+                if (disposed) {
+                    releaseEditorAssetUrl(resolvedImageUrl);
+                    return;
+                }
+                image.src = resolvedImageUrl;
+            } catch {
+                if (disposed) return;
+                pendingAutoSlice.resolve(false);
+                setPendingAutoSlice(undefined);
+                setAutoSliceImage(undefined);
+            }
+        })();
 
         return () => {
             disposed = true;
+            if (resolvedImageUrl) {
+                releaseEditorAssetUrl(resolvedImageUrl);
+            }
         };
     }, [pendingAutoSlice]);
 

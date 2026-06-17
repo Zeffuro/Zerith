@@ -39,12 +39,9 @@ export function resetSaveProjectAsMocks(): void {
 vi.mock('../services/fs', () => ({
     fsJoin: saveProjectAsMocks.fsJoin,
     fsMkdir: saveProjectAsMocks.fsMkdir,
+    fsPickDirectory: saveProjectAsMocks.openDialog,
     fsReadBinaryFile: saveProjectAsMocks.fsReadBinaryFile,
     fsReadDirectory: saveProjectAsMocks.fsReadDirectory,
     fsWriteBinaryFile: saveProjectAsMocks.fsWriteBinaryFile,
-}));
-
-vi.mock('@tauri-apps/plugin-dialog', () => ({
-    open: saveProjectAsMocks.openDialog,
 }));
 

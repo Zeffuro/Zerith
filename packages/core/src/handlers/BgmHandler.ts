@@ -96,7 +96,7 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
                 if (cueReference) {
                     await this.playCue(cueReference, command);
                 } else {
-                    const resolvedUrl = this.assets.resolve(url);
+                    const resolvedUrl = await this.assets.resolve(url);
 
                     if (!this.audio.audioExists(resolvedUrl)) {
                         await this.audio.preloadAudio(resolvedUrl);
@@ -160,7 +160,7 @@ export class BgmHandler implements CommandHandler<BgmCommand> {
 
         await this.audio.loadAudiosheet(cueReference.sheetUrl, {
             ...parsedDescriptor.data,
-            source: this.assets.resolve(sourceAssetUrl),
+            source: await this.assets.resolve(sourceAssetUrl),
         });
         await this.audio.playCue(cueReference.sheetUrl, cueReference.cueName, {
             channel: 'bgm',

@@ -16,6 +16,7 @@
     "@tauri-apps/plugin-fs": "^2.5.1",
     "@tauri-apps/plugin-opener": "^2.5.4",
     "core": "file:../core",
+    "fflate": "^0.8.3",
     "flexlayout-react": "^0.9.1",
     "lucide-react": "^1.18.0",
     "monaco-editor": "^0.55.1",

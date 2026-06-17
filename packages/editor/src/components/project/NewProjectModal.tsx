@@ -1,9 +1,10 @@
-import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { useEffect, useState } from 'react';
 
 import { useBackdropDismissal } from '../../hooks/useBackdropDismissal';
 import { createNewProject } from '../../services/createNewProject';
+import { fsPickDirectory } from '../../services/fs';
 import { openProjectEntry } from '../../services/openProjectEntry';
+import { isTauriRuntime } from '../../services/runtime/runtimeEnvironment';
 import { closeProject } from '../../store/actions/projectOpenActions';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
@@ -74,11 +75,7 @@ export function NewProjectModal() {
         if (isCreating) return;
 
         try {
-            const selectedDirectory = await openDialog({
-                directory: true,
-                multiple: false,
-                title: 'Select a project directory',
-            });
+            const selectedDirectory = await fsPickDirectory('Select a project directory');
 
             if (!selectedDirectory) {
                 return;
@@ -109,7 +106,7 @@ export function NewProjectModal() {
 
             closeProject();
             await openProjectFromManifest(result.manifestPath);
-            addRecentProject(result.manifestPath);
+            if (isTauriRuntime()) addRecentProject(result.manifestPath);
             await handleOpenInitialProjectEntry();
             closeNewProjectModal();
         } catch (error) {

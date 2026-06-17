@@ -103,7 +103,7 @@ export class AssetManager {
     }
 
     public async load<T = unknown>(url: string): Promise<T> {
-        return await Assets.load<T>(this.resolve(url));
+        return await Assets.load<T>(await this.resolve(url));
     }
 
     public async preloadCharacterAssets(characters: Record<string, CharacterDefinition>): Promise<void> {
@@ -140,7 +140,7 @@ export class AssetManager {
         this.logger.info(`Preloaded ${textures.size} textures, ${audio.size} audio files.`);
     }
 
-    public resolve(url: string): string {
+    public async resolve(url: string): Promise<string> {
         return this.resolver(url);
     }
 
@@ -149,7 +149,7 @@ export class AssetManager {
     }
 
     private async preloadAudio(url: string): Promise<void> {
-        const resolvedUrl = this.resolver(url);
+        const resolvedUrl = await this.resolve(url);
         const key = `audio:${resolvedUrl}`;
         if (this.loadedUrls.has(key) || this.audio.audioExists(resolvedUrl)) {
             this.loadedUrls.add(key);
@@ -165,7 +165,7 @@ export class AssetManager {
     }
 
     private async preloadSpritesheet(config: SpritesheetConfig): Promise<void> {
-        const resolvedAtlasUrl = this.resolver(config.atlasUrl);
+        const resolvedAtlasUrl = await this.resolve(config.atlasUrl);
         const key = `sheet:${resolvedAtlasUrl}`;
         if (this.loadedUrls.has(key)) return;
 
@@ -178,7 +178,7 @@ export class AssetManager {
     }
 
     private async preloadTexture(url: string): Promise<void> {
-        const resolvedUrl = this.resolver(url);
+        const resolvedUrl = await this.resolve(url);
         const key = `texture:${resolvedUrl}`;
         if (this.loadedUrls.has(key)) return;
 

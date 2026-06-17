@@ -1,65 +1,63 @@
-import { dirname, join } from '@tauri-apps/api/path';
-import { type DirEntry, mkdir, readDir, readFile, readTextFile, remove, rename, writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
-import { openPath } from '@tauri-apps/plugin-opener';
+import type { FsAdapter, FsDirectoryEntry, FsProjectPickerResult } from './types';
 
-export type FsDirectoryEntry = {
-    isDirectory: boolean;
-    isFile: boolean;
-    isSymlink: boolean;
-    name: string;
-};
+import { isTauriRuntime } from '../runtime/runtimeEnvironment';
+import { browserFsAdapter } from './browserFsAdapter';
+import { tauriFsAdapter } from './tauriFsAdapter';
+
+export type { FsDirectoryEntry, FsProjectPickerResult } from './types';
 
 export async function fsDirname(path: string): Promise<string> {
-    return dirname(path);
+    return getFsAdapter().dirname(path);
 }
 
 export async function fsJoin(...parts: string[]): Promise<string> {
-    return join(...parts);
+    return getFsAdapter().join(...parts);
 }
 
 export async function fsMkdir(path: string, recursive = true): Promise<void> {
-    await mkdir(path, { recursive });
+    await getFsAdapter().mkdir(path, recursive);
 }
 
 export async function fsOpenPath(path: string): Promise<void> {
-    await openPath(path);
+    await getFsAdapter().openPath(path);
+}
+
+export async function fsPickDirectory(title?: string): Promise<string | undefined> {
+    return getFsAdapter().pickDirectory(title);
+}
+
+export async function fsPickProjectManifest(): Promise<FsProjectPickerResult | undefined> {
+    return getFsAdapter().pickProjectManifest();
 }
 
 export async function fsReadBinaryFile(path: string): Promise<Uint8Array> {
-    return readFile(path);
+    return getFsAdapter().readBinaryFile(path);
 }
 
 export async function fsReadDirectory(path: string): Promise<FsDirectoryEntry[]> {
-    const entries = await readDir(path);
-    return entries.map((entry) => mapDirectoryEntry(entry));
+    return getFsAdapter().readDirectory(path);
 }
 
 export async function fsReadTextFile(path: string): Promise<string> {
-    return readTextFile(path);
+    return getFsAdapter().readTextFile(path);
 }
 
 export async function fsRemove(path: string, recursive = true): Promise<void> {
-    await remove(path, { recursive });
+    await getFsAdapter().remove(path, recursive);
 }
 
 export async function fsRename(oldPath: string, newPath: string): Promise<void> {
-    await rename(oldPath, newPath);
+    await getFsAdapter().rename(oldPath, newPath);
 }
 
 export async function fsWriteBinaryFile(path: string, content: Uint8Array): Promise<void> {
-    await writeFile(path, content);
+    await getFsAdapter().writeBinaryFile(path, content);
 }
 
 export async function fsWriteTextFile(path: string, content: string): Promise<void> {
-    await writeTextFile(path, content);
+    await getFsAdapter().writeTextFile(path, content);
 }
 
-function mapDirectoryEntry(entry: DirEntry): FsDirectoryEntry {
-    return {
-        isDirectory: entry.isDirectory,
-        isFile: entry.isFile,
-        isSymlink: entry.isSymlink,
-        name: entry.name,
-    };
+function getFsAdapter(): FsAdapter {
+    return isTauriRuntime() ? tauriFsAdapter : browserFsAdapter;
 }
-
