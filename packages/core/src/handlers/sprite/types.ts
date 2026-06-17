@@ -1,4 +1,4 @@
-import type { BaseCommand } from '../../types';
+import type { BaseCommand, SpriteFitMode } from '../../types';
 
 export interface SpriteCommand extends BaseCommand {
     action: 'animate' | 'hide' | 'move' | 'pose' | 'show';
@@ -7,7 +7,9 @@ export interface SpriteCommand extends BaseCommand {
     animation?: string;
     assetUrl?: string;
     duration?: number;
+    fit?: SpriteFitMode;
     flip?: boolean;
+    heightRatio?: number;
     id: string;
     pose?: string;
     scaleX?: number;
@@ -15,6 +17,7 @@ export interface SpriteCommand extends BaseCommand {
     transition?: 'fade' | 'instant';
     type: 'sprite';
     wait?: boolean;
+    widthRatio?: number;
     x?: number;
     xRatio?: number;
     y?: number;
@@ -27,10 +30,13 @@ export interface SpriteState {
     anchorY?: number;
     animation?: string;
     assetUrl?: string;
+    fit?: SpriteFitMode;
     flip?: boolean;
+    heightRatio?: number;
     pose?: string;
     scaleX?: number;
     scaleY?: number;
+    widthRatio?: number;
     x?: number;
     xRatio?: number;
     y?: number;

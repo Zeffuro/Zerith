@@ -88,7 +88,7 @@
       "pose": "normal",
       "transition": "fade",
       "type": "sprite",
-      "x": 300
+      "xRatio": 0.2344
     },
     {
       "action": "show",
@@ -97,7 +97,7 @@
       "pose": "normal",
       "transition": "fade",
       "type": "sprite",
-      "x": 690
+      "xRatio": 0.5391
     },
     {
       "action": "show",
@@ -106,7 +106,7 @@
       "pose": "normal",
       "transition": "fade",
       "type": "sprite",
-      "x": 1035
+      "xRatio": 0.8086
     }
   ],
   "show_duo": [
@@ -117,7 +117,7 @@
       "pose": "normal",
       "transition": "fade",
       "type": "sprite",
-      "x": 390
+      "xRatio": 0.3047
     },
     {
       "action": "show",
@@ -126,7 +126,7 @@
       "pose": "normal",
       "transition": "fade",
       "type": "sprite",
-      "x": 885
+      "xRatio": 0.6914
     }
   ],
   "soft_beat": [

@@ -6,6 +6,8 @@ import { editorTheme as t } from '../../theme/editorTheme';
 import { toRecordOrUndefined } from '../../utils/typeGuards';
 import { FieldError } from './FieldError';
 
+type SpriteCommandField = Extract<keyof SpriteCommand, string>;
+
 export function SpriteInspector({ index, node }: { index?: null | number; node: SpriteCommand, }) {
     const { characters } = useProjectStore();
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle } = useInspectorFieldEditor(index);
@@ -15,6 +17,12 @@ export function SpriteInspector({ index, node }: { index?: null | number; node: 
     const animations = toRecordOrUndefined(characterData?.animations);
     const poseNames = poses ? Object.keys(poses) : [];
     const animationNames = animations ? Object.keys(animations) : [];
+    const handleOptionalNumberChange = (field: SpriteCommandField, value: string) => {
+        handleChange(field, value.trim().length === 0 ? undefined : Number(value));
+    };
+    const handleOptionalStringChange = (field: SpriteCommandField, value: string) => {
+        handleChange(field, value.length === 0 ? undefined : value);
+    };
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -45,6 +53,7 @@ export function SpriteInspector({ index, node }: { index?: null | number; node: 
                         >
                             <option value="show">Show</option>
                             <option value="hide">Hide</option>
+                            <option value="move">Move</option>
                             <option value="animate">Animate</option>
                             <option value="pose">Set Pose</option>
                         </select>
@@ -95,27 +104,130 @@ export function SpriteInspector({ index, node }: { index?: null | number; node: 
                         </div>
                     )}
 
-                    <div>
-                        <label style={labelStyle}>X Position (Left)</label>
-                        <input
-                            onChange={(event) => handleChange('x', Number(event.target.value))}
-                            style={getFieldInputStyle('x')}
-                            type="number"
-                            value={node.x ?? ''}
-                        />
-                        <FieldError errors={getFieldErrors('x')} />
-                    </div>
+                    {(['move', 'show'] as readonly string[]).includes(node.action) && (
+                        <>
+                            <div>
+                                <label style={labelStyle}>X Position</label>
+                                <input
+                                    onChange={(event) => handleOptionalNumberChange('x', event.target.value)}
+                                    style={getFieldInputStyle('x')}
+                                    type="number"
+                                    value={node.x ?? ''}
+                                />
+                                <FieldError errors={getFieldErrors('x')} />
+                            </div>
 
-                    <div>
-                        <label style={labelStyle}>Y Position (Top)</label>
-                        <input
-                            onChange={(event) => handleChange('y', Number(event.target.value))}
-                            style={getFieldInputStyle('y')}
-                            type="number"
-                            value={node.y ?? ''}
-                        />
-                        <FieldError errors={getFieldErrors('y')} />
-                    </div>
+                            <div>
+                                <label style={labelStyle}>Y Position</label>
+                                <input
+                                    onChange={(event) => handleOptionalNumberChange('y', event.target.value)}
+                                    style={getFieldInputStyle('y')}
+                                    type="number"
+                                    value={node.y ?? ''}
+                                />
+                                <FieldError errors={getFieldErrors('y')} />
+                            </div>
+
+                            <div>
+                                <label style={labelStyle}>X Ratio</label>
+                                <input
+                                    max={1}
+                                    min={0}
+                                    onChange={(event) => handleOptionalNumberChange('xRatio', event.target.value)}
+                                    step={0.0001}
+                                    style={getFieldInputStyle('xRatio')}
+                                    type="number"
+                                    value={node.xRatio ?? ''}
+                                />
+                                <FieldError errors={getFieldErrors('xRatio')} />
+                            </div>
+
+                            <div>
+                                <label style={labelStyle}>Y Ratio</label>
+                                <input
+                                    max={1}
+                                    min={0}
+                                    onChange={(event) => handleOptionalNumberChange('yRatio', event.target.value)}
+                                    step={0.0001}
+                                    style={getFieldInputStyle('yRatio')}
+                                    type="number"
+                                    value={node.yRatio ?? ''}
+                                />
+                                <FieldError errors={getFieldErrors('yRatio')} />
+                            </div>
+                        </>
+                    )}
+
+                    {node.action === 'show' && (
+                        <>
+                            <div>
+                                <label style={labelStyle}>Scale X</label>
+                                <input
+                                    onChange={(event) => handleOptionalNumberChange('scaleX', event.target.value)}
+                                    step={0.01}
+                                    style={getFieldInputStyle('scaleX')}
+                                    type="number"
+                                    value={node.scaleX ?? ''}
+                                />
+                                <FieldError errors={getFieldErrors('scaleX')} />
+                            </div>
+
+                            <div>
+                                <label style={labelStyle}>Scale Y</label>
+                                <input
+                                    onChange={(event) => handleOptionalNumberChange('scaleY', event.target.value)}
+                                    step={0.01}
+                                    style={getFieldInputStyle('scaleY')}
+                                    type="number"
+                                    value={node.scaleY ?? ''}
+                                />
+                                <FieldError errors={getFieldErrors('scaleY')} />
+                            </div>
+
+                            <div>
+                                <label style={labelStyle}>Width Ratio</label>
+                                <input
+                                    max={1}
+                                    min={0}
+                                    onChange={(event) => handleOptionalNumberChange('widthRatio', event.target.value)}
+                                    step={0.0001}
+                                    style={getFieldInputStyle('widthRatio')}
+                                    type="number"
+                                    value={node.widthRatio ?? ''}
+                                />
+                                <FieldError errors={getFieldErrors('widthRatio')} />
+                            </div>
+
+                            <div>
+                                <label style={labelStyle}>Height Ratio</label>
+                                <input
+                                    max={1}
+                                    min={0}
+                                    onChange={(event) => handleOptionalNumberChange('heightRatio', event.target.value)}
+                                    step={0.0001}
+                                    style={getFieldInputStyle('heightRatio')}
+                                    type="number"
+                                    value={node.heightRatio ?? ''}
+                                />
+                                <FieldError errors={getFieldErrors('heightRatio')} />
+                            </div>
+
+                            <div>
+                                <label style={labelStyle}>Fit</label>
+                                <select
+                                    onChange={(event) => handleOptionalStringChange('fit', event.target.value)}
+                                    style={getFieldInputStyle('fit')}
+                                    value={node.fit ?? ''}
+                                >
+                                    <option value="">Default</option>
+                                    <option value="contain">Contain</option>
+                                    <option value="cover">Cover</option>
+                                    <option value="stretch">Stretch</option>
+                                </select>
+                                <FieldError errors={getFieldErrors('fit')} />
+                            </div>
+                        </>
+                    )}
                 </>
             ) : (
                 <div style={{ color: t.text.faint, fontStyle: 'italic' }}> Character definition not found. </div>

@@ -182,8 +182,8 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
         const sprite = this.sprites.get(command.id);
         if (!sprite) { this.logger.warn(`Sprite '${command.id}' not found for 'move'`); return; }
 
-        const targetX = command.x ?? sprite.x;
-        const targetY = command.y ?? sprite.y;
+        const targetX = resolveMoveAxisPosition(command.x, command.xRatio, this.display.width, sprite.x);
+        const targetY = resolveMoveAxisPosition(command.y, command.yRatio, this.display.height, sprite.y);
         const duration = command.duration ?? 300;
 
         if (duration <= 0 || command.transition === 'instant') {
@@ -191,6 +191,14 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             if (command.flip !== undefined) {
                 sprite.scale.x = command.flip ? -Math.abs(sprite.scale.x) : Math.abs(sprite.scale.x);
             }
+            this.serializer.saveMove(command.id, {
+                clearXRatio: command.x !== undefined,
+                clearYRatio: command.y !== undefined,
+                x: sprite.x,
+                xRatio: command.xRatio,
+                y: sprite.y,
+                yRatio: command.yRatio,
+            });
             return;
         }
 
@@ -215,7 +223,14 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             requestAnimationFrame(tick);
         });
 
-        this.serializer.saveMove(command.id, sprite.x, sprite.y);
+        this.serializer.saveMove(command.id, {
+            clearXRatio: command.x !== undefined,
+            clearYRatio: command.y !== undefined,
+            x: sprite.x,
+            xRatio: command.xRatio,
+            y: sprite.y,
+            yRatio: command.yRatio,
+        });
     }
 
     private async show(command: SpriteCommand) {
@@ -248,6 +263,8 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             defaults,
             displayHeight: this.display.height,
             displayWidth: this.display.width,
+            textureHeight: texture.height,
+            textureWidth: texture.width,
         });
 
         sprite.anchor.set(
@@ -265,6 +282,15 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
         if (placement.flip) {
             sprite.scale.x = -Math.abs(sprite.scale.x);
         }
+        const hasScaleOverride = command.scaleX !== undefined
+            || command.scaleY !== undefined
+            || defaults?.scaleX !== undefined
+            || defaults?.scaleY !== undefined;
+        const widthRatio = hasScaleOverride ? undefined : command.widthRatio ?? defaults?.widthRatio;
+        const heightRatio = hasScaleOverride ? undefined : command.heightRatio ?? defaults?.heightRatio;
+        const fit = widthRatio !== undefined || heightRatio !== undefined
+            ? command.fit ?? defaults?.fit
+            : undefined;
 
         if (command.transition === 'fade') {
             await this.fadeIn(sprite, command.duration ?? 300);
@@ -276,14 +302,28 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             anchorX: sprite.anchor.x,
             anchorY: sprite.anchor.y,
             assetUrl: command.assetUrl,
+            fit,
             flip: placement.flip,
+            heightRatio,
             pose: command.pose,
             scaleX: sprite.scale.x,
             scaleY: sprite.scale.y,
+            widthRatio,
             x: sprite.x,
             xRatio: command.xRatio ?? defaults?.xRatio,
             y: sprite.y,
             yRatio: command.yRatio ?? defaults?.yRatio,
         });
     }
+}
+
+function resolveMoveAxisPosition(
+    absoluteValue: number | undefined,
+    ratioValue: number | undefined,
+    displaySize: number,
+    fallback: number,
+): number {
+    if (absoluteValue !== undefined) return absoluteValue;
+    if (ratioValue !== undefined) return displaySize * ratioValue;
+    return fallback;
 }

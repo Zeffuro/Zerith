@@ -65,8 +65,8 @@
     "duration": 420,
     "id": "nora",
     "type": "sprite",
-    "x": 760,
-    "y": 720
+    "xRatio": 0.5938,
+    "yRatio": 1
   },
   {
     "speaker": "nora",

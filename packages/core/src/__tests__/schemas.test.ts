@@ -77,8 +77,11 @@ describe('schemas', () => {
     it('SpriteCommandSchema accepts ratio-based placement fields', () => {
         const parsed = SchemaRegistry.getCommandSchema().safeParse({
             action: 'show',
+            fit: 'contain',
+            heightRatio: 0.8,
             id: 'juno',
             type: 'sprite',
+            widthRatio: 0.35,
             xRatio: 0.3,
             yRatio: 1,
         });

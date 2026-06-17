@@ -20,15 +20,20 @@ export class SpriteStateSerializer {
                 anchorX: sprite.anchorX,
                 anchorY: sprite.anchorY,
                 assetUrl: sprite.assetUrl,
+                fit: sprite.fit,
                 flip: sprite.flip,
+                heightRatio: sprite.heightRatio,
                 id,
                 pose: sprite.pose,
-                scaleX: sprite.scaleX,
-                scaleY: sprite.scaleY,
+                scaleX: hasRatioSize(sprite) ? undefined : sprite.scaleX,
+                scaleY: hasRatioSize(sprite) ? undefined : sprite.scaleY,
                 transition: 'instant',
                 type: 'sprite',
-                x: sprite.x,
-                y: sprite.y,
+                widthRatio: sprite.widthRatio,
+                x: sprite.xRatio === undefined ? sprite.x : undefined,
+                xRatio: sprite.xRatio,
+                y: sprite.yRatio === undefined ? sprite.y : undefined,
+                yRatio: sprite.yRatio,
             }).then(async () => {
                 if (!sprite.animation) {
                     return;
@@ -57,14 +62,22 @@ export class SpriteStateSerializer {
         sprite.animation = animation;
     }
 
-    public saveMove(id: string, x: number, y: number): void {
+    public saveMove(
+        id: string,
+        position: {
+            clearXRatio?: boolean;
+            clearYRatio?: boolean;
+        } & Pick<SpriteState, 'x' | 'xRatio' | 'y' | 'yRatio'>,
+    ): void {
         const sprite = this.state.system.sprites[id];
         if (!sprite) {
             return;
         }
 
-        sprite.x = x;
-        sprite.y = y;
+        sprite.x = position.x;
+        sprite.y = position.y;
+        sprite.xRatio = position.xRatio ?? (position.clearXRatio ? undefined : sprite.xRatio);
+        sprite.yRatio = position.yRatio ?? (position.clearYRatio ? undefined : sprite.yRatio);
     }
 
     public savePose(id: string, command: Pick<SpriteCommand, 'assetUrl' | 'pose'>): void {
@@ -81,5 +94,9 @@ export class SpriteStateSerializer {
     public saveShownSprite(id: string, spriteState: SpriteState): void {
         this.state.system.sprites[id] = spriteState;
     }
+}
+
+function hasRatioSize(sprite: SpriteState): boolean {
+    return sprite.widthRatio !== undefined || sprite.heightRatio !== undefined;
 }
 

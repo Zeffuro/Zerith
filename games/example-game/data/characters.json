@@ -10,8 +10,8 @@
     "displayDefaults": {
       "anchorX": 0.5,
       "anchorY": 1,
-      "scaleX": 0.82,
-      "scaleY": 0.82,
+      "fit": "contain",
+      "heightRatio": 0.82,
       "xRatio": 0.3047,
       "yRatio": 1
     },
@@ -74,8 +74,8 @@
     "displayDefaults": {
       "anchorX": 0.5,
       "anchorY": 1,
-      "scaleX": 1.35,
-      "scaleY": 1.35,
+      "fit": "contain",
+      "heightRatio": 0.675,
       "xRatio": 0.8164,
       "yRatio": 1
     },
@@ -128,8 +128,8 @@
     "displayDefaults": {
       "anchorX": 0.5,
       "anchorY": 1,
-      "scaleX": 0.82,
-      "scaleY": 0.82,
+      "fit": "contain",
+      "heightRatio": 0.82,
       "xRatio": 0.6914,
       "yRatio": 1
     },
