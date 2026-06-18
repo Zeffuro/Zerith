@@ -15,7 +15,6 @@ export function ReferenceTrackerPanel() {
     const scanned = useReferenceStore((state) => state.result);
 
     const [query, setQuery] = useState('');
-    const [showAssets, setShowAssets] = useState(true);
     const [showCharacters, setShowCharacters] = useState(true);
     const [showItems, setShowItems] = useState(true);
     const [showVariables, setShowVariables] = useState(true);
@@ -27,13 +26,6 @@ export function ReferenceTrackerPanel() {
             .filter(([name]) => !normalizedQuery || name.toLowerCase().includes(normalizedQuery))
             .toSorted(([left], [right]) => left.localeCompare(right)),
         [normalizedQuery, scanned.variables],
-    );
-
-    const filteredAssets = useMemo(
-        () => Object.entries(scanned.assets)
-            .filter(([name]) => !normalizedQuery || name.toLowerCase().includes(normalizedQuery))
-            .toSorted(([left], [right]) => left.localeCompare(right)),
-        [normalizedQuery, scanned.assets],
     );
 
     const filteredCharacters = useMemo(
@@ -72,7 +64,7 @@ export function ReferenceTrackerPanel() {
 
             <input
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Filter variables, items, assets, characters..."
+                placeholder="Filter variables, items, characters..."
                 style={{
                     background: t.bg.input,
                     border: `1px solid ${t.border.input}`,
@@ -109,22 +101,6 @@ export function ReferenceTrackerPanel() {
                 {showItems && filteredItems.map(([name, locations]) => (
                     <EntryBlock
                         key={`item-${name}`}
-                        locations={locations}
-                        name={name}
-                        onOpenLocation={handleOpenLocation}
-                        subtitle={`references: ${locations.length}`}
-                        uiScale={uiScale}
-                    />
-                ))}
-            </section>
-
-            <section style={sectionStyle(uiScale)}>
-                <button className="toolbar-btn" onClick={() => setShowAssets((value) => !value)} style={sectionHeaderStyle(uiScale)} type="button">
-                    Assets ({filteredAssets.length})
-                </button>
-                {showAssets && filteredAssets.map(([name, locations]) => (
-                    <EntryBlock
-                        key={`asset-${name}`}
                         locations={locations}
                         name={name}
                         onOpenLocation={handleOpenLocation}

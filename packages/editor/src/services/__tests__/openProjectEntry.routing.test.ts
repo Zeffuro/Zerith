@@ -436,6 +436,50 @@ describe('openProjectEntry', () => {
         });
     });
 
+    it('opens blank manifest JSON as an empty manifest object', async () => {
+        openProjectEntryMocks.fsReadTextFile.mockResolvedValueOnce('');
+
+        await openProjectEntry('/project/game.json', 'game.json', { forceView: 'json' });
+
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenNthCalledWith(1, {
+            action: 'setManifestView',
+            view: 'json',
+        });
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenNthCalledWith(2, {
+            action: 'openTab',
+            tab: {
+                id: 'manifest:/project/game.json',
+                kind: 'manifest',
+                path: '/project/game.json',
+                preferredView: 'json',
+                textContent: '{}\n',
+                title: 'Project Settings',
+            },
+        });
+    });
+
+    it('opens blank unhinted JSON as an empty script', async () => {
+        openProjectEntryMocks.fsReadTextFile.mockResolvedValueOnce('');
+
+        await openProjectEntry('/project/scenes/new-file.json', 'new-file.json', { forceView: 'timeline' });
+
+        expect(openProjectEntryMocks.applyScriptFile).toHaveBeenCalledWith('/project/scenes/new-file.json', []);
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenNthCalledWith(1, {
+            action: 'setScriptView',
+            view: 'timeline',
+        });
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenNthCalledWith(2, {
+            action: 'openTab',
+            tab: {
+                id: 'script:/project/scenes/new-file.json',
+                kind: 'script',
+                path: '/project/scenes/new-file.json',
+                preferredView: 'timeline',
+                title: 'new-file.json',
+            },
+        });
+    });
+
     it('opens scene JSON as a script based on manifest scene mapping', async () => {
         const sceneScript = [{ duration: 0, type: 'wait' }];
         openProjectEntryMocks.fsReadTextFile.mockResolvedValueOnce(JSON.stringify(sceneScript));

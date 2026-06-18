@@ -20,9 +20,14 @@ export function SpriteInspector({ index, node }: { index?: null | number; node: 
     const handleOptionalNumberChange = (field: SpriteCommandField, value: string) => {
         handleChange(field, value.trim().length === 0 ? undefined : Number(value));
     };
+    const handleOptionalPercentChange = (field: SpriteCommandField, value: string) => {
+        handleChange(field, value.trim().length === 0 ? undefined : Number(value) / 100);
+    };
     const handleOptionalStringChange = (field: SpriteCommandField, value: string) => {
         handleChange(field, value.length === 0 ? undefined : value);
     };
+    const toPercentInputValue = (value: number | undefined) =>
+        value === undefined ? '' : Number((value * 100).toFixed(4));
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -129,29 +134,29 @@ export function SpriteInspector({ index, node }: { index?: null | number; node: 
                             </div>
 
                             <div>
-                                <label style={labelStyle}>X Ratio</label>
+                                <label style={labelStyle}>X % of Stage</label>
                                 <input
-                                    max={1}
+                                    max={100}
                                     min={0}
-                                    onChange={(event) => handleOptionalNumberChange('xRatio', event.target.value)}
-                                    step={0.0001}
+                                    onChange={(event) => handleOptionalPercentChange('xRatio', event.target.value)}
+                                    step={0.01}
                                     style={getFieldInputStyle('xRatio')}
                                     type="number"
-                                    value={node.xRatio ?? ''}
+                                    value={toPercentInputValue(node.xRatio)}
                                 />
                                 <FieldError errors={getFieldErrors('xRatio')} />
                             </div>
 
                             <div>
-                                <label style={labelStyle}>Y Ratio</label>
+                                <label style={labelStyle}>Y % of Stage</label>
                                 <input
-                                    max={1}
+                                    max={100}
                                     min={0}
-                                    onChange={(event) => handleOptionalNumberChange('yRatio', event.target.value)}
-                                    step={0.0001}
+                                    onChange={(event) => handleOptionalPercentChange('yRatio', event.target.value)}
+                                    step={0.01}
                                     style={getFieldInputStyle('yRatio')}
                                     type="number"
-                                    value={node.yRatio ?? ''}
+                                    value={toPercentInputValue(node.yRatio)}
                                 />
                                 <FieldError errors={getFieldErrors('yRatio')} />
                             </div>
@@ -185,35 +190,35 @@ export function SpriteInspector({ index, node }: { index?: null | number; node: 
                             </div>
 
                             <div>
-                                <label style={labelStyle}>Width Ratio</label>
+                                <label style={labelStyle}>Width % of Stage</label>
                                 <input
-                                    max={1}
+                                    max={100}
                                     min={0}
-                                    onChange={(event) => handleOptionalNumberChange('widthRatio', event.target.value)}
-                                    step={0.0001}
+                                    onChange={(event) => handleOptionalPercentChange('widthRatio', event.target.value)}
+                                    step={0.01}
                                     style={getFieldInputStyle('widthRatio')}
                                     type="number"
-                                    value={node.widthRatio ?? ''}
+                                    value={toPercentInputValue(node.widthRatio)}
                                 />
                                 <FieldError errors={getFieldErrors('widthRatio')} />
                             </div>
 
                             <div>
-                                <label style={labelStyle}>Height Ratio</label>
+                                <label style={labelStyle}>Height % of Stage</label>
                                 <input
-                                    max={1}
+                                    max={100}
                                     min={0}
-                                    onChange={(event) => handleOptionalNumberChange('heightRatio', event.target.value)}
-                                    step={0.0001}
+                                    onChange={(event) => handleOptionalPercentChange('heightRatio', event.target.value)}
+                                    step={0.01}
                                     style={getFieldInputStyle('heightRatio')}
                                     type="number"
-                                    value={node.heightRatio ?? ''}
+                                    value={toPercentInputValue(node.heightRatio)}
                                 />
                                 <FieldError errors={getFieldErrors('heightRatio')} />
                             </div>
 
                             <div>
-                                <label style={labelStyle}>Fit</label>
+                                <label style={labelStyle}>Fit Mode</label>
                                 <select
                                     onChange={(event) => handleOptionalStringChange('fit', event.target.value)}
                                     style={getFieldInputStyle('fit')}

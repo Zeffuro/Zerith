@@ -1,8 +1,13 @@
 import { editorTheme as t } from '../../../theme/editorTheme';
 
 export type ExplorerContextMenuState = {
+    canDelete?: boolean;
+    canDuplicate?: boolean;
+    canOpen?: boolean;
     canOpenAudiosheet: boolean;
     canOpenSpritesheet: boolean;
+    canRename?: boolean;
+    canReveal?: boolean;
     isDirectory: boolean;
     name: string;
     onAction: (action: ExplorerMenuAction) => void;
@@ -15,8 +20,10 @@ export type ExplorerContextMenuState = {
 export type ExplorerMenuAction =
     | 'delete'
     | 'duplicate'
-    | 'newFile'
     | 'newFolder'
+    | 'newJson'
+    | 'newScene'
+    | 'newText'
     | 'open'
     | 'openAudiosheet'
     | 'openJson'
@@ -64,7 +71,7 @@ export function ExplorerContextMenu({ menu, uiScale }: { menu: ExplorerContextMe
                 zIndex: 7000,
             }}
         >
-            <ActionRow action="open" disabled={menu.isDirectory} itemStyle={itemStyle} label="Open" menu={menu} />
+            <ActionRow action="open" disabled={menu.isDirectory || menu.canOpen === false} itemStyle={itemStyle} label="Open" menu={menu} />
             {!menu.isDirectory && (
                 <>
                     <ActionRow
@@ -83,37 +90,46 @@ export function ExplorerContextMenu({ menu, uiScale }: { menu: ExplorerContextMe
                         label="Open in Spritesheet Editor"
                         menu={menu}
                     />
-                    <ActionRow action="duplicate" itemStyle={itemStyle} label="Duplicate" menu={menu} />
+                    <ActionRow action="duplicate" disabled={menu.canDuplicate === false} itemStyle={itemStyle} label="Duplicate" menu={menu} />
                 </>
             )}
 
             <div style={{ background: t.border.subtle, height: 1, margin: `${6 * uiScale}px 0` }} />
 
-            <ActionRow action="newFile" itemStyle={itemStyle} label="New File…" menu={menu} />
-            <ActionRow action="newFolder" itemStyle={itemStyle} label="New Folder…" menu={menu} />
-            <ActionRow action="rename" itemStyle={itemStyle} label="Rename…" menu={menu} />
-            <ActionRow action="delete" itemStyle={itemStyle} label="Delete…" menu={menu} />
+            <ActionRow action="newScene" itemStyle={itemStyle} label="New Scene Script..." menu={menu} />
+            <ActionRow action="newJson" itemStyle={itemStyle} label="New JSON Data..." menu={menu} />
+            <ActionRow action="newText" itemStyle={itemStyle} label="New Text File..." menu={menu} />
+            <ActionRow action="newFolder" itemStyle={itemStyle} label="New Folder..." menu={menu} />
+            <ActionRow action="rename" itemStyle={itemStyle} label="Rename..." menu={menu} />
+            <ActionRow action="delete" itemStyle={itemStyle} label="Delete..." menu={menu} />
             <ActionRow action="reveal" itemStyle={itemStyle} label="Reveal in File Manager" menu={menu} />
         </div>
     );
 }
 
 function ActionRow({ action, disabled = false, itemStyle, label, menu }: ActionRowProperties) {
+    const resolvedDisabled = disabled
+        || (action === 'delete' && menu.canDelete === false)
+        || (action === 'duplicate' && menu.canDuplicate === false)
+        || (action === 'open' && menu.canOpen === false)
+        || (action === 'rename' && menu.canRename === false)
+        || (action === 'reveal' && menu.canReveal === false);
+
     return (
         <button
-            disabled={disabled}
+            disabled={resolvedDisabled}
             onClick={() => {
-                if (disabled) return;
+                if (resolvedDisabled) return;
                 menu.onAction(action);
                 menu.onClose();
             }}
             onMouseEnter={(event) => {
-                if (!disabled) event.currentTarget.style.background = t.bg.hover;
+                if (!resolvedDisabled) event.currentTarget.style.background = t.bg.hover;
             }}
             onMouseLeave={(event) => {
                 event.currentTarget.style.background = 'transparent';
             }}
-            style={{ ...itemStyle, color: disabled ? t.text.faint : t.text.normal, cursor: disabled ? 'not-allowed' : 'pointer' }}
+            style={{ ...itemStyle, color: resolvedDisabled ? t.text.faint : t.text.normal, cursor: resolvedDisabled ? 'not-allowed' : 'pointer' }}
             type="button"
         >
             {label}

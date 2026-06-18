@@ -15,8 +15,9 @@ import {
     fsWriteBinaryFile,
     fsWriteTextFile,
 } from './fs';
+import { getDefaultContentForNewFile } from './newFileTemplates';
 
-export async function createFileInDirectory(directoryPath: string, name: string, initialContent = '') {
+export async function createFileInDirectory(directoryPath: string, name: string, initialContent?: string) {
     try {
         const sanitizedName = sanitizeFileName(name);
         if (!sanitizedName) {
@@ -34,7 +35,7 @@ export async function createFileInDirectory(directoryPath: string, name: string,
         }
 
         const full = await fsJoin(directoryPath, sanitizedName);
-        await fsWriteTextFile(full, initialContent);
+        await fsWriteTextFile(full, initialContent ?? getDefaultContentForNewFile(sanitizedName));
         await refreshProjectTree();
         return full;
     } catch (error) {

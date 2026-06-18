@@ -12,6 +12,17 @@
     "type": "call"
   },
   {
+    "key": "selected_route",
+    "onFalse": [
+      {
+        "key": "selected_route",
+        "type": "set",
+        "value": "staging"
+      }
+    ],
+    "type": "if"
+  },
+  {
     "action": "add",
     "id": "staging_card",
     "type": "item"

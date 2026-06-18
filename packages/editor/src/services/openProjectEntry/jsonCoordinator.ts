@@ -1,4 +1,4 @@
-import type { OpenProjectEntryOptions } from './contracts';
+import type { JsonHintKind, OpenProjectEntryOptions } from './contracts';
 
 import { useProjectStore } from '../../store/storeBootstrap';
 import { fsReadTextFile } from '../fs';
@@ -11,16 +11,18 @@ import {
 import { routeJsonEntry } from './jsonRouting';
 
 export async function openJsonEntry(fullPath: string, options?: OpenProjectEntryOptions): Promise<void> {
-    const contents = await fsReadTextFile(fullPath);
+    const { manifest, projectPath } = useProjectStore.getState();
+    const rawContents = await fsReadTextFile(fullPath);
+    const kindFromManifest = resolveJsonKindFromManifest(fullPath, manifest, projectPath);
+    const contents = normalizeBlankJsonContents(rawContents, kindFromManifest);
     const data: unknown = JSON.parse(contents);
 
-    const { manifest, projectPath } = useProjectStore.getState();
     const kindFromSchema = resolveJsonKindFromSchema(data);
-    const kindFromManifest = kindFromSchema ?? resolveJsonKindFromManifest(fullPath, manifest, projectPath);
+    const hintedKind = kindFromSchema ?? kindFromManifest;
     const route = routeJsonEntry({
         data,
         filePath: fullPath,
-        hintedKind: kindFromManifest,
+        hintedKind,
         isMacrosObject: looksLikeMacrosObject,
     });
 
@@ -32,5 +34,11 @@ export async function openJsonEntry(fullPath: string, options?: OpenProjectEntry
         isMacrosObject: looksLikeMacrosObject,
         route,
     });
+}
+
+function normalizeBlankJsonContents(contents: string, hintedKind: JsonHintKind): string {
+    if (contents.trim().length > 0) return contents;
+
+    return hintedKind === 'script' || hintedKind === undefined ? '[]\n' : '{}\n';
 }
 

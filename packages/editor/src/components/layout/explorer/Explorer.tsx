@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, FileAudio, FileCode, FileJson, FileText, FolderGit2, FolderOpen, Image as ImageIcon, Settings } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileAudio, FileCode, FileJson, FileText, FolderGit2, FolderOpen, Image as ImageIcon, RefreshCcw, Settings } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import {
@@ -11,6 +11,7 @@ import {
 } from '../../../services/explorerFileActions';
 import { type FsDirectoryEntry, fsDirname, fsJoin, fsReadDirectory, fsReadTextFile, fsWriteTextFile } from '../../../services/fs';
 import { openAudiosheetEntry, openProjectEntry } from '../../../services/openProjectEntry';
+import { executeExternalProjectTreeRefreshAction } from '../../../store/actions/projectTreeActions';
 import { useProjectStore } from '../../../store/storeBootstrap';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useReferenceStore } from '../../../store/useReferenceStore';
@@ -26,11 +27,28 @@ import {
 } from './ExplorerContextMenu';
 import { InlineNameInput } from './InlineNameInput';
 
+type CreateFileMode = 'json' | 'scene' | 'text';
+type CreateMode = 'folder' | CreateFileMode;
+
 export function Explorer() {
-    const { files, projectPath, treeRevision } = useProjectStore();
+    const { files, loadManifest, projectPath, treeRevision } = useProjectStore();
     const globalUiScale = useEditorStore((state) => state.uiScale);
     const explorerScale = useSettingsStore((state) => state.explorerScale);
     const uiScale = resolveComponentScale(globalUiScale, explorerScale);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const handleRefreshProject = useCallback(async () => {
+        if (!projectPath || isRefreshing) return;
+
+        setIsRefreshing(true);
+        try {
+            await executeExternalProjectTreeRefreshAction(projectPath);
+            await loadManifest();
+        } catch (error) {
+            console.error('Failed to refresh project files:', error);
+        } finally {
+            setIsRefreshing(false);
+        }
+    }, [isRefreshing, loadManifest, projectPath]);
 
     return (
         <div
@@ -50,26 +68,31 @@ export function Explorer() {
                     padding: `0 ${12 * uiScale}px`,
                 }}
             >
-                EXPLORER
+                <span>EXPLORER</span>
+                <button
+                    className="toolbar-btn"
+                    disabled={!projectPath || isRefreshing}
+                    onClick={() => { void handleRefreshProject(); }}
+                    style={{
+                        alignItems: 'center',
+                        display: 'inline-flex',
+                        justifyContent: 'center',
+                        marginLeft: 'auto',
+                        padding: `${4 * uiScale}px`,
+                    }}
+                    title="Refresh Project Files"
+                    type="button"
+                >
+                    <RefreshCcw size={13 * uiScale} />
+                </button>
             </div>
 
             {projectPath ? (
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <div
-                        style={{
-                            color: t.text.muted,
-                            fontSize: '0.85em',
-                            fontWeight: 'bold',
-                            marginBottom: '8px',
-                            padding: `0 ${12 * uiScale}px`,
-                            textTransform: 'uppercase',
-                        }}
-                    >
-                        {projectPath.split('\\').pop()?.split('/').pop()}
-                    </div>
+                    <ProjectRootNode projectPath={projectPath} uiScale={uiScale} />
 
                     {files.map((file) => (
-                        <FileNode entry={file} key={`${projectPath}:${file.name}:${treeRevision}`} parentPath={projectPath} />
+                        <FileNode entry={file} key={`${projectPath}:${file.name}:${treeRevision}`} level={1} parentPath={projectPath} />
                     ))}
                 </div>
             ) : (
@@ -107,7 +130,7 @@ function FileNode({
     const [renameDraft, setRenameDraft] = useState(entry.name);
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
-    const [createMode, setCreateMode] = useState<'file' | 'folder'>();
+    const [createMode, setCreateMode] = useState<CreateMode>();
     const [createDraft, setCreateDraft] = useState('');
     const [createTargetDirectory, setCreateTargetDirectory] = useState<string>();
 
@@ -200,11 +223,11 @@ function FileNode({
         setIsRenaming(false);
     };
 
-    const startCreate = async (mode: 'file' | 'folder') => {
+    const startCreate = async (mode: CreateMode) => {
         const baseDirectory = entry.isDirectory ? fullPath : await fsDirname(fullPath);
         setCreateTargetDirectory(baseDirectory);
         setCreateMode(mode);
-        setCreateDraft(mode === 'file' ? 'new-file.json' : 'new-folder');
+        setCreateDraft(getCreateDraft(mode));
         if (entry.isDirectory && !isOpen && fullPath) {
             setPathExpanded(fullPath, true);
         }
@@ -218,8 +241,8 @@ function FileNode({
             return;
         }
 
-        await (createMode === 'file'
-            ? createFileInDirectory(createTargetDirectory, name, '')
+        await (isFileCreateMode(createMode)
+            ? createFileInDirectory(createTargetDirectory, name, getCreateFileContent(createMode))
             : createFolderInDirectory(createTargetDirectory, name));
 
         setCreateMode(undefined);
@@ -266,12 +289,20 @@ function FileNode({
                             await duplicatePath(fullPath);
                             break;
                         }
-                        case 'newFile': {
-                            await startCreate('file');
-                            break;
-                        }
                         case 'newFolder': {
                             await startCreate('folder');
+                            break;
+                        }
+                        case 'newJson': {
+                            await startCreate('json');
+                            break;
+                        }
+                        case 'newScene': {
+                            await startCreate('scene');
+                            break;
+                        }
+                        case 'newText': {
+                            await startCreate('text');
                             break;
                         }
                         case 'open': {
@@ -464,6 +495,41 @@ function FileNode({
     );
 }
 
+function getCreateDraft(mode: CreateMode): string {
+    switch (mode) {
+        case 'folder': {
+            return 'new-folder';
+        }
+        case 'json': {
+            return 'new-data.json';
+        }
+        case 'scene': {
+            return 'new-scene.json';
+        }
+        case 'text': {
+            return 'notes.txt';
+        }
+    }
+}
+
+function getCreateFileContent(mode: CreateFileMode): string {
+    switch (mode) {
+        case 'json': {
+            return '{}\n';
+        }
+        case 'scene': {
+            return '[]\n';
+        }
+        case 'text': {
+            return '';
+        }
+    }
+}
+
+function getPathBasename(path: string): string {
+    return path.split(/[\\/]/).findLast(Boolean) || path;
+}
+
 function groupCompanionDescriptors(entries: FsDirectoryEntry[]): {
     descriptorChildrenByParent: Map<string, FsDirectoryEntry[]>;
     topLevelEntries: FsDirectoryEntry[];
@@ -497,6 +563,145 @@ function isCompanionAsset(entry: FsDirectoryEntry): boolean {
     if (entry.isDirectory) return false;
     const extension = getExtension(entry.name);
     return IMG_EXT.has(extension) || AUDIO_EXT.has(extension);
+}
+
+function isFileCreateMode(mode: CreateMode): mode is CreateFileMode {
+    return mode !== 'folder';
+}
+
+function ProjectRootNode({ projectPath, uiScale }: { projectPath: string; uiScale: number }) {
+    const [context, setContext] = useState<ExplorerContextMenuState>();
+    const [createMode, setCreateMode] = useState<CreateMode>();
+    const [createDraft, setCreateDraft] = useState('');
+    const projectName = getPathBasename(projectPath);
+
+    useEffect(() => {
+        if (!context) return;
+        const onDown = () => setContext(undefined);
+        const onEscape = (event: KeyboardEvent) => event.key === 'Escape' && setContext(undefined);
+        document.addEventListener('mousedown', onDown);
+        document.addEventListener('keydown', onEscape);
+        return () => {
+            document.removeEventListener('mousedown', onDown);
+            document.removeEventListener('keydown', onEscape);
+        };
+    }, [context]);
+
+    const startCreate = (mode: CreateMode) => {
+        setCreateMode(mode);
+        setCreateDraft(getCreateDraft(mode));
+    };
+
+    const commitCreate = async () => {
+        if (!createMode) return;
+        const name = createDraft.trim();
+        if (!name) {
+            setCreateMode(undefined);
+            return;
+        }
+
+        await (isFileCreateMode(createMode)
+            ? createFileInDirectory(projectPath, name, getCreateFileContent(createMode))
+            : createFolderInDirectory(projectPath, name));
+
+        setCreateMode(undefined);
+        setCreateDraft('');
+    };
+
+    const onContextMenu = (event: React.MouseEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        setContext({
+            canDelete: false,
+            canDuplicate: false,
+            canOpen: false,
+            canOpenAudiosheet: false,
+            canOpenSpritesheet: false,
+            canRename: false,
+            isDirectory: true,
+            name: projectName,
+            onAction: (action) => {
+                void (async () => {
+                    switch (action) {
+                        case 'newFolder': {
+                            startCreate('folder');
+                            break;
+                        }
+                        case 'newJson': {
+                            startCreate('json');
+                            break;
+                        }
+                        case 'newScene': {
+                            startCreate('scene');
+                            break;
+                        }
+                        case 'newText': {
+                            startCreate('text');
+                            break;
+                        }
+                        case 'reveal': {
+                            await revealPathInSystem(projectPath);
+                            break;
+                        }
+                    }
+                })();
+            },
+            onClose: () => setContext(undefined),
+            path: projectPath,
+            x: event.clientX,
+            y: event.clientY,
+        });
+    };
+
+    return (
+        <div>
+            <div
+                onContextMenu={onContextMenu}
+                style={{
+                    alignItems: 'center',
+                    borderRadius: '3px',
+                    color: t.text.normal,
+                    cursor: 'context-menu',
+                    display: 'flex',
+                    fontSize: 'inherit',
+                    fontWeight: 'bold',
+                    gap: `${6 * uiScale}px`,
+                    padding: `${4 * uiScale}px ${8 * uiScale}px`,
+                }}
+            >
+                <ChevronDown color={t.text.muted} size={14 * uiScale} />
+                <FolderOpen color={t.icon.manifest} size={14 * uiScale} />
+                <span>{projectName}</span>
+            </div>
+
+            <ExplorerContextMenu menu={context} uiScale={uiScale} />
+
+            {createMode && (
+                <div
+                    style={{
+                        alignItems: 'center',
+                        display: 'flex',
+                        gap: `${6 * uiScale}px`,
+                        padding: `${4 * uiScale}px ${8 * uiScale}px`,
+                        paddingLeft: `${20 * uiScale}px`,
+                    }}
+                >
+                    <span style={{ width: 14 * uiScale }} />
+                    <InlineNameInput
+                        onCancel={() => {
+                            setCreateMode(undefined);
+                            setCreateDraft('');
+                        }}
+                        onChange={setCreateDraft}
+                        onSubmit={commitCreate}
+                        uiScale={uiScale}
+                        value={createDraft}
+                    />
+                </div>
+            )}
+        </div>
+    );
 }
 
 const AUDIO_EXTENSIONS = new Set(['.m4a', '.mp3', '.ogg', '.wav']);

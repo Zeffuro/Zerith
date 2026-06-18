@@ -111,7 +111,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
 
         const displayName = charData?.displayName || (speaker || 'Narrator');
 
-        this.history.push(displayName, command.text);
+        this.history.push(displayName, resolvedText);
 
         this.renderer.setSpeaker(displayName, charData?.nameColor || '#7A6EF6');
 
@@ -123,7 +123,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
             portraitSide: charData?.portraitUrl ? portraitSide : undefined,
             portraitUrl: charData?.portraitUrl,
             speaker: speaker || displayName,
-            text: command.text,
+            text: resolvedText,
         };
 
         const fullCharData = speakerKey ? this.config.characters?.[speakerKey] : undefined;
