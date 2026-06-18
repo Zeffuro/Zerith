@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { CheckSquare, Square, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { ReferenceLocation } from '../../services/referenceScanner';
 
@@ -12,6 +13,12 @@ import { useReferenceStore } from '../../store/useReferenceStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { ConfirmDialog } from '../ConfirmDialog';
+import {
+    areAllUnusedAssetsSelected,
+    getSelectedUnusedAssets,
+    reconcileUnusedAssetSelection,
+    toggleUnusedAssetSelection,
+} from './assetDependencyPanelModel';
 
 export function AssetDependencyPanel() {
     const uiScale = useSettingsStore((state) => state.uiScale);
@@ -20,12 +27,23 @@ export function AssetDependencyPanel() {
     const assetInventory = useReferenceStore((state) => state.assetInventory);
 
     const [isDeletingUnused, setIsDeletingUnused] = useState(false);
+    const [selectedUnusedAssets, setSelectedUnusedAssets] = useState<string[]>([]);
     const [showDeleteUnusedDialog, setShowDeleteUnusedDialog] = useState(false);
 
     const dependencyGraph = useMemo(
         () => createAssetDependencyGraph(result.assetFiles, assetInventory),
         [assetInventory, result.assetFiles],
     );
+    const selectedUnusedAssetUrls = useMemo(
+        () => getSelectedUnusedAssets(selectedUnusedAssets, dependencyGraph.unused),
+        [dependencyGraph.unused, selectedUnusedAssets],
+    );
+    const selectedUnusedAssetSet = useMemo(() => new Set(selectedUnusedAssetUrls), [selectedUnusedAssetUrls]);
+    const allUnusedAssetsSelected = areAllUnusedAssetsSelected(selectedUnusedAssetUrls, dependencyGraph.unused);
+
+    useEffect(() => {
+        setSelectedUnusedAssets((current) => reconcileUnusedAssetSelection(current, dependencyGraph.unused));
+    }, [dependencyGraph.unused]);
 
     if (!projectPath) {
         return <div style={{ color: t.text.faint, fontStyle: 'italic', padding: `${12 * uiScale}px` }}>Open a project to analyze assets.</div>;
@@ -53,19 +71,23 @@ export function AssetDependencyPanel() {
 
             <button
                 className="toolbar-btn"
-                disabled={dependencyGraph.unused.length === 0 || isDeletingUnused}
+                disabled={selectedUnusedAssetUrls.length === 0 || isDeletingUnused}
                 onClick={() => setShowDeleteUnusedDialog(true)}
                 style={{
+                    alignItems: 'center',
                     border: `1px solid ${t.border.subtle}`,
                     borderRadius: t.radius.sm,
-                    color: dependencyGraph.unused.length === 0 ? t.text.faint : t.text.primary,
-                    cursor: dependencyGraph.unused.length === 0 || isDeletingUnused ? 'not-allowed' : 'pointer',
+                    color: selectedUnusedAssetUrls.length === 0 ? t.text.faint : t.text.primary,
+                    cursor: selectedUnusedAssetUrls.length === 0 || isDeletingUnused ? 'not-allowed' : 'pointer',
+                    display: 'inline-flex',
+                    gap: `${6 * uiScale}px`,
                     padding: `${6 * uiScale}px ${8 * uiScale}px`,
                     textAlign: 'left',
                 }}
                 type="button"
             >
-                {isDeletingUnused ? 'Deleting unused assets...' : `Delete unused assets (${dependencyGraph.unused.length})`}
+                <Trash2 size={14 * uiScale} />
+                <span>{isDeletingUnused ? 'Deleting unused assets...' : `Delete selected unused assets (${selectedUnusedAssetUrls.length})`}</span>
             </button>
 
             <section style={sectionStyle(uiScale)}>
@@ -86,12 +108,51 @@ export function AssetDependencyPanel() {
             </section>
 
             <section style={sectionStyle(uiScale)}>
-                <div style={sectionHeaderStyle(uiScale)}>Unused assets</div>
+                <div style={sectionTitleRowStyle(uiScale)}>
+                    <div style={sectionHeaderStyle(uiScale)}>Unused assets</div>
+                    <div style={{ display: 'flex', gap: `${6 * uiScale}px` }}>
+                        <button
+                            className="toolbar-btn"
+                            disabled={dependencyGraph.unused.length === 0 || allUnusedAssetsSelected}
+                            onClick={() => setSelectedUnusedAssets([...dependencyGraph.unused])}
+                            style={miniButtonStyle(uiScale, dependencyGraph.unused.length === 0 || allUnusedAssetsSelected)}
+                            title="Select all unused assets"
+                            type="button"
+                        >
+                            <CheckSquare size={13 * uiScale} />
+                            <span>Select all</span>
+                        </button>
+                        <button
+                            className="toolbar-btn"
+                            disabled={selectedUnusedAssetUrls.length === 0}
+                            onClick={() => setSelectedUnusedAssets([])}
+                            style={miniButtonStyle(uiScale, selectedUnusedAssetUrls.length === 0)}
+                            title="Clear unused asset selection"
+                            type="button"
+                        >
+                            <Square size={13 * uiScale} />
+                            <span>Clear</span>
+                        </button>
+                    </div>
+                </div>
+                <div style={{ color: t.text.faint, fontSize: `${11 * uiScale}px` }}>
+                    Selected for cleanup: {selectedUnusedAssetUrls.length}
+                </div>
                 {dependencyGraph.unused.length === 0 && (
                     <div style={{ color: t.text.faint, fontStyle: 'italic' }}>No unused assets detected.</div>
                 )}
                 {dependencyGraph.unused.map((assetUrl) => (
-                    <div key={`unused-${assetUrl}`} style={unusedRowStyle(uiScale)}>{assetUrl}</div>
+                    <label key={`unused-${assetUrl}`} style={unusedRowStyle(uiScale, selectedUnusedAssetSet.has(assetUrl))}>
+                        <input
+                            checked={selectedUnusedAssetSet.has(assetUrl)}
+                            onChange={(event) => {
+                                const checked = event.currentTarget.checked;
+                                setSelectedUnusedAssets((current) => toggleUnusedAssetSelection(current, assetUrl, checked));
+                            }}
+                            type="checkbox"
+                        />
+                        <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{assetUrl}</span>
+                    </label>
                 ))}
             </section>
 
@@ -116,7 +177,7 @@ export function AssetDependencyPanel() {
                 cancelText="Cancel"
                 confirmText={isDeletingUnused ? 'Deleting...' : 'Delete'}
                 danger
-                message={`Delete ${dependencyGraph.unused.length} unused assets? This cannot be undone.`}
+                message={`Delete ${selectedUnusedAssetUrls.length} selected unused asset${selectedUnusedAssetUrls.length === 1 ? '' : 's'}? This cannot be undone.`}
                 onCancel={() => {
                     if (isDeletingUnused) return;
                     setShowDeleteUnusedDialog(false);
@@ -126,12 +187,13 @@ export function AssetDependencyPanel() {
                         setIsDeletingUnused(true);
                         try {
                             const filePaths = await Promise.all(
-                                dependencyGraph.unused.map((assetUrl) => {
+                                selectedUnusedAssetUrls.map((assetUrl) => {
                                     const normalizedAsset = assetUrl.replace(/^\/+/, '');
                                     return fsJoin(projectPath, normalizedAsset);
                                 }),
                             );
                             await deletePaths(filePaths);
+                            setSelectedUnusedAssets([]);
                         } finally {
                             setIsDeletingUnused(false);
                             setShowDeleteUnusedDialog(false);
@@ -240,6 +302,21 @@ function LocationRow({
     );
 }
 
+function miniButtonStyle(uiScale: number, disabled: boolean) {
+    return {
+        alignItems: 'center',
+        border: `1px solid ${t.border.subtle}`,
+        borderRadius: t.radius.sm,
+        color: disabled ? t.text.faint : t.text.normal,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        display: 'inline-flex',
+        fontSize: `${11 * uiScale}px`,
+        gap: `${4 * uiScale}px`,
+        padding: `${4 * uiScale}px ${6 * uiScale}px`,
+        whiteSpace: 'nowrap' as const,
+    };
+}
+
 function sectionHeaderStyle(uiScale: number) {
     return {
         color: t.text.primary,
@@ -259,12 +336,25 @@ function sectionStyle(uiScale: number) {
     };
 }
 
-function unusedRowStyle(uiScale: number) {
+function sectionTitleRowStyle(uiScale: number) {
     return {
+        alignItems: 'center',
+        display: 'flex',
+        gap: `${8 * uiScale}px`,
+        justifyContent: 'space-between',
+    };
+}
+
+function unusedRowStyle(uiScale: number, selected: boolean) {
+    return {
+        alignItems: 'center',
+        background: selected ? t.bg.selected : t.bg.panel,
         border: `1px solid ${t.border.subtle}`,
         borderRadius: t.radius.sm,
         color: t.text.normal,
+        display: 'flex',
         fontSize: `${12 * uiScale}px`,
+        gap: `${6 * uiScale}px`,
         padding: `${6 * uiScale}px ${8 * uiScale}px`,
     };
 }

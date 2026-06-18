@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useBackdropDismissal } from '../../hooks/useBackdropDismissal';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { styles } from '../../theme/styleHelpers';
+import { clamp } from '../../utils/math';
 import {
     getFrameSizeFromGridSize,
     getGridSizeFromFrameSize,
@@ -267,7 +268,10 @@ export function SpritesheetAutoSliceDialog({
                                 disabled={!useChromaKey}
                                 max={100}
                                 min={10}
-                                onChange={(event) => setChromaTolerance(clamp(event.target.valueAsNumber, 10, 100))}
+                                onChange={(event) => {
+                                    const tolerance = event.currentTarget.valueAsNumber;
+                                    setChromaTolerance(Number.isFinite(tolerance) ? clamp(tolerance, 10, 100) : 10);
+                                }}
                                 type="range"
                                 value={chromaTolerance}
                             />
@@ -295,10 +299,4 @@ export function SpritesheetAutoSliceDialog({
 function basename(path: string): string {
     return path.split(/[\\/]/).pop() ?? path;
 }
-
-function clamp(value: number, minimum: number, maximum: number): number {
-    if (!Number.isFinite(value)) return minimum;
-    return Math.min(maximum, Math.max(minimum, value));
-}
-
 

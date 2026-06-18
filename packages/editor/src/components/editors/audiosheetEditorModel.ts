@@ -1,5 +1,7 @@
 import { type AudiosheetDescriptor } from 'core';
 
+import { clamp } from '../../utils/math';
+
 export type AudiosheetCue = AudiosheetDescriptor['cues'][string];
 
 export type CueOverlap = {
@@ -199,9 +201,3 @@ export function waveformXToTime(x: number, durationSeconds: number, width: numbe
     const ratio = clamp(x / safeWidth, 0, 1);
     return ratio * Math.max(0, durationSeconds);
 }
-
-
-function clamp(value: number, min: number, max: number): number {
-    return Math.min(max, Math.max(min, value));
-}
-

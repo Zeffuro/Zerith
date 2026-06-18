@@ -1,3 +1,5 @@
+import { clamp } from '../../utils/math';
+
 export function scrollRowIntoContainer(row: HTMLDivElement, container: HTMLDivElement): void {
     const rowRect = row.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
@@ -18,11 +20,5 @@ export function scrollRowIntoContainer(row: HTMLDivElement, container: HTMLDivEl
         behavior: 'smooth',
         top: clampedTop,
     });
-}
-
-function clamp(value: number, min: number, max: number): number {
-    if (value < min) return min;
-    if (value > max) return max;
-    return value;
 }
 

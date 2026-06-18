@@ -8,6 +8,7 @@ import {
 
 import { useBackdropDismissal } from '../../hooks/useBackdropDismissal';
 import { editorTheme as t } from '../../theme/editorTheme';
+import { clamp } from '../../utils/math';
 
 export type SettingsModalWindowLayout = {
     beginDrag: (event: ReactMouseEvent<HTMLDivElement>) => void;
@@ -196,12 +197,6 @@ export function SettingsModalWindow({ children, onBackdropClick, uiScale }: Sett
             </div>
         </div>
     );
-}
-
-function clamp(value: number, min: number, max: number): number {
-    if (value < min) return min;
-    if (value > max) return max;
-    return value;
 }
 
 function clampDragOffset(x: number, y: number, modalWidth: number, modalHeight: number): { x: number; y: number } {

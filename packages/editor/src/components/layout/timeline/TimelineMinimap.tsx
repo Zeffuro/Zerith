@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 
 import { editorTheme as t } from '../../../theme/editorTheme';
+import { clamp } from '../../../utils/math';
 
 export type TimelineMinimapRow = {
     color: string;
@@ -242,10 +243,6 @@ export function TimelineMinimap({
             />
         </div>
     );
-}
-
-function clamp(value: number, min: number, max: number): number {
-    return Math.max(min, Math.min(max, value));
 }
 
 function LegendRow({
