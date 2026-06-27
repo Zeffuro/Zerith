@@ -66,4 +66,49 @@ describe('TypewriterController', () => {
         expect(frames).toContain('<b>Hi</b>');
         expect(messageText).toBe('<b>Hi</b>');
     });
+
+    it('continues rendering when cosmetic blip playback fails', async () => {
+        let messageText = '';
+
+        await expect(new TypewriterController().run({
+            blipUrl: '/assets/sfx/missing.wav',
+            consumeSkip: () => false,
+            createPromptBlinker: () => ({ destroy: vi.fn() }),
+            getMessageText: () => messageText,
+            initialSpeed: 0,
+            playVoice: vi.fn(() => Promise.reject(new Error('Unable to decode audio data'))),
+            setMessageText: (text) => {
+                messageText = text;
+            },
+            signal: new AbortController().signal,
+            tokens: [{ type: 'text', val: 'Hi' }],
+            waitForPromptInput: vi.fn(),
+        })).resolves.toBeUndefined();
+
+        expect(messageText).toBe('Hi');
+    });
+
+    it('skips typewriter and wait delays when reduced motion is enabled', async () => {
+        let messageText = '';
+
+        await new TypewriterController().run({
+            consumeSkip: () => false,
+            createPromptBlinker: () => ({ destroy: vi.fn() }),
+            getMessageText: () => messageText,
+            initialSpeed: 1000,
+            playVoice: vi.fn(),
+            reducedMotion: true,
+            setMessageText: (text) => {
+                messageText = text;
+            },
+            signal: new AbortController().signal,
+            tokens: [
+                { ms: 1000, type: 'wait' },
+                { type: 'text', val: 'Hi' },
+            ],
+            waitForPromptInput: vi.fn(),
+        });
+
+        expect(messageText).toBe('Hi');
+    });
 });

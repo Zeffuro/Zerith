@@ -1,97 +1,113 @@
-[
-    {
-        "name": "court_entry",
-        "type": "call"
-    },
-    {
-        "action": "show",
-        "id": "phoenix",
-        "pose": "default",
-        "type": "sprite",
-        "x": 300,
-        "y": 720
-    },
-    {
-        "action": "animate",
-        "animation": "idle_blink",
-        "id": "phoenix",
-        "type": "sprite"
-    },
-    {
-        "speaker": "judge",
-        "text": "Is the defense ready?",
-        "type": "dialogue"
-    },
-    {
-        "key": "attorney_badge",
-        "source": "items",
-        "type": "if",
-        "onTrue": [],
-        "onFalse": []
-    },
-    {
-        "speaker": "judge",
-        "text": "Very well. The autopsy report has been submitted into evidence.",
-        "type": "dialogue"
-    },
-    {
-        "action": "add",
-        "id": "autopsy_report",
-        "type": "item"
-    },
-    {
-        "name": "interrogation_start",
-        "type": "label"
-    },
-    {
-        "action": "pose",
-        "id": "phoenix",
-        "pose": "thinking",
-        "type": "sprite"
-    },
-    {
-        "speaker": "phoenix",
-        "text": "Tell me what happened.",
-        "type": "dialogue"
-    },
-    {
-        "action": "animate",
-        "animation": "idle_blink",
-        "id": "phoenix",
-        "type": "sprite"
-    },
-    {
-        "speaker": "Witness",
-        "text": "I don't remember.",
-        "type": "dialogue"
-    },
-    {
-        "options": [
-            {
-                "commands": [
-                    {
-                        "key": "press_count",
-                        "op": "add",
-                        "type": "set",
-                        "value": 1
-                    },
-                    {
-                        "label": "interrogation_start",
-                        "type": "goto"
-                    }
-                ],
-                "label": "Press further"
-            },
-            {
-                "commands": [],
-                "label": "Move on"
-            }
-        ],
-        "type": "choice"
-    },
-    {
-        "speaker": "judge",
-        "text": "Dear Phoenix, I regret to inform you...{wait:1000}\nYou are truly {wait:500}<b>{color='red'}AN IDIOT{/color}</b>",
-        "type": "dialogue"
-    }
-]
+{
+    "$schema": "zerith/scene",
+    "commands": [
+        {
+            "name": "court_entry",
+            "type": "call"
+        },
+        {
+            "action": "show",
+            "id": "phoenix",
+            "pose": "default",
+            "type": "sprite",
+            "x": 300,
+            "y": 720
+        },
+        {
+            "action": "animate",
+            "animation": "idle_blink",
+            "id": "phoenix",
+            "type": "sprite"
+        },
+        {
+            "speaker": "judge",
+            "text": "Is the defense ready?",
+            "type": "dialogue",
+            "lineId": "scene.courtroom.line.004"
+        },
+        {
+            "key": "attorney_badge",
+            "source": "items",
+            "type": "if",
+            "onTrue": [],
+            "onFalse": []
+        },
+        {
+            "speaker": "judge",
+            "text": "Very well. The autopsy report has been submitted into evidence.",
+            "type": "dialogue",
+            "lineId": "scene.courtroom.line.006"
+        },
+        {
+            "action": "add",
+            "id": "autopsy_report",
+            "type": "item"
+        },
+        {
+            "name": "interrogation_start",
+            "type": "label"
+        },
+        {
+            "action": "pose",
+            "id": "phoenix",
+            "pose": "thinking",
+            "type": "sprite"
+        },
+        {
+            "speaker": "phoenix",
+            "text": "Tell me what happened.",
+            "type": "dialogue",
+            "lineId": "scene.courtroom.line.010"
+        },
+        {
+            "action": "animate",
+            "animation": "idle_blink",
+            "id": "phoenix",
+            "type": "sprite"
+        },
+        {
+            "speaker": "Witness",
+            "text": "I don't remember.",
+            "type": "dialogue",
+            "lineId": "scene.courtroom.line.012"
+        },
+        {
+            "options": [
+                {
+                    "commands": [
+                        {
+                            "key": "press_count",
+                            "op": "add",
+                            "type": "set",
+                            "value": 1
+                        },
+                        {
+                            "label": "interrogation_start",
+                            "type": "goto"
+                        }
+                    ],
+                    "label": "Press further",
+                    "id": "scene.courtroom.choice.013.option.001",
+                    "labelId": "scene.courtroom.choice.013.option.001.label"
+                },
+                {
+                    "commands": [],
+                    "label": "Move on",
+                    "id": "scene.courtroom.choice.013.option.002",
+                    "labelId": "scene.courtroom.choice.013.option.002.label"
+                }
+            ],
+            "type": "choice",
+            "id": "scene.courtroom.choice.013"
+        },
+        {
+            "speaker": "judge",
+            "text": "Dear Phoenix, I regret to inform you...{wait:1000}\nYou are truly {wait:500}<b>{color='red'}AN IDIOT{/color}</b>",
+            "type": "dialogue",
+            "lineId": "scene.courtroom.line.014"
+        }
+    ],
+    "id": "courtroom",
+    "localeNamespace": "scene.courtroom",
+    "schemaVersion": 2
+}

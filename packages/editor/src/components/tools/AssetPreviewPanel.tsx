@@ -1,17 +1,27 @@
-import { Pause, Play } from 'lucide-react';
+import { Download, Pause, Play, Save, X } from 'lucide-react';
 import { type PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAssetOptions } from '../../hooks/useAssetOptions';
+import { saveAudioRegionWavToProject } from '../../services/audioRegionExport';
+import { refreshProjectTree } from '../../services/explorerFileActions';
+import { refreshReferenceScannerState } from '../../services/referenceScanner';
 import { releaseEditorAssetUrl, resolveEditorAssetUrl } from '../../services/runtime/assetUrls';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { AUDIO_EXT, getExtension, IMG_EXT } from '../../utils/assetTypes';
 import { closeAudioContext, computeAudioPeaks, decodeAudioSource } from '../../utils/audio';
+import {
+    createAudioRegionExportFileName,
+    createAudioRegionFromSelection,
+    encodeAudioBufferRegionToWav,
+    type NormalizedAudioRegion,
+} from '../../utils/audioRegions';
 import { formatTimestamp } from '../editors/audiosheetEditorModel';
 import { AudioWaveformCanvas } from '../editors/AudioWaveformCanvas';
 
 const WAVEFORM_BINS = 420;
+type AudioWaveformPointerMode = 'region' | 'scrub';
 
 export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
     const projectPath = useProjectStore((s) => s.projectPath);
@@ -19,13 +29,17 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
     const selectedAssetPath = useEditorStore((s) => s.selectedAssetPath);
     const audioReference = useRef<HTMLAudioElement>(null);
     const audioContextReference = useRef<AudioContext | undefined>(undefined);
-    const audioScrubDragReference = useRef(false);
+    const audioRegionAnchorReference = useRef<number | undefined>(undefined);
+    const audioWaveformPointerModeReference = useRef<AudioWaveformPointerMode | undefined>(undefined);
 
     const [value, setValue] = useState('');
     const [audioBuffer, setAudioBuffer] = useState<AudioBuffer>();
     const [audioError, setAudioError] = useState<string>();
+    const [audioExportMessage, setAudioExportMessage] = useState<string>();
     const [audioIsPlaying, setAudioIsPlaying] = useState(false);
     const [audioLoading, setAudioLoading] = useState(false);
+    const [audioSavingSelection, setAudioSavingSelection] = useState(false);
+    const [audioSelectionRegion, setAudioSelectionRegion] = useState<NormalizedAudioRegion>();
     const [audioScrub, setAudioScrub] = useState(0);
     const [imageSize, setImageSize] = useState<{ height: number; width: number }>();
     const [resolvedSource, setResolvedSource] = useState('');
@@ -33,6 +47,7 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
     useEffect(() => {
         if (!selectedAssetPath) return;
         const frame = requestAnimationFrame(() => {
+            setAudioExportMessage(undefined);
             setValue(selectedAssetPath);
         });
         return () => cancelAnimationFrame(frame);
@@ -53,7 +68,11 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
         setAudioError(undefined);
         setAudioIsPlaying(false);
         setAudioLoading(false);
+        setAudioSavingSelection(false);
+        setAudioSelectionRegion(undefined);
         setAudioScrub(0);
+        audioRegionAnchorReference.current = undefined;
+        audioWaveformPointerModeReference.current = undefined;
         audioReference.current?.pause();
         if (!isAudio || !sourceForDecoding) return;
 
@@ -116,14 +135,22 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
     }, []);
 
     const audioDuration = audioBuffer?.duration ?? audioReference.current?.duration ?? 0;
+    const audioSelectionCues = audioSelectionRegion
+        ? [{ end: audioSelectionRegion.end, name: 'selection', start: audioSelectionRegion.start }]
+        : [];
     const iconSize = Math.max(14, Math.round(15 * uiScale));
 
-    const seekAudioFromClientX = (canvas: HTMLCanvasElement, clientX: number) => {
+    const getWaveformSecondsFromClientX = (canvas: HTMLCanvasElement, clientX: number) => {
         const duration = audioBuffer?.duration ?? audioReference.current?.duration ?? 0;
         if (!duration) return;
         const bounds = canvas.getBoundingClientRect();
         const ratio = Math.min(1, Math.max(0, (clientX - bounds.left) / Math.max(1, bounds.width)));
-        const nextTime = ratio * duration;
+        return ratio * duration;
+    };
+
+    const seekAudioFromClientX = (canvas: HTMLCanvasElement, clientX: number) => {
+        const nextTime = getWaveformSecondsFromClientX(canvas, clientX);
+        if (nextTime === undefined) return;
         setAudioScrub(nextTime);
         if (audioReference.current) {
             audioReference.current.currentTime = nextTime;
@@ -142,23 +169,86 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
         audio.pause();
     };
 
+    const handleExportAudioSelection = () => {
+        if (!audioBuffer || !audioSelectionRegion) return;
+
+        const wavBytes = encodeAudioBufferRegionToWav(audioBuffer, audioSelectionRegion);
+        const wavBuffer = new ArrayBuffer(wavBytes.byteLength);
+        new Uint8Array(wavBuffer).set(wavBytes);
+        const fileName = createAudioRegionExportFileName(value, audioSelectionRegion);
+        downloadBlob(new Blob([wavBuffer], { type: 'audio/wav' }), fileName);
+    };
+
+    const handleSaveAudioSelectionToProject = () => {
+        if (!audioBuffer || !audioSelectionRegion || !projectPath) return;
+
+        void (async () => {
+            try {
+                setAudioSavingSelection(true);
+                setAudioExportMessage(undefined);
+                const wavBytes = encodeAudioBufferRegionToWav(audioBuffer, audioSelectionRegion);
+                const result = await saveAudioRegionWavToProject(projectPath, {
+                    region: audioSelectionRegion,
+                    sourcePath: value,
+                    wavBytes,
+                });
+                await refreshProjectTree();
+                await refreshReferenceScannerState();
+                setValue(result.assetUrl);
+                setAudioExportMessage(`Saved ${result.assetUrl}${result.collisionResolved ? ' (renamed)' : ''}.`);
+            } catch (error) {
+                setAudioExportMessage(error instanceof Error ? error.message : String(error));
+            } finally {
+                setAudioSavingSelection(false);
+            }
+        })();
+    };
+
     const handleWaveformPointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
         if (!audioDuration) return;
         event.preventDefault();
         event.currentTarget.setPointerCapture(event.pointerId);
-        audioScrubDragReference.current = true;
+        const seconds = getWaveformSecondsFromClientX(event.currentTarget, event.clientX);
+        if (seconds === undefined) return;
+
+        if (event.shiftKey && audioBuffer) {
+            audioWaveformPointerModeReference.current = 'region';
+            audioRegionAnchorReference.current = seconds;
+            setAudioSelectionRegion(createAudioRegionFromSelection(seconds, seconds, audioDuration));
+            return;
+        }
+
+        audioWaveformPointerModeReference.current = 'scrub';
         seekAudioFromClientX(event.currentTarget, event.clientX);
     };
 
     const handleWaveformPointerMove = (event: PointerEvent<HTMLCanvasElement>) => {
-        if (!audioScrubDragReference.current) return;
+        const pointerMode = audioWaveformPointerModeReference.current;
+        if (!pointerMode) return;
         event.preventDefault();
+        if (pointerMode === 'region') {
+            const anchor = audioRegionAnchorReference.current;
+            const seconds = getWaveformSecondsFromClientX(event.currentTarget, event.clientX);
+            if (anchor === undefined || seconds === undefined) return;
+            setAudioSelectionRegion(createAudioRegionFromSelection(anchor, seconds, audioDuration));
+            return;
+        }
+
         seekAudioFromClientX(event.currentTarget, event.clientX);
     };
 
     const handleWaveformPointerUp = (event: PointerEvent<HTMLCanvasElement>) => {
-        if (!audioScrubDragReference.current) return;
-        audioScrubDragReference.current = false;
+        const pointerMode = audioWaveformPointerModeReference.current;
+        if (!pointerMode) return;
+        if (pointerMode === 'region') {
+            const anchor = audioRegionAnchorReference.current;
+            const seconds = getWaveformSecondsFromClientX(event.currentTarget, event.clientX);
+            if (anchor !== undefined && seconds !== undefined) {
+                setAudioSelectionRegion(createAudioRegionFromSelection(anchor, seconds, audioDuration));
+            }
+        }
+        audioWaveformPointerModeReference.current = undefined;
+        audioRegionAnchorReference.current = undefined;
         if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId);
         }
@@ -170,7 +260,10 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
 
             <input
                 list="asset-preview-options"
-                onChange={(event) => setValue(event.target.value)}
+                onChange={(event) => {
+                    setAudioExportMessage(undefined);
+                    setValue(event.target.value);
+                }}
                 placeholder="/assets/..."
                 style={{
                     background: t.bg.input,
@@ -268,8 +361,47 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
                                 {formatTimestamp(audioScrub)} / {formatTimestamp(audioDuration)}
                             </span>
                         </div>
+                        <div style={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: `${8 * uiScale}px` }}>
+                            <button
+                                disabled={!audioBuffer || !audioSelectionRegion}
+                                onClick={handleExportAudioSelection}
+                                style={audioActionButtonStyle(uiScale, !audioBuffer || !audioSelectionRegion)}
+                                title="Export selected audio region as WAV"
+                                type="button"
+                            >
+                                <Download size={iconSize} />
+                                <span>Export WAV</span>
+                            </button>
+                            <button
+                                disabled={!projectPath || !audioBuffer || !audioSelectionRegion || audioSavingSelection}
+                                onClick={handleSaveAudioSelectionToProject}
+                                style={audioActionButtonStyle(uiScale, !projectPath || !audioBuffer || !audioSelectionRegion || audioSavingSelection)}
+                                title="Save selected audio region to the project"
+                                type="button"
+                            >
+                                <Save size={iconSize} />
+                                <span>{audioSavingSelection ? 'Saving...' : 'Save to Project'}</span>
+                            </button>
+                            <button
+                                disabled={!audioSelectionRegion}
+                                onClick={() => setAudioSelectionRegion(undefined)}
+                                style={audioActionButtonStyle(uiScale, !audioSelectionRegion)}
+                                title="Clear audio selection"
+                                type="button"
+                            >
+                                <X size={iconSize} />
+                            </button>
+                            <span style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
+                                Selection: {audioSelectionRegion ? `${formatTimestamp(audioSelectionRegion.start)} - ${formatTimestamp(audioSelectionRegion.end)}` : 'none'}
+                            </span>
+                            {audioExportMessage ? (
+                                <span style={{ color: audioExportMessage.startsWith('Saved ') ? t.accent.green : t.accent.red, fontSize: `${12 * uiScale}px`, overflowWrap: 'anywhere' }}>
+                                    {audioExportMessage}
+                                </span>
+                            ) : undefined}
+                        </div>
                         <AudioWaveformCanvas
-                            cues={[]}
+                            cues={audioSelectionCues}
                             durationSeconds={audioDuration}
                             height={120}
                             onPointerCancel={handleWaveformPointerUp}
@@ -278,7 +410,7 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
                             onPointerUp={handleWaveformPointerUp}
                             peaks={audioPeaks}
                             scrubSeconds={audioScrub}
-                            selectedCue={undefined}
+                            selectedCue={audioSelectionRegion ? 'selection' : undefined}
                             selectionAnchor={undefined}
                         />
                         <div style={{ color: t.text.muted, display: 'grid', fontSize: `${12 * uiScale}px`, gap: `${4 * uiScale}px`, gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
@@ -301,6 +433,34 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
             </div>
         </div>
     );
+}
+
+function audioActionButtonStyle(uiScale: number, disabled: boolean) {
+    return {
+        alignItems: 'center',
+        background: t.bg.panel,
+        border: `1px solid ${t.border.button}`,
+        borderRadius: t.radius.sm,
+        color: disabled ? t.text.faint : t.text.normal,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        display: 'inline-flex',
+        gap: `${6 * uiScale}px`,
+        minHeight: `${30 * uiScale}px`,
+        opacity: disabled ? 0.55 : 1,
+        padding: `${5 * uiScale}px ${9 * uiScale}px`,
+    };
+}
+
+function downloadBlob(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = url;
+    link.style.display = 'none';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    globalThis.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function resolveAssetSource(value: string, projectPath: string | undefined): string {

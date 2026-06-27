@@ -4,11 +4,18 @@ import {
     type EngineConfig,
     EngineConfigSchema,
     type GameManifest,
+    parseSceneFile,
     resolveManifestValue,
     resolveScenes,
     type Script,
-    validateScript,
 } from 'core';
+
+import { mergeEngineConfigs } from './bootstrapConfig';
+import {
+    createRuntimeContentPrefetcher,
+    loadCompiledContentManifest,
+} from './compiledContentPrefetch';
+import { configurePlayerAccessibilityShell } from './playerAccessibility';
 
 const defaultConfig: EngineConfig = {
     audio: {
@@ -38,10 +45,12 @@ const defaultConfig: EngineConfig = {
 export interface PlayerBootstrapOptions {
     baseUrl?: string;
     canvas: HTMLCanvasElement;
+    compiledContentUrl?: false | string;
     config?: EngineConfig;
     configUrl?: false | string;
-    defaultBlipUrl?: string;
+    defaultBlipUrl?: null | string;
     manifestUrl?: string;
+    prefetchCompiledAssets?: boolean;
     preloadAssets?: boolean;
 }
 
@@ -49,18 +58,24 @@ export async function bootstrapPlayer(options: PlayerBootstrapOptions): Promise<
     const {
         baseUrl = new URL(import.meta.env.BASE_URL, globalThis.location.href).toString(),
         canvas,
+        compiledContentUrl = 'zerith.content.json',
         config,
         configUrl = 'engine.config.json',
-        defaultBlipUrl = 'assets/sfx/blip.wav',
+        defaultBlipUrl,
         manifestUrl = 'game.json',
+        prefetchCompiledAssets = true,
         preloadAssets = true,
     } = options;
 
     const manifest = await loadManifest(resolveRuntimeUrl(manifestUrl, baseUrl));
+    const compiledContent = compiledContentUrl === false
+        ? undefined
+        : await loadCompiledContentManifest(resolveRuntimeUrl(compiledContentUrl, baseUrl));
     const loadedConfig = configUrl === false
         ? undefined
         : await loadEngineConfig(resolveRuntimeUrl(configUrl, baseUrl));
     const effectiveConfig = mergeEngineConfigs(defaultConfig, loadedConfig, config);
+    const accessibilityShell = configurePlayerAccessibilityShell(canvas, effectiveConfig);
 
     const resolvedCharacters = typeof manifest.characters === 'string'
         ? resolveRuntimeUrl(manifest.characters, baseUrl)
@@ -86,16 +101,18 @@ export async function bootstrapPlayer(options: PlayerBootstrapOptions): Promise<
     ]);
 
     const validatedScenes: Record<string, Script> = {};
-    for (const [name, script] of Object.entries(scenes)) {
-        validatedScenes[name] = validateScript(script as unknown[]);
+    for (const [name, sceneFile] of Object.entries(scenes)) {
+        validatedScenes[name] = parseSceneFile(sceneFile, { sceneName: name }).commands;
     }
 
     const engine = await bootstrapEngine({
         assetResolver: (url) => resolveRuntimeUrl(url, baseUrl),
         canvas,
         characters,
-        config: effectiveConfig,
-        defaultBlipUrl: resolveRuntimeUrl(defaultBlipUrl, baseUrl),
+        config: accessibilityShell.config,
+        defaultBlipUrl: defaultBlipUrl === undefined || defaultBlipUrl === null
+            ? defaultBlipUrl
+            : resolveRuntimeUrl(defaultBlipUrl, baseUrl),
         items,
         macros,
         manifest,
@@ -104,6 +121,27 @@ export async function bootstrapPlayer(options: PlayerBootstrapOptions): Promise<
     });
 
     const startScene = manifest.startScene ?? 'intro';
+    const prefetcher = prefetchCompiledAssets && compiledContent
+        ? createRuntimeContentPrefetcher({
+            compiledContent,
+            resolveAssetUrl: (assetUrl) => resolveRuntimeUrl(assetUrl, baseUrl),
+            scripts: validatedScenes,
+        })
+        : undefined;
+    const onSceneLoaded = (sceneName: string) => {
+        prefetcher?.prefetchLikelyNextScenes(sceneName);
+    };
+
+    prefetcher?.prefetchGlobalAndScene(startScene);
+    engine.events.on('scene:loaded', onSceneLoaded);
+    const destroyEngine = engine.destroy.bind(engine);
+    engine.destroy = () => {
+        engine.events.off('scene:loaded', onSceneLoaded);
+        prefetcher?.dispose();
+        accessibilityShell.dispose();
+        destroyEngine();
+    };
+
     await engine.startScreen.show(startScene);
     engine.start();
 
@@ -137,35 +175,6 @@ export async function loadManifest(manifestUrl: string): Promise<GameManifest> {
     }
 
     return response.json() as Promise<GameManifest>;
-}
-
-function mergeEngineConfigs(...configs: (EngineConfig | undefined)[]): EngineConfig {
-    const merged: EngineConfig = {};
-
-    for (const config of configs) {
-        if (!config) continue;
-
-        const audio = merged.audio;
-        const display = merged.display;
-        const input = merged.input;
-        const notifications = merged.notifications;
-        const overlay = merged.overlay;
-        const preview = merged.preview;
-        const startScreen = merged.startScreen;
-        const theme = merged.theme;
-
-        Object.assign(merged, config);
-        merged.audio = { ...audio, ...config.audio };
-        merged.display = { ...display, ...config.display };
-        merged.input = { ...input, ...config.input };
-        merged.notifications = { ...notifications, ...config.notifications };
-        merged.overlay = { ...overlay, ...config.overlay };
-        merged.preview = { ...preview, ...config.preview };
-        merged.startScreen = { ...startScreen, ...config.startScreen };
-        merged.theme = { ...theme, ...config.theme };
-    }
-
-    return merged;
 }
 
 function resolveRuntimeUrl(assetPath: string, baseUrl: string): string {

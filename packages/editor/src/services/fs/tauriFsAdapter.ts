@@ -1,6 +1,6 @@
 import type { DirEntry } from '@tauri-apps/plugin-fs';
 
-import type { FsAdapter, FsDirectoryEntry } from './types';
+import type { FsAdapter, FsDirectoryEntry, FsFilePickerFilter } from './types';
 
 let pathApiPromise: Promise<typeof import('@tauri-apps/api/path')> | undefined;
 let dialogApiPromise: Promise<typeof import('@tauri-apps/plugin-dialog')> | undefined;
@@ -23,6 +23,26 @@ export const tauriFsAdapter: FsAdapter = {
     openPath: async (path) => {
         const openerApi = await getOpenerApi();
         await openerApi.openPath(path);
+    },
+    pickBinaryFiles: async (options = {}) => {
+        const dialogApi = await getDialogApi();
+        const fsApi = await getFsApi();
+        const selectedFiles = await dialogApi.open({
+            directory: false,
+            filters: normalizePickerFilters(options.filters),
+            multiple: options.multiple ?? true,
+            title: options.title ?? 'Select files',
+        }) as null | string | string[];
+
+        const paths = Array.isArray(selectedFiles)
+            ? selectedFiles
+            : (typeof selectedFiles === 'string' ? [selectedFiles] : []);
+
+        return Promise.all(paths.map(async (path) => ({
+            bytes: await fsApi.readFile(path),
+            name: basenameFromPath(path),
+            path,
+        })));
     },
     pickDirectory: async (title = 'Select directory') => {
         const dialogApi = await getDialogApi();
@@ -83,6 +103,10 @@ export const tauriFsAdapter: FsAdapter = {
     },
 };
 
+function basenameFromPath(path: string): string {
+    return path.split(/[\\/]/u).findLast(Boolean) ?? path;
+}
+
 async function getDialogApi(): Promise<typeof import('@tauri-apps/plugin-dialog')> {
     dialogApiPromise ??= import('@tauri-apps/plugin-dialog');
     return dialogApiPromise;
@@ -110,4 +134,11 @@ function mapDirectoryEntry(entry: DirEntry): FsDirectoryEntry {
         isSymlink: entry.isSymlink,
         name: entry.name,
     };
+}
+
+function normalizePickerFilters(filters: FsFilePickerFilter[] | undefined) {
+    return filters?.map((filter) => ({
+        extensions: filter.extensions.map((extension) => extension.replace(/^\./u, '')),
+        name: filter.name,
+    }));
 }

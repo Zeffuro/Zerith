@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { activateWorkbenchTab } from '../../../services/activateWorkbenchTab';
 import { executeWorkbenchTabAction } from '../../../store/actions/workbenchTabActions';
+import { useProjectStore } from '../../../store/storeBootstrap';
 import { useEditorStore } from '../../../store/useEditorStore';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
@@ -15,6 +16,7 @@ type ContextMenuState = {
 
 export function WorkbenchTabs() {
     const uiScale = useEditorStore((s) => s.uiScale);
+    const dirtyFiles = useProjectStore((state) => state.dirtyFiles);
 
     const { activeTabId, tabs } = useWorkbenchStore();
 
@@ -106,6 +108,7 @@ export function WorkbenchTabs() {
         >
             {tabs.map((tab, index) => {
                 const active = tab.id === activeTabId;
+                const dirty = Boolean(tab.dirty || dirtyFiles.has(tab.path));
                 const showDropBefore = dropIndex === index;
                 const showDropAfter = dropIndex === index + 1 && index === tabs.length - 1;
 
@@ -149,9 +152,12 @@ export function WorkbenchTabs() {
                                 userSelect: 'none',
                                 whiteSpace: 'nowrap',
                             }}
-                            title={tab.path}
+                            title={dirty ? `${tab.path} (unsaved changes)` : tab.path}
                         >
-                            <span style={{ fontSize: `${12 * uiScale}px` }}>{tab.title}</span>
+                            <span style={{ fontSize: `${12 * uiScale}px` }}>
+                                {tab.title}
+                                {dirty ? <span aria-label="Unsaved changes" style={{ color: t.accent.yellow, marginLeft: `${4 * uiScale}px` }}>*</span> : undefined}
+                            </span>
 
                             <button
                                 onClick={(event) => {

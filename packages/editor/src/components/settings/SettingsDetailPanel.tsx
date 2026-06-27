@@ -8,6 +8,7 @@ import { SettingsAppearancePanel } from './SettingsAppearancePanel';
 import { type SettingsControlId } from './settingsControlRegistry';
 import { SettingsEditorPanel } from './SettingsEditorPanel';
 import { SettingsGeneralPanel } from './SettingsGeneralPanel';
+import { SettingsPluginPanel } from './SettingsPluginPanel';
 
 type SettingsDetailPanelProperties = {
     activeDockLayoutPresetId: string | undefined;
@@ -169,7 +170,11 @@ export function SettingsDetailPanel({
                 />
             ) : undefined}
 
-            {!panelId.startsWith('general') && !panelId.startsWith('appearance') && !panelId.startsWith('editor') ? (
+            {panelId === 'plugins' ? (
+                <SettingsPluginPanel uiScale={uiScale} />
+            ) : undefined}
+
+            {!panelId.startsWith('general') && !panelId.startsWith('appearance') && !panelId.startsWith('editor') && panelId !== 'plugins' ? (
                 <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
                     {showChangedOnly
                         ? 'No changed settings are visible in this panel for the current search.'

@@ -1,185 +1,205 @@
-[
-  {
-    "name": "clear_weather",
-    "type": "call"
-  },
-  {
-    "name": "enter_courtroom",
-    "type": "call"
-  },
-  {
-    "name": "show_cast",
-    "type": "call"
-  },
-  {
-    "key": "selected_route",
-    "onFalse": [
-      {
-        "key": "selected_route",
-        "type": "set",
-        "value": "staging"
-      }
-    ],
-    "type": "if"
-  },
-  {
-    "action": "add",
-    "id": "staging_card",
-    "type": "item"
-  },
-  {
-    "alpha": 0.5,
-    "density": 85,
-    "fadeIn": 500,
-    "id": "court_dust",
-    "layer": "weatherBack",
-    "preset": "ashfall",
-    "speed": 35,
-    "type": "weather",
-    "wind": 10
-  },
-  {
-    "speaker": "juno",
-    "text": "All right. The room looks official enough from a distance.",
-    "type": "dialogue"
-  },
-  {
-    "name": "dramatic_beat",
-    "type": "call"
-  },
-  {
-    "action": "pose",
-    "id": "juno",
-    "pose": "angry",
-    "type": "sprite"
-  },
-  {
-    "speaker": "juno",
-    "text": "{speed:12}Hold it.{speed:30} If this is going in the example folder, it should feel like something you can actually remix.",
-    "type": "dialogue"
-  },
-  {
-    "action": "animate",
-    "animation": "snap",
-    "id": "juno",
-    "type": "sprite",
-    "wait": true
-  },
-  {
-    "action": "pose",
-    "id": "nora",
-    "pose": "happy",
-    "type": "sprite"
-  },
-  {
-    "action": "move",
-    "duration": 420,
-    "id": "nora",
-    "type": "sprite",
-    "xRatio": 0.5938,
-    "yRatio": 1
-  },
-  {
-    "speaker": "nora",
-    "text": "I am stepping closer because apparently this is now a hearing.",
-    "type": "dialogue"
-  },
-  {
-    "action": "pose",
-    "id": "may",
-    "pose": "thinking",
-    "type": "sprite"
-  },
-  {
-    "speaker": "may",
-    "text": "For the record, you walked in through the {selected_route} route.",
-    "type": "dialogue"
-  },
-  {
-    "options": [
-      {
-        "commands": [
-          {
+{
+    "$schema": "zerith/scene",
+    "commands": [
+        {
+            "name": "clear_weather",
+            "type": "call"
+        },
+        {
+            "name": "enter_courtroom",
+            "type": "call"
+        },
+        {
+            "name": "show_cast",
+            "type": "call"
+        },
+        {
+            "key": "selected_route",
+            "onFalse": [
+                {
+                    "key": "selected_route",
+                    "type": "set",
+                    "value": "staging"
+                }
+            ],
+            "type": "if"
+        },
+        {
             "action": "add",
-            "id": "weather_card",
+            "id": "staging_card",
             "type": "item"
-          },
-          {
+        },
+        {
+            "alpha": 0.5,
+            "density": 85,
+            "fadeIn": 500,
+            "id": "court_dust",
+            "layer": "weatherBack",
+            "preset": "ashfall",
+            "speed": 35,
+            "type": "weather",
+            "wind": 10
+        },
+        {
+            "speaker": "juno",
+            "text": "All right. The room looks official enough from a distance.",
+            "type": "dialogue",
+            "lineId": "scene.courtroom_demo.line.007"
+        },
+        {
+            "name": "dramatic_beat",
+            "type": "call"
+        },
+        {
+            "action": "pose",
+            "id": "juno",
+            "pose": "angry",
+            "type": "sprite"
+        },
+        {
+            "speaker": "juno",
+            "text": "{speed:12}Hold it.{speed:30} If this is going in the example folder, it should feel like something you can actually remix.",
+            "type": "dialogue",
+            "lineId": "scene.courtroom_demo.line.010"
+        },
+        {
+            "action": "animate",
+            "animation": "snap",
+            "id": "juno",
+            "type": "sprite",
+            "wait": true
+        },
+        {
+            "action": "pose",
+            "id": "nora",
+            "pose": "happy",
+            "type": "sprite"
+        },
+        {
+            "action": "move",
+            "duration": 420,
+            "id": "nora",
+            "type": "sprite",
+            "xRatio": 0.5938,
+            "yRatio": 1
+        },
+        {
+            "speaker": "nora",
+            "text": "I am stepping closer because apparently this is now a hearing.",
+            "type": "dialogue",
+            "lineId": "scene.courtroom_demo.line.014"
+        },
+        {
+            "action": "pose",
+            "id": "may",
+            "pose": "thinking",
+            "type": "sprite"
+        },
+        {
+            "speaker": "may",
+            "text": "For the record, you walked in through the {selected_route} route.",
+            "type": "dialogue",
+            "lineId": "scene.courtroom_demo.line.016"
+        },
+        {
+            "options": [
+                {
+                    "commands": [
+                        {
+                            "action": "add",
+                            "id": "weather_card",
+                            "type": "item"
+                        },
+                        {
+                            "key": "presented_card",
+                            "type": "set",
+                            "value": "weather"
+                        }
+                    ],
+                    "label": "Present weather card",
+                    "id": "scene.courtroom_demo.choice.017.option.001",
+                    "labelId": "scene.courtroom_demo.choice.017.option.001.label"
+                },
+                {
+                    "commands": [
+                        {
+                            "action": "add",
+                            "id": "logic_card",
+                            "type": "item"
+                        },
+                        {
+                            "key": "presented_card",
+                            "type": "set",
+                            "value": "logic"
+                        }
+                    ],
+                    "label": "Present logic card",
+                    "id": "scene.courtroom_demo.choice.017.option.002",
+                    "labelId": "scene.courtroom_demo.choice.017.option.002.label"
+                },
+                {
+                    "commands": [
+                        {
+                            "key": "presented_card",
+                            "type": "set",
+                            "value": "profile"
+                        }
+                    ],
+                    "label": "Let May summarize",
+                    "id": "scene.courtroom_demo.choice.017.option.003",
+                    "labelId": "scene.courtroom_demo.choice.017.option.003.label"
+                }
+            ],
+            "type": "choice",
+            "id": "scene.courtroom_demo.choice.017"
+        },
+        {
             "key": "presented_card",
-            "type": "set",
+            "onFalse": [
+                {
+                    "speaker": "may",
+                    "text": "Then my summary is simple: keep the files tidy and the scene can carry itself.",
+                    "type": "dialogue",
+                    "lineId": "scene.courtroom_demo.line.018.001"
+                }
+            ],
+            "onTrue": [
+                {
+                    "speaker": "nora",
+                    "text": "Weather card accepted. I still think the storm was overdoing it, but it looked good.",
+                    "type": "dialogue",
+                    "lineId": "scene.courtroom_demo.line.018.001"
+                }
+            ],
+            "op": "eq",
+            "type": "if",
             "value": "weather"
-          }
-        ],
-        "label": "Present weather card"
-      },
-      {
-        "commands": [
-          {
-            "action": "add",
-            "id": "logic_card",
-            "type": "item"
-          },
-          {
+        },
+        {
             "key": "presented_card",
-            "type": "set",
+            "onTrue": [
+                {
+                    "speaker": "nora",
+                    "text": "Logic card accepted. The readings waited properly, which is more than I can say for most equipment.",
+                    "type": "dialogue",
+                    "lineId": "scene.courtroom_demo.line.019.001"
+                }
+            ],
+            "op": "eq",
+            "type": "if",
             "value": "logic"
-          }
-        ],
-        "label": "Present logic card"
-      },
-      {
-        "commands": [
-          {
-            "key": "presented_card",
-            "type": "set",
-            "value": "profile"
-          }
-        ],
-        "label": "Let May summarize"
-      }
+        },
+        {
+            "action": "clear",
+            "fadeOut": 500,
+            "type": "weather"
+        },
+        {
+            "to": "ending",
+            "type": "jump"
+        }
     ],
-    "type": "choice"
-  },
-  {
-    "key": "presented_card",
-    "onFalse": [
-      {
-        "speaker": "may",
-        "text": "Then my summary is simple: keep the files tidy and the scene can carry itself.",
-        "type": "dialogue"
-      }
-    ],
-    "onTrue": [
-      {
-        "speaker": "nora",
-        "text": "Weather card accepted. I still think the storm was overdoing it, but it looked good.",
-        "type": "dialogue"
-      }
-    ],
-    "op": "eq",
-    "type": "if",
-    "value": "weather"
-  },
-  {
-    "key": "presented_card",
-    "onTrue": [
-      {
-        "speaker": "nora",
-        "text": "Logic card accepted. The readings waited properly, which is more than I can say for most equipment.",
-        "type": "dialogue"
-      }
-    ],
-    "op": "eq",
-    "type": "if",
-    "value": "logic"
-  },
-  {
-    "action": "clear",
-    "fadeOut": 500,
-    "type": "weather"
-  },
-  {
-    "to": "ending",
-    "type": "jump"
-  }
-]
+    "id": "courtroom_demo",
+    "localeNamespace": "scene.courtroom_demo",
+    "schemaVersion": 2
+}

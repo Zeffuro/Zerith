@@ -185,12 +185,12 @@ export class FlowManager implements IFlowManager {
         this.stepRemaining = 0;
     }
 
-
     public resetHandlers() {
         for (const handler of this.handlers.values()) {
             handler.reset?.();
         }
     }
+
 
     public resume() {
         if (this.destroyed || !this.started || !this.paused) return;
@@ -199,7 +199,6 @@ export class FlowManager implements IFlowManager {
         this.events.emit('flow:resumed', this.scenes.currentSceneName, this.scenes.currentIndex);
         void this.playNext();
     }
-
 
     public async runCommand(command: BaseCommand) {
         if (this.destroyed) return;
@@ -218,6 +217,7 @@ export class FlowManager implements IFlowManager {
             );
         }
     }
+
 
     public start() {
         if (this.destroyed) return;
@@ -243,6 +243,13 @@ export class FlowManager implements IFlowManager {
     public stop() {
         this.started = false;
         this.reset();
+    }
+
+    public unregisterHandler(type: BaseCommand['type']) {
+        const handler = this.handlers.get(type);
+        if (!handler) return;
+        void handler.destroy?.();
+        this.handlers.delete(type);
     }
 
     private emitPaused() {

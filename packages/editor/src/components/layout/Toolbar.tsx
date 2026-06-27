@@ -1,8 +1,10 @@
-import { FolderOpen, MonitorDot, Pause, Play, Save, SkipForward, Square, Volume2, VolumeX, ZoomIn, ZoomOut } from 'lucide-react';
+import { FolderOpen, Languages, MonitorDot, Pause, Play, Save, SkipForward, Square, Volume2, VolumeX, ZoomIn, ZoomOut } from 'lucide-react';
 
 import { fsPickProjectManifest } from '../../services/fs';
+import { SOURCE_PREVIEW_LOCALE } from '../../services/localizationPreview';
 import { openProjectEntry } from '../../services/openProjectEntry';
 import { isTauriRuntime } from '../../services/runtime/runtimeEnvironment';
+import { executeOpenProjectInCurrentWindow } from '../../store/actions/projectOpenActions';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -11,7 +13,7 @@ import { openInitialProjectEntry as openInitialProjectEntryModel } from '../tool
 import { ThemeMenu } from './menus/ThemeMenu';
 
 export function Toolbar() {
-    const { activeFile, openProjectFromManifest, saveActiveFileFromCurrentScript } = useProjectStore();
+    const { activeFile, locales, manifest, saveActiveFileFromCurrentScript } = useProjectStore();
     const isMuted = useSettingsStore((state) => state.isMuted);
     const setIsMuted = useSettingsStore((state) => state.setIsMuted);
     const setThemeKey = useSettingsStore((state) => state.setThemeKey);
@@ -31,6 +33,8 @@ export function Toolbar() {
         triggerStop,
         uiScale,
     } = useEditorStore();
+    const previewLocale = useEditorStore((state) => state.previewLocale);
+    const setPreviewLocale = useEditorStore((state) => state.setPreviewLocale);
 
     const handleOpenInitialProjectEntry = async () => {
         const { expandToPath, manifest, projectPath } = useProjectStore.getState();
@@ -47,9 +51,10 @@ export function Toolbar() {
             const selectedProject = await fsPickProjectManifest();
 
             if (selectedProject) {
-                await openProjectFromManifest(selectedProject.manifestPath);
+                const opened = await executeOpenProjectInCurrentWindow(selectedProject.manifestPath);
+                if (opened.status === 'cancelled') return;
                 if (isTauriRuntime()) addRecentProject(selectedProject.manifestPath);
-                await handleOpenInitialProjectEntry();
+                if (opened.status === 'opened-current') await handleOpenInitialProjectEntry();
             }
         } catch (error) {
             console.error('Failed to open project dialog:', error);
@@ -65,6 +70,10 @@ export function Toolbar() {
     const iconSize = 16 * uiScale;
     const isRunning = playTrigger > stopTrigger;
     const toggleMute = () => setIsMuted(!isMuted);
+    const localeIds = Object.keys(locales).toSorted((left, right) => left.localeCompare(right));
+    const manifestDefaultLocale = manifest?.localization?.defaultLocale;
+    const selectedPreviewLocale = previewLocale
+        ?? (manifestDefaultLocale && localeIds.includes(manifestDefaultLocale) ? manifestDefaultLocale : SOURCE_PREVIEW_LOCALE);
 
     return (
         <div
@@ -102,6 +111,38 @@ export function Toolbar() {
             </div>
 
             <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto' }}>
+                <label
+                    style={{
+                        alignItems: 'center',
+                        display: 'inline-flex',
+                        gap: `${4 * uiScale}px`,
+                        marginRight: `${4 * uiScale}px`,
+                    }}
+                    title="Preview locale"
+                >
+                    <Languages color={t.text.muted} size={iconSize} />
+                    <select
+                        disabled={localeIds.length === 0}
+                        onChange={(event) => setPreviewLocale(event.currentTarget.value || undefined)}
+                        style={{
+                            background: t.bg.input,
+                            border: `1px solid ${t.border.input}`,
+                            borderRadius: t.radius.sm,
+                            color: t.text.primary,
+                            fontSize: `${12 * uiScale}px`,
+                            maxWidth: `${120 * uiScale}px`,
+                            minWidth: `${84 * uiScale}px`,
+                            outline: 'none',
+                            padding: `${5 * uiScale}px ${6 * uiScale}px`,
+                        }}
+                        value={selectedPreviewLocale}
+                    >
+                        <option value={SOURCE_PREVIEW_LOCALE}>Source text</option>
+                        {localeIds.map((locale) => (
+                            <option key={locale} value={locale}>{locale}</option>
+                        ))}
+                    </select>
+                </label>
                 <button className="toolbar-btn" onClick={toggleMute} style={{ padding: pad }} title={isMuted ? 'Unmute Audio' : 'Mute Audio'}>
                     {isMuted ? <VolumeX color={t.accent.red} size={iconSize} /> : <Volume2 size={iconSize} />}
                 </button>

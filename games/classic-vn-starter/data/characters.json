@@ -1,0 +1,40 @@
+{
+    "aria": {
+        "displayDefaults": {
+            "anchorX": 0.5,
+            "anchorY": 1,
+            "fit": "contain",
+            "heightRatio": 0.78,
+            "xRatio": 0.33,
+            "yRatio": 1
+        },
+        "displayName": "Aria",
+        "name": "aria",
+        "nameColor": "#ffd166",
+        "portraitUrl": "/assets/sprites/aria-smile.svg",
+        "poses": {
+            "normal": "/assets/sprites/aria-normal.svg",
+            "smile": "/assets/sprites/aria-smile.svg"
+        },
+        "schemaVersion": 2
+    },
+    "cove": {
+        "displayDefaults": {
+            "anchorX": 0.5,
+            "anchorY": 1,
+            "fit": "contain",
+            "heightRatio": 0.76,
+            "xRatio": 0.67,
+            "yRatio": 1
+        },
+        "displayName": "Cove",
+        "name": "cove",
+        "nameColor": "#9ad0ff",
+        "portraitUrl": "/assets/sprites/cove-thoughtful.svg",
+        "poses": {
+            "normal": "/assets/sprites/cove-normal.svg",
+            "thoughtful": "/assets/sprites/cove-thoughtful.svg"
+        },
+        "schemaVersion": 2
+    }
+}

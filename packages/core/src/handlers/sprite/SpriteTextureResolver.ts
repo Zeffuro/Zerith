@@ -32,7 +32,7 @@ export class SpriteTextureResolver {
 
     public findCharacter(spriteId: string): CharacterDefinition | undefined {
         const characters = this.getManifest()?.characters;
-        if (!characters) {
+        if (!characters || typeof characters === 'string') {
             return undefined;
         }
 

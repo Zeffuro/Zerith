@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { registerEditorCommandType } from '../../../plugins/commandTypes';
 import { defaultSettings, extractPersistedSettings, MIN_AUTOSAVE_INTERVAL_MS, sanitizeAutosaveInterval } from '../SettingsSchema';
 
 function mergeSettings(value?: unknown) {
@@ -89,6 +90,17 @@ describe('SettingsSchema', () => {
         });
 
         expect(mergeSettings({ quickCommandTypes: [] })).toEqual(defaultSettings);
+    });
+
+    it('accepts registered plugin command types in quick commands', () => {
+        registerEditorCommandType('vitest_plugin_quick_command');
+
+        expect(mergeSettings({
+            quickCommandTypes: ['wait', ' vitest_plugin_quick_command ', 'vitest_plugin_quick_command'],
+        })).toEqual({
+            ...defaultSettings,
+            quickCommandTypes: ['wait', 'vitest_plugin_quick_command'],
+        });
     });
 
     it('accepts and sanitizes customThemes entries', () => {

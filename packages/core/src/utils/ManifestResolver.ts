@@ -25,17 +25,18 @@ export async function resolveManifestValue<T>(value: string | T): Promise<T> {
 
 /**
  * Resolves a scenes map where values can be inline scripts or file paths.
- * Returns a flat Record<string, Script>.
+ * Returns the parsed JSON payload for each scene; callers decide whether it is
+ * a legacy script array or a versioned scene envelope.
  */
 export async function resolveScenes(
     scenes: Record<string, unknown>
-): Promise<Record<string, unknown[]>> {
-    const resolved: Record<string, unknown[]> = {};
+): Promise<Record<string, unknown>> {
+    const resolved: Record<string, unknown> = {};
     const entries = Object.entries(scenes);
 
     await Promise.all(
         entries.map(async ([name, value]) => {
-            resolved[name] = await resolveManifestValue<unknown[]>(value as string | unknown[]);
+            resolved[name] = await resolveManifestValue<unknown>(value);
         })
     );
 

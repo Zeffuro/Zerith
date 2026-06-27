@@ -1,0 +1,158 @@
+{
+    "$schema": "zerith/scene",
+    "commands": [
+        {
+            "name": "intro.start",
+            "type": "label"
+        },
+        {
+            "key": "chapter",
+            "type": "set",
+            "value": "intro"
+        },
+        {
+            "name": "enter_studio_morning",
+            "type": "call"
+        },
+        {
+            "name": "show_cast",
+            "type": "call"
+        },
+        {
+            "action": "add",
+            "id": "chapter_notebook",
+            "type": "item"
+        },
+        {
+            "expressionRef": "aria.smile",
+            "lineId": "intro.opening.001",
+            "speaker": "aria",
+            "tags": [
+                "opening",
+                "backlog"
+            ],
+            "text": "Every classic visual novel starts with a room, a choice, and a promise.",
+            "type": "dialogue"
+        },
+        {
+            "expressionRef": "cove.thoughtful",
+            "lineId": "intro.opening.002",
+            "speaker": "cove",
+            "tags": [
+                "localization-ready"
+            ],
+            "text": "The promise is simple: every line should be easy to find again.",
+            "type": "dialogue"
+        },
+        {
+            "expressionRef": "aria.smile",
+            "lineId": "intro.choice.prompt",
+            "speaker": "aria",
+            "text": "How should we start?",
+            "type": "dialogue"
+        },
+        {
+            "analyticsLabel": "starter_opening_focus",
+            "id": "intro.focus_choice",
+            "options": [
+                {
+                    "analyticsLabel": "outline_first",
+                    "commands": [
+                        {
+                            "key": "route_focus",
+                            "type": "set",
+                            "value": "outline"
+                        },
+                        {
+                            "label": "intro.outline",
+                            "type": "goto"
+                        }
+                    ],
+                    "id": "intro.focus_choice.outline",
+                    "label": "Outline the chapter",
+                    "labelId": "intro.focus_choice.outline.label",
+                    "replayable": true
+                },
+                {
+                    "analyticsLabel": "character_first",
+                    "commands": [
+                        {
+                            "key": "route_focus",
+                            "type": "set",
+                            "value": "character"
+                        },
+                        {
+                            "label": "intro.character",
+                            "type": "goto"
+                        }
+                    ],
+                    "id": "intro.focus_choice.character",
+                    "label": "Follow the characters",
+                    "labelId": "intro.focus_choice.character.label",
+                    "replayable": true
+                }
+            ],
+            "type": "choice"
+        },
+        {
+            "name": "intro.outline",
+            "type": "label"
+        },
+        {
+            "lineId": "intro.outline.001",
+            "speaker": "aria",
+            "tags": [
+                "route-outline"
+            ],
+            "text": "Then the outline goes first: setup, branch, consequence, clean return.",
+            "type": "dialogue"
+        },
+        {
+            "label": "intro.join",
+            "type": "goto"
+        },
+        {
+            "name": "intro.character",
+            "type": "label"
+        },
+        {
+            "lineId": "intro.character.001",
+            "speaker": "cove",
+            "tags": [
+                "route-character"
+            ],
+            "text": "Then the characters go first, and the outline follows what they reveal.",
+            "type": "dialogue"
+        },
+        {
+            "name": "intro.join",
+            "type": "label"
+        },
+        {
+            "lineId": "intro.join.001",
+            "speaker": "aria",
+            "text": "Either way, the next scene should load from the same save point.",
+            "type": "dialogue"
+        },
+        {
+            "to": "chapter_one",
+            "type": "jump"
+        }
+    ],
+    "graph": {
+        "entry": "intro.start",
+        "exits": [
+            "chapter_one"
+        ],
+        "nodes": [
+            "intro.start",
+            "intro.focus_choice",
+            "intro.outline",
+            "intro.character",
+            "intro.join"
+        ]
+    },
+    "id": "intro",
+    "localeNamespace": "scene.intro",
+    "schemaVersion": 2
+}

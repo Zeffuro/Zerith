@@ -7,6 +7,7 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { resolveComponentScale, editorTheme as t } from '../../theme/editorTheme';
 import { AssetPreviewPanel } from '../tools/AssetPreviewPanel';
+import { LocalizationPanel } from '../tools/LocalizationPanel';
 import { Timeline } from './timeline/Timeline';
 
 const ScriptJsonEditor = lazy(() => import('./workbench/ScriptJsonEditor').then((m) => ({ default: m.ScriptJsonEditor })));
@@ -129,6 +130,10 @@ export function EditorSurface() {
     };
 
     if (activeTab.kind === 'asset') return <AssetPreviewPanel uiScale={uiScale} />;
+
+    if (activeTab.kind === 'localization') {
+        return <LocalizationPanel initialQuery={activeTab.localizationFilter} />;
+    }
 
     if (activeTab.kind in kindEditorMap) {
         const kindEditor = kindEditorMap[activeTab.kind as ToggleableWorkbenchKind];

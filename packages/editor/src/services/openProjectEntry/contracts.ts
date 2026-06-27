@@ -6,6 +6,7 @@ export type JsonResourceKind = 'characters' | 'engineConfig' | 'items' | 'manife
 
 export type OpenProjectEntryOptions = {
 	forceView?: ForceView;
+	jsonSelectionPath?: string[];
 	openInSpritesheetEditor?: boolean;
 };
 

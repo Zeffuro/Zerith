@@ -156,7 +156,7 @@ describe('openProjectEntry jsonHandlers', () => {
         });
     });
 
-    it('throws for hinted script route when payload is not an array', () => {
+    it('throws for hinted script route when payload is not a scene file', () => {
         const route: JsonRoute = { kind: 'script', requiresArrayShape: true };
 
         expect(() => handleJsonRoute({
@@ -165,7 +165,7 @@ describe('openProjectEntry jsonHandlers', () => {
             fullPath: '/project/scripts/intro.json',
             isMacrosObject: looksLikeMacros,
             route,
-        })).toThrowError(new TypeError('Scene scripts must be JSON arrays.'));
+        })).toThrowError(new TypeError('Scene scripts must be JSON arrays or scene objects with a commands array.'));
     });
 
     it('handles macros route and applies macros opener path', () => {

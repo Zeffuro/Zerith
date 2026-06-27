@@ -32,6 +32,7 @@ export async function openJsonEntry(fullPath: string, options?: OpenProjectEntry
         forceView: options?.forceView,
         fullPath,
         isMacrosObject: looksLikeMacrosObject,
+        jsonSelectionPath: options?.jsonSelectionPath,
         route,
     });
 }

@@ -43,7 +43,8 @@ export type SettingsPanelId =
     | 'general-layout'
     | 'general-playback'
     | 'general-quickbuttons'
-    | 'general';
+    | 'general'
+    | 'plugins';
 
 type SettingsControlDefinition = {
     badgePanelId: SettingsPanelId;

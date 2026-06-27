@@ -6,11 +6,14 @@ import {
     createFolderInDirectory,
     deletePath,
     duplicatePath,
+    moveAssetDirectoryPathWithPicker,
+    moveAssetPathWithPicker,
     renamePath,
     revealPathInSystem,
 } from '../../../services/explorerFileActions';
 import { type FsDirectoryEntry, fsDirname, fsJoin, fsReadDirectory, fsReadTextFile, fsWriteTextFile } from '../../../services/fs';
 import { openAudiosheetEntry, openProjectEntry } from '../../../services/openProjectEntry';
+import { toProjectAssetUrl } from '../../../services/referenceScanner';
 import { executeExternalProjectTreeRefreshAction } from '../../../store/actions/projectTreeActions';
 import { useProjectStore } from '../../../store/storeBootstrap';
 import { useEditorStore } from '../../../store/useEditorStore';
@@ -272,8 +275,13 @@ function FileNode({
 
         const canOpenAudiosheet = !entry.isDirectory && AUDIO_EXT.has(getExtension(entry.name));
         const canOpenSpritesheet = !entry.isDirectory && IMG_EXT.has(getExtension(entry.name));
+        const assetUrl = toProjectAssetUrl(fullPath, projectPath);
+        const canMoveAsset = !entry.isDirectory && !!assetUrl;
+        const canMoveAssetFolder = entry.isDirectory && !!assetUrl;
 
         setContext({
+            canMoveAsset,
+            canMoveAssetFolder,
             canOpenAudiosheet,
             canOpenSpritesheet,
             isDirectory: entry.isDirectory,
@@ -287,6 +295,14 @@ function FileNode({
                         }
                         case 'duplicate': {
                             await duplicatePath(fullPath);
+                            break;
+                        }
+                        case 'moveAsset': {
+                            await moveAssetPathWithPicker(fullPath);
+                            break;
+                        }
+                        case 'moveAssetFolder': {
+                            await moveAssetDirectoryPathWithPicker(fullPath);
                             break;
                         }
                         case 'newFolder': {

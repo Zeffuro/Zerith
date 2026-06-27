@@ -1,19 +1,22 @@
 import type { TextStyleOptions } from 'pixi.js';
 
 import type { IAnimationManager, IAssetManager, IAudioManager, IDisplayManager, IEventBus, IFlowManager, IHistoryManager, IStateManager } from '../interfaces/managers';
+import type { DialogueAnnouncement, DialogueAnnouncementHandler } from '../types';
 import type { CharacterDefinition } from '../types';
 import type { CommandHandler } from '../types';
 import type { BaseCommand } from '../types';
 import type { Logger } from '../utils/Logger';
+import type { TextMarkupMode } from '../utils/TextParser';
 import type { SpriteCommand } from './SpriteHandler';
 
 import { waitForAbortableDelay, waitForEventsOrAbort } from '../utils/AsyncHelpers';
-import { parseTextTags, resolveTemplateText, transformShorthands } from '../utils/TextParser';
+import { parseDisplayTextTags, parseTextTags, resolveTemplateText, transformShorthands } from '../utils/TextParser';
 import { DialogueRenderer } from './dialogue/DialogueRenderer';
 import { TypewriterController } from './dialogue/TypewriterController';
 
 export interface DialogueCommand extends BaseCommand {
     instant?: boolean;
+    lineId?: string;
     portraitSide?: 'left' | 'right';
     speaker: string;
     text: string;
@@ -21,6 +24,7 @@ export interface DialogueCommand extends BaseCommand {
 }
 
 export interface DialogueConfig {
+    announceDialogue?: DialogueAnnouncementHandler;
     backgroundAlpha?: number;
     backgroundColor?: number;
     borderColor?: number;
@@ -29,12 +33,19 @@ export interface DialogueConfig {
     boxWidth?: number;
     boxX?: number;
     boxY?: number;
+    captions?: boolean;
     characters?: Record<string, CharacterDefinition>;
     defaultBlipUrl?: string;
+    markupMode?: TextMarkupMode;
     messageStyle?: Partial<TextStyleOptions>;
     nameStyle?: Partial<TextStyleOptions>;
+    reducedMotion?: boolean;
+    selfVoicing?: boolean;
     typewriterSpeed?: number;
 }
+
+export const DEFAULT_TYPEWRITER_SPEED_MS = 30;
+export const MAX_TYPEWRITER_SPEED_MS = 120;
 
 interface TalkingSpriteSnapshot {
     animation?: string;
@@ -78,7 +89,12 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         this.history = history;
         this.logger = logger;
         this.state = state;
-        this.config = { characters: {}, typewriterSpeed: 30, ...config };
+        this.config = {
+            characters: {},
+            markupMode: 'zerith',
+            ...config,
+            typewriterSpeed: normalizeTypewriterSpeed(config.typewriterSpeed),
+        };
         this.renderer = new DialogueRenderer(this.config, animations, display, this.assets);
         this.typewriter = new TypewriterController();
     }
@@ -125,6 +141,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
             speaker: speaker || displayName,
             text: resolvedText,
         };
+        this.announceDialogueLine(command, displayName, resolvedText);
 
         const fullCharData = speakerKey ? this.config.characters?.[speakerKey] : undefined;
         let talkingSpriteSnapshot: TalkingSpriteSnapshot | undefined;
@@ -154,13 +171,15 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
 
         const blipUrl = charData?.blipUrl || this.config.defaultBlipUrl;
         const resolvedBlipUrl = blipUrl ? await this.assets.resolve(blipUrl) : undefined;
-        if (resolvedBlipUrl) {
+        let playableBlipUrl = resolvedBlipUrl;
+        if (playableBlipUrl) {
             try {
-                if (!this.audio.audioExists(resolvedBlipUrl)) {
-                    await this.audio.preloadAudio(resolvedBlipUrl);
+                if (!this.audio.audioExists(playableBlipUrl)) {
+                    await this.audio.preloadAudio(playableBlipUrl);
                 }
             } catch {
                 this.logger.warn(`Blip failed to load: ${blipUrl}`);
+                playableBlipUrl = undefined;
             }
             if (signal.aborted) return;
         }
@@ -168,8 +187,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         this.renderer.clearMessage();
 
         try {
-            const transformed = transformShorthands(resolvedText);
-            const tokens = parseTextTags(transformed);
+            const tokens = parseDisplayTextTags(resolvedText, this.config.markupMode);
 
             if (command.instant) {
                 this.renderer.setMessageText(tokens
@@ -180,19 +198,20 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
             }
 
             await this.typewriter.run({
-                blipUrl: resolvedBlipUrl,
+                blipUrl: playableBlipUrl,
                 consumeSkip: () => this.flow.consumeSkip(),
                 createPromptBlinker: () => this.renderer.createPromptBlinker(),
                 getMessageText: () => this.renderer.getMessageText(),
                 initialSpeed: this.config.typewriterSpeed!,
                 playVoice: (url) => this.audio.playVoice(url),
+                reducedMotion: this.config.reducedMotion,
                 setMessageText: (text) => this.renderer.setMessageText(text),
                 signal,
                 tokens,
                 waitForPromptInput: (abortSignal) => this.waitForPromptInput(this.events, abortSignal),
             });
         } finally {
-            if (talkingSpriteSnapshot && !signal.aborted) {
+            if (talkingSpriteSnapshot?.animation && !signal.aborted) {
                 await this.restoreTalkingSprite(talkingSpriteSnapshot);
             }
         }
@@ -210,6 +229,26 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         return this.autoAdvanceDelay;
     }
 
+    public getCaptionsEnabled(): boolean {
+        return this.config.captions === true;
+    }
+
+    public getMarkupMode(): TextMarkupMode {
+        return this.config.markupMode ?? 'zerith';
+    }
+
+    public getReducedMotion(): boolean {
+        return this.config.reducedMotion === true;
+    }
+
+    public getSelfVoicingEnabled(): boolean {
+        return this.config.selfVoicing === true;
+    }
+
+    public getTypewriterSpeed(): number {
+        return normalizeTypewriterSpeed(this.config.typewriterSpeed);
+    }
+
     public reset = () => {
         this.activeAbortController?.abort();
         this.activeAbortController = undefined;
@@ -221,35 +260,93 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         this.autoAdvanceDelay = delay;
     }
 
+    public setCaptionsEnabled(captions: boolean) {
+        this.config.captions = captions;
+    }
+
+    public setReducedMotion(reducedMotion: boolean) {
+        this.config.reducedMotion = reducedMotion;
+    }
+
+    public setSelfVoicingEnabled(selfVoicing: boolean) {
+        this.config.selfVoicing = selfVoicing;
+    }
+
+    public setTypewriterSpeed(speedMs: number) {
+        this.config.typewriterSpeed = normalizeTypewriterSpeed(speedMs);
+    }
+
+    private announceDialogueLine(command: DialogueCommand, displayName: string, resolvedText: string): void {
+        if (!shouldAnnounceDialogue(this.config)) return;
+
+        const announceDialogue = this.config.announceDialogue;
+        if (!announceDialogue) return;
+
+        const announcement = createDialogueAnnouncement({
+            captions: this.getCaptionsEnabled(),
+            lineId: command.lineId,
+            markupMode: this.config.markupMode,
+            selfVoicing: this.getSelfVoicingEnabled(),
+            speaker: displayName,
+            text: resolvedText,
+        });
+
+        try {
+            void Promise.resolve(announceDialogue(announcement)).catch((error: unknown) => {
+                this.logger.warn(`Dialogue accessibility announcement failed: ${String(error)}`);
+            });
+        } catch (error) {
+            this.logger.warn(`Dialogue accessibility announcement failed: ${String(error)}`);
+        }
+    }
+
     private async restoreTalkingSprite(snapshot: TalkingSpriteSnapshot): Promise<void> {
         const currentSprite = this.state.system.sprites[snapshot.id];
         if (!currentSprite) return;
 
-        if (snapshot.animation) {
-            await this.flow.runCommand({
-                action: 'animate',
-                animation: snapshot.animation,
-                id: snapshot.id,
-                type: 'sprite',
-            });
-            return;
-        }
+        if (!snapshot.animation) return;
 
-        if (snapshot.pose || snapshot.assetUrl) {
-            await this.flow.runCommand({
-                action: 'pose',
-                assetUrl: snapshot.assetUrl,
-                id: snapshot.id,
-                pose: snapshot.pose,
-                type: 'sprite',
-            });
-        }
+        await this.flow.runCommand({
+            action: 'animate',
+            animation: snapshot.animation,
+            id: snapshot.id,
+            type: 'sprite',
+        });
     }
 
     private async waitForPromptInput(events: IEventBus, signal: AbortSignal): Promise<void> {
         await waitForEventsOrAbort(events, ['input:confirm', 'input:next'], signal);
     }
 
+}
+
+export function createDialogueAnnouncement(input: { markupMode?: TextMarkupMode } & DialogueAnnouncement): DialogueAnnouncement {
+    const lineId = typeof input.lineId === 'string' && input.lineId.trim()
+        ? input.lineId.trim()
+        : undefined;
+
+    return {
+        captions: input.captions === true,
+        ...(lineId === undefined ? {} : { lineId }),
+        selfVoicing: input.selfVoicing === true,
+        speaker: coerceSpeaker(input.speaker) || 'Narrator',
+        text: toDialogueAnnouncementText(input.text, input.markupMode),
+    };
+}
+
+export function shouldAnnounceDialogue(config: Pick<DialogueConfig, 'announceDialogue' | 'captions' | 'selfVoicing'>): boolean {
+    return typeof config.announceDialogue === 'function'
+        && (config.captions === true || config.selfVoicing === true);
+}
+
+export function toDialogueAnnouncementText(text: string, markupMode: TextMarkupMode = 'zerith'): string {
+    const transformed = markupMode === 'zerith' ? transformShorthands(text) : text;
+    const tokens = parseTextTags(transformed);
+    const textWithMarkup = tokens
+        .filter((token): token is { type: 'text'; val: string } => token.type === 'text')
+        .map((token) => token.val)
+        .join('');
+    return markupMode === 'plain' ? textWithMarkup : stripHtmlForAnnouncement(textWithMarkup);
 }
 
 function coerceSpeaker(value: unknown): string {
@@ -260,5 +357,18 @@ function normalizeLower(value: string | undefined): string | undefined {
     if (!value) return undefined;
     const normalized = value.trim().toLowerCase();
     return normalized.length > 0 ? normalized : undefined;
+}
+
+function normalizeTypewriterSpeed(value: number | undefined): number {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+        return DEFAULT_TYPEWRITER_SPEED_MS;
+    }
+    return Math.round(Math.max(0, Math.min(MAX_TYPEWRITER_SPEED_MS, value)));
+}
+
+function stripHtmlForAnnouncement(text: string): string {
+    return text
+        .replaceAll(/<\s*br\s*\/?\s*>/giu, '\n')
+        .replaceAll(/<[^>]*>/gu, '');
 }
 

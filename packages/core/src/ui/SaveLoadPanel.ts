@@ -1,13 +1,24 @@
-import { Container, type FederatedPointerEvent, Graphics, Text } from 'pixi.js';
+import { Container, type FederatedPointerEvent, Graphics, Sprite, Text } from 'pixi.js';
 
 import type { INotificationManager, ISaveManager } from '../interfaces/managers';
-import type { SaveState } from '../managers/SaveManager';
 import type { MenuPanel, PanelBuildDeps } from '../types';
 
+import { isSaveThumbnailDataUrl, type SaveMeta, type SaveState } from '../managers/SaveManager';
 import { createButton, createPanelTitle, registerFocusableButton } from './UIComponents';
 
 export interface SaveLoadPanelConfig {
     maxSlots?: number;
+}
+
+interface SaveSlotText {
+    primary: string;
+    secondary: string;
+    tertiary: string;
+}
+
+interface SaveSlotTextLimits {
+    primaryMaxLength: number;
+    secondaryMaxLength: number;
 }
 
 export class SaveLoadPanel implements MenuPanel {
@@ -55,7 +66,7 @@ export class SaveLoadPanel implements MenuPanel {
         root.addChild(createPanelTitle(cfg, w, this.mode === 'save' ? 'SAVE GAME' : 'LOAD GAME'));
 
         const slots = this.saves.listSlots(this.config.maxSlots);
-        const slotHeight = 55;
+        const slotHeight = 78;
         const slotSpacing = 8;
         const slotWidth = Math.min(600, w * 0.8);
         const totalHeight = slots.length * (slotHeight + slotSpacing);
@@ -82,23 +93,79 @@ export class SaveLoadPanel implements MenuPanel {
             const slotBg = new Graphics();
             styleSlot(slotBg, false);
             slotBgs.push(slotBg);
+            slotContainer.addChild(slotBg);
 
-            let label: string;
+            const primaryFontSize = cfg.fontSize - 6;
+            const secondaryFontSize = Math.max(12, cfg.fontSize - 10);
+            const tertiaryFontSize = Math.max(10, cfg.fontSize - 12);
+            const hasOccupiedSlot = Boolean(meta);
+            const thumbnailWidth = 92;
+            const thumbnailHeight = 52;
+            const textX = hasOccupiedSlot ? 122 : 15;
+            const textWidth = slotWidth - textX - 18;
+            const { primary, secondary, tertiary } = formatSaveSlotText(slotNumber, meta, {
+                primaryMaxLength: estimateTextCapacity(textWidth, primaryFontSize),
+                secondaryMaxLength: estimateTextCapacity(textWidth, secondaryFontSize),
+            });
+
             if (meta) {
-                const date = new Date(meta.savedAt);
-                label = `Slot ${slotNumber} - ${meta.sceneName || 'Unknown'}  (${date.toLocaleString()})`;
-            } else {
-                label = `Slot ${slotNumber} - Empty`;
+                const thumbnailX = 15;
+                const thumbnailY = 13;
+                const thumbnailFrame = new Graphics()
+                    .roundRect(thumbnailX, thumbnailY, thumbnailWidth, thumbnailHeight, 5)
+                    .fill({ alpha: 0.75, color: 0x0B_0B_14 })
+                    .stroke({ alpha: 0.8, color: theme.borderColor, width: 1 });
+                slotContainer.addChild(thumbnailFrame);
+
+                if (isSaveThumbnailDataUrl(meta.thumbnailDataUrl)) {
+                    const thumbnail = Sprite.from(meta.thumbnailDataUrl);
+                    thumbnail.position.set(thumbnailX, thumbnailY);
+                    thumbnail.width = thumbnailWidth;
+                    thumbnail.height = thumbnailHeight;
+                    slotContainer.addChild(thumbnail);
+
+                    const thumbnailBorder = new Graphics()
+                        .roundRect(thumbnailX, thumbnailY, thumbnailWidth, thumbnailHeight, 5)
+                        .stroke({ alpha: 0.85, color: theme.borderColor, width: 1 });
+                    slotContainer.addChild(thumbnailBorder);
+                }
             }
 
-            const slotText = new Text({
-                style: { fill: meta ? cfg.textColor : 0x66_66_66, fontFamily: cfg.fontFamily, fontSize: cfg.fontSize - 6 },
-                text: label
+            const primaryText = new Text({
+                style: {
+                    fill: meta ? cfg.textColor : 0x66_66_66,
+                    fontFamily: cfg.fontFamily,
+                    fontSize: primaryFontSize,
+                    fontWeight: meta ? 'bold' : 'normal',
+                },
+                text: primary
             });
-            slotText.anchor.set(0, 0.5);
-            slotText.position.set(15, slotHeight / 2);
+            primaryText.anchor.set(0, 0);
+            primaryText.position.set(textX, 8);
 
-            slotContainer.addChild(slotBg, slotText);
+            const secondaryText = new Text({
+                style: {
+                    fill: meta ? 0xAA_AA_AA : 0x66_66_66,
+                    fontFamily: cfg.fontFamily,
+                    fontSize: secondaryFontSize,
+                },
+                text: secondary
+            });
+            secondaryText.anchor.set(0, 0);
+            secondaryText.position.set(textX, 33);
+
+            const tertiaryText = new Text({
+                style: {
+                    fill: meta ? 0x88_88_88 : 0x66_66_66,
+                    fontFamily: cfg.fontFamily,
+                    fontSize: tertiaryFontSize,
+                },
+                text: tertiary
+            });
+            tertiaryText.anchor.set(0, 0);
+            tertiaryText.position.set(textX, 56);
+
+            slotContainer.addChild(primaryText, secondaryText, tertiaryText);
             slotContainer.position.set((w - slotWidth) / 2, y);
 
             const activateSlot = () => {
@@ -144,4 +211,66 @@ export class SaveLoadPanel implements MenuPanel {
 
         return { container: root };
     }
+}
+
+export function formatSaveSlotText(
+    slotNumber: number,
+    meta: SaveMeta | undefined,
+    limits: SaveSlotTextLimits,
+): SaveSlotText {
+    if (!meta) {
+        return {
+            primary: truncateSlotText(`Slot ${slotNumber} - Empty`, limits.primaryMaxLength),
+            secondary: 'No save data',
+            tertiary: '',
+        };
+    }
+
+    const title = meta.label?.trim() || meta.chapter?.trim() || meta.sceneName || 'Unknown';
+    const preview = formatSavePreview(meta);
+    const date = Number.isFinite(meta.savedAt)
+        ? new Date(meta.savedAt).toLocaleString()
+        : 'Unknown date';
+    const secondary = preview ?? 'No dialogue preview';
+    const tertiary = `${date} - ${formatSaveContextLine(meta)}`;
+
+    return {
+        primary: truncateSlotText(`Slot ${slotNumber} - ${title}`, limits.primaryMaxLength),
+        secondary: truncateSlotText(secondary, limits.secondaryMaxLength),
+        tertiary: truncateSlotText(tertiary, limits.secondaryMaxLength),
+    };
+}
+
+function estimateTextCapacity(width: number, fontSize: number): number {
+    return Math.max(16, Math.floor(width / Math.max(6, fontSize * 0.62)));
+}
+
+function formatSaveContextLine(meta: SaveMeta): string {
+    const parts: string[] = [];
+    if (meta.kind === 'bookmark') {
+        parts.push(meta.bookmarkId ? `Bookmark ${meta.bookmarkId}` : 'Bookmark');
+    } else if (meta.kind === 'chapter') {
+        parts.push(meta.chapter ? `Chapter ${meta.chapter}` : 'Chapter');
+    }
+    parts.push(formatSaveVersionLine(meta));
+    return parts.join(' - ');
+}
+
+function formatSavePreview(meta: SaveMeta): string | undefined {
+    const previewText = meta.previewText?.trim();
+    if (!previewText) return undefined;
+
+    const previewSpeaker = meta.previewSpeaker?.trim();
+    return previewSpeaker ? `${previewSpeaker}: ${previewText}` : previewText;
+}
+
+function formatSaveVersionLine(meta: SaveMeta): string {
+    const saveVersion = meta.saveSchemaVersion === undefined ? 'legacy' : `v${meta.saveSchemaVersion}`;
+    const contentVersion = meta.contentSchemaVersion === undefined ? 'legacy' : `v${meta.contentSchemaVersion}`;
+    return `Save ${saveVersion} / Content ${contentVersion}`;
+}
+
+function truncateSlotText(value: string, maxLength: number): string {
+    if (value.length <= maxLength) return value;
+    return `${value.slice(0, maxLength - 3).trimEnd()}...`;
 }

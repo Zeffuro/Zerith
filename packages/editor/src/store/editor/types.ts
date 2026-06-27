@@ -121,10 +121,12 @@ export interface UiPrefsSlice {
     openGlobalSearchReplacePopup: () => void;
     openNewProjectModal: () => void;
     openSettingsModal: () => void;
+    previewLocale: string | undefined;
     recentProjects: RecentProject[];
     requestProjectClose: () => void;
     setAutosaveEnabled: (enabled: boolean) => void;
     setAutosaveIntervalMs: (intervalMs: number) => void;
+    setPreviewLocale: (locale: string | undefined) => void;
     setThemeKey: (key: string) => void;
     setUiScale: (scale: number) => void;
     setWindowState: (state: EditorWindowState) => void;

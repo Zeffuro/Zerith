@@ -15,6 +15,7 @@ export interface DialogueRendererConfig {
     boxY?: number;
     messageStyle?: Partial<TextStyleOptions>;
     nameStyle?: Partial<TextStyleOptions>;
+    reducedMotion?: boolean;
 }
 
 export class DialogueRenderer {
@@ -51,7 +52,9 @@ export class DialogueRenderer {
             this.messageText.y + this.messageText.height
         );
         this.container?.addChild(blinker);
-        void this.animations.to(blinker, { alpha: 0, duration: 0.5, repeat: -1, yoyo: true });
+        if (!this.config.reducedMotion) {
+            void this.animations.to(blinker, { alpha: 0, duration: 0.5, repeat: -1, yoyo: true });
+        }
         return blinker;
     }
 

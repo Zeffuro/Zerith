@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="720" viewBox="0 0 360 720" role="img" aria-label="Aria normal pose">
+  <ellipse cx="180" cy="690" rx="92" ry="18" fill="#000" opacity="0.25"/>
+  <path d="M112 694 L132 336 Q180 292 228 336 L248 694 Z" fill="#3a506b"/>
+  <path d="M126 430 Q180 470 234 430 L248 694 L112 694 Z" fill="#1f2a44"/>
+  <circle cx="180" cy="238" r="74" fill="#f7c59f"/>
+  <path d="M104 232 Q118 132 184 128 Q246 128 258 226 Q214 184 170 194 Q132 202 104 232 Z" fill="#3b2f4a"/>
+  <circle cx="154" cy="244" r="7" fill="#1f2937"/>
+  <circle cx="206" cy="244" r="7" fill="#1f2937"/>
+  <path d="M154 284 Q180 300 206 284" stroke="#8f4f4f" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M94 386 Q132 332 178 332 Q226 332 266 386 L234 436 Q180 396 126 436 Z" fill="#ffd166"/>
+</svg>

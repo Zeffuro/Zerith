@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="720" viewBox="0 0 360 720" role="img" aria-label="Cove thoughtful pose">
+  <ellipse cx="180" cy="690" rx="92" ry="18" fill="#000" opacity="0.25"/>
+  <path d="M106 694 L128 344 Q180 308 232 344 L254 694 Z" fill="#1b4965"/>
+  <path d="M128 428 Q180 458 232 428 L254 694 L106 694 Z" fill="#102a43"/>
+  <circle cx="180" cy="238" r="72" fill="#d7b49e"/>
+  <path d="M108 222 Q118 146 174 130 Q238 126 258 214 Q222 192 186 198 Q144 202 108 222 Z" fill="#1f2937"/>
+  <path d="M144 244 Q154 238 164 246" stroke="#111827" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M198 246 Q208 238 218 244" stroke="#111827" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M158 290 Q180 282 202 290" stroke="#6b3f3f" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M90 386 Q132 336 180 336 Q228 336 270 386 L236 440 Q180 408 124 440 Z" fill="#9ad0ff"/>
+  <circle cx="238" cy="304" r="12" fill="#f4d06f"/>
+</svg>

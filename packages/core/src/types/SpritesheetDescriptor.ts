@@ -1,5 +1,6 @@
 export interface SheetDescriptorBase {
     meta?: Record<string, unknown>;
+    schemaVersion?: 1 | 2;
     source: string;
 }
 

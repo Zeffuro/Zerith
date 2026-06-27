@@ -1,0 +1,133 @@
+{
+    "$schema": "zerith/scene",
+    "commands": [
+        {
+            "name": "chapter_one.start",
+            "type": "label"
+        },
+        {
+            "key": "chapter",
+            "type": "set",
+            "value": "chapter_one"
+        },
+        {
+            "name": "enter_studio_evening",
+            "type": "call"
+        },
+        {
+            "action": "pose",
+            "id": "aria",
+            "pose": "smile",
+            "type": "sprite"
+        },
+        {
+            "action": "pose",
+            "id": "cove",
+            "pose": "thoughtful",
+            "type": "sprite"
+        },
+        {
+            "lineId": "chapter_one.opening.001",
+            "speaker": "cove",
+            "tags": [
+                "save-point",
+                "drafting"
+            ],
+            "text": "The board is clean. That is the scariest possible state.",
+            "type": "dialogue"
+        },
+        {
+            "lineId": "chapter_one.opening.002",
+            "speaker": "aria",
+            "tags": [
+                "drafting"
+            ],
+            "text": "Good. Clean means every branch we add is intentional.",
+            "type": "dialogue"
+        },
+        {
+            "all": [
+                {
+                    "key": "route_focus",
+                    "op": "eq",
+                    "value": "outline"
+                }
+            ],
+            "onFalse": [
+                {
+                    "lineId": "chapter_one.route.character.001",
+                    "speaker": "cove",
+                    "text": "I wrote the emotional turn first, so the outline has something to protect.",
+                    "type": "dialogue"
+                }
+            ],
+            "onTrue": [
+                {
+                    "lineId": "chapter_one.route.outline.001",
+                    "speaker": "cove",
+                    "text": "I marked the branch point before writing the emotional turn.",
+                    "type": "dialogue"
+                }
+            ],
+            "type": "if"
+        },
+        {
+            "lineId": "chapter_one.close.001",
+            "speaker": "aria",
+            "text": "Then we leave space for the player to breathe.",
+            "type": "dialogue"
+        },
+        {
+            "analyticsLabel": "starter_chapter_tone",
+            "id": "chapter_one.tone_choice",
+            "options": [
+                {
+                    "commands": [
+                        {
+                            "key": "ending_tone",
+                            "type": "set",
+                            "value": "quiet"
+                        },
+                        {
+                            "to": "ending",
+                            "type": "jump"
+                        }
+                    ],
+                    "id": "chapter_one.tone_choice.quiet",
+                    "label": "Keep the ending quiet",
+                    "labelId": "chapter_one.tone_choice.quiet.label"
+                },
+                {
+                    "commands": [
+                        {
+                            "key": "ending_tone",
+                            "type": "set",
+                            "value": "bright"
+                        },
+                        {
+                            "to": "ending",
+                            "type": "jump"
+                        }
+                    ],
+                    "id": "chapter_one.tone_choice.bright",
+                    "label": "Make the ending bright",
+                    "labelId": "chapter_one.tone_choice.bright.label"
+                }
+            ],
+            "type": "choice"
+        }
+    ],
+    "graph": {
+        "entry": "chapter_one.start",
+        "exits": [
+            "ending"
+        ],
+        "nodes": [
+            "chapter_one.start",
+            "chapter_one.tone_choice"
+        ]
+    },
+    "id": "chapter_one",
+    "localeNamespace": "scene.chapter_one",
+    "schemaVersion": 2
+}

@@ -3,6 +3,7 @@ export {
     fsJoin,
     fsMkdir,
     fsOpenPath,
+    fsPickBinaryFiles,
     fsPickDirectory,
     fsPickProjectManifest,
     fsReadBinaryFile,
@@ -14,5 +15,5 @@ export {
     fsWriteTextFile,
 } from './explorerFs';
 
-export type { FsDirectoryEntry } from './explorerFs';
+export type { FsDirectoryEntry, FsFilePickerFilter, FsFilePickerOptions, FsPickedFile } from './explorerFs';
 

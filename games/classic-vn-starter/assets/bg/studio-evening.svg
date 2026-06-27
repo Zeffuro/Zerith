@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="Evening writing studio">
+  <defs>
+    <linearGradient id="evening-wall" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a2034"/>
+      <stop offset="1" stop-color="#0f1628"/>
+    </linearGradient>
+    <linearGradient id="evening-window" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d66f6f"/>
+      <stop offset="1" stop-color="#394867"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#evening-wall)"/>
+  <rect x="86" y="96" width="1110" height="404" rx="8" fill="#0b1020" opacity="0.82"/>
+  <rect x="144" y="124" width="284" height="318" rx="6" fill="url(#evening-window)"/>
+  <rect x="472" y="124" width="284" height="318" rx="6" fill="url(#evening-window)" opacity="0.72"/>
+  <rect x="800" y="124" width="284" height="318" rx="6" fill="url(#evening-window)" opacity="0.52"/>
+  <rect x="132" y="452" width="966" height="34" rx="4" fill="#070b16"/>
+  <rect x="0" y="502" width="1280" height="218" fill="#0b1020"/>
+  <rect x="284" y="468" width="712" height="138" rx="12" fill="#20273d"/>
+  <rect x="324" y="500" width="286" height="22" rx="6" fill="#ef767a"/>
+  <rect x="324" y="536" width="422" height="16" rx="5" fill="#9ad0ff"/>
+  <circle cx="1040" cy="548" r="44" fill="#ef767a" opacity="0.7"/>
+</svg>

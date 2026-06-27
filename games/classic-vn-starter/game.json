@@ -1,0 +1,24 @@
+{
+    "$schema": "zerith/manifest",
+    "author": "Zerith",
+    "characters": "/data/characters.json",
+    "description": "A small v2 visual novel starter with branching dialogue, stable line IDs, save/load-friendly pacing, and a localization-ready string bundle.",
+    "items": "/data/items.json",
+    "license": "Starter template content for Zerith projects.",
+    "localization": {
+        "defaultLocale": "en",
+        "locales": {
+            "en": "/locales/en.json"
+        }
+    },
+    "macros": "/data/macros.json",
+    "scenes": {
+        "chapter_one": "/scenes/chapter_one.json",
+        "ending": "/scenes/ending.json",
+        "intro": "/scenes/intro.json"
+    },
+    "schemaVersion": 2,
+    "startScene": "intro",
+    "title": "Classic VN Starter",
+    "version": "0.1.0"
+}

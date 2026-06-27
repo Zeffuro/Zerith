@@ -112,6 +112,7 @@ describe('openProjectEntry jsonKindResolution', () => {
             expect(resolveJsonKindFromSchema({ $schema: 'zerith/engine-config' })).toBe('engineConfig');
             expect(resolveJsonKindFromSchema({ $schema: 'zerith/items' })).toBe('items');
             expect(resolveJsonKindFromSchema({ $schema: 'zerith/macros' })).toBe('macros');
+            expect(resolveJsonKindFromSchema({ $schema: 'zerith/scene' })).toBe('script');
         });
 
         it('returns undefined for unknown or missing schema ids', () => {
@@ -247,6 +248,24 @@ describe('openProjectEntry', () => {
                 kind: 'asset',
                 path: '/project/assets/bg/courtroom.png',
                 title: 'courtroom.png',
+            },
+        });
+    });
+
+    it('opens svg image assets in an asset tab and updates selection', async () => {
+        openProjectEntryMocks.fsReadTextFile.mockRejectedValueOnce(new Error('missing descriptor'));
+
+        await openProjectEntry('/project/assets/sprites/aria-smile.svg', 'aria-smile.svg');
+
+        expect(openProjectEntryMocks.applyAssetSelection).toHaveBeenCalledWith('/assets/sprites/aria-smile.svg');
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenCalledWith({
+            action: 'openTab',
+            tab: {
+                assetPath: '/assets/sprites/aria-smile.svg',
+                id: 'asset:/project/assets/sprites/aria-smile.svg',
+                kind: 'asset',
+                path: '/project/assets/sprites/aria-smile.svg',
+                title: 'aria-smile.svg',
             },
         });
     });

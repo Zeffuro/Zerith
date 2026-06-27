@@ -1,8 +1,10 @@
+import type { ProjectOpenResult } from '../../store/actions/projectOpenActions';
+
 export type CommandPaletteActionDeps = {
     activeDockLayoutPresetId: string | undefined;
     activeFile: string | undefined;
-            addRecentProject: (manifestPath: string) => void;
-            availableThemeKeys: string[];
+    addRecentProject: (manifestPath: string) => void;
+    availableThemeKeys: string[];
     captureDockLayoutJson: () => unknown;
     clearAllBreakpoints: () => void;
     closeProject: () => void;
@@ -11,17 +13,19 @@ export type CommandPaletteActionDeps = {
     isPlaybackPaused: boolean;
     isRunning: boolean;
     markManualSave: () => void;
+    migrateProjectContent: () => Promise<void>;
     openExportGameModal: () => void;
     openGlobalSearchPopup: (mode?: 'find' | 'replace') => void;
     openGlobalSearchReplacePopup: () => void;
     openInitialProjectEntry: () => Promise<void>;
+    openLocalizationEditor: () => void;
     openNewProjectModal: () => void;
     openProjectFolder: () => Promise<void>;
-    openProjectFromManifest: (manifestPath: string) => Promise<void>;
+    openProjectInCurrentWindow: (manifestPath: string) => Promise<ProjectOpenResult>;
     openSettingsModal: () => void;
-            projectPath: string | undefined;
-            recentProjects: RecentProjectLike[] | undefined;
-            resetDockLayout: () => void;
+    projectPath: string | undefined;
+    recentProjects: RecentProjectLike[] | undefined;
+    resetDockLayout: () => void;
     saveActiveFileFromCurrentScript: () => Promise<unknown>;
     saveAllDirtyFiles: () => Promise<unknown>;
     saveDockLayoutPreset: (name: string, layoutJson: unknown) => void;
@@ -29,12 +33,21 @@ export type CommandPaletteActionDeps = {
     setActiveDockLayoutPresetId: (id: string | undefined) => void;
     setDockLayoutJson: (json: unknown) => void;
     setThemeKey: (key: string) => void;
+    showBrowserParityReport: () => void;
+    showGitCheckoutBranch: () => Promise<void> | void;
+    showGitCommitStaged: () => Promise<void> | void;
+    showGitCreateBranch: () => Promise<void> | void;
+    showGitIntegrationReport: () => void;
+    showGitPushCurrentBranch: () => Promise<void> | void;
+    showGitStageAll: () => Promise<void> | void;
+    showGitStatusReport: () => Promise<void> | void;
     themeKey: string;
     triggerPause: () => void;
     triggerPlay: () => void;
     triggerResume: () => void;
     triggerStep: () => void;
     triggerStop: () => void;
+    validateProjectContent: () => Promise<void>;
 };
 
 export type PaletteAction = {
@@ -129,6 +142,33 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
             shortcut: 'Ctrl+Alt+O',
         },
         {
+            action: async () => {
+                if (!deps.projectPath) return;
+                await deps.migrateProjectContent();
+            },
+            id: 'migrate-content-schema',
+            keywords: 'migrate content schema version upgrade scene ids',
+            label: 'Migrate Content Schema...',
+        },
+        {
+            action: async () => {
+                if (!deps.projectPath) return;
+                await deps.validateProjectContent();
+            },
+            id: 'validate-project-content',
+            keywords: 'validate project content graph localization backlog line ids diagnostics',
+            label: 'Validate Project Content...',
+        },
+        {
+            action: () => {
+                if (!deps.projectPath) return;
+                deps.openLocalizationEditor();
+            },
+            id: 'open-localization',
+            keywords: 'localization locale translation strings dialogue lines',
+            label: 'Open Localization',
+        },
+        {
             action: () => {
                 const nextThemeKey = resolveNextThemeKey(deps.themeKey, deps.availableThemeKeys);
                 deps.setThemeKey(nextThemeKey);
@@ -154,6 +194,76 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
             keywords: 'settings preferences keymap theme autosave',
             label: 'Open Settings',
             shortcut: 'Ctrl+Alt+S',
+        },
+        {
+            action: () => {
+                deps.showBrowserParityReport();
+            },
+            id: 'show-browser-parity-report',
+            keywords: 'browser desktop parity capability export reveal filesystem close diagnostics',
+            label: 'Show Browser Parity Report',
+        },
+        {
+            action: () => {
+                deps.showGitIntegrationReport();
+            },
+            id: 'show-git-integration-report',
+            keywords: 'git integration version control repository status diff commit branch diagnostics tauri rust browser',
+            label: 'Show Git Integration Report',
+        },
+        {
+            action: async () => {
+                if (!deps.projectPath) return;
+                await deps.showGitCreateBranch();
+            },
+            id: 'git-create-branch',
+            keywords: 'git create branch version control repository ref',
+            label: 'Git: Create Branch...',
+        },
+        {
+            action: async () => {
+                if (!deps.projectPath) return;
+                await deps.showGitCheckoutBranch();
+            },
+            id: 'git-checkout-branch',
+            keywords: 'git checkout switch branch version control repository clean worktree',
+            label: 'Git: Checkout Branch...',
+        },
+        {
+            action: async () => {
+                if (!deps.projectPath) return;
+                await deps.showGitCommitStaged();
+            },
+            id: 'git-commit-staged',
+            keywords: 'git commit staged version control repository message',
+            label: 'Git: Commit Staged...',
+        },
+        {
+            action: async () => {
+                if (!deps.projectPath) return;
+                await deps.showGitStageAll();
+            },
+            id: 'git-stage-all',
+            keywords: 'git stage add project changes version control repository index',
+            label: 'Git: Stage Project Changes...',
+        },
+        {
+            action: async () => {
+                if (!deps.projectPath) return;
+                await deps.showGitPushCurrentBranch();
+            },
+            id: 'git-push-current-branch',
+            keywords: 'git push current branch remote version control repository',
+            label: 'Git: Push Current Branch...',
+        },
+        {
+            action: async () => {
+                if (!deps.projectPath) return;
+                await deps.showGitStatusReport();
+            },
+            id: 'show-git-status-report',
+            keywords: 'git status repository version control changed files branch ahead behind tauri rust desktop',
+            label: 'Show Git Status Report',
         },
         {
             action: () => {
@@ -272,11 +382,13 @@ export function buildRecentProjectPaletteActions(deps: CommandPaletteActionDeps)
 
 export async function executeRecentProjectOpenSequence(
     projectPath: string,
-    deps: Pick<CommandPaletteActionDeps, 'addRecentProject' | 'openInitialProjectEntry' | 'openProjectFromManifest'>,
+    deps: Pick<CommandPaletteActionDeps, 'addRecentProject' | 'openInitialProjectEntry' | 'openProjectInCurrentWindow'>,
 ): Promise<void> {
-    await deps.openProjectFromManifest(projectPath);
+    const opened = await deps.openProjectInCurrentWindow(projectPath);
+    if (opened.status === 'cancelled') return;
+
     deps.addRecentProject(projectPath);
-    await deps.openInitialProjectEntry();
+    if (opened.status === 'opened-current') await deps.openInitialProjectEntry();
 }
 
 function resolveNextThemeKey(currentThemeKey: string, availableThemeKeys: string[]): string {

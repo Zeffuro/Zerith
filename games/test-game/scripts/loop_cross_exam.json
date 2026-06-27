@@ -1,54 +1,124 @@
-[
-  { "type": "call", "name": "court_entry" },
-  { "type": "sprite", "id": "phoenix", "action": "show", "pose": "default", "x": 300, "y": 720 },
-  { "type": "sprite", "id": "phoenix", "action": "animate", "animation": "idle_blink" },
-
-  { "type": "dialogue", "speaker": "judge", "text": "Defense, proceed with your cross-examination." },
-  { "type": "dialogue", "speaker": "phoenix", "text": "Yes, Your Honor." },
-
-  { "type": "call", "name": "witness_testimony_loop" },
-
-  { "type": "set", "key": "press_count", "value": 0 },
-
-  {
-    "type": "while",
-    "key": "press_count",
-    "op": "lt",
-    "value": 2,
-    "maxIterations": 5,
-    "body": [
-      {
-        "type": "choice",
-        "options": [
-          {
-            "label": "Press statement",
-            "commands": [
-              { "type": "set", "key": "press_count", "op": "add", "value": 1 },
-              { "type": "dialogue", "speaker": "phoenix", "text": "Hold it! That's your statement #{press_count} under pressure." }
+{
+    "$schema": "zerith/scene",
+    "commands": [
+        {
+            "type": "call",
+            "name": "court_entry"
+        },
+        {
+            "type": "sprite",
+            "id": "phoenix",
+            "action": "show",
+            "pose": "default",
+            "x": 300,
+            "y": 720
+        },
+        {
+            "type": "sprite",
+            "id": "phoenix",
+            "action": "animate",
+            "animation": "idle_blink"
+        },
+        {
+            "type": "dialogue",
+            "speaker": "judge",
+            "text": "Defense, proceed with your cross-examination.",
+            "lineId": "scene.loop_cross_exam.line.004"
+        },
+        {
+            "type": "dialogue",
+            "speaker": "phoenix",
+            "text": "Yes, Your Honor.",
+            "lineId": "scene.loop_cross_exam.line.005"
+        },
+        {
+            "type": "call",
+            "name": "witness_testimony_loop"
+        },
+        {
+            "type": "set",
+            "key": "press_count",
+            "value": 0
+        },
+        {
+            "type": "while",
+            "key": "press_count",
+            "op": "lt",
+            "value": 2,
+            "maxIterations": 5,
+            "body": [
+                {
+                    "type": "choice",
+                    "options": [
+                        {
+                            "label": "Press statement",
+                            "commands": [
+                                {
+                                    "type": "set",
+                                    "key": "press_count",
+                                    "op": "add",
+                                    "value": 1
+                                },
+                                {
+                                    "type": "dialogue",
+                                    "speaker": "phoenix",
+                                    "text": "Hold it! That's your statement #{press_count} under pressure.",
+                                    "lineId": "scene.loop_cross_exam.line.008.001.001.002"
+                                }
+                            ],
+                            "id": "scene.loop_cross_exam.choice.008.001.option.001",
+                            "labelId": "scene.loop_cross_exam.choice.008.001.option.001.label"
+                        },
+                        {
+                            "label": "Present autopsy report",
+                            "commands": [
+                                {
+                                    "type": "if",
+                                    "source": "items",
+                                    "key": "autopsy_report",
+                                    "onTrue": [
+                                        {
+                                            "type": "call",
+                                            "name": "phoenix_objection"
+                                        },
+                                        {
+                                            "type": "dialogue",
+                                            "speaker": "phoenix",
+                                            "text": "This report contradicts your timeline!",
+                                            "lineId": "scene.loop_cross_exam.line.008.001.002.001.002"
+                                        },
+                                        {
+                                            "type": "set",
+                                            "key": "press_count",
+                                            "value": 2
+                                        }
+                                    ],
+                                    "onFalse": [
+                                        {
+                                            "type": "dialogue",
+                                            "speaker": "phoenix",
+                                            "text": "(I don't have the report yet...)",
+                                            "lineId": "scene.loop_cross_exam.line.008.001.002.001.001"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "id": "scene.loop_cross_exam.choice.008.001.option.002",
+                            "labelId": "scene.loop_cross_exam.choice.008.001.option.002.label"
+                        }
+                    ],
+                    "id": "scene.loop_cross_exam.choice.008.001"
+                }
             ]
-          },
-          {
-            "label": "Present autopsy report",
-            "commands": [
-              {
-                "type": "if",
-                "source": "items",
-                "key": "autopsy_report",
-                "onTrue": [
-                  { "type": "call", "name": "phoenix_objection" },
-                  { "type": "dialogue", "speaker": "phoenix", "text": "This report contradicts your timeline!" },
-                  { "type": "set", "key": "press_count", "value": 2 }
-                ],
-                "onFalse": [
-                  { "type": "dialogue", "speaker": "phoenix", "text": "(I don't have the report yet...)" }
-                ]
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-
-  { "type": "dialogue", "speaker": "judge", "text": "Interesting. We'll take a short recess." }
-]
+        },
+        {
+            "type": "dialogue",
+            "speaker": "judge",
+            "text": "Interesting. We'll take a short recess.",
+            "lineId": "scene.loop_cross_exam.line.009"
+        }
+    ],
+    "id": "loop_cross_exam",
+    "localeNamespace": "scene.loop_cross_exam",
+    "schemaVersion": 2
+}

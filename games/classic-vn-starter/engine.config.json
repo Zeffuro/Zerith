@@ -1,0 +1,39 @@
+{
+    "$schema": "zerith/engine-config",
+    "audio": {
+        "defaultBlipUrl": null
+    },
+    "display": {
+        "backgroundColor": 1052688,
+        "height": 720,
+        "scaleMode": "fit",
+        "width": 1280
+    },
+    "overlay": {
+        "backgroundAlpha": 0.88,
+        "buttonColor": 1778248,
+        "buttonHoverColor": 3307054,
+        "fontFamily": "Arial",
+        "fontSize": 22,
+        "textColor": 16777215
+    },
+    "schemaVersion": 2,
+    "startScreen": {
+        "backgroundAlpha": 0.9,
+        "backgroundColor": 1052688,
+        "fontFamily": "Arial",
+        "fontSize": 30,
+        "text": "CLICK TO START",
+        "textColor": 16777215
+    },
+    "theme": {
+        "accentColor": 16764057,
+        "borderColor": 7635429,
+        "borderWidth": 2,
+        "boxAlpha": 0.9,
+        "boxColor": 1646377,
+        "fontFamily": "Arial",
+        "fontSize": 25,
+        "hoverColor": 3307054
+    }
+}

@@ -28,6 +28,11 @@ const hoistedMocks = vi.hoisted(() => {
         getPreferredManifestView: vi.fn((fallback?: 'json' | 'timeline') => fallback ?? 'json'),
         getPreferredScriptView: vi.fn((fallback?: 'json' | 'timeline') => fallback ?? 'timeline'),
         looksLikeMacrosObject: vi.fn((value: unknown) => Boolean(value) && typeof value === 'object' && !Array.isArray(value)),
+        looksLikeSceneFile: vi.fn((value: unknown) => Array.isArray(value) || (
+            Boolean(value)
+            && typeof value === 'object'
+            && Array.isArray((value as { commands?: unknown }).commands)
+        )),
         makeTabId: vi.fn((kind: string, path: string) => `${kind}:${path}`),
         state,
     };
@@ -52,6 +57,7 @@ export function resetOpenProjectEntryMocks(): void {
     hoistedMocks.getPreferredManifestView.mockReset();
     hoistedMocks.getPreferredScriptView.mockReset();
     hoistedMocks.looksLikeMacrosObject.mockReset();
+    hoistedMocks.looksLikeSceneFile.mockReset();
     hoistedMocks.makeTabId.mockReset();
 
     hoistedMocks.state.manifest = undefined;
@@ -67,6 +73,11 @@ export function resetOpenProjectEntryMocks(): void {
     hoistedMocks.looksLikeMacrosObject.mockImplementation(
         (value: unknown) => Boolean(value) && typeof value === 'object' && !Array.isArray(value),
     );
+    hoistedMocks.looksLikeSceneFile.mockImplementation((value: unknown) => Array.isArray(value) || (
+        Boolean(value)
+        && typeof value === 'object'
+        && Array.isArray((value as { commands?: unknown }).commands)
+    ));
     hoistedMocks.makeTabId.mockImplementation((kind: string, path: string) => `${kind}:${path}`);
 }
 
@@ -117,4 +128,5 @@ vi.mock('../services/projectOpeners', () => ({
     applyMacrosFile: hoistedMocks.applyMacrosFile,
     applyScriptFile: hoistedMocks.applyScriptFile,
     looksLikeMacrosObject: hoistedMocks.looksLikeMacrosObject,
+    looksLikeSceneFile: hoistedMocks.looksLikeSceneFile,
 }));

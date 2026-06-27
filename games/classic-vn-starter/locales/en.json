@@ -1,0 +1,32 @@
+{
+    "$schema": "zerith/locale",
+    "locale": "en",
+    "namespaces": {
+        "scene.chapter_one": {
+            "chapter_one.close.001": "Then we leave space for the player to breathe.",
+            "chapter_one.opening.001": "The board is clean. That is the scariest possible state.",
+            "chapter_one.opening.002": "Good. Clean means every branch we add is intentional.",
+            "chapter_one.route.character.001": "I wrote the emotional turn first, so the outline has something to protect.",
+            "chapter_one.route.outline.001": "I marked the branch point before writing the emotional turn.",
+            "chapter_one.tone_choice.bright.label": "Make the ending bright",
+            "chapter_one.tone_choice.quiet.label": "Keep the ending quiet"
+        },
+        "scene.ending": {
+            "ending.bright.001": "Bright endings make a good promise: there is more waiting after the fade.",
+            "ending.close.001": "The notebook is ready. Tomorrow, the real chapter starts.",
+            "ending.opening.001": "One branch, one notebook, one clean save point.",
+            "ending.quiet.001": "Quiet endings are easier to hear when the next chapter is calling."
+        },
+        "scene.intro": {
+            "intro.choice.prompt": "How should we start?",
+            "intro.character.001": "Then the characters go first, and the outline follows what they reveal.",
+            "intro.join.001": "Either way, the next scene should load from the same save point.",
+            "intro.opening.001": "Every classic visual novel starts with a room, a choice, and a promise.",
+            "intro.opening.002": "The promise is simple: every line should be easy to find again.",
+            "intro.outline.001": "Then the outline goes first: setup, branch, consequence, clean return.",
+            "intro.focus_choice.character.label": "Follow the characters",
+            "intro.focus_choice.outline.label": "Outline the chapter"
+        }
+    },
+    "schemaVersion": 2
+}

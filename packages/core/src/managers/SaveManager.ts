@@ -2,13 +2,23 @@ import type { SpriteState } from '../handlers/SpriteHandler';
 import type { WeatherEffectState } from '../handlers/WeatherHandler';
 import type { ISaveManager } from '../interfaces/managers';
 import type { IStorageProvider } from '../interfaces/providers';
+import type { ContentSchemaVersion } from '../schemas/contentVersionSchemas';
 import type { Serializable, SystemState } from '../types';
+import type { HistoryEntry } from './HistoryManager';
 
+import { CURRENT_CONTENT_SCHEMA_VERSION, LEGACY_CONTENT_SCHEMA_VERSION } from '../schemas/contentVersionSchemas';
 import { createDefaultSystemState } from '../types';
 import { deepClone } from '../utils/deepClone';
 
+export const CURRENT_SAVE_SCHEMA_VERSION = 1 as const;
+export const LEGACY_SAVE_SCHEMA_VERSION = 0 as const;
+
 export interface SaveContext {
+    captureThumbnailDataUrl?: () => string | undefined;
+    getContentSchemaVersion?: () => ContentSchemaVersion;
+    getCurrentChapterName?: () => string | undefined;
     getCurrentSceneName(): string;
+    getHistorySnapshot?: () => readonly HistoryEntry[];
     getLastSavePoint(): number;
     getStateSnapshot(): Record<string, Serializable>;
     getSystemSnapshot(): SystemState;
@@ -18,19 +28,44 @@ export interface SaveContext {
 }
 
 export interface SaveMeta {
+    bookmarkId?: string;
+    chapter?: string;
+    contentSchemaVersion?: ContentSchemaVersion;
+    kind?: SaveSlotKind;
     label?: string;
+    previewSpeaker?: string;
+    previewText?: string;
     savedAt: number;
+    saveSchemaVersion?: SaveSchemaVersion;
     sceneName: string;
     slot: number;
+    thumbnailDataUrl?: string;
 }
 
+export interface SaveOptions {
+    bookmarkId?: string;
+    chapter?: string;
+    kind?: SaveSlotKind;
+    label?: string;
+}
+
+export type SaveSchemaVersion = typeof CURRENT_SAVE_SCHEMA_VERSION | typeof LEGACY_SAVE_SCHEMA_VERSION;
+export type SaveSlotKind = 'bookmark' | 'chapter' | 'manual';
+
 export interface SaveState {
+    contentSchemaVersion?: ContentSchemaVersion;
     index: number;
     meta: SaveMeta;
+    saveSchemaVersion?: SaveSchemaVersion;
     sceneName: string;
     state: Record<string, Serializable>;
     system: SystemState;
 }
+
+const SAVE_PREVIEW_MAX_LENGTH = 120;
+const SAVE_HISTORY_MAX_ENTRIES = 200;
+const SAVE_THUMBNAIL_MAX_LENGTH = 300_000;
+const SAVE_THUMBNAIL_PATTERN = /^data:image\/(?:png|jpe?g|webp);base64,[a-z0-9+/=]+$/i;
 
 const LEGACY_SYSTEM_KEYS = new Set([
     '__sys_background',
@@ -139,25 +174,44 @@ export class SaveManager implements ISaveManager {
         }
     }
 
-    public save(slot: number = 1, label?: string) {
+    public save(slot: number = 1, labelOrOptions?: SaveOptions | string) {
         if (this.destroyed) return;
+        const options = normalizeSaveOptions(labelOrOptions);
         const currentSceneName = this.context.getCurrentSceneName();
+        const contentSchemaVersion = this.context.getContentSchemaVersion?.() ?? LEGACY_CONTENT_SCHEMA_VERSION;
+        const systemSnapshot = deepClone(this.context.getSystemSnapshot());
+        const historySnapshot = normalizeSaveHistoryEntries(
+            this.context.getHistorySnapshot?.() ?? systemSnapshot.history
+        );
+        const bookmarkId = normalizeSaveMetaString(options.bookmarkId);
+        const chapter = normalizeSaveMetaString(options.chapter)
+            ?? normalizeSaveMetaString(this.context.getCurrentChapterName?.());
+        const label = normalizeSaveMetaString(options.label);
         const meta: SaveMeta = {
-            label,
+            ...(bookmarkId ? { bookmarkId } : {}),
+            ...(chapter ? { chapter } : {}),
+            contentSchemaVersion,
+            kind: options.kind ?? (bookmarkId ? 'bookmark' : 'manual'),
+            ...(label ? { label } : {}),
+            ...buildSavePreviewMeta(systemSnapshot.dialogue),
+            ...buildSaveThumbnailMeta(this.captureThumbnailDataUrl()),
             savedAt: Date.now(),
+            saveSchemaVersion: CURRENT_SAVE_SCHEMA_VERSION,
             sceneName: currentSceneName,
             slot
         };
 
         const saveData: SaveState = {
+            contentSchemaVersion,
             index: this.context.getLastSavePoint(),
             meta,
+            saveSchemaVersion: CURRENT_SAVE_SCHEMA_VERSION,
             sceneName: currentSceneName,
             state: deepClone(this.context.getStateSnapshot()),
-            system: {
-                ...deepClone(this.context.getSystemSnapshot()),
+            system: withOptionalHistory({
+                ...systemSnapshot,
                 items: this.context.serializeItems(),
-            },
+            }, historySnapshot),
         };
 
         this.storage.setItem(`${this.prefix}_${slot}`, JSON.stringify(saveData));
@@ -169,6 +223,22 @@ export class SaveManager implements ISaveManager {
         this.storage.setItem(`${this.prefix}_global`, JSON.stringify(state));
     }
 
+    private captureThumbnailDataUrl(): string | undefined {
+        const capture = this.context.captureThumbnailDataUrl;
+        if (!capture) return undefined;
+
+        try {
+            return capture();
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            this.context.logWarn(`Save thumbnail capture failed: ${message}`);
+            return undefined;
+        }
+    }
+
+    private isContentSchemaVersion(value: unknown): value is ContentSchemaVersion {
+        return value === LEGACY_CONTENT_SCHEMA_VERSION || value === CURRENT_CONTENT_SCHEMA_VERSION;
+    }
 
     private isRecord(value: unknown): value is Record<string, unknown> {
         return typeof value === 'object' && value !== null;
@@ -176,11 +246,37 @@ export class SaveManager implements ISaveManager {
 
     private isSaveMeta(value: unknown): value is SaveMeta {
         if (!this.isRecord(value)) return false;
+        const bookmarkIdOk = value.bookmarkId === undefined || typeof value.bookmarkId === 'string';
+        const chapterOk = value.chapter === undefined || typeof value.chapter === 'string';
         const labelOk = value.label === undefined || typeof value.label === 'string';
-        return labelOk
+        const kindOk = value.kind === undefined || this.isSaveSlotKind(value.kind);
+        const previewSpeakerOk = value.previewSpeaker === undefined || typeof value.previewSpeaker === 'string';
+        const previewTextOk = value.previewText === undefined || typeof value.previewText === 'string';
+        const thumbnailOk = value.thumbnailDataUrl === undefined || typeof value.thumbnailDataUrl === 'string';
+        const contentSchemaVersionOk = value.contentSchemaVersion === undefined
+            || this.isContentSchemaVersion(value.contentSchemaVersion);
+        const saveSchemaVersionOk = value.saveSchemaVersion === undefined
+            || this.isSaveSchemaVersion(value.saveSchemaVersion);
+        return bookmarkIdOk
+            && chapterOk
+            && kindOk
+            && labelOk
+            && previewSpeakerOk
+            && previewTextOk
+            && thumbnailOk
+            && contentSchemaVersionOk
+            && saveSchemaVersionOk
             && typeof value.savedAt === 'number'
             && typeof value.sceneName === 'string'
             && typeof value.slot === 'number';
+    }
+
+    private isSaveSchemaVersion(value: unknown): value is SaveSchemaVersion {
+        return value === LEGACY_SAVE_SCHEMA_VERSION || value === CURRENT_SAVE_SCHEMA_VERSION;
+    }
+
+    private isSaveSlotKind(value: unknown): value is SaveSlotKind {
+        return typeof value === 'string' && ['bookmark', 'chapter', 'manual'].includes(value);
     }
 
     private isSerializable(value: unknown): value is Serializable {
@@ -219,18 +315,31 @@ export class SaveManager implements ISaveManager {
 
             const meta = parsed.meta;
             if (meta !== undefined && !this.isSaveMeta(meta)) return undefined;
+            const contentSchemaVersion = this.toContentSchemaVersion(parsed.contentSchemaVersion)
+                ?? (this.isSaveMeta(meta) ? meta.contentSchemaVersion : undefined)
+                ?? LEGACY_CONTENT_SCHEMA_VERSION;
+            const saveSchemaVersion = this.toSaveSchemaVersion(parsed.saveSchemaVersion)
+                ?? (this.isSaveMeta(meta) ? meta.saveSchemaVersion : undefined)
+                ?? LEGACY_SAVE_SCHEMA_VERSION;
+            const parsedMeta = this.isSaveMeta(meta)
+                ? meta
+                : {
+                    savedAt: 0,
+                    sceneName: parsed.sceneName,
+                    slot: 0
+                };
 
             const parsedSystem = this.toSystemState(parsed.system);
 
             return {
+                contentSchemaVersion,
                 index: parsed.index,
-                meta: this.isSaveMeta(meta)
-                    ? meta
-                    : {
-                        savedAt: 0,
-                        sceneName: parsed.sceneName,
-                        slot: 0
-                    },
+                meta: {
+                    ...parsedMeta,
+                    contentSchemaVersion,
+                    saveSchemaVersion,
+                },
+                saveSchemaVersion,
                 sceneName: parsed.sceneName,
                 state: this.sanitizeUserState(parsed.state),
                 system: parsedSystem ?? this.readLegacySystemState(parsed.state),
@@ -297,6 +406,14 @@ export class SaveManager implements ISaveManager {
         return sanitized;
     }
 
+    private toContentSchemaVersion(value: unknown): ContentSchemaVersion | undefined {
+        return this.isContentSchemaVersion(value) ? value : undefined;
+    }
+
+    private toSaveSchemaVersion(value: unknown): SaveSchemaVersion | undefined {
+        return this.isSaveSchemaVersion(value) ? value : undefined;
+    }
+
     private toSystemState(value: unknown): SystemState | undefined {
         if (!this.isRecord(value)) return undefined;
 
@@ -337,6 +454,11 @@ export class SaveManager implements ISaveManager {
                 speaker: value.dialogue.speaker,
                 text: value.dialogue.text,
             };
+        }
+
+        const history = normalizeSaveHistoryEntries(value.history);
+        if (history.length > 0) {
+            state.history = history;
         }
 
         return state;
@@ -384,6 +506,97 @@ export class SaveManager implements ISaveManager {
     }
 }
 
+export function buildSavePreviewMeta(dialogue: SystemState['dialogue'] | undefined): Pick<SaveMeta, 'previewSpeaker' | 'previewText'> {
+    if (!dialogue) return {};
+
+    const previewSpeaker = normalizeSavePreviewValue(dialogue.speaker);
+    const previewText = truncateSavePreviewText(normalizeSavePreviewValue(stripRuntimeTextMarkup(dialogue.text)));
+
+    return {
+        ...(previewSpeaker ? { previewSpeaker } : {}),
+        ...(previewText ? { previewText } : {}),
+    };
+}
+
+export function buildSaveThumbnailMeta(thumbnailDataUrl: string | undefined): Pick<SaveMeta, 'thumbnailDataUrl'> {
+    return isSaveThumbnailDataUrl(thumbnailDataUrl) ? { thumbnailDataUrl } : {};
+}
+
+export function isSaveThumbnailDataUrl(value: unknown): value is string {
+    return typeof value === 'string'
+        && value.length <= SAVE_THUMBNAIL_MAX_LENGTH
+        && SAVE_THUMBNAIL_PATTERN.test(value);
+}
+
+function isSaveHistoryEntry(value: unknown): value is HistoryEntry {
+    return typeof value === 'object'
+        && value !== null
+        && 'speaker' in value
+        && 'text' in value
+        && 'timestamp' in value
+        && typeof value.speaker === 'string'
+        && typeof value.text === 'string'
+        && typeof value.timestamp === 'number'
+        && Number.isFinite(value.timestamp);
+}
+
 function isWeatherPreset(value: unknown): value is WeatherEffectState['preset'] {
     return WEATHER_PRESET_VALUES.has(value);
+}
+
+function normalizeSaveHistoryEntries(value: unknown): HistoryEntry[] {
+    if (!Array.isArray(value)) return [];
+
+    const entries: HistoryEntry[] = [];
+    for (const entry of value) {
+        if (!isSaveHistoryEntry(entry)) continue;
+
+        entries.push({
+            speaker: entry.speaker,
+            text: entry.text,
+            timestamp: entry.timestamp,
+        });
+    }
+
+    return entries.slice(-SAVE_HISTORY_MAX_ENTRIES);
+}
+
+function normalizeSaveMetaString(value: string | undefined): string | undefined {
+    const normalized = value?.trim();
+    return normalized && normalized.length > 0 ? normalized : undefined;
+}
+
+function normalizeSaveOptions(value: SaveOptions | string | undefined): SaveOptions {
+    return typeof value === 'string'
+        ? { label: value }
+        : (value ?? {});
+}
+
+function normalizeSavePreviewValue(value: string | undefined): string | undefined {
+    const normalized = value?.replaceAll(/\s+/g, ' ').trim();
+    return normalized && normalized.length > 0 ? normalized : undefined;
+}
+
+function stripRuntimeTextMarkup(value: string): string {
+    return value
+        .replaceAll(/{[^}]+}/g, '')
+        .replaceAll(/<[^>]+>/g, '');
+}
+
+function truncateSavePreviewText(value: string | undefined): string | undefined {
+    if (!value || value.length <= SAVE_PREVIEW_MAX_LENGTH) return value;
+    return `${value.slice(0, SAVE_PREVIEW_MAX_LENGTH - 3).trimEnd()}...`;
+}
+
+function withOptionalHistory(system: SystemState, history: HistoryEntry[]): SystemState {
+    if (history.length === 0) {
+        const systemWithoutHistory = { ...system };
+        delete systemWithoutHistory.history;
+        return systemWithoutHistory;
+    }
+
+    return {
+        ...system,
+        history,
+    };
 }

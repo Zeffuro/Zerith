@@ -1,5 +1,6 @@
 import type { SpriteState } from '../handlers/SpriteHandler';
 import type { WeatherEffectState } from '../handlers/WeatherHandler';
+import type { HistoryEntry } from '../managers/HistoryManager';
 
 export interface DialogueState {
     portraitSide?: 'left' | 'right';
@@ -12,6 +13,7 @@ export interface SystemState {
     background?: string;
     bgm?: string;
     dialogue?: DialogueState;
+    history?: HistoryEntry[];
     items: string[];
     sprites: Record<string, SpriteState>;
     weather: Record<string, WeatherEffectState>;

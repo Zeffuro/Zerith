@@ -11,6 +11,7 @@ export interface ChoiceCommand extends BaseCommand {
 export interface ChoiceOption {
     commands?: BaseCommand[];
     label: string;
+    labelId?: string;
 }
 
 

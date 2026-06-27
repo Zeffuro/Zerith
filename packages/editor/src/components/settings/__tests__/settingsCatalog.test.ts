@@ -27,6 +27,7 @@ describe('filterSettingsTree', () => {
         const result = filterSettingsTree(settingsCatalog, 'KEYMAP');
 
         expect(result).toEqual([{ id: 'keymap', label: 'Keymap' }]);
+        expect(filterSettingsTree(settingsCatalog, 'plugins')).toEqual([{ id: 'plugins', label: 'Plugins' }]);
     });
 
     it('returns no nodes when nothing matches', () => {
@@ -64,6 +65,7 @@ describe('filterSettingsTree', () => {
             'general-playback': 0,
             'general-quickbuttons': 0,
             keymap: 3,
+            plugins: 0,
         });
     });
 });

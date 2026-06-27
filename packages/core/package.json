@@ -8,7 +8,10 @@
     ".": "./src/index.ts",
     "./handlers": "./src/handlers/index.ts",
     "./schemas": "./src/schemas/index.ts",
-    "./types": "./src/types/index.ts"
+    "./types": "./src/types/index.ts",
+    "./utils/Backlog": "./src/utils/Backlog.ts",
+    "./utils/Localization": "./src/utils/Localization.ts",
+    "./utils/StoryGraph": "./src/utils/StoryGraph.ts"
   },
   "scripts": {
     "dev": "tsc --noEmit --watch",

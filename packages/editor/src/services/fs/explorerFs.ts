@@ -1,10 +1,10 @@
-import type { FsAdapter, FsDirectoryEntry, FsProjectPickerResult } from './types';
+import type { FsAdapter, FsDirectoryEntry, FsFilePickerOptions, FsPickedFile, FsProjectPickerResult } from './types';
 
 import { isTauriRuntime } from '../runtime/runtimeEnvironment';
 import { browserFsAdapter } from './browserFsAdapter';
 import { tauriFsAdapter } from './tauriFsAdapter';
 
-export type { FsDirectoryEntry, FsProjectPickerResult } from './types';
+export type { FsDirectoryEntry, FsFilePickerFilter, FsFilePickerOptions, FsPickedFile, FsProjectPickerResult } from './types';
 
 export async function fsDirname(path: string): Promise<string> {
     return getFsAdapter().dirname(path);
@@ -20,6 +20,10 @@ export async function fsMkdir(path: string, recursive = true): Promise<void> {
 
 export async function fsOpenPath(path: string): Promise<void> {
     await getFsAdapter().openPath(path);
+}
+
+export async function fsPickBinaryFiles(options?: FsFilePickerOptions): Promise<FsPickedFile[]> {
+    return getFsAdapter().pickBinaryFiles(options);
 }
 
 export async function fsPickDirectory(title?: string): Promise<string | undefined> {

@@ -161,6 +161,9 @@ function inferMimeType(path: string): string {
         case 'png': {
             return 'image/png';
         }
+        case 'svg': {
+            return 'image/svg+xml';
+        }
         case 'ttf': {
             return 'font/ttf';
         }

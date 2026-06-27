@@ -32,11 +32,37 @@ type MonacoThemeApi = {
     KeyMod: {
         CtrlCmd: number;
     };
+    languages: {
+        json?: {
+            jsonDefaults: {
+                setDiagnosticsOptions: (options: ZerithJsonDiagnosticsOptions) => void;
+            };
+        };
+    };
 };
 
 type SyncPayload = {
     canonical: string;
     pretty: string;
+};
+
+type ZerithJsonDiagnosticsOptions = {
+    allowComments?: boolean;
+    comments?: 'error' | 'ignore' | 'warning';
+    enableSchemaRequest?: boolean;
+    schemaRequest?: 'error' | 'ignore' | 'warning';
+    schemas?: ZerithJsonSchemaRegistration[];
+    schemaValidation?: 'error' | 'ignore' | 'warning';
+    trailingCommas?: 'error' | 'ignore' | 'warning';
+    validate?: boolean;
+};
+
+type ZerithJsonSchema = Record<string, unknown>;
+
+type ZerithJsonSchemaRegistration = {
+    fileMatch?: string[];
+    schema: ZerithJsonSchema;
+    uri: string;
 };
 
 const FILE_JSON_TAB_KINDS = new Set<string>([
@@ -49,6 +75,82 @@ const FILE_JSON_TAB_KINDS = new Set<string>([
     'spritesheet',
 ]);
 const JSON_EDITOR_MODES = new Set<EditorMode>(['file-json', 'macros', 'script']);
+
+const ZERITH_JSON_SCHEMAS: ZerithJsonSchemaRegistration[] = [
+    {
+        fileMatch: ['**/game.json'],
+        schema: looseObjectSchema('zerith/manifest', {
+            localization: { type: 'object' },
+            macros: { type: ['object', 'string'] },
+            scenes: { type: 'object' },
+            schemaVersion: { enum: [1, 2] },
+            startScene: { type: 'string' },
+            title: { type: 'string' },
+        }),
+        uri: 'zerith://schemas/manifest.json',
+    },
+    {
+        fileMatch: ['**/engine.config.json'],
+        schema: looseObjectSchema('zerith/engine-config', {
+            audio: { type: 'object' },
+            display: { type: 'object' },
+            schemaVersion: { enum: [1, 2] },
+            theme: { type: 'object' },
+        }),
+        uri: 'zerith://schemas/engine-config.json',
+    },
+    {
+        fileMatch: ['**/scenes/*.json'],
+        schema: {
+            oneOf: [
+                { items: { type: 'object' }, type: 'array' },
+                looseObjectSchema('zerith/scene', {
+                    commands: { items: { type: 'object' }, type: 'array' },
+                    graph: { type: 'object' },
+                    id: { type: 'string' },
+                    localeNamespace: { type: 'string' },
+                    schemaVersion: { enum: [1, 2] },
+                }),
+            ],
+        },
+        uri: 'zerith://schemas/scene.json',
+    },
+    {
+        fileMatch: ['**/locales/*.json'],
+        schema: looseObjectSchema('zerith/locale', {
+            locale: { type: 'string' },
+            namespaces: {
+                additionalProperties: {
+                    additionalProperties: { type: 'string' },
+                    type: 'object',
+                },
+                type: 'object',
+            },
+            schemaVersion: { enum: [1, 2] },
+        }, ['locale', 'namespaces']),
+        uri: 'zerith://schemas/locale.json',
+    },
+    {
+        fileMatch: ['**/data/characters.json', '**/characters.json'],
+        schema: looseObjectSchema('zerith/characters'),
+        uri: 'zerith://schemas/characters.json',
+    },
+    {
+        fileMatch: ['**/data/items.json', '**/items.json'],
+        schema: looseObjectSchema('zerith/items'),
+        uri: 'zerith://schemas/items.json',
+    },
+    {
+        fileMatch: ['**/data/macros.json', '**/macros.json'],
+        schema: looseObjectSchema('zerith/macros'),
+        uri: 'zerith://schemas/macros.json',
+    },
+    {
+        fileMatch: ['**/zerith.content.json'],
+        schema: looseObjectSchema('zerith/compiled-content'),
+        uri: 'zerith://schemas/compiled-content.json',
+    },
+];
 
 export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
     const rootScript = useScriptStore((s) => s.rootScript);
@@ -97,6 +199,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
     }, [activeTab, macroEntries, mode, rootScript]);
 
     const editorReference = useRef<Monaco.editor.IStandaloneCodeEditor | undefined>(undefined);
+    const appliedJsonSelectionReference = useRef<null | string>(null);
     const suppressNextMonacoChangeBySessionReference = useRef<Record<string, boolean>>({});
     const syncedCanonicalBySessionReference = useRef<Record<string, string>>({});
     const saveNowReference = useRef<() => Promise<void>>(async () => {});
@@ -105,6 +208,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
     const [errorBySession, setErrorBySession] = useState<Record<string, string | undefined>>({});
     const value = draftBySession[sessionKey] ?? initial;
     const error = errorBySession[sessionKey];
+    const jsonSelectionSignature = activeTab?.jsonSelectionPath?.join('\u001F') ?? '';
 
     const setDraft = useCallback((nextValue: string) => {
         setDraftBySession((previous) => ({ ...previous, [sessionKey]: nextValue }));
@@ -204,6 +308,20 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
         }
     },[editingAllMacrosFile, mode, setLastMacrosView, setLastScriptView]);
 
+    useEffect(() => {
+        if (mode !== 'file-json' || !activeTab?.jsonSelectionPath || jsonSelectionSignature.length === 0) return;
+
+        const token = `${sessionKey}:${jsonSelectionSignature}`;
+        if (appliedJsonSelectionReference.current === token) return;
+
+        const editor = editorReference.current;
+        if (!editor) return;
+
+        if (revealJsonSelection(editor, value, activeTab.jsonSelectionPath)) {
+            appliedJsonSelectionReference.current = token;
+        }
+    }, [activeTab?.jsonSelectionPath, jsonSelectionSignature, mode, sessionKey, value]);
+
     const apply = useCallback((sourceText = value): ApplyResult => {
         if (!activeTab) return { ok: false };
 
@@ -286,11 +404,13 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
 
     const title = titleForMode(mode, activeTab?.title);
     const language = languageForMode(mode, activeTab?.path);
+    const monacoModelPath = toMonacoModelPath(activeTab?.path, sessionKey, mode);
 
     const onMount = ((editor: Monaco.editor.IStandaloneCodeEditor, monaco: MonacoThemeApi) => {
         editorReference.current = editor;
         monacoReference.current = monaco;
 
+        configureZerithJsonDiagnostics(monaco);
         applyMonacoTheme();
 
         editor.addAction({
@@ -341,6 +461,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
                         tabSize: 2,
                         wordWrap: 'off',
                     }}
+                    path={monacoModelPath}
                     value={value}
                 />
             </div>
@@ -350,6 +471,19 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
             </div>
         </div>
     );
+}
+
+function configureZerithJsonDiagnostics(monaco: MonacoThemeApi): void {
+    monaco.languages.json?.jsonDefaults.setDiagnosticsOptions({
+        allowComments: true,
+        comments: 'error',
+        enableSchemaRequest: false,
+        schemaRequest: 'ignore',
+        schemas: ZERITH_JSON_SCHEMAS,
+        schemaValidation: 'warning',
+        trailingCommas: 'error',
+        validate: true,
+    });
 }
 
 function createMonacoTheme(): Monaco.editor.IStandaloneThemeData {
@@ -376,6 +510,35 @@ function createMonacoTheme(): Monaco.editor.IStandaloneThemeData {
             { fontStyle: 'italic', foreground: getMonacoColor('--editor-text-muted', '#6a9955'), token: 'comment' },
         ],
     };
+}
+
+function findJsonObjectKeyRange(sourceText: string, path: string[]): { end: number; start: number } | undefined {
+    let cursor = 0;
+    let found: { end: number; start: number } | undefined;
+
+    for (const segment of path) {
+        const keyLiteral = JSON.stringify(segment);
+        let searchFrom = cursor;
+
+        while (searchFrom < sourceText.length) {
+            const start = sourceText.indexOf(keyLiteral, searchFrom);
+            if (start === -1) return found;
+
+            const end = start + keyLiteral.length;
+            let colonIndex = end;
+            while (/\s/u.test(sourceText[colonIndex] ?? '')) colonIndex++;
+
+            if (sourceText[colonIndex] === ':') {
+                found = { end, start };
+                cursor = colonIndex + 1;
+                break;
+            }
+
+            searchFrom = end;
+        }
+    }
+
+    return found;
 }
 
 function getMonacoColor(name: string, fallback: string): string {
@@ -421,6 +584,44 @@ function languageForMode(mode: EditorMode, path: string | undefined): string {
     return 'json';
 }
 
+function looseObjectSchema(
+    schemaName: string,
+    properties: Record<string, ZerithJsonSchema> = {},
+    required: string[] = [],
+): ZerithJsonSchema {
+    return {
+        additionalProperties: true,
+        properties: {
+            $schema: { const: schemaName },
+            ...properties,
+        },
+        required,
+        type: 'object',
+    };
+}
+
+function revealJsonSelection(
+    editor: Monaco.editor.IStandaloneCodeEditor,
+    sourceText: string,
+    path: string[],
+): boolean {
+    const model = editor.getModel();
+    const range = findJsonObjectKeyRange(sourceText, path);
+    if (!model || !range) return false;
+
+    const start = model.getPositionAt(range.start);
+    const end = model.getPositionAt(range.end);
+    editor.setSelection({
+        endColumn: end.column,
+        endLineNumber: end.lineNumber,
+        startColumn: start.column,
+        startLineNumber: start.lineNumber,
+    });
+    editor.revealPositionInCenter(start);
+    editor.focus();
+    return true;
+}
+
 async function runFormatDocument(editor: Monaco.editor.IStandaloneCodeEditor): Promise<void> {
     await editor.getAction('editor.action.formatDocument')?.run();
 }
@@ -439,6 +640,21 @@ function toMacroEntries(value: unknown): { commands: Command[]; name: string; }[
         commands: Array.isArray(commands) ? (commands as Command[]) : [],
         name,
     }));
+}
+
+function toMonacoModelPath(path: string | undefined, sessionKey: string, mode: EditorMode): string {
+    if (!path) {
+        return `inmemory://zerith/${mode}/${encodeURIComponent(sessionKey)}.json`;
+    }
+
+    const normalized = path.replaceAll('\\', '/');
+    if (/^[a-z][a-z+.-]*:\/\//iu.test(normalized)) {
+        return normalized;
+    }
+
+    return /^[a-z]:\//iu.test(normalized)
+        ? `file:///${normalized}`
+        : `file://${normalized.startsWith('/') ? '' : '/'}${normalized}`;
 }
 
 function toSyncPayload(value: unknown): SyncPayload {

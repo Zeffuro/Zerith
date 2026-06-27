@@ -1,0 +1,76 @@
+{
+    "$schema": "zerith/scene",
+    "commands": [
+        {
+            "name": "ending.start",
+            "type": "label"
+        },
+        {
+            "key": "chapter",
+            "type": "set",
+            "value": "ending"
+        },
+        {
+            "name": "enter_studio_evening",
+            "type": "call"
+        },
+        {
+            "lineId": "ending.opening.001",
+            "speaker": "aria",
+            "tags": [
+                "ending",
+                "save-point"
+            ],
+            "text": "One branch, one notebook, one clean save point.",
+            "type": "dialogue"
+        },
+        {
+            "all": [
+                {
+                    "key": "ending_tone",
+                    "op": "eq",
+                    "value": "bright"
+                }
+            ],
+            "onFalse": [
+                {
+                    "lineId": "ending.quiet.001",
+                    "speaker": "cove",
+                    "text": "Quiet endings are easier to hear when the next chapter is calling.",
+                    "type": "dialogue"
+                }
+            ],
+            "onTrue": [
+                {
+                    "color": 16764057,
+                    "duration": 220,
+                    "type": "flash",
+                    "wait": false
+                },
+                {
+                    "lineId": "ending.bright.001",
+                    "speaker": "cove",
+                    "text": "Bright endings make a good promise: there is more waiting after the fade.",
+                    "type": "dialogue"
+                }
+            ],
+            "type": "if"
+        },
+        {
+            "lineId": "ending.close.001",
+            "speaker": "aria",
+            "text": "The notebook is ready. Tomorrow, the real chapter starts.",
+            "type": "dialogue"
+        }
+    ],
+    "graph": {
+        "entry": "ending.start",
+        "exits": [],
+        "nodes": [
+            "ending.start"
+        ]
+    },
+    "id": "ending",
+    "localeNamespace": "scene.ending",
+    "schemaVersion": 2
+}

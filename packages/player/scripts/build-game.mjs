@@ -8,8 +8,11 @@ import { fileURLToPath } from 'node:url';
 import { zipSync } from 'fflate';
 import { build } from 'vite';
 
+import { writeCompiledContentManifest } from './content-compiler.mjs';
+
 function parseArgs(argv) {
     let base;
+    let cachePolicy;
     let game;
     let outDir;
     let zip = false;
@@ -51,6 +54,17 @@ function parseArgs(argv) {
             continue;
         }
 
+        if (arg === '--cachePolicy' && argv[index + 1]) {
+            cachePolicy = argv[index + 1];
+            index += 1;
+            continue;
+        }
+
+        if (arg.startsWith('--cachePolicy=')) {
+            cachePolicy = arg.slice('--cachePolicy='.length);
+            continue;
+        }
+
         if (arg === '--zip') {
             zip = true;
             continue;
@@ -67,7 +81,7 @@ function parseArgs(argv) {
         }
     }
 
-    return { base, game, outDir, zip, zipFile };
+    return { base, cachePolicy, game, outDir, zip, zipFile };
 }
 
 function toAbsolutePath(value, rootPath) {
@@ -147,7 +161,13 @@ async function run() {
         mode: 'production',
     });
 
+    const { artifactPath, compiled } = writeCompiledContentManifest(gamePath, outputPath, {
+        cachePolicy: args.cachePolicy ?? 'hashed',
+    });
+
     process.stdout.write(`Built game from ${gamePath} to ${outputPath} (base: ${base})\n`);
+    process.stdout.write(`Compiled content manifest at ${artifactPath}\n`);
+    process.stdout.write(`Compiled content cache: ${compiled.cache ? 'hashed local files' : 'disabled'}\n`);
 
     if (args.zip) {
         createZipArchive(outputPath, zipPath);

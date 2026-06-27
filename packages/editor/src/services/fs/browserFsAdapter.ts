@@ -1,4 +1,4 @@
-import type { FsAdapter, FsDirectoryEntry } from './types';
+import type { FsAdapter, FsDirectoryEntry, FsFilePickerFilter } from './types';
 
 import { basename, dirname, join, normalizeVirtualPath, pathSegments } from './pathUtilities';
 
@@ -28,7 +28,18 @@ export type BrowserFsAdapter = {
 
 export type BrowserFsGlobal = {
     showDirectoryPicker?: (options?: { mode?: 'read' | 'readwrite' }) => Promise<BrowserDirectoryHandle>;
+    showOpenFilePicker?: (options?: BrowserOpenFilePickerOptions) => Promise<BrowserFileHandle[]>;
 } & typeof globalThis;
+
+export type BrowserOpenFilePickerOptions = {
+    multiple?: boolean;
+    types?: BrowserOpenFilePickerType[];
+};
+
+export type BrowserOpenFilePickerType = {
+    accept: Record<string, string[]>;
+    description: string;
+};
 
 export type BrowserWritableFileStream = {
     close: () => Promise<void>;
@@ -58,6 +69,16 @@ export function createBrowserFsAdapter(browserGlobal: BrowserFsGlobal = globalTh
         },
         mountDirectory: (handle) => mountDirectory(handle, roots),
         openPath: () => Promise.reject(new Error('Reveal in system is only available in the desktop editor.')),
+        pickBinaryFiles: async (options = {}) => {
+            const handles = await pickBinaryFiles(browserGlobal, options.filters, options.multiple ?? true);
+            return Promise.all(handles.map(async (handle) => {
+                const file = await handle.getFile();
+                return {
+                    bytes: new Uint8Array(await file.arrayBuffer()),
+                    name: file.name || handle.name,
+                };
+            }));
+        },
         pickDirectory: async () => {
             const directory = await pickDirectory(browserGlobal, adapter);
             return directory ? mountDirectory(directory, roots) : undefined;
@@ -162,6 +183,17 @@ async function getWritableFile(path: string, roots: Map<string, BrowserDirectory
     return parent.getFileHandle(entryName, { create: true });
 }
 
+function mimeForPickerFilter(filter: FsFilePickerFilter): string {
+    const extensions = new Set(filter.extensions.map((extension) => extension.replace(/^\./u, '').toLowerCase()));
+
+    if ([...extensions].every((extension) => IMAGE_PICKER_EXTENSIONS.has(extension))) return 'image/*';
+    if ([...extensions].every((extension) => AUDIO_PICKER_EXTENSIONS.has(extension))) return 'audio/*';
+    if ([...extensions].every((extension) => FONT_PICKER_EXTENSIONS.has(extension))) return 'font/*';
+    if ([...extensions].every((extension) => TEXT_PICKER_EXTENSIONS.has(extension))) return 'text/*';
+
+    return 'application/octet-stream';
+}
+
 function mountDirectory(handle: BrowserDirectoryHandle, roots: Map<string, BrowserDirectoryHandle>): string {
     for (const [rootName, rootHandle] of roots) {
         if (rootHandle === handle) {
@@ -179,6 +211,28 @@ function mountDirectory(handle: BrowserDirectoryHandle, roots: Map<string, Brows
 
     roots.set(rootName, handle);
     return `/${rootName}`;
+}
+
+async function pickBinaryFiles(
+    browserGlobal: BrowserFsGlobal,
+    filters: FsFilePickerFilter[] | undefined,
+    multiple: boolean,
+): Promise<BrowserFileHandle[]> {
+    if (typeof browserGlobal.showOpenFilePicker !== 'function') {
+        throw new TypeError('This browser does not support file import. Use Chrome or Edge.');
+    }
+
+    try {
+        return await browserGlobal.showOpenFilePicker({
+            multiple,
+            types: toBrowserPickerTypes(filters),
+        });
+    } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+            return [];
+        }
+        throw error;
+    }
 }
 
 async function pickDirectory(
@@ -245,8 +299,24 @@ function sanitizeRootName(name: string): string {
     return sanitized || 'browser-project';
 }
 
+function toBrowserPickerTypes(filters: FsFilePickerFilter[] | undefined): BrowserOpenFilePickerType[] | undefined {
+    if (!filters || filters.length === 0) return undefined;
+
+    return filters.map((filter) => ({
+        accept: {
+            [mimeForPickerFilter(filter)]: filter.extensions.map((extension) => extension.startsWith('.') ? extension : `.${extension}`),
+        },
+        description: filter.name,
+    }));
+}
+
 async function writeFile(file: BrowserFileHandle, content: ArrayBuffer | Blob | string | Uint8Array): Promise<void> {
     const writable = await file.createWritable();
     await writable.write(content);
     await writable.close();
 }
+
+const AUDIO_PICKER_EXTENSIONS = new Set(['m4a', 'mp3', 'ogg', 'wav']);
+const FONT_PICKER_EXTENSIONS = new Set(['otf', 'ttf', 'woff', 'woff2']);
+const IMAGE_PICKER_EXTENSIONS = new Set(['avif', 'jpeg', 'jpg', 'png', 'svg', 'webp']);
+const TEXT_PICKER_EXTENSIONS = new Set(['css', 'csv', 'html', 'ini', 'js', 'jsx', 'md', 'toml', 'ts', 'tsx', 'txt', 'yaml', 'yml']);

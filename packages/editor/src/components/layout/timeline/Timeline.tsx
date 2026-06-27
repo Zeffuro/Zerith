@@ -1,3 +1,5 @@
+import type { GameManifest } from 'core';
+
 import { MouseEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { NonMacroEditorCommandType, PluginNode } from '../../../plugins/types';
@@ -5,6 +7,9 @@ import type { ScriptPath } from '../../../utils/scriptPathUtilities';
 
 import { createDefaultCommand, getAllPlugins, getPlugin } from '../../../plugins/commandPlugins';
 import { hasLikelyIssue } from '../../../plugins/likelyIssues';
+import { openProjectEntry } from '../../../services/openProjectEntry';
+import { createMissingCallMacro } from '../../../services/timelineGraphMacroCreation';
+import { createMissingJumpScene } from '../../../services/timelineGraphSceneCreation';
 import { executeTimelineContextAction } from '../../../store/actions/timelineContextActions';
 import { useProjectStore } from '../../../store/storeBootstrap';
 import { useScriptStore } from '../../../store/storeBootstrap';
@@ -13,12 +18,14 @@ import { useSettingsStore } from '../../../store/useSettingsStore';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { resolveComponentScale, editorTheme as t } from '../../../theme/editorTheme';
 import { ConfirmDialog } from '../../ConfirmDialog';
+import { resolveGraphLabelInsertion, resolveMissingGraphLabelCreations, summarizeSceneComposer } from './sceneComposerModel';
 import { TimelineCommandBar } from './TimelineCommandBar';
 import { type CommandContextMenuState, TimelineCommandContextMenu } from './TimelineCommandContextMenu';
 import { TimelineDropZone } from './TimelineDropZone';
 import { TimelineEmptyState } from './TimelineEmptyState';
 import { TimelineMinimap, type TimelineMinimapRow } from './TimelineMinimap';
 import { TimelineNode } from './TimelineNode';
+import { TimelineSceneComposerPanel } from './TimelineSceneComposerPanel';
 import { TimelineSearchBar } from './TimelineSearchBar';
 import { TimelineTypeFilterChips } from './TimelineTypeFilterChips';
 import { useTimelineDragDrop } from './useTimelineDragDrop';
@@ -56,12 +63,18 @@ export function Timeline() {
     const requestDelete = useEditorStore((state) => state.requestDelete);
     const clearSelection = useEditorStore((state) => state.clearSelection);
     const selectedNodePaths = useEditorStore((s) => s.selectedNodePaths);
+    const setSelectedNodePaths = useEditorStore((state) => state.setSelectedNodePaths);
+    const setSelectionAnchorPath = useEditorStore((state) => state.setSelectionAnchorPath);
 
     const editingAllMacrosFile = useProjectStore((s) => s.editingAllMacrosFile);
     const activeFile = useProjectStore((s) => s.activeFile);
+    const manifest = useProjectStore((s) => s.manifest);
     const setLastScriptView = useWorkbenchStore((s) => s.setLastScriptView);
     const setLastMacrosView = useWorkbenchStore((s) => s.setLastMacrosView);
     const macroEntries = useProjectStore((s) => s.macroEntries);
+    const projectPath = useProjectStore((s) => s.projectPath);
+    const scenePaths = useProjectStore((s) => s.scenePaths);
+    const scenes = useProjectStore((s) => s.scenes);
     const setMacroEntries = useProjectStore((s) => s.setMacroEntries);
     const addMacroEntry = useProjectStore((s) => s.addMacroEntry);
     const deleteMacroEntries = useProjectStore((s) => s.deleteMacroEntries);
@@ -81,13 +94,14 @@ export function Timeline() {
 
     const {
         addNode,
+        addNodeAtPath,
         deleteNodeByPath,
         deleteNodesByPaths,
         rootScript,
         selectedNodeIndex,
     } = useScriptStore();
 
-    const allPlugins = useMemo(() => getAllPlugins(), []);
+    const allPlugins = getAllPlugins();
     const commandMenuItems = useMemo(
         () => allPlugins.map((p) => ({ icon: p.icon(14 * uiScale), label: p.label, type: p.type })),
         [allPlugins, uiScale]
@@ -116,6 +130,19 @@ export function Timeline() {
             .map(([type, count]) => ({ count, type }))
             .toSorted((a, b) => a.type.localeCompare(b.type));
     }, [rootNodes]);
+
+    const sceneComposerSnapshot = useMemo(() => {
+        if (editingAllMacrosFile) {
+            return;
+        }
+
+        return summarizeSceneComposer(rootNodes, {
+            knownScenes: Object.keys(scenes),
+            macros: macroEntries,
+            sceneName: resolveActiveSceneName(manifest, projectPath, activeFile),
+            selectedPaths: selectedNodePaths,
+        });
+    }, [activeFile, editingAllMacrosFile, macroEntries, manifest, projectPath, rootNodes, scenes, selectedNodePaths]);
 
     const {
         activeMatchDisplayIndex,
@@ -421,6 +448,149 @@ export function Timeline() {
         setMacroEntries(next);
     };
 
+    const handleSelectComposerPath = useCallback((path: ScriptPath) => {
+        setSelectedNodePaths([path]);
+        setSelectionAnchorPath(path);
+    }, [setSelectedNodePaths, setSelectionAnchorPath]);
+
+    const handleCreateGraphLabel = useCallback((label: string, sourcePath: ScriptPath) => {
+        const trimmedLabel = label.trim();
+        if (!trimmedLabel || editingAllMacrosFile) return;
+
+        const insertion = resolveGraphLabelInsertion(sourcePath, rootScript.length);
+        addNodeAtPath(insertion.arrayPath, { name: trimmedLabel, type: 'label' }, insertion.index);
+        setSelectedNodePaths([insertion.nodePath]);
+        setSelectionAnchorPath(insertion.nodePath);
+    }, [addNodeAtPath, editingAllMacrosFile, rootScript.length, setSelectedNodePaths, setSelectionAnchorPath]);
+
+    const handleCreateMissingGraphLabels = useCallback(() => {
+        if (editingAllMacrosFile || !sceneComposerSnapshot) return;
+
+        const creations = resolveMissingGraphLabelCreations(sceneComposerSnapshot.graph.gotos, rootScript.length);
+        if (creations.length === 0) return;
+
+        for (const creation of creations) {
+            addNodeAtPath(creation.arrayPath, { name: creation.label, type: 'label' }, creation.index);
+        }
+
+        const selectedCreation = creations.at(-1);
+        if (!selectedCreation) return;
+        setSelectedNodePaths([selectedCreation.nodePath]);
+        setSelectionAnchorPath(selectedCreation.nodePath);
+    }, [addNodeAtPath, editingAllMacrosFile, rootScript.length, sceneComposerSnapshot, setSelectedNodePaths, setSelectionAnchorPath]);
+
+    const canOpenGraphScene = useCallback((sceneName: string) => (
+        typeof scenePaths[sceneName] === 'string'
+    ), [scenePaths]);
+
+    const canOpenGraphMacro = useCallback((macroName: string) => {
+        const macrosPath = typeof manifest?.macros === 'string' && projectPath
+            ? resolveProjectFilePath(projectPath, manifest.macros)
+            : undefined;
+
+        return Boolean(
+            macrosPath
+            && macroEntries.some((entry) => entry.name === macroName)
+        );
+    }, [macroEntries, manifest, projectPath]);
+
+    const handleOpenGraphScene = useCallback((sceneName: string) => {
+        const scenePath = scenePaths[sceneName];
+        if (!scenePath) return;
+        void openProjectEntry(scenePath, basename(scenePath), { forceView: 'timeline' });
+    }, [scenePaths]);
+
+    const handleOpenGraphMacro = useCallback((macroName: string) => {
+        const macroIndex = macroEntries.findIndex((entry) => entry.name === macroName);
+        const macrosPath = typeof manifest?.macros === 'string' && projectPath
+            ? resolveProjectFilePath(projectPath, manifest.macros)
+            : undefined;
+
+        if (macroIndex === -1 || !macrosPath) return;
+
+        void (async () => {
+            await openProjectEntry(macrosPath, basename(macrosPath), { forceView: 'timeline' });
+            const targetPath: ScriptPath = [macroIndex];
+            setSelectedNodePaths([targetPath]);
+            setSelectionAnchorPath(targetPath);
+        })();
+    }, [macroEntries, manifest, projectPath, setSelectedNodePaths, setSelectionAnchorPath]);
+
+    const handleCreateMissingGraphMacro = useCallback((macroName: string) => {
+        void (async () => {
+            const project = useProjectStore.getState();
+            const result = await createMissingCallMacro({
+                dirtyFiles: project.dirtyFiles,
+                macroName,
+                manifest: project.manifest,
+                projectPath: project.projectPath,
+            }, {
+                reloadManifest: project.loadManifest,
+            });
+
+            if (result.status === 'blocked') {
+                globalThis.alert?.(result.message);
+                return;
+            }
+
+            const macroIndex = useProjectStore.getState().macroEntries.findIndex((entry) => entry.name === result.macroName);
+            if (macroIndex === -1) return;
+            const targetPath: ScriptPath = [macroIndex];
+            setSelectedNodePaths([targetPath]);
+            setSelectionAnchorPath(targetPath);
+        })();
+    }, [setSelectedNodePaths, setSelectionAnchorPath]);
+
+    const handleOpenMissingGraphSceneTarget = useCallback((sceneName: string) => {
+        if (!projectPath || !sceneName.trim()) return;
+        const manifestPath = `${projectPath.replaceAll(/[\\/]+$/gu, '')}/game.json`;
+        void openProjectEntry(manifestPath, 'game.json', {
+            forceView: 'json',
+            jsonSelectionPath: ['scenes', sceneName],
+        });
+    }, [projectPath]);
+
+    const handleCreateMissingGraphScene = useCallback((sceneName: string) => {
+        void (async () => {
+            const project = useProjectStore.getState();
+            const result = await createMissingJumpScene({
+                activeFile: project.activeFile,
+                dirtyFiles: project.dirtyFiles,
+                manifest: project.manifest,
+                projectPath: project.projectPath,
+                sceneName,
+            }, {
+                reloadManifest: project.loadManifest,
+            });
+
+            if (result.status === 'blocked') {
+                globalThis.alert?.(result.message);
+            }
+        })();
+    }, []);
+
+    const handleCreateMissingGraphScenes = useCallback((sceneNames: string[]) => {
+        void (async () => {
+            for (const sceneName of sceneNames) {
+                const project = useProjectStore.getState();
+                const result = await createMissingJumpScene({
+                    activeFile: project.activeFile,
+                    dirtyFiles: project.dirtyFiles,
+                    manifest: project.manifest,
+                    projectPath: project.projectPath,
+                    sceneName,
+                }, {
+                    reloadManifest: project.loadManifest,
+                });
+
+                if (result.status === 'blocked') {
+                    globalThis.alert?.(result.message);
+                    return;
+                }
+            }
+        })();
+    }, []);
+
     const renderNode = (
         node: PluginNode,
         nodePath: ScriptPath,
@@ -539,6 +709,24 @@ export function Timeline() {
                     </div>
                 )}
 
+                {sceneComposerSnapshot && (
+                    <TimelineSceneComposerPanel
+                        canOpenMacro={canOpenGraphMacro}
+                        canOpenScene={canOpenGraphScene}
+                        onCreateLabel={handleCreateGraphLabel}
+                        onCreateMissingLabels={handleCreateMissingGraphLabels}
+                        onCreateMissingMacro={handleCreateMissingGraphMacro}
+                        onCreateMissingScene={handleCreateMissingGraphScene}
+                        onCreateMissingScenes={handleCreateMissingGraphScenes}
+                        onOpenMacro={handleOpenGraphMacro}
+                        onOpenMissingSceneTarget={handleOpenMissingGraphSceneTarget}
+                        onOpenScene={handleOpenGraphScene}
+                        onSelectPath={handleSelectComposerPath}
+                        snapshot={sceneComposerSnapshot}
+                        uiScale={uiScale}
+                    />
+                )}
+
                 <TimelineSearchBar
                     activeMatchDisplayIndex={activeMatchDisplayIndex}
                     inputId={searchInputId}
@@ -637,6 +825,10 @@ export function Timeline() {
 }
 
 
+function basename(path: string): string {
+    return path.split(/[\\/]/).pop() || path;
+}
+
 function flattenRenderedNodes(
     root: { index: number; node: PluginNode }[],
     context: FlattenContext
@@ -689,8 +881,42 @@ function macroNode(name: string, commands: PluginNode[]) {
     return { body: commands, name, type: 'macro_header' };
 }
 
+function normalizePath(path: string): string {
+    return path.replaceAll('\\', '/').replace(/\/+$/u, '').toLowerCase();
+}
+
 function pathKey(path: ScriptPath) {
     return path.join('.');
+}
+
+function resolveActiveSceneName(
+    manifest: GameManifest | undefined,
+    projectPath: string | undefined,
+    activeFile: string | undefined,
+): string | undefined {
+    if (!manifest?.scenes || !projectPath || !activeFile) return undefined;
+
+    const normalizedActiveFile = normalizePath(activeFile);
+    for (const [sceneName, scene] of Object.entries(manifest.scenes)) {
+        if (typeof scene !== 'string') continue;
+
+        const scenePath = resolveProjectFilePath(projectPath, scene);
+        if (scenePath && normalizePath(scenePath) === normalizedActiveFile) {
+            return sceneName;
+        }
+    }
+
+    return undefined;
+}
+
+function resolveProjectFilePath(projectPath: string, assetPath: string): string | undefined {
+    if (/^(?:[a-z]+:)?\/\//iu.test(assetPath) || assetPath.startsWith('data:')) return undefined;
+
+    const normalizedProjectPath = projectPath.replaceAll('\\', '/').replace(/\/+$/u, '');
+    const normalizedAssetPath = assetPath.replaceAll('\\', '/');
+    return normalizedAssetPath.startsWith('/')
+        ? `${normalizedProjectPath}/${normalizedAssetPath.slice(1)}`
+        : `${normalizedProjectPath}/${normalizedAssetPath}`;
 }
 
 function samePath(a: ScriptPath, b: ScriptPath): boolean {
@@ -700,5 +926,3 @@ function samePath(a: ScriptPath, b: ScriptPath): boolean {
     }
     return true;
 }
-
-

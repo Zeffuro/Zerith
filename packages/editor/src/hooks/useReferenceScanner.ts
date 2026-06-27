@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import { collectDataAssetReferences, listProjectAssetFiles, scanReferences } from '../services/referenceScanner';
+import { buildReferenceScannerState } from '../services/referenceScanner';
 import { useProjectStore } from '../store/storeBootstrap';
 import { useReferenceStore } from '../store/useReferenceStore';
 
@@ -23,14 +23,11 @@ export function useReferenceScanner() {
                     return;
                 }
 
-                const projectData = useProjectStore.getState();
-                const result = scanReferences(projectData);
-                await collectDataAssetReferences(projectData, result);
-                const assetInventory = await listProjectAssetFiles(projectPath);
+                const nextState = await buildReferenceScannerState(useProjectStore.getState());
 
                 if (cancelled) return;
-                useReferenceStore.getState().setResult(result);
-                useReferenceStore.getState().setAssetInventory(assetInventory);
+                useReferenceStore.getState().setResult(nextState.result);
+                useReferenceStore.getState().setAssetInventory(nextState.assetInventory);
             })();
         }, 500);
 

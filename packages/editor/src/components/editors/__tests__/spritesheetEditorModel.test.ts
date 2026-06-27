@@ -7,6 +7,7 @@ import {
     applySliceLineFrames,
     buildFramesFromSliceLines,
     clampFrameRectToBounds,
+    computeFrameListMetrics,
     computeThumbnailCanvasMetrics,
     duplicateFrame,
     frameAtPoint,
@@ -41,6 +42,15 @@ describe('spritesheetEditorModel', () => {
 
         expect(metrics.pixelWidth).toBe(24);
         expect(metrics.pixelHeight).toBe(24);
+    });
+
+    it('computes compact frame list metrics smaller than comfortable rows', () => {
+        const comfortable = computeFrameListMetrics('comfortable', 1);
+        const compact = computeFrameListMetrics('compact', 1);
+
+        expect(compact.rowMinHeight).toBeLessThan(comfortable.rowMinHeight);
+        expect(compact.thumbnailBoxSize).toBeLessThan(comfortable.thumbnailBoxSize);
+        expect(compact.thumbnailColumnWidth).toBeLessThan(comfortable.thumbnailColumnWidth);
     });
 
     it('returns frame name for inclusive hit-testing bounds', () => {

@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import type { AudioCue, AudiosheetDescriptor, SheetDescriptor, SpriteFrame, SpritesheetDescriptor } from '../types';
 
+import { ContentSchemaVersionSchema } from './contentVersionSchemas';
+
 const nonNegativeNumberSchema = z.float64().nonnegative();
 const positiveNumberSchema = z.float64().positive();
 const nonNegativeIntegerSchema = z.int().nonnegative();
@@ -28,6 +30,7 @@ export const spritesheetDescriptorSchema: z.ZodType<SpritesheetDescriptor> = z.o
     frameWidth: positiveIntegerSchema.optional(),
     margin: nonNegativeIntegerSchema.optional(),
     meta: z.record(z.string(), z.unknown()).optional(),
+    schemaVersion: ContentSchemaVersionSchema.optional(),
     source: z.string().min(1),
     spacing: nonNegativeIntegerSchema.optional(),
 }).superRefine((value, context) => {
@@ -58,6 +61,7 @@ export const audioCueSchema: z.ZodType<AudioCue> = z.object({
 export const audiosheetDescriptorSchema: z.ZodType<AudiosheetDescriptor> = z.object({
     cues: z.record(z.string(), audioCueSchema),
     meta: z.record(z.string(), z.unknown()).optional(),
+    schemaVersion: ContentSchemaVersionSchema.optional(),
     source: z.string().min(1),
 });
 

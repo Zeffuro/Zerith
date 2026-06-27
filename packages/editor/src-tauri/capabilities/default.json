@@ -3,18 +3,21 @@
   "identifier": "default",
   "description": "Capability for the main window",
   "windows": [
-    "main"
+    "main",
+    "editor-*"
   ],
   "permissions": [
     "core:default",
     "opener:default",
     "dialog:default",
     "fs:default",
+    "core:window:allow-create",
     "core:window:allow-set-size",
     "core:window:allow-set-position",
     "core:window:allow-maximize",
     "core:window:allow-close",
     "core:window:allow-destroy",
+    "core:webview:allow-create-webview-window",
     {
       "identifier": "fs:allow-read-dir",
       "allow": [{ "path": "**" }]

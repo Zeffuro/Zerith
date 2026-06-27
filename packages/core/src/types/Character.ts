@@ -11,6 +11,7 @@ export interface CharacterDefinition {
     nameColor?: string;
     portraitUrl?: string;
     poses?: Record<string, string>;
+    schemaVersion?: 1 | 2;
     spritesheet?: SpritesheetConfig;
     talkAnimation?: string;
 }

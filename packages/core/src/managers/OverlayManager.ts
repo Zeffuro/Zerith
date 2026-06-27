@@ -91,6 +91,9 @@ export class OverlayManager {
         events.off('scene:loaded', this.onSceneLoaded);
     }
 
+    public hasPanel(id: string): boolean {
+        return this.panels.some(panel => panel.id === id);
+    }
 
     public open() {
         if (this._isOpen) return;
@@ -105,11 +108,9 @@ export class OverlayManager {
         }
     }
 
-    /*
     public removePanel(id: string) {
         this.panels = this.panels.filter(p => p.id !== id);
     }
-    */
 
     public scale(value: number): number {
         return Math.round(value * this.config.uiScale);

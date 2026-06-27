@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
+import { CURRENT_CONTENT_SCHEMA_VERSION } from '../schemas/contentVersionSchemas';
 import { parseAudiosheetDescriptor, parseSheetDescriptor, parseSpritesheetDescriptor } from '../schemas/descriptorSchemas';
 import { audiosheetDescriptor, spritesheetDescriptor } from '../test-utils/scriptBuilders';
 
 describe('descriptorSchemas', () => {
     it('parses a valid spritesheet descriptor in grid format', () => {
-        const input = spritesheetDescriptor();
+        const input = spritesheetDescriptor({
+            schemaVersion: CURRENT_CONTENT_SCHEMA_VERSION,
+        });
 
         const parsed = parseSpritesheetDescriptor(input);
 
@@ -15,6 +18,7 @@ describe('descriptorSchemas', () => {
                 format: 'grid',
                 frameHeight: 64,
                 frameWidth: 64,
+                schemaVersion: CURRENT_CONTENT_SCHEMA_VERSION,
                 source: 'assets/sprites/hero.png',
             },
             success: true,
@@ -65,6 +69,7 @@ describe('descriptorSchemas', () => {
                     volume: 0.9,
                 },
             },
+            schemaVersion: CURRENT_CONTENT_SCHEMA_VERSION,
             source: 'assets/bgm/court.mp3',
         });
 
@@ -80,6 +85,7 @@ describe('descriptorSchemas', () => {
                         volume: 0.9,
                     },
                 },
+                schemaVersion: CURRENT_CONTENT_SCHEMA_VERSION,
                 source: 'assets/bgm/court.mp3',
             },
             success: true,

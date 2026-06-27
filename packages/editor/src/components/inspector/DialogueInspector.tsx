@@ -1,21 +1,50 @@
 import type { DialogueCommand } from 'core';
 
-import { Bold, Clock, FastForward, Italic, Palette, Underline } from 'lucide-react';
-import { useRef } from 'react';
+import { resolveLocalizedText } from 'core/utils/Localization';
+import { Bold, Clock, FastForward, Italic, Languages, Palette, Underline } from 'lucide-react';
+import { useMemo, useRef } from 'react';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
+import { resolvePreviewLocaleBundle } from '../../services/localizationPreview';
+import { openLocalizationWorkbenchTab } from '../../services/localizationWorkbench';
 import { useProjectStore } from '../../store/storeBootstrap';
+import { useEditorStore } from '../../store/useEditorStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { FieldError } from './FieldError';
 
 export function DialogueInspector({ index, node }: { index?: null | number; node: DialogueCommand, }) {
     const { getFieldErrors, getFieldInputStyle, handleChange, labelStyle, uiScale } = useInspectorFieldEditor(index);
+    const lineIdErrors = getFieldErrors('lineId');
     const speakerErrors = getFieldErrors('speaker');
     const textErrors = getFieldErrors('text');
     const textareaReference = useRef<HTMLTextAreaElement>(null);
 
-    const { characters } = useProjectStore();
+    const {
+        activeFile,
+        characters,
+        locales,
+        manifest,
+        projectPath,
+        sceneNamespaces,
+        scenePaths,
+    } = useProjectStore();
+    const previewLocale = useEditorStore((state) => state.previewLocale);
     const charKeys = Object.keys(characters);
+    const lineId = typeof node.lineId === 'string' ? node.lineId : '';
+    const activeSceneName = useMemo(
+        () => findSceneNameByPath(scenePaths, activeFile),
+        [activeFile, scenePaths],
+    );
+    const namespace = activeSceneName
+        ? sceneNamespaces[activeSceneName] ?? `scene.${activeSceneName}`
+        : undefined;
+    const previewBundle = useMemo(
+        () => resolvePreviewLocaleBundle(locales, previewLocale, manifest?.localization?.defaultLocale),
+        [locales, manifest?.localization?.defaultLocale, previewLocale],
+    );
+    const localizedText = lineId && previewBundle.bundle
+        ? resolveLocalizedText(previewBundle.bundle, lineId, { namespace })
+        : undefined;
 
     const insertTag = (before: string, after = '') => {
         const element = textareaReference.current;
@@ -50,6 +79,9 @@ export function DialogueInspector({ index, node }: { index?: null | number; node
     };
 
     const buttonStyle = { alignItems: 'center', background: t.bg.panel, border: `1px solid ${t.border.subtle}`, borderRadius: '3px', color: t.text.normal, cursor: 'pointer', display: 'flex', padding: `${4 * uiScale}px` };
+    const openLocalization = () => {
+        openLocalizationWorkbenchTab({ query: lineId.trim() });
+    };
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -66,6 +98,66 @@ export function DialogueInspector({ index, node }: { index?: null | number; node
                 <datalist id="dialogue-character-ids">
                     {charKeys.map((k) => <option key={k} value={k} />)}
                 </datalist>
+            </div>
+
+            <div>
+                <div style={{ alignItems: 'center', display: 'flex', gap: `${8 * uiScale}px`, justifyContent: 'space-between', marginBottom: `${6 * uiScale}px` }}>
+                    <label style={{ ...labelStyle, marginBottom: 0 }}>Line ID</label>
+                    <button
+                        className="toolbar-btn"
+                        disabled={!projectPath}
+                        onClick={openLocalization}
+                        style={{
+                            alignItems: 'center',
+                            background: t.bg.panel,
+                            border: `1px solid ${t.border.subtle}`,
+                            borderRadius: t.radius.sm,
+                            color: projectPath ? t.text.normal : t.text.faint,
+                            cursor: projectPath ? 'pointer' : 'not-allowed',
+                            display: 'inline-flex',
+                            fontSize: `${11 * uiScale}px`,
+                            gap: `${5 * uiScale}px`,
+                            padding: `${4 * uiScale}px ${7 * uiScale}px`,
+                        }}
+                        title={lineId ? 'Open localization for this line' : 'Open localization'}
+                        type="button"
+                    >
+                        <Languages size={12 * uiScale} />
+                        <span>Open</span>
+                    </button>
+                </div>
+                <input
+                    onChange={(event) => handleChange('lineId', event.target.value.trim() || undefined)}
+                    placeholder="scene.line.001"
+                    style={getFieldInputStyle('lineId')}
+                    type="text"
+                    value={lineId}
+                />
+                <FieldError errors={lineIdErrors} />
+                {(previewBundle.locale || namespace) && (
+                    <div
+                        style={{
+                            background: t.bg.panel,
+                            border: `1px solid ${localizedText ? t.border.subtle : t.accent.orange}`,
+                            borderRadius: t.radius.sm,
+                            color: localizedText ? t.text.muted : t.accent.orange,
+                            fontSize: `${11 * uiScale}px`,
+                            marginTop: `${6 * uiScale}px`,
+                            overflowWrap: 'anywhere',
+                            padding: `${6 * uiScale}px ${8 * uiScale}px`,
+                        }}
+                    >
+                        <strong style={{ color: t.text.faint }}>
+                            {previewBundle.locale ?? 'source'}
+                            {namespace ? ` / ${namespace}` : ''}
+                        </strong>
+                        <div style={{ color: localizedText ? t.text.primary : t.accent.orange, marginTop: `${3 * uiScale}px` }}>
+                            {lineId
+                                ? (localizedText ?? 'Missing locale entry')
+                                : 'No line ID'}
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div>
@@ -98,4 +190,25 @@ export function DialogueInspector({ index, node }: { index?: null | number; node
             </div>
         </div>
     );
+}
+
+function findSceneNameByPath(
+    scenePaths: Record<string, string | undefined>,
+    activeFile: string | undefined,
+): string | undefined {
+    if (!activeFile) return undefined;
+    const normalizedActiveFile = normalizePath(activeFile);
+
+    for (const [sceneName, scenePath] of Object.entries(scenePaths)) {
+        if (!scenePath) continue;
+        if (normalizePath(scenePath) === normalizedActiveFile) {
+            return sceneName;
+        }
+    }
+
+    return undefined;
+}
+
+function normalizePath(path: string): string {
+    return path.replaceAll('\\', '/').replace(/\/+$/u, '').toLowerCase();
 }

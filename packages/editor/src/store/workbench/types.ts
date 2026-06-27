@@ -9,6 +9,7 @@ export type WorkbenchResourceKind =
     | 'engineConfig'
     | 'items'
     | 'json'
+    | 'localization'
     | 'macros'
     | 'manifest'
     | 'script'
@@ -27,7 +28,9 @@ export type WorkbenchTab = {
     assetPath?: string;
     dirty?: boolean;
     id: string;
+    jsonSelectionPath?: string[];
     kind: WorkbenchResourceKind;
+    localizationFilter?: string;
     path: string;
 
     preferredView?: ScriptViewMode;

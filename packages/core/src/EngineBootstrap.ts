@@ -13,7 +13,7 @@ export interface EngineBootstrapOptions {
     canvas: HTMLCanvasElement;
     characters?: Record<string, CharacterDefinition>;
     config?: EngineConfig;
-    defaultBlipUrl?: string;
+    defaultBlipUrl?: null | string;
     items?: Record<string, Omit<EvidenceItem, 'id'>>;
     macros?: Record<string, Script>;
     manifest?: GameManifest;
@@ -27,7 +27,7 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
         canvas,
         characters = {},
         config = {},
-        defaultBlipUrl = '/assets/sfx/blip.wav',
+        defaultBlipUrl,
         items = {},
         macros = {},
         manifest = {},
@@ -46,14 +46,16 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
         sceneManager,
         state,
         theme,
-    } = createManagers({ config });
+    } = createManagers({ config, contentSchemaVersion: manifest.schemaVersion });
     const manifestData = { ...manifest, characters };
+    const effectiveDefaultBlipUrl = resolveDefaultBlipUrl(config, defaultBlipUrl);
     const { dialogueHandler } = registerHandlers({
+        accessibility: config.accessibility,
         animations: deps.animations,
         assets: deps.assets,
         audio: deps.audio,
         characters,
-        defaultBlipUrl,
+        defaultBlipUrl: effectiveDefaultBlipUrl,
         display: deps.display,
         events: deps.events,
         evidence,
@@ -64,6 +66,7 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
         sceneManager,
         spritesheets: deps.spritesheets,
         state,
+        text: config.text,
         theme,
     });
 
@@ -144,4 +147,17 @@ function bindDefaultInputEvents(engine: Engine) {
             notifications.show('Game Loaded!');
         });
     });
+}
+
+function resolveDefaultBlipUrl(config: EngineConfig, override: null | string | undefined): string | undefined {
+    if (override !== undefined) {
+        return override ?? undefined;
+    }
+
+    const configDefaultBlipUrl = config.audio?.defaultBlipUrl;
+    if (configDefaultBlipUrl !== undefined) {
+        return configDefaultBlipUrl ?? undefined;
+    }
+
+    return '/assets/sfx/blip.wav';
 }

@@ -12,7 +12,7 @@ export interface IAudioManager extends IBaseManager {
     audioExists(url: string): boolean;
     bgmVolume: number;
     currentBgmUrl: string | undefined;
-    getVolumes(): Required<AudioConfig>;
+    getVolumes(): Required<Omit<AudioConfig, 'defaultBlipUrl'>>;
     loadAudiosheet(sheetName: string, descriptor: AudiosheetDescriptor): Promise<void>;
     masterVolume: number;
     muted: boolean;

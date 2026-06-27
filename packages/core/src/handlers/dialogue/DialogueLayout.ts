@@ -43,8 +43,9 @@ export function calculateDialogueLayout(options: {
 
     const maxBoxWidth = Math.max(1, displayWidth - margin * 2);
     const maxBoxHeight = Math.max(1, displayHeight - margin * 2);
+    const defaultBoxHeight = Math.max(displayHeight * 0.3, Math.min(160, displayHeight * 0.45));
     const boxWidth = clamp(options.config.boxWidth ?? maxBoxWidth, 1, maxBoxWidth);
-    const boxHeight = clamp(options.config.boxHeight ?? displayHeight * 0.3, 1, maxBoxHeight);
+    const boxHeight = clamp(options.config.boxHeight ?? defaultBoxHeight, 1, maxBoxHeight);
     const boxX = clamp(options.config.boxX ?? margin, 0, Math.max(0, displayWidth - boxWidth));
     const boxY = clamp(options.config.boxY ?? (displayHeight - boxHeight - margin), 0, Math.max(0, displayHeight - boxHeight));
 

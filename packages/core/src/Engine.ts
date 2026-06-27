@@ -21,7 +21,16 @@ import type {
 import type { SaveState } from './managers/SaveManager';
 import type { MenuPanel } from './types';
 import type { BaseCommand, GameManifest, Serializable } from './types';
+import type {
+    RegisteredRuntimePlugin,
+    RuntimePlugin,
+    RuntimePluginActivationResult,
+    RuntimePluginCleanup,
+    RuntimePluginContext,
+    RuntimePluginManifest,
+} from './types/RuntimePlugin';
 
+import { CURRENT_RUNTIME_PLUGIN_API_VERSION } from './types/RuntimePlugin';
 import { Logger } from './utils/Logger';
 import { DefaultTheme, type Theme } from './utils/Theme';
 
@@ -44,6 +53,12 @@ export interface EngineDeps {
     spritesheets: ISpritesheetManager;
     startScreen: IStartScreenManager;
     state: IStateManager;
+}
+
+interface RuntimePluginRegistration {
+    cleanups: RuntimePluginCleanup[];
+    manifest: RuntimePluginManifest;
+    plugin: RuntimePlugin;
 }
 
 export class Engine {
@@ -116,6 +131,7 @@ export class Engine {
     }
 
     private _autoAdvanceDelay: number | undefined;
+    private readonly runtimePlugins = new Map<string, RuntimePluginRegistration>();
 
     constructor(config: EngineConfig = {}, deps: EngineDeps) {
         this.config = config;
@@ -148,6 +164,7 @@ export class Engine {
         if (saveData.system.items.length > 0) {
             this.items.deserialize(saveData.system.items);
         }
+        this.history.deserialize(saveData.system.history ?? []);
 
         this.events.emit('state:loaded', saveData);
 
@@ -172,7 +189,27 @@ export class Engine {
         return this.flow.consumeSkip();
     }
 
+    public async deactivatePlugin(pluginId: string): Promise<boolean> {
+        const id = normalizeRuntimePluginId(pluginId);
+        const registration = this.runtimePlugins.get(id);
+        if (!registration) {
+            return false;
+        }
+
+        this.runtimePlugins.delete(id);
+
+        const tasks: RuntimePluginCleanup[] = [];
+        if (registration.plugin.deactivate) {
+            tasks.push(() => registration.plugin.deactivate?.());
+        }
+        tasks.push(...registration.cleanups.toReversed());
+
+        await this.runRuntimePluginCleanupTasks(registration.manifest.id, tasks);
+        return true;
+    }
+
     public destroy() {
+        const pluginDeactivateTask = this.deactivateAllPlugins();
         this.flow.stop();
         this.input.detach();
         this.clear();
@@ -182,6 +219,7 @@ export class Engine {
             name: string;
             run: () => Promise<void> | void;
         }> = [
+            { name: 'runtimePlugins', run: () => pluginDeactivateTask },
             { name: 'animations', run: () => this.animations.destroy?.() },
             { name: 'overlay', run: () => this.overlay.destroy?.() },
             { name: 'startScreen', run: () => this.startScreen.destroy?.() },
@@ -226,6 +264,12 @@ export class Engine {
         return this.flow.getHandler(type);
     }
 
+    public getRegisteredPlugins(): RegisteredRuntimePlugin[] {
+        return [...this.runtimePlugins.values()]
+            .map((registration) => toRuntimePluginSnapshot(registration))
+            .toSorted((left, right) => left.manifest.id.localeCompare(right.manifest.id));
+    }
+
     public getState<T = Serializable>(key: string): T | undefined {
         return this.stateManager.get<T>(key);
     }
@@ -260,6 +304,39 @@ export class Engine {
 
     public registerHandlers(handlers: RegisteredCommandHandler[]) {
         this.flow.registerHandlers(handlers);
+    }
+
+    public async registerPlugin(plugin: RuntimePlugin): Promise<RegisteredRuntimePlugin> {
+        const manifest = normalizeRuntimePluginManifest(plugin.manifest);
+        assertRuntimePluginCompatibility(manifest);
+        if (this.runtimePlugins.has(manifest.id)) {
+            throw new TypeError(`Runtime plugin '${manifest.id}' is already registered.`);
+        }
+
+        const cleanups: RuntimePluginCleanup[] = [];
+        const context = this.createRuntimePluginContext(manifest, cleanups);
+
+        try {
+            const activationResult = await plugin.activate(context);
+            const activationCleanup = getRuntimePluginActivationCleanup(activationResult);
+            if (activationCleanup) {
+                cleanups.push(activationCleanup);
+            }
+
+            const registration: RuntimePluginRegistration = {
+                cleanups,
+                manifest,
+                plugin: {
+                    ...plugin,
+                    manifest,
+                },
+            };
+            this.runtimePlugins.set(manifest.id, registration);
+            return toRuntimePluginSnapshot(registration);
+        } catch (error) {
+            await this.runRuntimePluginCleanupTasks(manifest.id, cleanups.toReversed());
+            throw error;
+        }
     }
 
     public requestSkip() {
@@ -318,5 +395,152 @@ export class Engine {
     }
 
     private _assetResolver: AssetResolver = (url) => url;
+
+    private createRuntimePluginContext(
+        manifest: RuntimePluginManifest,
+        cleanups: RuntimePluginCleanup[],
+    ): RuntimePluginContext {
+        return {
+            engine: this,
+            manifest: { ...manifest },
+            registerHandler: (handler) => {
+                const previousHandler = this.flow.getHandler(handler.type);
+                this.flow.registerHandler(handler);
+
+                let disposed = false;
+                const dispose = async () => {
+                    if (disposed) return;
+                    disposed = true;
+
+                    const currentHandler = this.flow.getHandler(handler.type);
+                    let destroyedByFlow = false;
+                    if (currentHandler === handler) {
+                        if (previousHandler) {
+                            this.flow.registerHandler(previousHandler);
+                        } else {
+                            this.flow.unregisterHandler(handler.type);
+                            destroyedByFlow = true;
+                        }
+                    }
+
+                    if (!destroyedByFlow) {
+                        await handler.destroy?.();
+                    }
+                };
+
+                cleanups.push(dispose);
+                return dispose;
+            },
+            registerPanel: (panel) => {
+                const existed = this.overlay.hasPanel(panel.id);
+                if (!existed) {
+                    this.overlay.registerPanel(panel);
+                }
+
+                let disposed = false;
+                const dispose = () => {
+                    if (disposed) return;
+                    disposed = true;
+                    if (!existed) {
+                        this.overlay.removePanel(panel.id);
+                    }
+                };
+
+                cleanups.push(dispose);
+                return dispose;
+            },
+        };
+    }
+
+    private async deactivateAllPlugins(): Promise<void> {
+        const pluginIds = [...this.runtimePlugins.keys()];
+        for (const pluginId of pluginIds) {
+            await this.deactivatePlugin(pluginId);
+        }
+    }
+
+    private async runRuntimePluginCleanupTasks(
+        pluginId: string,
+        tasks: RuntimePluginCleanup[],
+    ): Promise<void> {
+        for (const task of tasks) {
+            try {
+                await task();
+            } catch (error) {
+                this.logger.error(
+                    `Runtime plugin '${pluginId}' cleanup failed: ${String(error)}`
+                );
+            }
+        }
+    }
+}
+
+function assertRuntimePluginCompatibility(manifest: RuntimePluginManifest): void {
+    if (
+        manifest.pluginApiVersion !== undefined
+        && manifest.pluginApiVersion !== CURRENT_RUNTIME_PLUGIN_API_VERSION
+    ) {
+        throw new TypeError(
+            `Runtime plugin '${manifest.id}' targets plugin API v${manifest.pluginApiVersion}, `
+            + `but this runtime supports v${CURRENT_RUNTIME_PLUGIN_API_VERSION}.`
+        );
+    }
+}
+
+function getRuntimePluginActivationCleanup(
+    activationResult: RuntimePluginActivationResult,
+): RuntimePluginCleanup | undefined {
+    if (typeof activationResult === 'function') {
+        return activationResult;
+    }
+
+    if (!activationResult) {
+        return undefined;
+    }
+
+    return activationResult.cleanup ?? activationResult.dispose;
+}
+
+function normalizeRuntimePluginId(id: string): string {
+    const normalized = id.trim();
+    if (!normalized) {
+        throw new TypeError('Runtime plugin id cannot be empty.');
+    }
+    return normalized;
+}
+
+function normalizeRuntimePluginManifest(manifest: RuntimePluginManifest): RuntimePluginManifest {
+    const id = normalizeRuntimePluginId(manifest.id);
+    const name = manifest.name.trim();
+    const pluginApiVersion = manifest.pluginApiVersion;
+    const version = manifest.version.trim();
+
+    if (!name) {
+        throw new TypeError(`Runtime plugin '${id}' must declare a name.`);
+    }
+
+    if (!version) {
+        throw new TypeError(`Runtime plugin '${id}' must declare a version.`);
+    }
+
+    return {
+        ...manifest,
+        capabilities: [...new Set(manifest.capabilities)]
+            .toSorted((left, right) => left.localeCompare(right)),
+        id,
+        name,
+        ...(pluginApiVersion === undefined ? {} : { pluginApiVersion }),
+        version,
+    };
+}
+
+function toRuntimePluginSnapshot(
+    registration: RuntimePluginRegistration,
+): RegisteredRuntimePlugin {
+    return {
+        active: true,
+        capabilities: [...(registration.manifest.capabilities ?? [])],
+        manifest: { ...registration.manifest },
+    };
 }
 

@@ -1,121 +1,168 @@
-[
-    {
-        "action": "play",
-        "assetUrl": "/assets/bgm/court.mp3",
-        "type": "bgm",
-        "volume": 0.4
-    },
-    {
-        "assetUrl": "/assets/bg/office.png",
-        "type": "background"
-    },
-    {
-        "fadeIn": 300,
-        "preset": "heavy_rain",
-        "type": "weather"
-    },
-    {
-        "action": "show",
-        "id": "phoenix",
-        "pose": "default",
-        "type": "sprite"
-    },
-    {
-        "speaker": "phoenix",
-        "text": "What should I do todaydsds?",
-        "type": "dialogue"
-    },
-    {
-        "speaker": "phoenix",
-        "text": "What should I do today?",
-        "type": "dialogue"
-    },
-    {
-        "speaker": "phoenix",
-        "text": "This is <b>Bold</b> and this is <i>Italic</i>. {wait:1000} \nAnd now... {u color='red'}Underlined and Red!{/u}",
-        "type": "dialogue"
-    },
-    {
-        "options": [
-            {
-                "commands": [
-                    {
-                        "speaker": "phoenix",
-                        "text": "Charlie looks thirsty.",
-                        "type": "dialogue"
-                    },
-                    {
-                        "key": "watered_plant",
-                        "type": "set",
-                        "value": true
-                    }
-                ],
-                "label": "Water the plant"
-            },
-            {
-                "commands": [
-                    {
-                        "speaker": "phoenix",
-                        "text": "Better safe than sorry.",
-                        "type": "dialogue"
-                    },
-                    {
-                        "action": "add",
-                        "id": "attorney_badge",
-                        "type": "item"
-                    }
-                ],
-                "label": "Grab my attorney badge"
-            }
-        ],
-        "type": "choice"
-    },
-    {
-        "key": "attorney_badge",
-        "onFalse": [
-            {
-                "speaker": "phoenix",
-                "text": "(I hope I don't need my badge today...)",
-                "type": "dialogue"
-            }
-        ],
-        "onTrue": [
-            {
-                "speaker": "phoenix",
-                "text": "(Good, I have my badge on me.)",
-                "type": "dialogue"
-            }
-        ],
-        "source": "items",
-        "type": "if"
-    },
-    {
-        "action": "animate",
-        "animation": "coffee_sip",
-        "id": "phoenix",
-        "type": "sprite",
-        "wait": true
-    },
-    {
-        "speaker": "phoenix",
-        "text": "Okay, enough stalling. To the courthouse!",
-        "type": "dialogue"
-    },
-    {
-        "action": "stop",
-        "fadeOut": 400,
-        "preset": "heavy_rain",
-        "type": "weather"
-    },
-    {
-        "action": "hide",
-        "duration": 300,
-        "id": "phoenix",
-        "transition": "fade",
-        "type": "sprite"
-    },
-    {
-        "to": "courtroom",
-        "type": "jump"
-    }
-]
+{
+    "$schema": "zerith/scene",
+    "id": "intro",
+    "localeNamespace": "scene.intro",
+    "schemaVersion": 2,
+    "commands": [
+        {
+            "action": "play",
+            "assetUrl": "/assets/bgm/court.mp3",
+            "type": "bgm",
+            "volume": 0.4
+        },
+        {
+            "assetUrl": "/assets/bg/office.png",
+            "type": "background"
+        },
+        {
+            "fadeIn": 300,
+            "preset": "heavy_rain",
+            "type": "weather"
+        },
+        {
+            "action": "show",
+            "id": "phoenix",
+            "pose": "default",
+            "type": "sprite"
+        },
+        {
+            "lineId": "scene.intro.line.006",
+            "speaker": "phoenix",
+            "text": "What should I do today?",
+            "type": "dialogue"
+        },
+        {
+            "lineId": "scene.intro.line.007",
+            "speaker": "phoenix",
+            "text": "This is <b>Bold</b> and this is <i>Italic</i>. {wait:1000} \nAnd now... {u color='red'}Underlined and Red!{/u}",
+            "type": "dialogue"
+        },
+        {
+            "id": "scene.intro.choice.008",
+            "options": [
+                {
+                    "commands": [
+                        {
+                            "lineId": "scene.intro.line.008.001.001",
+                            "speaker": "phoenix",
+                            "text": "Charlie looks thirsty.",
+                            "type": "dialogue"
+                        },
+                        {
+                            "key": "watered_plant",
+                            "type": "set",
+                            "value": true
+                        }
+                    ],
+                    "id": "scene.intro.choice.008.option.001",
+                    "label": "Water the plant",
+                    "labelId": "scene.intro.choice.008.option.001.label"
+                },
+                {
+                    "commands": [
+                        {
+                            "lineId": "scene.intro.line.008.002.001",
+                            "speaker": "phoenix",
+                            "text": "Better safe than sorry.",
+                            "type": "dialogue"
+                        },
+                        {
+                            "action": "add",
+                            "id": "attorney_badge",
+                            "type": "item"
+                        }
+                    ],
+                    "id": "scene.intro.choice.008.option.002",
+                    "label": "Grab my attorney badge",
+                    "labelId": "scene.intro.choice.008.option.002.label"
+                },
+                {
+                    "commands": [
+                        {
+                            "lineId": "scene.intro.line.008.003.001",
+                            "speaker": "phoenix",
+                            "text": "A quick loop drill should help before court.",
+                            "type": "dialogue"
+                        },
+                        {
+                            "to": "loop_training_day",
+                            "type": "jump"
+                        }
+                    ],
+                    "id": "scene.intro.choice.008.option.003",
+                    "label": "Run loop training",
+                    "labelId": "scene.intro.choice.008.option.003.label"
+                },
+                {
+                    "commands": [
+                        {
+                            "lineId": "scene.intro.line.008.004.001",
+                            "speaker": "phoenix",
+                            "text": "I should run the QA loop showcase while I can.",
+                            "type": "dialogue"
+                        },
+                        {
+                            "to": "loop_debug_showcase",
+                            "type": "jump"
+                        }
+                    ],
+                    "id": "scene.intro.choice.008.option.004",
+                    "label": "Run debug showcase",
+                    "labelId": "scene.intro.choice.008.option.004.label"
+                }
+            ],
+            "type": "choice"
+        },
+        {
+            "key": "attorney_badge",
+            "onFalse": [
+                {
+                    "lineId": "scene.intro.line.009.001",
+                    "speaker": "phoenix",
+                    "text": "(I hope I don't need my badge today...)",
+                    "type": "dialogue"
+                }
+            ],
+            "onTrue": [
+                {
+                    "lineId": "scene.intro.line.009.002",
+                    "speaker": "phoenix",
+                    "text": "(Good, I have my badge on me.)",
+                    "type": "dialogue"
+                }
+            ],
+            "source": "items",
+            "type": "if"
+        },
+        {
+            "action": "animate",
+            "animation": "coffee_sip",
+            "id": "phoenix",
+            "type": "sprite",
+            "wait": true
+        },
+        {
+            "lineId": "scene.intro.line.011",
+            "speaker": "phoenix",
+            "text": "Okay, enough stalling. To the courthouse!",
+            "type": "dialogue"
+        },
+        {
+            "action": "stop",
+            "fadeOut": 400,
+            "preset": "heavy_rain",
+            "type": "weather"
+        },
+        {
+            "action": "hide",
+            "duration": 300,
+            "id": "phoenix",
+            "transition": "fade",
+            "type": "sprite"
+        },
+        {
+            "to": "courtroom",
+            "type": "jump"
+        }
+    ]
+}

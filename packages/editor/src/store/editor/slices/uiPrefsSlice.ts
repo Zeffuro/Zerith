@@ -60,6 +60,7 @@ export function createUiPrefsSlice(set: EditorSet): UiPrefsSlice {
             set((state) => state.isSettingsModalOpen ? {} : { globalSearchLaunchMode: 'replace', isGlobalSearchPopupOpen: true }),
         openNewProjectModal: () => set({ isNewProjectModalOpen: true }),
         openSettingsModal: () => set({ isGlobalSearchPopupOpen: false, isSettingsModalOpen: true }),
+        previewLocale: undefined,
         recentProjects,
         requestProjectClose: () => set({ isProjectCloseRequested: true }),
         setAutosaveEnabled: (nextAutosaveEnabled) => {
@@ -71,6 +72,7 @@ export function createUiPrefsSlice(set: EditorSet): UiPrefsSlice {
             getSettingsSnapshot().setAutosaveIntervalMs(autosaveInterval);
             set({ autosaveIntervalMs: autosaveInterval });
         },
+        setPreviewLocale: (previewLocale) => set({ previewLocale }),
         setThemeKey: (key) => {
             getSettingsSnapshot().setThemeKey(key);
             set({ themeKey: key });

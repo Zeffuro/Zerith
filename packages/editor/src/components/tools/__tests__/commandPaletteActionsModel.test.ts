@@ -24,13 +24,15 @@ function createDeps(overrides?: Partial<CommandPaletteActionDeps>): CommandPalet
         isPlaybackPaused: false,
         isRunning: false,
         markManualSave: vi.fn(),
+        migrateProjectContent: vi.fn(async () => {}),
         openExportGameModal: vi.fn(),
         openGlobalSearchPopup: vi.fn(),
         openGlobalSearchReplacePopup: vi.fn(),
         openInitialProjectEntry: vi.fn(async () => {}),
+        openLocalizationEditor: vi.fn(),
         openNewProjectModal: vi.fn(),
         openProjectFolder: vi.fn(async () => {}),
-        openProjectFromManifest: vi.fn(async () => {}),
+        openProjectInCurrentWindow: vi.fn(() => Promise.resolve({ status: 'opened-current' as const })),
         openSettingsModal: vi.fn(),
         projectPath: '/project',
         recentProjects: [],
@@ -42,12 +44,21 @@ function createDeps(overrides?: Partial<CommandPaletteActionDeps>): CommandPalet
         setActiveDockLayoutPresetId: vi.fn(),
         setDockLayoutJson: vi.fn(),
         setThemeKey: vi.fn(),
+        showBrowserParityReport: vi.fn(),
+        showGitCheckoutBranch: vi.fn(async () => {}),
+        showGitCommitStaged: vi.fn(async () => {}),
+        showGitCreateBranch: vi.fn(async () => {}),
+        showGitIntegrationReport: vi.fn(),
+        showGitPushCurrentBranch: vi.fn(async () => {}),
+        showGitStageAll: vi.fn(async () => {}),
+        showGitStatusReport: vi.fn(async () => {}),
         themeKey: 'classic',
         triggerPause: vi.fn(),
         triggerPlay: vi.fn(),
         triggerResume: vi.fn(),
         triggerStep: vi.fn(),
         triggerStop: vi.fn(),
+        validateProjectContent: vi.fn(async () => {}),
         ...overrides,
     };
 }
@@ -63,12 +74,12 @@ describe('commandPaletteActionsModel', () => {
 
         const actions = buildCommandPaletteActions(deps);
 
-        expect(actions).toHaveLength(21);
+        expect(actions).toHaveLength(32);
         expect(actions[0]?.id).toBe('find-project');
-        expect(actions[17]?.id).toBe('reset-layout');
-        expect(actions[18]?.id).toBe('save-layout-preset');
-        expect(actions[19]?.id).toBe('open-recent-/alpha/game.json');
-        expect(actions[20]?.id).toBe('open-recent-/beta/game.json');
+        expect(actions[28]?.id).toBe('reset-layout');
+        expect(actions[29]?.id).toBe('save-layout-preset');
+        expect(actions[30]?.id).toBe('open-recent-/alpha/game.json');
+        expect(actions[31]?.id).toBe('open-recent-/beta/game.json');
     });
 
     it('marks manual save before save and save-all actions', async () => {
@@ -127,9 +138,9 @@ describe('commandPaletteActionsModel', () => {
                 calls.push('openInitialProjectEntry');
                 return Promise.resolve();
             }),
-            openProjectFromManifest: vi.fn(() => {
-                calls.push('openProjectFromManifest');
-                return Promise.resolve();
+            openProjectInCurrentWindow: vi.fn(() => {
+                calls.push('openProjectInCurrentWindow');
+                return Promise.resolve({ status: 'opened-current' as const });
             }),
             recentProjects: [{ name: 'Alpha', path: '/alpha/game.json' }],
         });
@@ -137,7 +148,7 @@ describe('commandPaletteActionsModel', () => {
         const actions = buildCommandPaletteActions(deps);
         await byId(actions, 'open-recent-/alpha/game.json')?.action();
 
-        expect(calls).toEqual(['openProjectFromManifest', 'addRecentProject', 'openInitialProjectEntry']);
+        expect(calls).toEqual(['openProjectInCurrentWindow', 'addRecentProject', 'openInitialProjectEntry']);
     });
 
     it('runs recent-project open sequence helper in order', async () => {
@@ -150,15 +161,41 @@ describe('commandPaletteActionsModel', () => {
                 calls.push('openInitial');
                 return Promise.resolve();
             },
-            openProjectFromManifest: (path: string) => {
+            openProjectInCurrentWindow: (path: string) => {
                 calls.push(`open:${path}`);
-                return Promise.resolve();
+                return Promise.resolve({ status: 'opened-current' as const });
             },
         };
 
         await executeRecentProjectOpenSequence('/alpha/game.json', deps);
 
         expect(calls).toEqual(['open:/alpha/game.json', 'add:/alpha/game.json', 'openInitial']);
+    });
+
+    it('skips recency and entry open when recent-project switch is cancelled', async () => {
+        const deps = createDeps({
+            openProjectInCurrentWindow: vi.fn(() => Promise.resolve({ status: 'cancelled' as const })),
+            recentProjects: [{ name: 'Alpha', path: '/alpha/game.json' }],
+        });
+
+        const actions = buildCommandPaletteActions(deps);
+        await byId(actions, 'open-recent-/alpha/game.json')?.action();
+
+        expect(deps.addRecentProject).not.toHaveBeenCalled();
+        expect(deps.openInitialProjectEntry).not.toHaveBeenCalled();
+    });
+
+    it('updates recency without opening an entry when recent project opens in a new window', async () => {
+        const deps = createDeps({
+            openProjectInCurrentWindow: vi.fn(() => Promise.resolve({ status: 'opened-new-window' as const })),
+            recentProjects: [{ name: 'Alpha', path: '/alpha/game.json' }],
+        });
+
+        const actions = buildCommandPaletteActions(deps);
+        await byId(actions, 'open-recent-/alpha/game.json')?.action();
+
+        expect(deps.addRecentProject).toHaveBeenCalledWith('/alpha/game.json');
+        expect(deps.openInitialProjectEntry).not.toHaveBeenCalled();
     });
 
     it('runs newly added file/workspace actions', async () => {
@@ -168,12 +205,34 @@ describe('commandPaletteActionsModel', () => {
         await byId(actions, 'new-project')?.action();
         await byId(actions, 'save-project-as')?.action();
         await byId(actions, 'open-project-folder')?.action();
+        await byId(actions, 'migrate-content-schema')?.action();
         await byId(actions, 'export-game')?.action();
+        await byId(actions, 'validate-project-content')?.action();
+        await byId(actions, 'open-localization')?.action();
+        await byId(actions, 'show-browser-parity-report')?.action();
+        await byId(actions, 'show-git-integration-report')?.action();
+        await byId(actions, 'git-create-branch')?.action();
+        await byId(actions, 'git-checkout-branch')?.action();
+        await byId(actions, 'git-commit-staged')?.action();
+        await byId(actions, 'git-stage-all')?.action();
+        await byId(actions, 'git-push-current-branch')?.action();
+        await byId(actions, 'show-git-status-report')?.action();
 
         expect(deps.openNewProjectModal).toHaveBeenCalledTimes(1);
         expect(deps.saveProjectAs).toHaveBeenCalledTimes(1);
         expect(deps.openProjectFolder).toHaveBeenCalledTimes(1);
+        expect(deps.migrateProjectContent).toHaveBeenCalledTimes(1);
         expect(deps.openExportGameModal).toHaveBeenCalledTimes(1);
+        expect(deps.validateProjectContent).toHaveBeenCalledTimes(1);
+        expect(deps.openLocalizationEditor).toHaveBeenCalledTimes(1);
+        expect(deps.showBrowserParityReport).toHaveBeenCalledTimes(1);
+        expect(deps.showGitCheckoutBranch).toHaveBeenCalledTimes(1);
+        expect(deps.showGitCommitStaged).toHaveBeenCalledTimes(1);
+        expect(deps.showGitCreateBranch).toHaveBeenCalledTimes(1);
+        expect(deps.showGitIntegrationReport).toHaveBeenCalledTimes(1);
+        expect(deps.showGitPushCurrentBranch).toHaveBeenCalledTimes(1);
+        expect(deps.showGitStageAll).toHaveBeenCalledTimes(1);
+        expect(deps.showGitStatusReport).toHaveBeenCalledTimes(1);
     });
 
     it('cycles theme key when toggle-theme runs', async () => {

@@ -15,6 +15,7 @@ import { useProjectStore, useScriptStore } from '../storeBootstrap';
 import { useEditorStore } from '../useEditorStore';
 import { useSettingsStore } from '../useSettingsStore';
 import { useWorkbenchStore } from '../useWorkbenchStore';
+import { executeOpenProjectInCurrentWindow } from './projectOpenActions';
 
 export type GlobalShortcutAction =
     | 'audiosheetSetLeftBoundary'
@@ -180,7 +181,12 @@ export async function executeGlobalShortcutAction(action: GlobalShortcutAction):
                 const result = await saveProjectAs(project.projectPath);
                 if (!result) return false;
 
-                await project.openProjectFromManifest(result.manifestPath);
+                const opened = await executeOpenProjectInCurrentWindow(result.manifestPath, {
+                    allowNewWindow: false,
+                    prompt: false,
+                });
+                if (opened.status !== 'opened-current') return false;
+
                 if (isTauriRuntime()) useEditorStore.getState().addRecentProject(result.manifestPath);
                 return true;
             } catch (error) {

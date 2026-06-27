@@ -22,5 +22,6 @@ export interface IFlowManager extends IBaseManager {
     start(): void;
     step(): void;
     stop(): void;
+    unregisterHandler(type: BaseCommand['type']): void;
 }
 

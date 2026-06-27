@@ -1,0 +1,9 @@
+{
+    "chapter_notebook": {
+        "description": "A production notebook with chapter beats, route notes, and localization IDs.",
+        "imageUrl": "/assets/items/notebook.svg",
+        "name": "Chapter Notebook",
+        "schemaVersion": 2,
+        "type": "evidence"
+    }
+}

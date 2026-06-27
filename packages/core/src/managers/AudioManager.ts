@@ -5,6 +5,7 @@ import type { AudioCue, AudiosheetDescriptor } from '../types';
 
 export interface AudioConfig {
     bgmVolume?: number;
+    defaultBlipUrl?: null | string;
     masterVolume?: number;
     muted?: boolean;
     sfxVolume?: number;
@@ -55,7 +56,7 @@ export class AudioManager {
     }
 
 
-    public getVolumes(): Required<AudioConfig> {
+    public getVolumes(): Required<Omit<AudioConfig, 'defaultBlipUrl'>> {
         return {
             bgmVolume: this.bgmVolume,
             masterVolume: this.masterVolume,

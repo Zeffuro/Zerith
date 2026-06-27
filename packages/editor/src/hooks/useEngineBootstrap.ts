@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react';
 
 import { fsJoin, fsReadTextFile } from '../services/fs';
 import { createGamePreviewLogger } from '../services/gamePreviewLoggerBridge';
+import { createPreviewSceneNavigationHandler } from '../services/previewSceneNavigation';
 import { createProjectAssetResolver, releaseEditorAssetUrl, resolveProjectAssetUrl } from '../services/runtime/assetUrls';
 import { useEditorStore } from '../store/useEditorStore';
 import { useEngineBridgeStore } from '../store/useEngineBridgeStore';
@@ -44,6 +45,7 @@ export function useEngineBootstrap({
     activeFileReference,
     canvasReference,
     containerReference,
+    localizationReloadKey,
     manifest,
     playbackRequestIdReference,
     projectDataReference,
@@ -55,6 +57,7 @@ export function useEngineBootstrap({
     activeFileReference: RefObject<string | undefined>;
     canvasReference: RefObject<HTMLCanvasElement | null>;
     containerReference: RefObject<HTMLDivElement | null>;
+    localizationReloadKey: string;
     manifest: GameManifest | undefined;
     playbackRequestIdReference: WritableReference<number>;
     projectDataReference: WritableReference<EngineLifecycleProjectData>;
@@ -112,7 +115,7 @@ export function useEngineBootstrap({
                 display: {
                     ...resolvedDisplayConfig,
                 },
-                onSceneNavigation: () => 'skip',
+                onSceneNavigation: createPreviewSceneNavigationHandler(bootstrapScenes),
                 theme: {
                     ...resolvedTheme,
                 },
@@ -126,7 +129,6 @@ export function useEngineBootstrap({
                 canvas,
                 characters: bootstrapCharacters,
                 config: effectiveConfig,
-                defaultBlipUrl: '/assets/sfx/blip.wav',
                 items: toEvidenceDefinitions(bootstrapItems),
                 macros: bootstrapMacros,
                 manifest,
@@ -186,6 +188,7 @@ export function useEngineBootstrap({
         attachDebugBridge,
         canvasReference,
         containerReference,
+        localizationReloadKey,
         manifest,
         playbackRequestIdReference,
         projectDataReference,

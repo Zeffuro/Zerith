@@ -6,7 +6,7 @@ import {
     getPreferredManifestView,
 } from '../../store/actions/workbenchOpenActions';
 import { makeTabId } from '../../store/useWorkbenchStore';
-import { applyMacrosFile, applyScriptFile } from '../projectOpeners';
+import { applyMacrosFile, applyScriptFile, looksLikeSceneFile } from '../projectOpeners';
 import { basenameFromPath } from './pathHelpers';
 import { openMacrosTab, openScriptTab } from './tabOpeners';
 import { getPreferredViewForJsonResource, getViewActionForJsonResource } from './viewPrefs';
@@ -17,6 +17,7 @@ type HandleJsonRouteOptions = {
     forceView?: ForceView;
     fullPath: string;
     isMacrosObject: (value: unknown) => boolean;
+    jsonSelectionPath?: string[];
     route: JsonRoute;
 };
 
@@ -27,6 +28,7 @@ export function handleJsonRoute(options: HandleJsonRouteOptions): void {
         forceView,
         fullPath,
         isMacrosObject,
+        jsonSelectionPath,
         route,
     } = options;
 
@@ -40,6 +42,7 @@ export function handleJsonRoute(options: HandleJsonRouteOptions): void {
 
         executeWorkbenchOpenAction({ action: 'openTab', tab: {
             id: makeTabId(route.resourceKind, fullPath),
+            jsonSelectionPath,
             kind: route.resourceKind,
             path: fullPath,
             preferredView,
@@ -54,8 +57,8 @@ export function handleJsonRoute(options: HandleJsonRouteOptions): void {
     }
 
     if (route.kind === 'script') {
-        if (!Array.isArray(data)) {
-            throw new TypeError('Scene scripts must be JSON arrays.');
+        if (!looksLikeSceneFile(data)) {
+            throw new TypeError('Scene scripts must be JSON arrays or scene objects with a commands array.');
         }
         applyScriptFile(fullPath, data);
         openScriptTab(fullPath, forceView);
@@ -77,6 +80,7 @@ export function handleJsonRoute(options: HandleJsonRouteOptions): void {
     }
     executeWorkbenchOpenAction({ action: 'openTab', tab: {
         id: makeTabId(route.tabKind, fullPath),
+        jsonSelectionPath,
         kind: route.tabKind,
         path: fullPath,
         preferredView,

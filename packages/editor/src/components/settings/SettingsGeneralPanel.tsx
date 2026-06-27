@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode, useMemo } from 'react';
+import { type CSSProperties, type ReactNode } from 'react';
 
 import type { NonMacroEditorCommandType } from '../../plugins/types';
 import type { DockLayoutPreset } from '../../store/settings/SettingsSchema';
@@ -63,7 +63,7 @@ export function SettingsGeneralPanel({
     uiScale,
 }: SettingsGeneralPanelProperties) {
     const visibleControlIds = new Set(getVisibleSettingsControls(panelId));
-    const quickCommandPlugins = useMemo(() => getAllPlugins(), []);
+    const quickCommandPlugins = getAllPlugins();
     const autosaveIntervalSeconds = Math.max(5, Math.round(autosaveIntervalMs / 1000));
     const autosaveIntervalLabel = `Autosave interval: ${autosaveIntervalSeconds}s`;
 

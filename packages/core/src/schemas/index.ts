@@ -2,9 +2,21 @@ import { z } from 'zod';
 
 import type { BaseCommand } from '../types';
 
+import {
+    type ContentSchemaVersion,
+    ContentSchemaVersionSchema,
+    CURRENT_CONTENT_SCHEMA_VERSION,
+    LEGACY_CONTENT_SCHEMA_VERSION,
+} from './contentVersionSchemas';
+import { LocalizationConfigSchema } from './localizationSchemas';
+
+export * from './contentMigration';
+export * from './contentVersionSchemas';
 export { parseAudiosheetDescriptor, parseSheetDescriptor, parseSpritesheetDescriptor } from './descriptorSchemas';
 export * from './engineConfigSchemas';
+export * from './localizationSchemas';
 
+const NonEmptyStringSchema = z.string().trim().min(1);
 
 export const BaseCommandSchema = z.object({
     type: z.string(),
@@ -13,12 +25,18 @@ export const BaseCommandSchema = z.object({
 export const GameManifestSchema = z.looseObject({
     $schema: z.string().optional(),
     author: z.string().optional(),
-    characters: z.record(z.string(), z.unknown()).optional(),
+    characters: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
     description: z.string().optional(),
-    items: z.record(z.string(), z.unknown()).optional(),
+    items: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
     license: z.string().optional(),
-    macros: z.record(z.string(), z.array(z.lazy(() => CommandSchema))).optional(),
-    scenes: z.record(z.string(), z.union([z.string(), z.array(z.lazy(() => CommandSchema))])).optional(),
+    localization: z.lazy(() => LocalizationConfigSchema).optional(),
+    macros: z.union([z.string(), z.record(z.string(), z.array(z.lazy(() => CommandSchema)))]).optional(),
+    scenes: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.lazy(() => CommandSchema)),
+        z.lazy(() => SceneFileEnvelopeSchema),
+    ])).optional(),
+    schemaVersion: ContentSchemaVersionSchema.optional(),
     startScene: z.string().optional(),
     title: z.string().optional(),
     variables: z.record(z.string(), z.unknown()).optional(),
@@ -28,11 +46,24 @@ export const GameManifestSchema = z.looseObject({
 /* Dialogue */
 
 export const DialogueCommandSchema = z.object({
+    autoAdvanceProfile: NonEmptyStringSchema.optional(),
+    backlogVisibility: z.enum(['hide', 'show']).optional(),
+    expressionRef: NonEmptyStringSchema.optional(),
     instant: z.boolean().optional(),
+    lineId: NonEmptyStringSchema.optional(),
     portraitSide: z.enum(['left', 'right']).optional(),
     speaker: z.string(),
+    tags: z.array(NonEmptyStringSchema).optional(),
     text: z.string(),
     type: z.literal('dialogue'),
+    voice: z.union([
+        NonEmptyStringSchema,
+        z.looseObject({
+            assetUrl: NonEmptyStringSchema,
+            cue: NonEmptyStringSchema.optional(),
+            volume: z.number().optional(),
+        }),
+    ]).optional(),
 });
 
 /* Background */
@@ -152,11 +183,20 @@ export const ForCommandSchema = z.object({
 /* Choice */
 
 export const ChoiceOptionSchema = z.object({
+    all: z.array(ConditionSchema).optional(),
+    analyticsLabel: NonEmptyStringSchema.optional(),
+    any: z.array(ConditionSchema).optional(),
     commands: z.array(z.lazy(() => CommandSchema)).optional(),
+    id: NonEmptyStringSchema.optional(),
     label: z.string(),
+    labelId: NonEmptyStringSchema.optional(),
+    onceOnly: z.boolean().optional(),
+    replayable: z.boolean().optional(),
 });
 
 export const ChoiceCommandSchema = z.object({
+    analyticsLabel: NonEmptyStringSchema.optional(),
+    id: NonEmptyStringSchema.optional(),
     options: z.array(ChoiceOptionSchema),
     type: z.literal('choice'),
 });
@@ -389,6 +429,51 @@ export const SchemaRegistry = new SchemaRegistrySingleton(BuiltInCommandSchemaRe
  * Script-level schema built from the currently registered command schemas.
  */
 export const ScriptSchema = z.array(z.lazy(() => SchemaRegistry.getCommandSchema()));
+
+export const SceneFileEnvelopeSchema = z.looseObject({
+    $schema: z.string().optional(),
+    commands: z.array(z.unknown()),
+    graph: z.record(z.string(), z.unknown()).optional(),
+    id: NonEmptyStringSchema.optional(),
+    localeNamespace: NonEmptyStringSchema.optional(),
+    schemaVersion: ContentSchemaVersionSchema.optional(),
+});
+
+export interface ParsedSceneFile {
+    commands: BaseCommand[];
+    metadata: Omit<SceneFileEnvelope, 'commands'>;
+    schemaVersion: ContentSchemaVersion;
+}
+
+type SceneFileEnvelope = z.infer<typeof SceneFileEnvelopeSchema>;
+
+export function isSceneFileEnvelope(value: unknown): value is SceneFileEnvelope {
+    return SceneFileEnvelopeSchema.safeParse(value).success;
+}
+
+export function parseSceneFile(value: unknown, options: { sceneName?: string } = {}): ParsedSceneFile {
+    if (Array.isArray(value)) {
+        return {
+            commands: validateScript(value),
+            metadata: {},
+            schemaVersion: LEGACY_CONTENT_SCHEMA_VERSION,
+        };
+    }
+
+    const parsed = SceneFileEnvelopeSchema.safeParse(value);
+    if (!parsed.success) {
+        const label = options.sceneName ? ` "${options.sceneName}"` : '';
+        throw new TypeError(`Invalid scene${label}: expected a command array or a scene object with a commands array.`);
+    }
+
+    const { commands, ...metadata } = parsed.data;
+
+    return {
+        commands: validateScript(commands),
+        metadata,
+        schemaVersion: metadata.schemaVersion ?? CURRENT_CONTENT_SCHEMA_VERSION,
+    };
+}
 
 /**
  * Validates an entire script array. Returns parsed commands or throws.

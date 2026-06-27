@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "build:game": "node ./scripts/build-game.mjs",
     "build:game:zip": "node ./scripts/build-game.mjs --zip",
+    "export:parity-smoke": "node ./scripts/export-parity-smoke.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -1,18 +1,25 @@
 {
-  "$schema": "zerith/manifest",
-  "author": "Zeffuro",
-  "characters": "/data/characters.json",
-  "description": "Original Zerith showcase project using data-driven scenes, characters, macros, items, sprites, weather, and layers.",
-  "items": "/data/items.json",
-  "license": "Original example content. See assets/README.md for asset attribution.",
-  "macros": "/data/macros.json",
-  "scenes": {
-    "courtroom_demo": "/scenes/courtroom_demo.json",
-    "ending": "/scenes/ending.json",
-    "intro": "/scenes/intro.json",
-    "logic_demo": "/scenes/logic_demo.json",
-    "weather_lab": "/scenes/weather_lab.json"
-  },
-  "startScene": "intro",
-  "title": "Zerith Example"
+    "$schema": "zerith/manifest",
+    "author": "Zeffuro",
+    "characters": "/data/characters.json",
+    "description": "Original Zerith showcase project using data-driven scenes, characters, macros, items, sprites, weather, and layers.",
+    "items": "/data/items.json",
+    "license": "Original example content. See assets/README.md for asset attribution.",
+    "macros": "/data/macros.json",
+    "scenes": {
+        "courtroom_demo": "/scenes/courtroom_demo.json",
+        "ending": "/scenes/ending.json",
+        "intro": "/scenes/intro.json",
+        "logic_demo": "/scenes/logic_demo.json",
+        "weather_lab": "/scenes/weather_lab.json"
+    },
+    "startScene": "intro",
+    "title": "Zerith Example",
+    "schemaVersion": 2,
+    "localization": {
+        "defaultLocale": "en",
+        "locales": {
+            "en": "/locales/en.json"
+        }
+    }
 }

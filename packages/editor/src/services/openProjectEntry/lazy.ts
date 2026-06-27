@@ -1,0 +1,1 @@
+export { openProjectEntry } from './service';

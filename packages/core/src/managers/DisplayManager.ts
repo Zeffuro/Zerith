@@ -16,6 +16,8 @@ export interface DisplayLayerDefinition {
 }
 
 const DEFAULT_DYNAMIC_LAYER_ORDER = 350;
+const SAVE_THUMBNAIL_HEIGHT = 108;
+const SAVE_THUMBNAIL_WIDTH = 192;
 const DEFAULT_LAYER_DEFINITIONS: Required<DisplayLayerDefinition>[] = [
     { id: 'background', order: 0 },
     { id: 'backgroundEffects', order: 100 },
@@ -49,6 +51,32 @@ export class DisplayManager {
         this.app = new Application();
         this.config = { ...DefaultDisplayConfig, ...config };
         this.configureLayers(this.config.layers);
+    }
+
+    public captureThumbnailDataUrl(): string | undefined {
+        if (!this.canvas) return undefined;
+
+        const overlayLayer = this.layers.get('overlay');
+        const previousOverlayVisible = overlayLayer?.visible;
+
+        try {
+            if (overlayLayer) {
+                overlayLayer.visible = false;
+            }
+
+            this.app.render();
+            return createCanvasThumbnailDataUrl(this.canvas);
+        } catch {
+            return undefined;
+        } finally {
+            if (overlayLayer && previousOverlayVisible !== undefined) {
+                overlayLayer.visible = previousOverlayVisible;
+            }
+
+            if (this.canvas) {
+                this.app.render();
+            }
+        }
     }
 
     public clearLayers() {
@@ -206,6 +234,32 @@ export class DisplayManager {
             .toSorted(([idA, orderA], [idB, orderB]) => orderA - orderB || idA.localeCompare(idB))
             .map(([id]) => id);
     }
+}
+
+function createCanvasThumbnailDataUrl(source: HTMLCanvasElement): string | undefined {
+    if (source.width <= 0 || source.height <= 0) return undefined;
+
+    const canvas = source.ownerDocument.createElement('canvas');
+    canvas.width = SAVE_THUMBNAIL_WIDTH;
+    canvas.height = SAVE_THUMBNAIL_HEIGHT;
+
+    const context = canvas.getContext('2d');
+    if (!context) return undefined;
+
+    context.fillStyle = '#000000';
+    context.fillRect(0, 0, SAVE_THUMBNAIL_WIDTH, SAVE_THUMBNAIL_HEIGHT);
+
+    const scale = Math.min(SAVE_THUMBNAIL_WIDTH / source.width, SAVE_THUMBNAIL_HEIGHT / source.height);
+    const drawWidth = Math.max(1, Math.round(source.width * scale));
+    const drawHeight = Math.max(1, Math.round(source.height * scale));
+    const x = Math.round((SAVE_THUMBNAIL_WIDTH - drawWidth) / 2);
+    const y = Math.round((SAVE_THUMBNAIL_HEIGHT - drawHeight) / 2);
+
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(source, 0, 0, source.width, source.height, x, y, drawWidth, drawHeight);
+
+    return canvas.toDataURL('image/webp', 0.75);
 }
 
 function findLayerIdByContainer(layers: ReadonlyMap<string, Container>, container: Container): string | undefined {

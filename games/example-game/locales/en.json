@@ -1,0 +1,66 @@
+{
+    "$schema": "zerith/locale",
+    "locale": "en",
+    "namespaces": {
+        "scene.courtroom_demo": {
+            "scene.courtroom_demo.choice.017.option.001.label": "Present weather card",
+            "scene.courtroom_demo.choice.017.option.002.label": "Present logic card",
+            "scene.courtroom_demo.choice.017.option.003.label": "Let May summarize",
+            "scene.courtroom_demo.line.007": "All right. The room looks official enough from a distance.",
+            "scene.courtroom_demo.line.010": "{speed:12}Hold it.{speed:30} If this is going in the example folder, it should feel like something you can actually remix.",
+            "scene.courtroom_demo.line.014": "I am stepping closer because apparently this is now a hearing.",
+            "scene.courtroom_demo.line.016": "For the record, you walked in through the {selected_route} route.",
+            "scene.courtroom_demo.line.018.001": "Then my summary is simple: keep the files tidy and the scene can carry itself.",
+            "scene.courtroom_demo.line.019.001": "Logic card accepted. The readings waited properly, which is more than I can say for most equipment."
+        },
+        "scene.ending": {
+            "scene.ending.choice.008.option.001.label": "Replay intro",
+            "scene.ending.choice.008.option.002.label": "Weather demo",
+            "scene.ending.choice.008.option.003.label": "Logic demo",
+            "scene.ending.choice.008.option.004.label": "Staging demo",
+            "scene.ending.line.006": "The rain eases. The files are still on the desk. Nothing exploded, which everyone agrees is a useful baseline.",
+            "scene.ending.line.007": "The collected notes are in the record panel if you want to check what this route kept."
+        },
+        "scene.intro": {
+            "scene.intro.choice.014.option.001.label": "Weather and layers",
+            "scene.intro.choice.014.option.002.label": "Logic and records",
+            "scene.intro.choice.014.option.003.label": "Staging and presentation",
+            "scene.intro.line.009": "{size:34}Zerith Example{/size}{p}Rain on the glass, two case files on the desk, and one very patient renderer.",
+            "scene.intro.line.010": "I moved everything clean into this folder. No borrowed cast, no mystery licenses, no surprise assets.",
+            "scene.intro.line.013": "Where do we start?"
+        },
+        "scene.logic_demo": {
+            "scene.logic_demo.choice.013.option.001.label": "Mark calibration clean",
+            "scene.logic_demo.choice.013.option.002.label": "Flag maintenance issue",
+            "scene.logic_demo.choice.016.option.001.label": "Go to weather demo",
+            "scene.logic_demo.choice.016.option.002.label": "Go to staging demo",
+            "scene.logic_demo.choice.016.option.003.label": "Finish showcase",
+            "scene.logic_demo.line.007": "I need three clean readings. Watch the counter; it should wait for us between each one.",
+            "scene.logic_demo.line.008.003": "Reading {scan_step}: logged. Count is {scan_count}.",
+            "scene.logic_demo.line.010": "Pressure valve next. It opens twice if the state is behaving.",
+            "scene.logic_demo.line.011.002": "Pressure notch {pressure}. Still within range.",
+            "scene.logic_demo.line.012": "Your call: pass the rig, or flag it before someone pretends the warning light is decorative.",
+            "scene.logic_demo.line.014.003": "Flagged. I'll add a note before this turns into a meeting.",
+            "scene.logic_demo.line.015.001": "The record drawer has no calibration note. That tells me exactly which way you went."
+        },
+        "scene.preview": {
+            "scene.intro.choice.014.option.001.label": "Weather and layers",
+            "scene.intro.choice.014.option.002.label": "Logic and records",
+            "scene.intro.choice.014.option.003.label": "Staging and presentation",
+            "scene.intro.line.009": "{size:34}Zerith Example{/size}{p}Rain on the glass, two case files on the desk, and one very patient renderer.",
+            "scene.intro.line.010": "I moved everything clean into this folder. No borrowed cast, no mystery licenses, no surprise assets.",
+            "scene.intro.line.013": "Where do we start?"
+        },
+        "scene.weather_lab": {
+            "scene.weather_lab.choice.020.option.001.label": "Go to logic demo",
+            "scene.weather_lab.choice.020.option.002.label": "Go to staging demo",
+            "scene.weather_lab.choice.020.option.003.label": "Finish showcase",
+            "scene.weather_lab.line.005": "The roof still leaks. If you hear thunder in a minute, pretend that was part of the plan.",
+            "scene.weather_lab.line.008": "Snow behind us. Much better than burying everyone's face under white dots.",
+            "scene.weather_lab.line.012": "Embers in front. A little theatrical, but I can work with theatrical.",
+            "scene.weather_lab.line.017": "New room, same people. The storm did not ask permission before following us in.",
+            "scene.weather_lab.line.018": "Wind is high enough to make the point, low enough that I can still see the room."
+        }
+    },
+    "schemaVersion": 2
+}

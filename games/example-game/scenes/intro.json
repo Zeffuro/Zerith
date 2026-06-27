@@ -1,126 +1,142 @@
-[
-    {
-        "name": "intro_start",
-        "type": "label"
-    },
-    {
-        "name": "clear_weather",
-        "type": "call"
-    },
-    {
-        "name": "enter_office",
-        "type": "call"
-    },
-    {
-        "name": "window_drizzle",
-        "type": "call"
-    },
-    {
-        "name": "show_duo",
-        "type": "call"
-    },
-    {
-        "action": "animate",
-        "animation": "idle",
-        "id": "juno",
-        "type": "sprite"
-    },
-    {
-        "action": "animate",
-        "animation": "idle",
-        "id": "nora",
-        "type": "sprite"
-    },
-    {
-        "assetUrl": "/assets/sfx/voices.sheet.json:takethat",
-        "type": "sfx",
-        "volume": 0.5
-    },
-    {
-        "speaker": "juno",
-        "text": "{size:34}Zerith Example{/size}{p}Rain on the glass, two case files on the desk, and one very patient renderer.",
-        "type": "dialogue"
-    },
-    {
-        "speaker": "nora",
-        "text": "I moved everything clean into this folder. No borrowed cast, no mystery licenses, no surprise assets.",
-        "type": "dialogue"
-    },
-    {
-        "action": "add",
-        "id": "juno_profile",
-        "type": "item"
-    },
-    {
-        "action": "add",
-        "id": "nora_profile",
-        "type": "item"
-    },
-    {
-        "speaker": "juno",
-        "text": "Where do we start?",
-        "type": "dialogue"
-    },
-    {
-        "options": [
-            {
-                "commands": [
-                    {
-                        "key": "selected_route",
-                        "type": "set",
-                        "value": "weather"
-                    },
-                    {
-                        "action": "add",
-                        "id": "weather_card",
-                        "type": "item"
-                    },
-                    {
-                        "to": "weather_lab",
-                        "type": "jump"
-                    }
-                ],
-                "label": "Weather and layers"
-            },
-            {
-                "commands": [
-                    {
-                        "key": "selected_route",
-                        "type": "set",
-                        "value": "logic"
-                    },
-                    {
-                        "action": "add",
-                        "id": "logic_card",
-                        "type": "item"
-                    },
-                    {
-                        "to": "logic_demo",
-                        "type": "jump"
-                    }
-                ],
-                "label": "Logic and records"
-            },
-            {
-                "commands": [
-                    {
-                        "key": "selected_route",
-                        "type": "set",
-                        "value": "staging"
-                    },
-                    {
-                        "action": "add",
-                        "id": "staging_card",
-                        "type": "item"
-                    },
-                    {
-                        "to": "courtroom_demo",
-                        "type": "jump"
-                    }
-                ],
-                "label": "Staging and presentation"
-            }
-        ],
-        "type": "choice"
-    }
-]
+{
+    "$schema": "zerith/scene",
+    "commands": [
+        {
+            "name": "intro_start",
+            "type": "label"
+        },
+        {
+            "name": "clear_weather",
+            "type": "call"
+        },
+        {
+            "name": "enter_office",
+            "type": "call"
+        },
+        {
+            "name": "window_drizzle",
+            "type": "call"
+        },
+        {
+            "name": "show_duo",
+            "type": "call"
+        },
+        {
+            "action": "animate",
+            "animation": "idle",
+            "id": "juno",
+            "type": "sprite"
+        },
+        {
+            "action": "animate",
+            "animation": "idle",
+            "id": "nora",
+            "type": "sprite"
+        },
+        {
+            "assetUrl": "/assets/sfx/voices.sheet.json:takethat",
+            "type": "sfx",
+            "volume": 0.5
+        },
+        {
+            "speaker": "juno",
+            "text": "{size:34}Zerith Example{/size}{p}Rain on the glass, two case files on the desk, and one very patient renderer.",
+            "type": "dialogue",
+            "lineId": "scene.intro.line.009"
+        },
+        {
+            "speaker": "nora",
+            "text": "I moved everything clean into this folder. No borrowed cast, no mystery licenses, no surprise assets.",
+            "type": "dialogue",
+            "lineId": "scene.intro.line.010"
+        },
+        {
+            "action": "add",
+            "id": "juno_profile",
+            "type": "item"
+        },
+        {
+            "action": "add",
+            "id": "nora_profile",
+            "type": "item"
+        },
+        {
+            "speaker": "juno",
+            "text": "Where do we start?",
+            "type": "dialogue",
+            "lineId": "scene.intro.line.013"
+        },
+        {
+            "options": [
+                {
+                    "commands": [
+                        {
+                            "key": "selected_route",
+                            "type": "set",
+                            "value": "weather"
+                        },
+                        {
+                            "action": "add",
+                            "id": "weather_card",
+                            "type": "item"
+                        },
+                        {
+                            "to": "weather_lab",
+                            "type": "jump"
+                        }
+                    ],
+                    "label": "Weather and layers",
+                    "id": "scene.intro.choice.014.option.001",
+                    "labelId": "scene.intro.choice.014.option.001.label"
+                },
+                {
+                    "commands": [
+                        {
+                            "key": "selected_route",
+                            "type": "set",
+                            "value": "logic"
+                        },
+                        {
+                            "action": "add",
+                            "id": "logic_card",
+                            "type": "item"
+                        },
+                        {
+                            "to": "logic_demo",
+                            "type": "jump"
+                        }
+                    ],
+                    "label": "Logic and records",
+                    "id": "scene.intro.choice.014.option.002",
+                    "labelId": "scene.intro.choice.014.option.002.label"
+                },
+                {
+                    "commands": [
+                        {
+                            "key": "selected_route",
+                            "type": "set",
+                            "value": "staging"
+                        },
+                        {
+                            "action": "add",
+                            "id": "staging_card",
+                            "type": "item"
+                        },
+                        {
+                            "to": "courtroom_demo",
+                            "type": "jump"
+                        }
+                    ],
+                    "label": "Staging and presentation",
+                    "id": "scene.intro.choice.014.option.003",
+                    "labelId": "scene.intro.choice.014.option.003.label"
+                }
+            ],
+            "type": "choice",
+            "id": "scene.intro.choice.014"
+        }
+    ],
+    "id": "intro",
+    "localeNamespace": "scene.intro",
+    "schemaVersion": 2
+}

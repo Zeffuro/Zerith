@@ -94,6 +94,7 @@ const panelDescriptions: Record<string, string> = {
     'general-playback': 'Playback defaults for preview and debugging.',
     'general-quickbuttons': 'Configure which timeline quick buttons are shown and how they are ordered.',
     keymap: 'Customize keyboard shortcuts by action.',
+    plugins: 'Inspect registered editor plugin packages.',
 };
 
 export function SettingsModalMainPane({

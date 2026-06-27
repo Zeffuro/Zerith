@@ -8,6 +8,7 @@ import type { NotificationDeps } from '../managers/NotificationManager';
 import type { SaveContext } from '../managers/SaveManager';
 import type { SceneManagerDeps } from '../managers/SceneManager';
 import type { StartScreenDeps } from '../managers/StartScreenManager';
+import type { ContentSchemaVersion } from '../schemas/contentVersionSchemas';
 
 import { AnimationManager } from '../managers/AnimationManager';
 import { AssetManager } from '../managers/AssetManager';
@@ -25,11 +26,13 @@ import { SceneManager } from '../managers/SceneManager';
 import { SpritesheetManager } from '../managers/SpritesheetManager';
 import { StartScreenManager } from '../managers/StartScreenManager';
 import { StateManager } from '../managers/StateManager';
+import { LEGACY_CONTENT_SCHEMA_VERSION } from '../schemas/contentVersionSchemas';
 import { Logger } from '../utils/Logger';
 import { DefaultTheme } from '../utils/Theme';
 
 export interface CreateManagersOptions {
     config: EngineConfig;
+    contentSchemaVersion?: ContentSchemaVersion;
 }
 
 export interface CreateManagersResult {
@@ -46,7 +49,10 @@ export interface CreateManagersResult {
 }
 
 export function createManagers(options: CreateManagersOptions): CreateManagersResult {
-    const { config } = options;
+    const {
+        config,
+        contentSchemaVersion = LEGACY_CONTENT_SCHEMA_VERSION,
+    } = options;
 
     const events = new EventBus();
     const animations = new AnimationManager();
@@ -100,7 +106,10 @@ export function createManagers(options: CreateManagersOptions): CreateManagersRe
     const storage = resolveStorageProvider(config.storage);
 
     const saveContext: SaveContext = {
+        captureThumbnailDataUrl: () => display.captureThumbnailDataUrl(),
+        getContentSchemaVersion: () => contentSchemaVersion,
         getCurrentSceneName: () => sceneManager.currentSceneName,
+        getHistorySnapshot: () => history.serialize(),
         getLastSavePoint: () => flow.lastSavePoint,
         getStateSnapshot: () => state.state,
         getSystemSnapshot: () => state.system,
@@ -162,9 +171,15 @@ export function createManagers(options: CreateManagersOptions): CreateManagersRe
     };
 }
 
+function clamp(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, value));
+}
+
 function createOverlayConfigProvider(config: EngineConfig): IOverlayConfigProvider {
     return {
-        getConfig: () => ({
+        getConfig: () => {
+            const textScale = clamp(config.accessibility?.textScale ?? 1, 0.75, 2);
+            const baseConfig = {
             backgroundAlpha: 0.85,
             backgroundColor: 0x00_00_00,
             buttonAlpha: 0.9,
@@ -178,12 +193,45 @@ function createOverlayConfigProvider(config: EngineConfig): IOverlayConfigProvid
             textColor: 0xFF_FF_FF,
             uiScale: 1,
             ...config.overlay,
-        }),
+            };
+
+            return {
+                ...baseConfig,
+                ...(config.accessibility?.highContrast ? {
+                    backgroundColor: 0x00_00_00,
+                    buttonColor: 0x11_11_11,
+                    buttonHoverColor: 0x44_44_44,
+                    textColor: 0xFF_FF_FF,
+                } : {}),
+                fontSize: Math.round(baseConfig.fontSize * textScale),
+            };
+        },
     };
 }
 
 function createTheme(config: EngineConfig): ReturnType<IThemeProvider['getTheme']> {
-    return { ...DefaultTheme, ...config.theme };
+    const textScale = clamp(config.accessibility?.textScale ?? 1, 0.75, 2);
+    const theme = {
+        ...DefaultTheme,
+        ...config.theme,
+    };
+    const scaledTheme = {
+        ...theme,
+        fontSize: Math.round(theme.fontSize * textScale),
+    };
+
+    if (!config.accessibility?.highContrast) {
+        return scaledTheme;
+    }
+
+    return {
+        ...scaledTheme,
+        accentColor: 0xFF_D5_4A,
+        borderColor: 0xFF_FF_FF,
+        boxAlpha: Math.max(scaledTheme.boxAlpha, 0.95),
+        boxColor: 0x00_00_00,
+        hoverColor: 0x44_44_44,
+    };
 }
 
 function resolveStorageProvider(storageOverride: IStorageProvider | undefined): IStorageProvider {

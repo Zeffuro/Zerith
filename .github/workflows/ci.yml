@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          cache: npm
+          node-version: 22
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build packages
+        run: npm run build
+
+      - name: Browser/Desktop export parity smoke - example game
+        run: npm run export:parity-smoke -- --game=games/example-game --outDir=dist/example-game-parity --base=./
+
+      - name: Browser/Desktop export parity smoke - classic VN starter
+        run: npm run export:parity-smoke -- --game=games/classic-vn-starter --outDir=dist/classic-vn-starter-parity --base=./
+
+      - name: Export example game
+        run: npm run build:game -- --game=games/example-game --outDir=dist/example-game-ci --base=./
+
+      - name: Export classic VN starter
+        run: npm run build:game -- --game=games/classic-vn-starter --outDir=dist/classic-vn-starter-ci --base=./

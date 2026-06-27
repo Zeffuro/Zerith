@@ -1,12 +1,14 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useDismissiblePopup } from '../../../hooks/useDismissiblePopup';
+import { executeContentMigrationCommand } from '../../../services/contentMigrationCommand';
 import { fsPickProjectManifest } from '../../../services/fs';
+import { openLocalizationWorkbenchTab } from '../../../services/localizationWorkbench';
 import { openProjectEntry } from '../../../services/openProjectEntry';
 import { isTauriRuntime } from '../../../services/runtime/runtimeEnvironment';
 import { closeEditorWindow, openExternalUrl } from '../../../services/runtime/windowControls';
 import { saveProjectAs } from '../../../services/saveProjectAs';
-import { executeCloseProjectAction } from '../../../store/actions/projectOpenActions';
+import { executeCloseProjectAction, executeOpenProjectInCurrentWindow } from '../../../store/actions/projectOpenActions';
 import { useProjectStore } from '../../../store/storeBootstrap';
 import { useScriptStore } from '../../../store/storeBootstrap';
 import { useEditorStore } from '../../../store/useEditorStore';
@@ -61,7 +63,6 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
     const {
         activeFile,
         dirtyFiles,
-        openProjectFromManifest,
         projectPath,
         saveActiveFileFromCurrentScript,
         saveAllDirtyFiles,
@@ -90,24 +91,26 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
             const selectedProject = await fsPickProjectManifest();
 
             if (selectedProject) {
-                await openProjectFromManifest(selectedProject.manifestPath);
+                const opened = await executeOpenProjectInCurrentWindow(selectedProject.manifestPath);
+                if (opened.status === 'cancelled') return;
                 if (supportsRecentProjects) addRecentProject(selectedProject.manifestPath);
-                await handleOpenInitialProjectEntry();
+                if (opened.status === 'opened-current') await handleOpenInitialProjectEntry();
             }
         } catch (error) {
             console.error('Failed to open project dialog:', error);
         }
-    }, [addRecentProject, handleOpenInitialProjectEntry, openProjectFromManifest, supportsRecentProjects]);
+    }, [addRecentProject, handleOpenInitialProjectEntry, supportsRecentProjects]);
 
     const handleOpenRecentProject = useCallback(async (manifestPath: string) => {
         try {
-            await openProjectFromManifest(manifestPath);
+            const opened = await executeOpenProjectInCurrentWindow(manifestPath);
+            if (opened.status === 'cancelled') return;
             if (supportsRecentProjects) addRecentProject(manifestPath);
-            await handleOpenInitialProjectEntry();
+            if (opened.status === 'opened-current') await handleOpenInitialProjectEntry();
         } catch (error) {
             console.error('Failed to open recent project:', error);
         }
-    }, [addRecentProject, handleOpenInitialProjectEntry, openProjectFromManifest, supportsRecentProjects]);
+    }, [addRecentProject, handleOpenInitialProjectEntry, supportsRecentProjects]);
 
     const handleSave = useCallback(async () => {
         if (!activeFile) return;
@@ -130,7 +133,11 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
             const result = await saveProjectAs(projectPath);
             if (!result) return;
 
-            await openProjectFromManifest(result.manifestPath);
+            const opened = await executeOpenProjectInCurrentWindow(result.manifestPath, {
+                allowNewWindow: false,
+                prompt: false,
+            });
+            if (opened.status !== 'opened-current') return;
             if (supportsRecentProjects) addRecentProject(result.manifestPath);
             await handleOpenInitialProjectEntry();
         } catch (error) {
@@ -140,11 +147,26 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         addRecentProject,
         handleOpenInitialProjectEntry,
         markManualSave,
-        openProjectFromManifest,
         projectPath,
         saveAllDirtyFiles,
         supportsRecentProjects,
     ]);
+
+    const handleMigrateProjectContent = useCallback(async () => {
+        if (!projectPath) return;
+
+        try {
+            markManualSave();
+            await saveAllDirtyFiles();
+
+            const result = await executeContentMigrationCommand(projectPath);
+            if (result.status === 'applied' || result.status === 'conflicted') {
+                await useProjectStore.getState().loadManifest();
+            }
+        } catch (error) {
+            console.error('Content migration from menu failed:', error);
+        }
+    }, [markManualSave, projectPath, saveAllDirtyFiles]);
 
     const handleExit = useCallback(() => {
         void closeEditorWindow();
@@ -174,6 +196,10 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
                 resetDockLayout();
                 setActiveDockLayoutPresetId(undefined);
             }, [resetDockLayout, setActiveDockLayoutPresetId]);
+
+            const handleOpenLocalizationEditor = useCallback(() => {
+                openLocalizationWorkbenchTab({ query: '' });
+            }, []);
 
     const selectedRootIndex = selectedNodePaths[0]?.length === 1
         && typeof selectedNodePaths[0][0] === 'number'
@@ -213,6 +239,11 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
                 onClick: () => { void handleSaveProjectAs(); },
                 shortcut: 'Ctrl+Alt+Shift+S',
             },
+            {
+                disabled: !projectPath,
+                label: 'Migrate Content Schema...',
+                onClick: () => { void handleMigrateProjectContent(); },
+            },
             { disabled: !projectPath, label: 'Close Project', onClick: executeCloseProjectAction },
             { label: 'sep-1', separator: true },
             { label: 'Settings…', onClick: openSettingsModal, shortcut: 'Ctrl+Alt+S' },
@@ -240,6 +271,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
             { label: 'Find in Project…', onClick: openGlobalSearchPopup, shortcut: 'Ctrl+Shift+F' },
             { label: 'Find and Replace in Project…', onClick: openGlobalSearchReplacePopup, shortcut: 'Ctrl+Shift+G' },
             { label: 'Command Palette…', onClick: openCommandPalette, shortcut: 'Ctrl+Shift+P' },
+            { disabled: !projectPath, label: 'Localization', onClick: handleOpenLocalizationEditor },
             { label: 'sep-3', separator: true },
             { label: 'Save Layout Preset…', onClick: handleSaveLayoutPreset },
             {
@@ -273,11 +305,13 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
             deleteDockLayoutPreset,
             dockLayoutPresets,
             handleLoadLayoutPreset,
+            handleOpenLocalizationEditor,
             handleResetLayout,
             handleSaveLayoutPreset,
             openCommandPalette,
             openGlobalSearchPopup,
             openGlobalSearchReplacePopup,
+            projectPath,
             setUiScale,
         ]
     );

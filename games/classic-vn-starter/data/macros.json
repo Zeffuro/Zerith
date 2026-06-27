@@ -1,0 +1,70 @@
+{
+    "enter_studio_morning": [
+        {
+            "action": "fade_out",
+            "duration": 260,
+            "type": "transition"
+        },
+        {
+            "assetUrl": "/assets/bg/studio-morning.svg",
+            "type": "background"
+        },
+        {
+            "action": "fade_in",
+            "duration": 320,
+            "type": "transition"
+        }
+    ],
+    "enter_studio_evening": [
+        {
+            "action": "fade_out",
+            "duration": 260,
+            "type": "transition"
+        },
+        {
+            "assetUrl": "/assets/bg/studio-evening.svg",
+            "type": "background"
+        },
+        {
+            "action": "fade_in",
+            "duration": 320,
+            "type": "transition"
+        }
+    ],
+    "hide_cast": [
+        {
+            "action": "hide",
+            "duration": 180,
+            "id": "aria",
+            "transition": "fade",
+            "type": "sprite"
+        },
+        {
+            "action": "hide",
+            "duration": 180,
+            "id": "cove",
+            "transition": "fade",
+            "type": "sprite"
+        }
+    ],
+    "show_cast": [
+        {
+            "action": "show",
+            "duration": 220,
+            "id": "aria",
+            "pose": "normal",
+            "transition": "fade",
+            "type": "sprite",
+            "xRatio": 0.32
+        },
+        {
+            "action": "show",
+            "duration": 220,
+            "id": "cove",
+            "pose": "normal",
+            "transition": "fade",
+            "type": "sprite",
+            "xRatio": 0.68
+        }
+    ]
+}

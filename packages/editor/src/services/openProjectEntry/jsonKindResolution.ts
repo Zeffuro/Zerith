@@ -52,6 +52,7 @@ export function resolveJsonKindFromSchema(data: unknown): JsonHintKind {
     if (schema === 'zerith/engine-config') return 'engineConfig';
     if (schema === 'zerith/items') return 'items';
     if (schema === 'zerith/macros') return 'macros';
+    if (schema === 'zerith/scene') return 'script';
     return;
 }
 

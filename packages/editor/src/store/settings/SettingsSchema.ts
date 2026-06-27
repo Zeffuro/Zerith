@@ -1,10 +1,10 @@
-import { BuiltInCommandTypes } from 'core/types';
 import { z } from 'zod';
 
 import type { NonMacroEditorCommandType } from '../../plugins/types';
 import type { KeymapOverrides } from '../../services/keymapRegistry';
 import type { EditorWindowState, RecentProject } from '../editor/types';
 
+import { isRegisteredNonMacroEditorCommandType } from '../../plugins/commandTypes';
 import { isGlobalShortcutCommand } from '../../services/keymapRegistry';
 import { normalizeShortcutChord } from '../../services/shortcutChord';
 import { isRecord } from '../../utils/typeGuards';
@@ -40,6 +40,11 @@ export type DockLayoutPreset = {
     name: string;
     updatedAt: number;
 };
+
+function isLikelyDockLayoutJson(value: unknown): boolean {
+    if (!isRecord(value)) return false;
+    return isRecord(value.global) && isRecord(value.layout);
+}
 
 function sanitizeAutosaveInterval(intervalMs: number): number {
     return Math.max(MIN_AUTOSAVE_INTERVAL_MS, Math.trunc(intervalMs));
@@ -94,29 +99,6 @@ function sanitizeCustomThemeVariables(value: unknown): Record<string, string> | 
     return variables;
 }
 
-function sanitizeKeymapOverrides(value: unknown): KeymapOverrides | undefined {
-    if (!isRecord(value)) return undefined;
-
-    const overrides: KeymapOverrides = {};
-
-    for (const [action, shortcutKey] of Object.entries(value)) {
-        if (!isGlobalShortcutCommand(action) || typeof shortcutKey !== 'string') continue;
-
-        const normalizedKey = normalizeShortcutChord(shortcutKey);
-        if (!normalizedKey) continue;
-        overrides[action] = normalizedKey;
-    }
-
-    return overrides;
-}
-
-const builtInCommandTypeSet = new Set<string>(BuiltInCommandTypes);
-
-function isLikelyDockLayoutJson(value: unknown): boolean {
-    if (!isRecord(value)) return false;
-    return isRecord(value.global) && isRecord(value.layout);
-}
-
 function sanitizeDockLayoutPresets(value: unknown): DockLayoutPreset[] | undefined {
     if (!Array.isArray(value)) return undefined;
 
@@ -155,6 +137,22 @@ function sanitizeDockLayoutPresets(value: unknown): DockLayoutPreset[] | undefin
         .slice(0, MAX_DOCK_LAYOUT_PRESETS);
 }
 
+function sanitizeKeymapOverrides(value: unknown): KeymapOverrides | undefined {
+    if (!isRecord(value)) return undefined;
+
+    const overrides: KeymapOverrides = {};
+
+    for (const [action, shortcutKey] of Object.entries(value)) {
+        if (!isGlobalShortcutCommand(action) || typeof shortcutKey !== 'string') continue;
+
+        const normalizedKey = normalizeShortcutChord(shortcutKey);
+        if (!normalizedKey) continue;
+        overrides[action] = normalizedKey;
+    }
+
+    return overrides;
+}
+
 function sanitizeQuickCommandTypes(value: unknown): NonMacroEditorCommandType[] | undefined {
     if (!Array.isArray(value)) return undefined;
 
@@ -162,7 +160,7 @@ function sanitizeQuickCommandTypes(value: unknown): NonMacroEditorCommandType[] 
     for (const entry of value) {
         if (typeof entry !== 'string') continue;
         const trimmed = entry.trim();
-        if (!builtInCommandTypeSet.has(trimmed)) continue;
+        if (!isRegisteredNonMacroEditorCommandType(trimmed)) continue;
         const commandType = trimmed;
         if (output.includes(commandType)) continue;
         output.push(commandType);
@@ -239,7 +237,9 @@ const dockLayoutPresetsSchema = z.preprocess(
 
 const quickCommandTypesSchema = z.preprocess(
     (value) => sanitizeQuickCommandTypes(value),
-    z.array(z.enum(BuiltInCommandTypes)),
+    z.array(z.custom<NonMacroEditorCommandType>((value) => (
+        typeof value === 'string' && isRegisteredNonMacroEditorCommandType(value)
+    ))),
 ).optional();
 
 const persistedSettingsSchema = z.object({

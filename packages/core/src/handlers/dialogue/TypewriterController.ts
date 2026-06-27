@@ -26,6 +26,7 @@ export interface TypewriterRunOptions {
     getMessageText: () => string;
     initialSpeed: number;
     playVoice: (url: string) => Promise<void>;
+    reducedMotion?: boolean;
     setMessageText: (text: string) => void;
     signal: AbortSignal;
     tokens: Token[];
@@ -41,6 +42,7 @@ export class TypewriterController {
             getMessageText,
             initialSpeed,
             playVoice,
+            reducedMotion,
             setMessageText,
             signal,
             tokens,
@@ -77,7 +79,9 @@ export class TypewriterController {
             }
 
             if (token.type === 'wait') {
-                await this.delay(token.ms, signal);
+                if (!reducedMotion) {
+                    await this.delay(token.ms, signal);
+                }
                 continue;
             }
 
@@ -92,6 +96,7 @@ export class TypewriterController {
                     consumeSkip,
                     currentText,
                     playVoice,
+                    reducedMotion,
                     setMessageText,
                     signal,
                     speed,
@@ -110,6 +115,7 @@ export class TypewriterController {
         consumeSkip: () => boolean;
         currentText: string;
         playVoice: (url: string) => Promise<void>;
+        reducedMotion?: boolean;
         setMessageText: (text: string) => void;
         signal: AbortSignal;
         speed: number;
@@ -120,12 +126,14 @@ export class TypewriterController {
             consumeSkip,
             currentText,
             playVoice,
+            reducedMotion,
             setMessageText,
             signal,
-            speed,
+            speed: requestedSpeed,
             text,
         } = options;
 
+        const speed = reducedMotion ? 0 : requestedSpeed;
         let current = currentText;
         let index = 0;
 
@@ -152,7 +160,9 @@ export class TypewriterController {
                 current += ch;
 
                 if (blipUrl && ch !== ' ' && ch !== '\n') {
-                    await playVoice(blipUrl);
+                    await playVoice(blipUrl).catch(() => {
+                        // Typewriter blips are cosmetic; missing audio must not stop dialogue.
+                    });
                 }
                 index++;
             }

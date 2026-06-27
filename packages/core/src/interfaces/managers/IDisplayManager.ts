@@ -16,6 +16,7 @@ export type DisplayLayerName = ({} & string) | BuiltInDisplayLayerName;
 
 export interface IDisplayManager extends IBaseManager {
     canvas: HTMLCanvasElement | undefined;
+    captureThumbnailDataUrl?(): string | undefined;
     clearLayers?(): void;
     getLayer(name: DisplayLayerName): Container;
     readonly height: number;

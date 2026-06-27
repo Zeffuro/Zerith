@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseTextTags, resolveTemplateText, transformShorthands } from '../TextParser';
+import { parseDisplayTextTags, parseTextTags, resolveTemplateText, transformShorthands } from '../TextParser';
 
 function createState(values: Record<string, unknown>, persistent: Record<string, unknown> = {}) {
     return {
@@ -31,6 +31,23 @@ describe('TextParser', () => {
         expect(transformShorthands("<b>Bold</b> {u color='blue'}link{/u}")).toBe(
             '<b>Bold</b> <span style="text-decoration: underline; color: blue;">link</span>'
         );
+    });
+
+    it('applies explicit markup modes while preserving engine control tags', () => {
+        expect(parseDisplayTextTags("<b>Bold</b> {color:red}Red{/color}{wait:50}", 'zerith')).toEqual([
+            { type: 'text', val: '<b>Bold</b> <span style="color: red;">Red</span>' },
+            { ms: 50, type: 'wait' },
+        ]);
+
+        expect(parseDisplayTextTags("<b>Bold</b> {color:red}Red{/color}{wait:50}", 'html')).toEqual([
+            { type: 'text', val: '<b>Bold</b> {color:red}Red{/color}' },
+            { ms: 50, type: 'wait' },
+        ]);
+
+        expect(parseDisplayTextTags("<b>Bold</b> {color:red}Red{/color}{wait:50}", 'plain')).toEqual([
+            { type: 'text', val: '&lt;b&gt;Bold&lt;/b&gt; {color:red}Red{/color}' },
+            { ms: 50, type: 'wait' },
+        ]);
     });
 
     it('resolves state and persistent template variables without consuming control tags', () => {

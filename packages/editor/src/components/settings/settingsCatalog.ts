@@ -32,6 +32,7 @@ export const settingsCatalog: SettingsCategoryNode[] = [
         label: 'Editor',
     },
     { id: 'keymap', label: 'Keymap' },
+    { id: 'plugins', label: 'Plugins' },
 ] as const;
 
 export function buildSettingsLeafCountMap(nodes: readonly SettingsCategoryNode[]): Record<string, number> {

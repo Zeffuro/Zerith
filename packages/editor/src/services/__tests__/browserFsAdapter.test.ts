@@ -52,6 +52,21 @@ describe('browserFsAdapter', () => {
 
         await expect(adapter.readBinaryFile('/Binary/logo.bin')).resolves.toEqual(new Uint8Array([1, 2, 3]));
     });
+
+    it('picks external binary files without mounting their parent directory', async () => {
+        const root = new MemoryDirectoryHandle('Binary');
+        const pickedFile = new MemoryFileHandle('hero.png', new Uint8Array([4, 5, 6]));
+        const adapter = createBrowserFsAdapter(createPickerGlobal(root, [pickedFile]));
+
+        const files = await adapter.pickBinaryFiles({ filters: [{ extensions: ['png'], name: 'Images' }] });
+
+        expect(files).toEqual([
+            {
+                bytes: new Uint8Array([4, 5, 6]),
+                name: 'hero.png',
+            },
+        ]);
+    });
 });
 
 class MemoryFileHandle implements BrowserFileHandle {
@@ -139,9 +154,10 @@ class MemoryDirectoryHandle implements BrowserDirectoryHandle {
     }
 }
 
-function createPickerGlobal(root: MemoryDirectoryHandle): BrowserFsGlobal {
+function createPickerGlobal(root: MemoryDirectoryHandle, files: MemoryFileHandle[] = []): BrowserFsGlobal {
     return {
         ...globalThis,
         showDirectoryPicker: () => Promise.resolve(root),
+        showOpenFilePicker: () => Promise.resolve(files),
     };
 }

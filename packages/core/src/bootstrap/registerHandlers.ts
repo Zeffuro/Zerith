@@ -1,3 +1,5 @@
+import type { AccessibilityConfig } from '../EngineConfig';
+import type { TextConfig } from '../EngineConfig';
 import type {
     IAnimationManager,
     IAssetManager,
@@ -41,11 +43,12 @@ import {
 } from '../handlers';
 
 export interface RegisterHandlersOptions {
+    accessibility?: AccessibilityConfig;
     animations: IAnimationManager;
     assets: IAssetManager;
     audio: IAudioManager;
     characters: Record<string, CharacterDefinition>;
-    defaultBlipUrl: string;
+    defaultBlipUrl?: string;
     display: IDisplayManager;
     events: IEventBus;
     evidence: IEvidenceManager;
@@ -56,6 +59,7 @@ export interface RegisterHandlersOptions {
     sceneManager: ISceneManager;
     spritesheets: ISpritesheetManager;
     state: IStateManager;
+    text?: TextConfig;
     theme: Theme;
 }
 
@@ -65,6 +69,7 @@ export interface RegisterHandlersResult {
 
 export function registerHandlers(options: RegisterHandlersOptions): RegisterHandlersResult {
     const {
+        accessibility,
         animations,
         assets,
         audio,
@@ -80,6 +85,7 @@ export function registerHandlers(options: RegisterHandlersOptions): RegisterHand
         sceneManager,
         spritesheets,
         state,
+        text,
         theme,
     } = options;
 
@@ -94,12 +100,15 @@ export function registerHandlers(options: RegisterHandlersOptions): RegisterHand
         logger,
         state,
         {
+            announceDialogue: accessibility?.announceDialogue,
             backgroundAlpha: theme.boxAlpha,
             backgroundColor: theme.boxColor,
             borderColor: theme.borderColor,
             borderWidth: theme.borderWidth,
+            captions: accessibility?.captions,
             characters,
             defaultBlipUrl,
+            markupMode: text?.markupMode,
             messageStyle: {
                 fontFamily: theme.fontFamily,
                 fontSize: theme.fontSize,
@@ -109,6 +118,9 @@ export function registerHandlers(options: RegisterHandlersOptions): RegisterHand
                 fontSize: Math.max(theme.fontSize + 4, theme.fontSize * 1.2),
                 fontWeight: 'bold',
             },
+            reducedMotion: accessibility?.reducedMotion,
+            selfVoicing: accessibility?.selfVoicing,
+            typewriterSpeed: Math.round(30 * (accessibility?.typewriterSpeedMultiplier ?? 1)),
         },
     );
 

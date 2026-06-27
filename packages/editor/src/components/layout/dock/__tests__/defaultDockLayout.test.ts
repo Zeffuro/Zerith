@@ -12,6 +12,7 @@ describe('defaultDockLayout', () => {
 
         expect(isUsableDockLayoutJson(layout)).toBe(true);
         expect(JSON.stringify(layout)).not.toContain('"type":"column"');
+        expect(JSON.stringify(layout)).not.toContain('"component":"localization"');
     });
 
     it('rejects layouts that only have the outer JSON shape', () => {

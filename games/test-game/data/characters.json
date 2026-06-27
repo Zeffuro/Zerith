@@ -9,7 +9,7 @@
     "nameColor": "#3399ff",
     "spritesheet": {
       "atlasUrl": "/assets/sprites/phoenixsheet.sheet.json",
-      "chromaKey": "#009a00",
+      "chromaKey": "#0b6e25",
       "chromaTolerance": 60
     },
     "displayDefaults": {

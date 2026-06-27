@@ -397,7 +397,7 @@ export function SpritesheetEditorPanel({ tab }: SpritesheetEditorPanelProperties
                 </ToolbarGroup>
             </div>
 
-            <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(220px, 280px) minmax(0, 1fr) minmax(300px, 360px)', minHeight: 0 }}>
+            <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(180px, 240px) minmax(0, 1fr) minmax(260px, 320px)', minHeight: 0 }}>
                 <section className="zerith-scrollbar" style={panelStyle}>
                     {image ? undefined : <div style={{ color: t.text.muted }}>Load source image to preview frames.</div>}
                     {image ? (

@@ -17,6 +17,7 @@ export function useEngineLifecycle({
     activeFileReference,
     canvasReference,
     containerReference,
+    localizationReloadKey,
     manifest,
     playbackRequestIdReference,
     projectDataReference,
@@ -28,6 +29,7 @@ export function useEngineLifecycle({
     activeFileReference: RefObject<string | undefined>;
     canvasReference: RefObject<HTMLCanvasElement | null>;
     containerReference: RefObject<HTMLDivElement | null>;
+    localizationReloadKey: string;
     manifest: GameManifest | undefined;
     playbackRequestIdReference: WritableReference<number>;
     projectDataReference: WritableReference<EngineLifecycleProjectData>;
@@ -42,6 +44,7 @@ export function useEngineLifecycle({
         activeFileReference,
         canvasReference,
         containerReference,
+        localizationReloadKey,
         manifest,
         playbackRequestIdReference,
         projectDataReference,

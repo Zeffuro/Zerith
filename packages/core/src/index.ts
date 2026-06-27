@@ -45,10 +45,15 @@ export * from './ui/SettingsPanel';
 export * from './ui/UIComponents';
 
 /* Utils */
+export * from './utils/Backlog';
 export * from './utils/ChromaKey';
+export * from './utils/ContentCompiler';
 export * from './utils/deepClone';
+export * from './utils/Localization';
 export * from './utils/Logger';
 export * from './utils/ManifestResolver';
+export * from './utils/RuntimePluginDiscovery';
 export * from './utils/sheetGridUtilities';
+export * from './utils/StoryGraph';
 export * from './utils/TextParser';
 export * from './utils/Theme';

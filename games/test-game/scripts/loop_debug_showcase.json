@@ -1,31 +1,70 @@
-[
-  { "type": "background", "assetUrl": "/assets/bg/office.png" },
-  { "type": "sprite", "id": "phoenix", "action": "show", "pose": "thinking" },
-
-  { "type": "dialogue", "speaker": "phoenix", "text": "Let's run both loop types quickly for QA." },
-
-  {
-    "type": "for",
-    "iterator": "i",
-    "from": 3,
-    "to": 1,
-    "step": -1,
-    "body": [
-      { "type": "dialogue", "speaker": "phoenix", "text": "Countdown: {i}" }
-    ]
-  },
-
-  { "type": "set", "key": "qa_ticks", "value": 0 },
-  {
-    "type": "while",
-    "key": "qa_ticks",
-    "op": "lt",
-    "value": 2,
-    "body": [
-      { "type": "dialogue", "speaker": "phoenix", "text": "while tick {qa_ticks}" },
-      { "type": "set", "key": "qa_ticks", "op": "add", "value": 1 }
-    ]
-  },
-
-  { "type": "dialogue", "speaker": "phoenix", "text": "Loop showcase complete." }
-]
+{
+    "$schema": "zerith/scene",
+    "commands": [
+        {
+            "type": "background",
+            "assetUrl": "/assets/bg/office.png"
+        },
+        {
+            "type": "sprite",
+            "id": "phoenix",
+            "action": "show",
+            "pose": "thinking"
+        },
+        {
+            "type": "dialogue",
+            "speaker": "phoenix",
+            "text": "Let's run both loop types quickly for QA.",
+            "lineId": "scene.loop_debug_showcase.line.003"
+        },
+        {
+            "type": "for",
+            "iterator": "i",
+            "from": 3,
+            "to": 1,
+            "step": -1,
+            "body": [
+                {
+                    "type": "dialogue",
+                    "speaker": "phoenix",
+                    "text": "Countdown: {i}",
+                    "lineId": "scene.loop_debug_showcase.line.004.001"
+                }
+            ]
+        },
+        {
+            "type": "set",
+            "key": "qa_ticks",
+            "value": 0
+        },
+        {
+            "type": "while",
+            "key": "qa_ticks",
+            "op": "lt",
+            "value": 2,
+            "body": [
+                {
+                    "type": "dialogue",
+                    "speaker": "phoenix",
+                    "text": "while tick {qa_ticks}",
+                    "lineId": "scene.loop_debug_showcase.line.006.001"
+                },
+                {
+                    "type": "set",
+                    "key": "qa_ticks",
+                    "op": "add",
+                    "value": 1
+                }
+            ]
+        },
+        {
+            "type": "dialogue",
+            "speaker": "phoenix",
+            "text": "Loop showcase complete.",
+            "lineId": "scene.loop_debug_showcase.line.007"
+        }
+    ],
+    "id": "loop_debug_showcase",
+    "localeNamespace": "scene.loop_debug_showcase",
+    "schemaVersion": 2
+}

@@ -8,9 +8,11 @@ export interface IOverlayManager extends IBaseManager {
     closePanel(): void;
     config: Required<OverlayConfig>;
     readonly focus: PanelFocusManager;
+    hasPanel(id: string): boolean;
     readonly isOpen: boolean;
     open(): void;
     registerPanel(panel: MenuPanel): void;
+    removePanel(id: string): void;
     scale(value: number): number;
     showPanel(panel: MenuPanel): void;
     toggle(): void;

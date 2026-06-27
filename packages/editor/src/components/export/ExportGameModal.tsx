@@ -1,13 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useBackdropDismissal } from '../../hooks/useBackdropDismissal';
-import { exportGame } from '../../services/exportGame';
+import {
+    type ExportCachePolicy,
+    exportGame,
+    type ExportProfile,
+    getExportProfileCatalog,
+    getExportProfileMetadata,
+    resolveExportGameOptions,
+} from '../../services/exportGame';
+import { type BrowserDesktopExportSmokeRunReport, runBrowserDesktopExportSmoke } from '../../services/exportParityRunner';
+import { isTauriRuntime } from '../../services/runtime/runtimeEnvironment';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { styles } from '../../theme/styleHelpers';
-
-type ExportTarget = 'itch' | 'web';
 
 export function ExportGameModal() {
     const closeExportGameModal = useEditorStore((state) => state.closeExportGameModal);
@@ -17,13 +24,20 @@ export function ExportGameModal() {
     const projectPath = useProjectStore((state) => state.projectPath);
     const saveAllDirtyFiles = useProjectStore((state) => state.saveAllDirtyFiles);
 
-    const [target, setTarget] = useState<ExportTarget>('itch');
+    const profileCatalog = useMemo(() => getExportProfileCatalog(), []);
+    const [profile, setProfile] = useState<ExportProfile>('itch-html5');
     const [base, setBase] = useState('./');
+    const [cachePolicy, setCachePolicy] = useState<ExportCachePolicy>('hashed');
     const [outDirectory, setOutDirectory] = useState('');
     const [zipEnabled, setZipEnabled] = useState(true);
     const [zipFile, setZipFile] = useState('');
     const [isExporting, setIsExporting] = useState(false);
     const [statusMessage, setStatusMessage] = useState<string | undefined>();
+    const activeProfileMetadata = useMemo(() => getExportProfileMetadata(profile), [profile]);
+    const plannedProfileMetadata = useMemo(
+        () => profileCatalog.filter((entry) => !entry.selectable),
+        [profileCatalog],
+    );
 
     const defaultOutDirectory = useMemo(() => {
         return projectPath ? buildDefaultOutputDirectory(projectPath) : 'dist/game';
@@ -31,29 +45,29 @@ export function ExportGameModal() {
     const defaultZipFilePath = useMemo(() => {
         return projectPath ? defaultZipPath(projectPath) : 'dist/game.zip';
     }, [projectPath]);
+    const applyProfileDefaults = useCallback((nextProfile: ExportProfile) => {
+        const resolved = resolveExportGameOptions({ profile: nextProfile });
+        if (resolved.base !== undefined) setBase(resolved.base);
+        if (resolved.cachePolicy !== undefined) setCachePolicy(resolved.cachePolicy);
+        if (resolved.zip !== undefined) setZipEnabled(resolved.zip);
+    }, []);
 
     useEffect(() => {
         if (!isOpen) {
             return;
         }
 
-        setTarget('itch');
-        setBase('./');
+        setProfile('itch-html5');
+        applyProfileDefaults('itch-html5');
         setOutDirectory(defaultOutDirectory);
-        setZipEnabled(true);
         setZipFile(defaultZipFilePath);
         setStatusMessage(undefined);
-    }, [defaultOutDirectory, defaultZipFilePath, isOpen]);
+    }, [applyProfileDefaults, defaultOutDirectory, defaultZipFilePath, isOpen]);
 
     useEffect(() => {
-        if (target === 'itch') {
-            setBase('./');
-            setZipEnabled(true);
-            if (!zipFile.trim()) {
-                setZipFile(defaultZipFilePath);
-            }
-        }
-    }, [defaultZipFilePath, target, zipFile]);
+        applyProfileDefaults(profile);
+        setZipFile((current) => profile === 'itch-html5' && !current.trim() ? defaultZipFilePath : current);
+    }, [applyProfileDefaults, defaultZipFilePath, profile]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -76,6 +90,16 @@ export function ExportGameModal() {
     }
 
     const canExport = !!projectPath && !isExporting;
+    const canRunParitySmoke = canExport && isTauriRuntime();
+
+    const getCurrentExportOptions = () => ({
+        base: base.trim() || undefined,
+        cachePolicy,
+        outDir: outDirectory.trim() || undefined,
+        profile,
+        zip: zipEnabled,
+        zipFile: zipEnabled ? (zipFile.trim() || undefined) : undefined,
+    });
 
     const handleExport = async () => {
         if (!projectPath || isExporting) {
@@ -90,20 +114,11 @@ export function ExportGameModal() {
             await saveAllDirtyFiles();
 
             console.info('[Export Game] Running export with options:', {
-                base,
-                outDirectory,
+                ...getCurrentExportOptions(),
                 projectPath,
-                target,
-                zip: zipEnabled,
-                zipFile,
             });
 
-            const result = await exportGame(projectPath, {
-                base: base.trim() || undefined,
-                outDir: outDirectory.trim() || undefined,
-                zip: zipEnabled,
-                zipFile: zipEnabled ? (zipFile.trim() || undefined) : undefined,
-            });
+            const result = await exportGame(projectPath, getCurrentExportOptions());
             const stderr = typeof (result as { stderr?: unknown }).stderr === 'string'
                 ? (result as { stderr: string }).stderr
                 : '';
@@ -119,6 +134,40 @@ export function ExportGameModal() {
         } catch (error) {
             console.error('[Export Game] Export failed:', error);
             setStatusMessage(`Export failed: ${error instanceof Error ? error.message : String(error)}`);
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    const handleParitySmoke = async () => {
+        if (!projectPath || isExporting) {
+            return;
+        }
+
+        setIsExporting(true);
+        setStatusMessage('Export parity smoke started. Details will stream to the Console panel.');
+
+        try {
+            markManualSave();
+            await saveAllDirtyFiles();
+
+            const options = {
+                ...getCurrentExportOptions(),
+                profile: 'local-preview' as const,
+                zip: false,
+                zipFile: undefined,
+            };
+            console.info('[Export Parity Smoke] Running browser/desktop export smoke with options:', {
+                ...options,
+                projectPath,
+            });
+
+            const report = await runBrowserDesktopExportSmoke(projectPath, options);
+            logParitySmokeReport(report);
+            setStatusMessage(formatParitySmokeStatus(report.comparison.status));
+        } catch (error) {
+            console.error('[Export Parity Smoke] Export parity smoke failed:', error);
+            setStatusMessage(`Export parity smoke failed: ${error instanceof Error ? error.message : String(error)}`);
         } finally {
             setIsExporting(false);
         }
@@ -156,22 +205,48 @@ export function ExportGameModal() {
                 </div>
 
                 <label style={{ display: 'grid', fontSize: `${12 * uiScale}px`, gap: `${4 * uiScale}px` }}>
-                    Target
+                    Export Profile
                     <select
                         disabled={isExporting}
-                        onChange={(event) => setTarget(event.target.value as ExportTarget)}
+                        onChange={(event) => setProfile(event.target.value as ExportProfile)}
                         style={{ ...styles.input(uiScale), padding: `${6 * uiScale}px ${8 * uiScale}px` }}
-                        value={target}
+                        value={profile}
                     >
-                        <option value="itch">Itch.io HTML5 (zip + base ./)</option>
-                        <option value="web">Generic web host</option>
+                        {profileCatalog.map((entry) => (
+                            <option disabled={!entry.selectable} key={entry.id} value={entry.id}>
+                                {entry.label}{entry.status === 'planned' ? ' (planned)' : ''}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+                <div style={profileInfoStyle(uiScale)}>
+                    <span style={profileStatusPillStyle(uiScale)}>{activeProfileMetadata.target} | {activeProfileMetadata.status}</span>
+                    <span>{activeProfileMetadata.description}</span>
+                </div>
+                {plannedProfileMetadata.map((entry) => (
+                    <div key={entry.id} style={profileInfoStyle(uiScale)}>
+                        <span style={profileStatusPillStyle(uiScale)}>{entry.target} | {entry.status}</span>
+                        <span>{entry.description}</span>
+                    </div>
+                ))}
+
+                <label style={{ display: 'grid', fontSize: `${12 * uiScale}px`, gap: `${4 * uiScale}px` }}>
+                    Compiled Content Cache
+                    <select
+                        disabled={isExporting}
+                        onChange={(event) => setCachePolicy(event.target.value as ExportCachePolicy)}
+                        style={{ ...styles.input(uiScale), padding: `${6 * uiScale}px ${8 * uiScale}px` }}
+                        value={cachePolicy}
+                    >
+                        <option value="hashed">Hashed local files (recommended)</option>
+                        <option value="none">No cache manifest</option>
                     </select>
                 </label>
 
                 <label style={{ display: 'grid', fontSize: `${12 * uiScale}px`, gap: `${4 * uiScale}px` }}>
                     Build Base URL
                     <input
-                        disabled={isExporting || target === 'itch'}
+                        disabled={isExporting || profile === 'itch-html5'}
                         onChange={(event) => setBase(event.target.value)}
                         placeholder="./"
                         style={styles.input(uiScale)}
@@ -193,7 +268,7 @@ export function ExportGameModal() {
                 <label style={{ alignItems: 'center', display: 'flex', fontSize: `${12 * uiScale}px`, gap: `${8 * uiScale}px` }}>
                     <input
                         checked={zipEnabled}
-                        disabled={isExporting || target === 'itch'}
+                        disabled={isExporting || profile === 'itch-html5'}
                         onChange={(event) => setZipEnabled(event.target.checked)}
                         type="checkbox"
                     />
@@ -239,6 +314,21 @@ export function ExportGameModal() {
                     >
                         {isExporting ? 'Exporting...' : 'Export'}
                     </button>
+                    <button
+                        disabled={!canRunParitySmoke}
+                        onClick={() => {
+                            void handleParitySmoke();
+                        }}
+                        style={{
+                            ...styles.buttonBase(uiScale),
+                            background: canRunParitySmoke ? t.accent.primary : t.bg.panelAlt,
+                            border: 'none',
+                            color: canRunParitySmoke ? '#fff' : t.text.muted,
+                        }}
+                        type="button"
+                    >
+                        {isExporting ? 'Running...' : 'Parity Smoke'}
+                    </button>
                 </div>
             </div>
         </div>
@@ -257,3 +347,72 @@ function defaultZipPath(projectPath: string): string {
     return `${buildDefaultOutputDirectory(projectPath)}.zip`;
 }
 
+function formatParitySmokeStatus(status: BrowserDesktopExportSmokeRunReport['comparison']['status']): string {
+    switch (status) {
+        case 'blocked': {
+            return 'Export parity smoke blocked. Check Console panel for missing artifact details.';
+        }
+        case 'matched': {
+            return 'Export parity smoke matched browser and desktop artifacts.';
+        }
+        case 'mismatched': {
+            return 'Export parity smoke found artifact differences. Check Console panel for details.';
+        }
+    }
+}
+
+function logParitySmokeReport(report: BrowserDesktopExportSmokeRunReport): void {
+    const { comparison } = report;
+
+    if (comparison.browserStdout.trim()) {
+        console.info('[Export Parity Smoke] Browser output:\n' + comparison.browserStdout.trim());
+    }
+    if (comparison.desktopStdout.trim()) {
+        console.info('[Export Parity Smoke] Desktop output:\n' + comparison.desktopStdout.trim());
+    }
+
+    if (comparison.status === 'blocked') {
+        console.warn('[Export Parity Smoke] Blocked:', comparison.reasons);
+        return;
+    }
+
+    const { summary } = comparison.artifactComparison;
+    console.info('[Export Parity Smoke] Artifact comparison:', {
+        matched: summary.matched,
+        mismatched: summary.mismatched,
+        missing: summary.missing,
+        status: comparison.status,
+    });
+
+    for (const check of comparison.artifactComparison.checks) {
+        console.info(`[Export Parity Smoke] ${check.id}: ${check.status}`, {
+            browser: check.browser,
+            desktop: check.desktop,
+            missingInBrowser: check.missingInBrowser,
+            missingInDesktop: check.missingInDesktop,
+            note: check.note,
+        });
+    }
+}
+
+function profileInfoStyle(uiScale: number) {
+    return {
+        alignItems: 'center',
+        color: t.text.muted,
+        display: 'flex',
+        fontSize: `${11 * uiScale}px`,
+        gap: `${6 * uiScale}px`,
+        minWidth: 0,
+    };
+}
+
+function profileStatusPillStyle(uiScale: number) {
+    return {
+        border: `1px solid ${t.border.subtle}`,
+        borderRadius: t.radius.sm,
+        color: t.text.normal,
+        flexShrink: 0,
+        padding: `${2 * uiScale}px ${5 * uiScale}px`,
+        textTransform: 'capitalize' as const,
+    };
+}

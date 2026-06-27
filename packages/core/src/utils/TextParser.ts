@@ -1,3 +1,5 @@
+export type TextMarkupMode = 'html' | 'plain' | 'zerith';
+
 export type Token =
     | { ms: number; type: 'wait', }
     | { speed: number; type: 'speed', }
@@ -7,6 +9,20 @@ export type Token =
 interface TextStateAccessor {
     get<T = unknown>(key: string): T | undefined;
     getPersistent<T = unknown>(key: string): T | undefined;
+}
+
+export function parseDisplayTextTags(text: string, markupMode: TextMarkupMode = 'zerith'): Token[] {
+    const transformed = markupMode === 'zerith' ? transformShorthands(text) : text;
+    const tokens = parseTextTags(transformed);
+    if (markupMode !== 'plain') {
+        return tokens;
+    }
+
+    return tokens.map((token) => (
+        token.type === 'text'
+            ? { type: 'text', val: escapeHtml(token.val) }
+            : token
+    ));
 }
 
 /**
@@ -97,5 +113,12 @@ export function transformShorthands(text: string): string {
     );
 
     return text;
+}
+
+function escapeHtml(text: string): string {
+    return text
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;');
 }
 

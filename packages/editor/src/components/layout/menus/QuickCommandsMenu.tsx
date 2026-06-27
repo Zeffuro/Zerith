@@ -1,5 +1,5 @@
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
 
 import type { NonMacroEditorCommandType } from '../../../plugins/types';
 
@@ -22,7 +22,7 @@ export function QuickCommandsMenu({
     toggleQuickCommandType: (type: NonMacroEditorCommandType) => void;
     uiScale: number;
 }) {
-    const allPlugins = useMemo(() => getAllPlugins(), []);
+    const allPlugins = getAllPlugins();
     const rootReference = useRef<HTMLDivElement>(null);
 
     useDismissiblePopup(open, rootReference, onClose);

@@ -1,4 +1,4 @@
-import { validateScript } from 'core/schemas';
+import { isSceneFileEnvelope, parseSceneFile, validateScript } from 'core/schemas';
 
 import { executeProjectOpenAction } from '../store/actions/projectOpenActions';
 import { isRecord } from '../utils/typeGuards';
@@ -16,8 +16,8 @@ export function applyMacrosFile(path: string, object: Record<string, unknown>) {
     executeProjectOpenAction({ action: 'applyMacrosFile', entries, path });
 }
 
-export function applyScriptFile(path: string, data: unknown[]) {
-    const validScript = validateScript(data);
+export function applyScriptFile(path: string, data: unknown) {
+    const validScript = parseSceneFile(data).commands;
     executeProjectOpenAction({ action: 'applyScriptFile', path, script: validScript });
 }
 
@@ -30,4 +30,8 @@ export function looksLikeMacrosObject(data: unknown): data is Record<string, unk
     if (macroEntries.length === 0) return false;
 
     return macroEntries.every(([, value]) => Array.isArray(value));
+}
+
+export function looksLikeSceneFile(data: unknown): boolean {
+    return Array.isArray(data) || isSceneFileEnvelope(data);
 }

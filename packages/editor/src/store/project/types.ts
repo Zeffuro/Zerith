@@ -1,4 +1,4 @@
-import type { CharacterDefinition, Command, GameManifest, ItemManifestEntry, Script } from 'core';
+import type { CharacterDefinition, Command, GameManifest, ItemManifestEntry, LocaleBundle, Script } from 'core';
 
 import type { FsDirectoryEntry } from '../../services/fs';
 import type { EditorNode } from '../../types/EditorNode';
@@ -35,8 +35,12 @@ export interface ProjectManifestSlice {
     characters: Record<string, CharacterDefinition>;
     items: Record<string, ItemManifestEntry>;
     loadManifest: () => Promise<void>;
+    localePaths: Record<string, string | undefined>;
+    locales: Record<string, LocaleBundle>;
     macros: Record<string, Script>;
     manifest: GameManifest | undefined;
+    sceneNamespaces: Record<string, string | undefined>;
+    scenePaths: Record<string, string | undefined>;
     scenes: Record<string, Script>;
 }
 

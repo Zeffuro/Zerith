@@ -10,11 +10,13 @@ import './App.css';
 import { useAutosave } from './hooks/useAutosave';
 import { useAutoSliceDialog } from './hooks/useAutoSliceDialog';
 import { useClosePrompt } from './hooks/useClosePrompt';
+import { useEditorDialogs } from './hooks/useEditorDialogs';
 import { useGlobalEditorShortcuts } from './hooks/useGlobalEditorShortcuts';
 import { useLiveScriptValidation } from './hooks/useLiveScriptValidation';
 import { useProjectFileWatcher } from './hooks/useProjectFileWatcher';
 import { useReferenceScanner } from './hooks/useReferenceScanner';
 import { useScriptDirtyTracking } from './hooks/useScriptDirtyTracking';
+import { useStartupProjectOpen } from './hooks/useStartupProjectOpen';
 import { useWindowStateRestore } from './hooks/useWindowStateRestore';
 import { setupConsoleInterceptor } from './services/consoleInterceptor';
 import { useScriptStore } from './store/storeBootstrap';
@@ -43,6 +45,7 @@ function App() {
         onCloseWithoutSaving,
         onSaveAllAndClose,
     } = useClosePrompt();
+    const editorDialogs = useEditorDialogs();
 
     useGlobalEditorShortcuts();
     useLiveScriptValidation(rootScript);
@@ -50,6 +53,7 @@ function App() {
     useProjectFileWatcher();
     useReferenceScanner();
     useScriptDirtyTracking();
+    useStartupProjectOpen();
     useWindowStateRestore();
 
     useEffect(() => {
@@ -68,6 +72,7 @@ function App() {
             <SettingsModal />
             <ExportGameModal />
             <NewProjectModal />
+            {editorDialogs}
             <ConfirmDialog
                 cancelText="Cancel"
                 confirmText={isClosingWithSave ? 'Saving...' : 'Save All'}

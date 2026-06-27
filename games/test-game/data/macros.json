@@ -28,30 +28,30 @@
           "key": "line_idx",
           "op": "eq",
           "value": 0,
-          "then": [
+          "onTrue": [
             { "type": "dialogue", "speaker": "Witness", "text": "I saw the defendant near the office at 4 PM." }
           ],
-          "else": []
+          "onFalse": []
         },
         {
           "type": "if",
           "key": "line_idx",
           "op": "eq",
           "value": 1,
-          "then": [
+          "onTrue": [
             { "type": "dialogue", "speaker": "Witness", "text": "Then I heard a loud shout from inside." }
           ],
-          "else": []
+          "onFalse": []
         },
         {
           "type": "if",
           "key": "line_idx",
           "op": "eq",
           "value": 2,
-          "then": [
+          "onTrue": [
             { "type": "dialogue", "speaker": "Witness", "text": "After that, someone rushed out and disappeared." }
           ],
-          "else": []
+          "onFalse": []
         },
         { "type": "set", "key": "line_idx", "op": "add", "value": 1 }
       ]

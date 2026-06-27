@@ -1,11 +1,17 @@
+import { CheckCircle2, FolderOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { useBackdropDismissal } from '../../hooks/useBackdropDismissal';
-import { createNewProject } from '../../services/createNewProject';
+import {
+    createNewProject,
+    getNewProjectTemplateDefaultName,
+    NEW_PROJECT_TEMPLATES,
+    type NewProjectTemplateId,
+} from '../../services/createNewProject';
 import { fsPickDirectory } from '../../services/fs';
-import { openProjectEntry } from '../../services/openProjectEntry';
+import { basenameFromPath, openProjectEntry } from '../../services/openProjectEntry';
 import { isTauriRuntime } from '../../services/runtime/runtimeEnvironment';
-import { closeProject } from '../../store/actions/projectOpenActions';
+import { executeOpenProjectInCurrentWindow } from '../../store/actions/projectOpenActions';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
 import { editorTheme as t } from '../../theme/editorTheme';
@@ -17,13 +23,13 @@ export function NewProjectModal() {
     const closeNewProjectModal = useEditorStore((state) => state.closeNewProjectModal);
     const isOpen = useEditorStore((state) => state.isNewProjectModalOpen);
     const uiScale = useEditorStore((state) => state.uiScale);
-    const openProjectFromManifest = useProjectStore((state) => state.openProjectFromManifest);
 
     const [author, setAuthor] = useState('');
     const [directory, setDirectory] = useState('');
     const [isCreating, setIsCreating] = useState(false);
-    const [name, setName] = useState('My New Game');
+    const [name, setName] = useState(getNewProjectTemplateDefaultName('blank'));
     const [statusMessage, setStatusMessage] = useState<string | undefined>();
+    const [templateId, setTemplateId] = useState<NewProjectTemplateId>('blank');
 
     useEffect(() => {
         if (!isOpen) {
@@ -33,8 +39,9 @@ export function NewProjectModal() {
         setAuthor('');
         setDirectory('');
         setIsCreating(false);
-        setName('My New Game');
+        setName(getNewProjectTemplateDefaultName('blank'));
         setStatusMessage(undefined);
+        setTemplateId('blank');
     }, [isOpen]);
 
     useEffect(() => {
@@ -60,15 +67,22 @@ export function NewProjectModal() {
     }
 
     const canCreate = directory.trim().length > 0 && name.trim().length > 0 && !isCreating;
+    const selectedTemplate = NEW_PROJECT_TEMPLATES.find((template) => template.id === templateId)
+        ?? NEW_PROJECT_TEMPLATES[0];
 
-    const handleOpenInitialProjectEntry = async () => {
-        const { expandToPath, manifest, projectPath } = useProjectStore.getState();
-        await openInitialProjectEntryModel({
-            expandToPath,
-            manifest,
-            openProjectEntry,
-            projectPath,
-        });
+    const handleSelectTemplate = (nextTemplateId: NewProjectTemplateId) => {
+        if (isCreating) {
+            return;
+        }
+
+        const nextTemplate = NEW_PROJECT_TEMPLATES.find((template) => template.id === nextTemplateId)
+            ?? selectedTemplate;
+        setTemplateId(nextTemplateId);
+        setStatusMessage(undefined);
+
+        if (!name.trim() || name === selectedTemplate.defaultName) {
+            setName(nextTemplate.defaultName);
+        }
     };
 
     const handleBrowseDirectory = async () => {
@@ -102,12 +116,17 @@ export function NewProjectModal() {
                 author,
                 directory,
                 name,
+                templateId,
             });
 
-            closeProject();
-            await openProjectFromManifest(result.manifestPath);
+            const opened = await executeOpenProjectInCurrentWindow(result.manifestPath, { allowNewWindow: false });
+            if (opened.status !== 'opened-current') {
+                setStatusMessage('Project created, but opening it was cancelled.');
+                return;
+            }
+
             if (isTauriRuntime()) addRecentProject(result.manifestPath);
-            await handleOpenInitialProjectEntry();
+            await openInitialNewProjectEntry(result.initialEntryPath);
             closeNewProjectModal();
         } catch (error) {
             console.error('Failed to create project:', error);
@@ -139,13 +158,15 @@ export function NewProjectModal() {
                     color: t.text.primary,
                     display: 'grid',
                     gap: `${10 * uiScale}px`,
-                    minWidth: `${560 * uiScale}px`,
+                    maxHeight: `calc(100vh - ${32 * uiScale}px)`,
+                    overflow: 'auto',
                     padding: `${16 * uiScale}px`,
+                    width: `min(${680 * uiScale}px, calc(100vw - ${32 * uiScale}px))`,
                 }}
             >
                 <div style={{ fontSize: `${15 * uiScale}px`, fontWeight: 700 }}>New Project</div>
                 <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
-                    Create a minimal project scaffold with a manifest, intro scene, and engine config.
+                    {selectedTemplate.description}
                 </div>
 
                 <label style={{ display: 'grid', fontSize: `${12 * uiScale}px`, gap: `${4 * uiScale}px` }}>
@@ -170,6 +191,108 @@ export function NewProjectModal() {
                     />
                 </label>
 
+                <div style={{ display: 'grid', fontSize: `${12 * uiScale}px`, gap: `${8 * uiScale}px` }}>
+                    Template
+                    <div
+                        aria-label="Project template"
+                        role="radiogroup"
+                        style={{
+                            display: 'grid',
+                            gap: `${8 * uiScale}px`,
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                        }}
+                    >
+                        {NEW_PROJECT_TEMPLATES.map((template) => (
+                            <button
+                                aria-checked={template.id === templateId}
+                                disabled={isCreating}
+                                key={template.id}
+                                onClick={() => handleSelectTemplate(template.id)}
+                                role="radio"
+                                style={{
+                                    ...styles.buttonBase(uiScale),
+                                    alignItems: 'stretch',
+                                    background: template.id === templateId ? t.bg.panelAlt : t.bg.panel,
+                                    border: `1px solid ${template.id === templateId ? t.accent.primary : t.border.normal}`,
+                                    display: 'grid',
+                                    gap: `${6 * uiScale}px`,
+                                    justifyItems: 'stretch',
+                                    padding: `${10 * uiScale}px`,
+                                    textAlign: 'left',
+                                }}
+                                type="button"
+                            >
+                                <span
+                                    style={{
+                                        alignItems: 'center',
+                                        display: 'flex',
+                                        gap: `${8 * uiScale}px`,
+                                        justifyContent: 'space-between',
+                                    }}
+                                >
+                                    <span style={{ color: t.text.primary, fontWeight: 700 }}>{template.label}</span>
+                                    {template.id === templateId ? (
+                                        <CheckCircle2
+                                            aria-hidden
+                                            size={15 * uiScale}
+                                            style={{ color: t.accent.primary, flex: '0 0 auto' }}
+                                        />
+                                    ) : (
+                                        <span style={{ color: t.text.muted, fontSize: `${11 * uiScale}px` }}>
+                                            {template.category}
+                                        </span>
+                                    )}
+                                </span>
+                                <span style={{ color: t.text.normal, fontSize: `${12 * uiScale}px` }}>
+                                    {template.summary}
+                                </span>
+                                <span
+                                    style={{
+                                        color: t.text.muted,
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        fontSize: `${11 * uiScale}px`,
+                                        gap: `${6 * uiScale}px`,
+                                    }}
+                                >
+                                    {template.tags.map((tag) => (
+                                        <span key={tag}>{tag}</span>
+                                    ))}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                    <div
+                        style={{
+                            borderTop: `1px solid ${t.border.normal}`,
+                            display: 'grid',
+                            gap: `${8 * uiScale}px`,
+                            paddingTop: `${8 * uiScale}px`,
+                        }}
+                    >
+                        {selectedTemplate.readinessChecks.map((check) => (
+                            <div
+                                key={check.id}
+                                style={{
+                                    display: 'grid',
+                                    gap: `${8 * uiScale}px`,
+                                    gridTemplateColumns: 'auto 1fr',
+                                }}
+                            >
+                                <CheckCircle2
+                                    aria-hidden
+                                    size={14 * uiScale}
+                                    style={{ color: t.accent.primary, marginTop: `${1 * uiScale}px` }}
+                                />
+                                <div style={{ display: 'grid', gap: `${2 * uiScale}px` }}>
+                                    <div style={{ color: t.text.primary, fontWeight: 700 }}>{check.label}</div>
+                                    <div style={{ color: t.text.muted }}>{check.description}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
                 <label style={{ display: 'grid', fontSize: `${12 * uiScale}px`, gap: `${4 * uiScale}px` }}>
                     Project Directory
                     <div style={{ display: 'grid', gap: `${8 * uiScale}px`, gridTemplateColumns: '1fr auto' }}>
@@ -185,16 +308,22 @@ export function NewProjectModal() {
                             onClick={() => {
                                 void handleBrowseDirectory();
                             }}
-                            style={{ ...styles.buttonBase(uiScale) }}
+                            style={{
+                                ...styles.buttonBase(uiScale),
+                                alignItems: 'center',
+                                display: 'inline-flex',
+                                gap: `${6 * uiScale}px`,
+                            }}
                             type="button"
                         >
+                            <FolderOpen aria-hidden size={14 * uiScale} />
                             Browse...
                         </button>
                     </div>
                 </label>
 
                 <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px`, minHeight: `${16 * uiScale}px` }}>
-                    {statusMessage ?? 'Choose an empty or existing directory to scaffold your project files.'}
+                    {statusMessage ?? `${selectedTemplate.label} opens ${selectedTemplate.initialEntry} after creation.`}
                 </div>
 
                 <div style={{ display: 'flex', gap: `${8 * uiScale}px`, justifyContent: 'flex-end' }}>
@@ -213,12 +342,16 @@ export function NewProjectModal() {
                         }}
                         style={{
                             ...styles.buttonBase(uiScale),
+                            alignItems: 'center',
                             background: canCreate ? t.accent.primary : t.bg.panelAlt,
                             border: 'none',
                             color: canCreate ? '#fff' : t.text.muted,
+                            display: 'inline-flex',
+                            gap: `${6 * uiScale}px`,
                         }}
                         type="button"
                     >
+                        {!isCreating && <CheckCircle2 aria-hidden size={14 * uiScale} />}
                         {isCreating ? 'Creating...' : 'Create Project'}
                     </button>
                 </div>
@@ -227,3 +360,19 @@ export function NewProjectModal() {
     );
 }
 
+async function openInitialNewProjectEntry(preferredPath?: string): Promise<void> {
+    const { expandToPath, manifest, projectPath } = useProjectStore.getState();
+
+    if (preferredPath) {
+        expandToPath(preferredPath);
+        await openProjectEntry(preferredPath, basenameFromPath(preferredPath), { forceView: 'timeline' });
+        return;
+    }
+
+    await openInitialProjectEntryModel({
+        expandToPath,
+        manifest,
+        openProjectEntry,
+        projectPath,
+    });
+}

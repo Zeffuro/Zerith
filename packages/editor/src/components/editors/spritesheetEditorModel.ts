@@ -11,6 +11,19 @@ export type ManualSliceLines = {
 
 export type ManualTool = 'draw' | 'select' | 'slice';
 
+export type SpritesheetFrameListDensity = 'comfortable' | 'compact';
+
+export type SpritesheetFrameListMetrics = {
+    detailFontSize: number;
+    itemGap: number;
+    rowGap: number;
+    rowMinHeight: number;
+    rowPadding: number;
+    thumbnailBoxSize: number;
+    thumbnailCanvasMaxSize: number;
+    thumbnailColumnWidth: number;
+};
+
 export type ThumbnailCanvasMetrics = {
     height: number;
     pixelHeight: number;
@@ -129,6 +142,22 @@ export function clampFrameRectToBounds(rect: ManualFrameRect, bounds: ImageBound
         w: Math.max(1, Math.min(maxWidth, Math.round(rect.w))),
         x,
         y,
+    };
+}
+
+export function computeFrameListMetrics(density: SpritesheetFrameListDensity, uiScale: number): SpritesheetFrameListMetrics {
+    const scale = Number.isFinite(uiScale) && uiScale > 0 ? uiScale : 1;
+    const compact = density === 'compact';
+
+    return {
+        detailFontSize: Math.max(10, Math.round((compact ? 11 : 12) * scale)),
+        itemGap: Math.max(4, Math.round((compact ? 6 : 8) * scale)),
+        rowGap: Math.max(4, Math.round((compact ? 4 : 6) * scale)),
+        rowMinHeight: Math.max(compact ? 40 : 58, Math.round((compact ? 42 : 66) * scale)),
+        rowPadding: Math.max(3, Math.round((compact ? 4 : 6) * scale)),
+        thumbnailBoxSize: Math.max(compact ? 30 : 44, Math.round((compact ? 34 : 52) * scale)),
+        thumbnailCanvasMaxSize: Math.max(compact ? 28 : 40, Math.round((compact ? 30 : 48) * scale)),
+        thumbnailColumnWidth: Math.max(compact ? 34 : 48, Math.round((compact ? 38 : 56) * scale)),
     };
 }
 

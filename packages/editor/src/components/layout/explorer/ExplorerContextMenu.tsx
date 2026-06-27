@@ -3,6 +3,8 @@ import { editorTheme as t } from '../../../theme/editorTheme';
 export type ExplorerContextMenuState = {
     canDelete?: boolean;
     canDuplicate?: boolean;
+    canMoveAsset?: boolean;
+    canMoveAssetFolder?: boolean;
     canOpen?: boolean;
     canOpenAudiosheet: boolean;
     canOpenSpritesheet: boolean;
@@ -20,6 +22,8 @@ export type ExplorerContextMenuState = {
 export type ExplorerMenuAction =
     | 'delete'
     | 'duplicate'
+    | 'moveAsset'
+    | 'moveAssetFolder'
     | 'newFolder'
     | 'newJson'
     | 'newScene'
@@ -72,6 +76,9 @@ export function ExplorerContextMenu({ menu, uiScale }: { menu: ExplorerContextMe
             }}
         >
             <ActionRow action="open" disabled={menu.isDirectory || menu.canOpen === false} itemStyle={itemStyle} label="Open" menu={menu} />
+            {menu.isDirectory && menu.canMoveAssetFolder && (
+                <ActionRow action="moveAssetFolder" itemStyle={itemStyle} label="Move Asset Folder..." menu={menu} />
+            )}
             {!menu.isDirectory && (
                 <>
                     <ActionRow
@@ -91,6 +98,7 @@ export function ExplorerContextMenu({ menu, uiScale }: { menu: ExplorerContextMe
                         menu={menu}
                     />
                     <ActionRow action="duplicate" disabled={menu.canDuplicate === false} itemStyle={itemStyle} label="Duplicate" menu={menu} />
+                    <ActionRow action="moveAsset" disabled={!menu.canMoveAsset} itemStyle={itemStyle} label="Move Asset..." menu={menu} />
                 </>
             )}
 
@@ -111,6 +119,8 @@ function ActionRow({ action, disabled = false, itemStyle, label, menu }: ActionR
     const resolvedDisabled = disabled
         || (action === 'delete' && menu.canDelete === false)
         || (action === 'duplicate' && menu.canDuplicate === false)
+        || (action === 'moveAsset' && !menu.canMoveAsset)
+        || (action === 'moveAssetFolder' && !menu.canMoveAssetFolder)
         || (action === 'open' && menu.canOpen === false)
         || (action === 'rename' && menu.canRename === false)
         || (action === 'reveal' && menu.canReveal === false);

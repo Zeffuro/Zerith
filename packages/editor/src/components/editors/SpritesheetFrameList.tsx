@@ -1,5 +1,5 @@
 import { type SpriteFrame } from 'core';
-import { Image as ImageIcon, Plus, Search, Trash2 } from 'lucide-react';
+import { Image as ImageIcon, Plus, Rows3, Search, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { editorTheme as t } from '../../theme/editorTheme';
@@ -10,7 +10,11 @@ import {
     resetSpritesheetButtonBackground,
     spritesheetButtonStyle,
 } from './spritesheetButtonStyles';
-import { computeThumbnailCanvasMetrics } from './spritesheetEditorModel';
+import {
+    computeFrameListMetrics,
+    computeThumbnailCanvasMetrics,
+    type SpritesheetFrameListDensity,
+} from './spritesheetEditorModel';
 
 const FRAME_MIME = 'application/x-zerith-frame';
 
@@ -25,9 +29,10 @@ export type SpritesheetFrameListProperties = {
 };
 
 type FrameThumbnailProperties = {
+    boxSize: number;
     frame: SpriteFrame;
     image: HTMLImageElement;
-    uiScale: number;
+    maxSize: number;
 };
 
 export function SpritesheetFrameList({
@@ -40,8 +45,10 @@ export function SpritesheetFrameList({
     uiScale,
 }: SpritesheetFrameListProperties) {
     const frameNames = useMemo(() => Object.keys(frames), [frames]);
+    const [density, setDensity] = useState<SpritesheetFrameListDensity>('comfortable');
     const [filter, setFilter] = useState('');
     const [pendingFrameRemoval, setPendingFrameRemoval] = useState<string>();
+    const metrics = useMemo(() => computeFrameListMetrics(density, uiScale), [density, uiScale]);
     const filteredFrameNames = useMemo(() => {
         const query = filter.trim().toLowerCase();
         if (!query) return frameNames;
@@ -64,6 +71,23 @@ export function SpritesheetFrameList({
                     <span style={{ color: t.text.faint, fontSize: `${12 * uiScale}px`, marginLeft: 'auto' }}>
                         {filteredFrameNames.length}/{frameNames.length}
                     </span>
+                    <button
+                        aria-label={density === 'compact' ? 'Use comfortable frame rows' : 'Use compact frame rows'}
+                        onClick={() => setDensity((current) => current === 'compact' ? 'comfortable' : 'compact')}
+                        onMouseDown={(event) => applySpritesheetButtonPressed(event, false, density === 'compact')}
+                        onMouseEnter={(event) => applySpritesheetButtonHover(event, false, density === 'compact')}
+                        onMouseLeave={(event) => resetSpritesheetButtonBackground(event, false, density === 'compact')}
+                        onMouseUp={(event) => applySpritesheetButtonHover(event, false, density === 'compact')}
+                        style={{
+                            ...spritesheetButtonStyle({ active: density === 'compact' }),
+                            minHeight: Math.max(26, Math.round(26 * uiScale)),
+                            padding: `${3 * uiScale}px ${7 * uiScale}px`,
+                        }}
+                        title={density === 'compact' ? 'Comfortable rows' : 'Compact rows'}
+                        type="button"
+                    >
+                        <Rows3 size={iconSize} />
+                    </button>
                 </div>
                 <label style={{ alignItems: 'center', background: t.bg.input, border: `1px solid ${t.border.input}`, borderRadius: t.radius.sm, display: 'grid', gap: 6, gridTemplateColumns: 'auto minmax(0, 1fr)', padding: `${5 * uiScale}px ${7 * uiScale}px` }}>
                     <Search color={t.text.faint} size={iconSize} />
@@ -85,7 +109,7 @@ export function SpritesheetFrameList({
             <div className="zerith-scrollbar" style={{ minHeight: 0, overflow: 'auto' }}>
                 {frameNames.length === 0 ? <div style={{ color: t.text.muted }}>No frames in descriptor.</div> : undefined}
                 {frameNames.length > 0 && filteredFrameNames.length === 0 ? <div style={{ color: t.text.muted }}>No matching frames.</div> : undefined}
-                <div style={{ display: 'grid', gap: 6 }}>
+                <div style={{ display: 'grid', gap: metrics.rowGap }}>
                     {filteredFrameNames.map((name) => {
                         const frame = frames[name];
                         const isSelected = name === selectedFrame;
@@ -106,19 +130,24 @@ export function SpritesheetFrameList({
                                 style={{
                                     alignItems: 'center',
                                     display: 'grid',
-                                    gap: 8,
-                                    gridTemplateColumns: '56px minmax(0, 1fr)',
-                                    minHeight: 66,
-                                    padding: 6,
+                                    gap: metrics.itemGap,
+                                    gridTemplateColumns: `${metrics.thumbnailColumnWidth}px minmax(0, 1fr)`,
+                                    minHeight: metrics.rowMinHeight,
+                                    padding: metrics.rowPadding,
                                     textAlign: 'left',
                                     ...spritesheetButtonStyle({ active: isSelected }),
                                 }}
                                 type="button"
                             >
-                                <FrameThumbnail frame={frame} image={image} uiScale={uiScale} />
+                                <FrameThumbnail
+                                    boxSize={metrics.thumbnailBoxSize}
+                                    frame={frame}
+                                    image={image}
+                                    maxSize={metrics.thumbnailCanvasMaxSize}
+                                />
                                 <div style={{ minWidth: 0 }}>
                                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
-                                    <div style={{ color: t.text.muted, fontSize: 12 }}>
+                                    <div style={{ color: t.text.muted, fontSize: metrics.detailFontSize }}>
                                         {frame.w}x{frame.h} @ {frame.x},{frame.y}
                                     </div>
                                 </div>
@@ -182,7 +211,7 @@ export function SpritesheetFrameList({
     );
 }
 
-function FrameThumbnail({ frame, image, uiScale }: FrameThumbnailProperties) {
+function FrameThumbnail({ boxSize, frame, image, maxSize }: FrameThumbnailProperties) {
     const canvasReference = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
@@ -192,7 +221,7 @@ function FrameThumbnail({ frame, image, uiScale }: FrameThumbnailProperties) {
         if (!context) return;
 
         const dpr = window.devicePixelRatio || 1;
-        const { height, pixelHeight, pixelWidth, width } = computeThumbnailCanvasMetrics(frame, Math.max(24, Math.round(48 * uiScale)), dpr);
+        const { height, pixelHeight, pixelWidth, width } = computeThumbnailCanvasMetrics(frame, maxSize, dpr);
 
         canvas.width = pixelWidth;
         canvas.height = pixelHeight;
@@ -209,7 +238,7 @@ function FrameThumbnail({ frame, image, uiScale }: FrameThumbnailProperties) {
         } catch {
             // Keep thumbnail blank when frame bounds are invalid for the current source image.
         }
-    }, [frame, image, uiScale]);
+    }, [frame, image, maxSize]);
 
     return (
         <div
@@ -219,10 +248,10 @@ function FrameThumbnail({ frame, image, uiScale }: FrameThumbnailProperties) {
                 border: `1px solid ${t.border.subtle}`,
                 borderRadius: t.radius.sm,
                 display: 'flex',
-                height: 52,
+                height: boxSize,
                 justifyContent: 'center',
                 overflow: 'hidden',
-                width: 52,
+                width: boxSize,
             }}
         >
             <canvas ref={canvasReference} />

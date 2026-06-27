@@ -15,6 +15,8 @@ import { AssetDependencyPanel } from '../tools/AssetDependencyPanel';
 import { CommandPalette } from '../tools/CommandPalette';
 import { ConsolePanel } from '../tools/ConsolePanel';
 import { GlobalSearchContent, GlobalSearchPanel } from '../tools/GlobalSearchPanel';
+import { LocalizationPanel } from '../tools/LocalizationPanel';
+import { ProjectValidationPanel } from '../tools/ProjectValidationPanel';
 import { ReferenceTrackerPanel } from '../tools/ReferenceTrackerPanel';
 import { RuntimeMonitorPanel } from '../tools/RuntimeMonitorPanel';
 import { StateObserverPanel } from '../tools/StateObserverPanel';
@@ -252,12 +254,18 @@ export function DockLayoutHost() {
             case DOCK_PANELS.inspector: {
                 return <Inspector />;
             }
+            case DOCK_PANELS.localization: {
+                return <LocalizationPanel />;
+            }
             case DOCK_PANELS.preview: {
                 return (
                     <Suspense fallback={<div style={{ opacity: 0.7, padding: 12 }}>Loading preview...</div>}>
                         <GamePreview script={rootScript} />
                     </Suspense>
                 );
+            }
+            case DOCK_PANELS.projectValidation: {
+                return <ProjectValidationPanel />;
             }
             case DOCK_PANELS.referenceTracker: {
                 return <ReferenceTrackerPanel />;

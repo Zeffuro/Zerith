@@ -1,6 +1,12 @@
 import { useWorkbenchStore } from '../store/useWorkbenchStore';
 import { fsReadTextFile } from './fs';
-import { applyAssetSelection, applyMacrosFile, applyScriptFile, looksLikeMacrosObject } from './projectOpeners';
+import {
+    applyAssetSelection,
+    applyMacrosFile,
+    applyScriptFile,
+    looksLikeMacrosObject,
+    looksLikeSceneFile,
+} from './projectOpeners';
 
 const FILE_BACKED_TAB_KINDS = new Set<string>(['engineConfig', 'json', 'manifest', 'text']);
 const SHEET_TAB_KINDS = new Set<string>(['audiosheet', 'spritesheet']);
@@ -21,7 +27,7 @@ export async function activateWorkbenchTab(tabId: string) {
         const text = await fsReadTextFile(tab.path);
         const data: unknown = JSON.parse(text);
 
-        if (Array.isArray(data)) {
+        if (looksLikeSceneFile(data)) {
             applyScriptFile(tab.path, data);
             return;
         }

@@ -15,6 +15,7 @@ export { scanCommandReferences } from './commandScan';
 export { scanProjectScriptBranches } from './coordinator';
 export { scanMacroReferences, scanSceneReferences } from './orchestration';
 export { resolveFilePath, resolveScenePath } from './paths';
+export { buildReferenceScannerState, refreshReferenceScannerState } from './refresh';
 export { getCommandFieldHints, unwrapObjectSchema } from './schemaHints';
 export { scanReferenceTree } from './treeScan';
 export type {

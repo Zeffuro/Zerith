@@ -16,7 +16,16 @@ export function ChoiceInspector({ index, node }: { index?: null | number; node: 
     };
 
     const addOption = () => {
-        const next: ChoiceOption[] = [...options, { commands: [], label: `Option ${options.length + 1}` }];
+        const nextOptionIndex = options.length + 1;
+        const choiceId = typeof node.id === 'string' && node.id.trim() ? node.id : undefined;
+        const next: ChoiceOption[] = [
+            ...options,
+            {
+                commands: [],
+                label: `Option ${nextOptionIndex}`,
+                ...(choiceId ? { labelId: `${choiceId}.option.${formatOptionIndex(nextOptionIndex)}.label` } : {}),
+            },
+        ];
         applyNodePatch({ options: next });
     };
 
@@ -89,8 +98,23 @@ export function ChoiceInspector({ index, node }: { index?: null | number; node: 
                             value={opt?.label ?? ''}
                         />
                     </div>
+
+                    <div>
+                        <label style={labelStyle}>Label ID</label>
+                        <input
+                            onChange={(event) => updateOption(index_, { labelId: event.target.value })}
+                            placeholder="Localization key for this option label"
+                            style={inputStyle}
+                            type="text"
+                            value={opt?.labelId ?? ''}
+                        />
+                    </div>
                 </div>
             ))}
         </div>
     );
+}
+
+function formatOptionIndex(value: number): string {
+    return value.toString().padStart(3, '0');
 }
