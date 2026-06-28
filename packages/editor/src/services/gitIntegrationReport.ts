@@ -1,6 +1,7 @@
 import type { GitRemoteEntry } from './gitIntegration';
 
 export type GitIntegrationReport = {
+    backendStrategy: GitBackendStrategyReport;
     recommendedNextStep: string;
     runtime: GitIntegrationRuntime;
     strategies: GitIntegrationStrategy[];
@@ -12,6 +13,30 @@ export type GitIntegrationReportOptions = {
 };
 
 export type GitIntegrationRuntime = 'browser' | 'desktop';
+
+export type GitBackendEngineId =
+    | 'browserDisabled'
+    | 'rustGitLibrary'
+    | 'tauriGitCli';
+
+export type GitBackendEngineStatus =
+    | 'deferred'
+    | 'future-candidate'
+    | 'selected';
+
+export type GitBackendEngineStrategy = {
+    id: GitBackendEngineId;
+    label: string;
+    note: string;
+    status: GitBackendEngineStatus;
+};
+
+export type GitBackendStrategyReport = {
+    engines: GitBackendEngineStrategy[];
+    recommendation: string;
+    runtime: GitIntegrationRuntime;
+    selectedEngineId: GitBackendEngineId;
+};
 
 export type GitIntegrationStrategy = {
     browser: GitIntegrationStrategyStatus;
@@ -90,10 +115,12 @@ const GIT_STRATEGIES: readonly GitIntegrationStrategy[] = [
 
 export function createGitIntegrationReport(options: GitIntegrationReportOptions): GitIntegrationReport {
     const runtimeStatuses = GIT_STRATEGIES.map((strategy) => strategy[options.runtime]);
+    const backendStrategy = createGitBackendStrategyReport(options);
 
     return {
+        backendStrategy,
         recommendedNextStep: options.runtime === 'desktop'
-            ? 'Prototype a Tauri/Rust git status/diff backend before adding browser git behavior.'
+            ? backendStrategy.recommendation
             : 'Keep git disabled or read-only in browser builds until project-handle persistence and repository access are explicitly designed.',
         runtime: options.runtime,
         strategies: GIT_STRATEGIES.map((strategy) => ({ ...strategy })),
@@ -103,6 +130,56 @@ export function createGitIntegrationReport(options: GitIntegrationReportOptions)
             recommended: runtimeStatuses.filter((status) => status === 'recommended').length,
             unsupported: runtimeStatuses.filter((status) => status === 'unsupported').length,
         },
+    };
+}
+
+export function createGitBackendStrategyReport(options: GitIntegrationReportOptions): GitBackendStrategyReport {
+    if (options.runtime === 'browser') {
+        return {
+            engines: [
+                {
+                    id: 'browserDisabled',
+                    label: 'Browser Git disabled',
+                    note: 'Browser builds should not expose repository writes until project-handle persistence and repository access policy are explicit.',
+                    status: 'selected',
+                },
+                {
+                    id: 'rustGitLibrary',
+                    label: 'Rust git library',
+                    note: 'Native Rust libraries do not solve browser repository access and credential policy.',
+                    status: 'deferred',
+                },
+            ],
+            recommendation: 'Keep browser Git disabled or read-only until repository access policy is designed.',
+            runtime: options.runtime,
+            selectedEngineId: 'browserDisabled',
+        };
+    }
+
+    return {
+        engines: [
+            {
+                id: 'tauriGitCli',
+                label: 'Tauri backend + system git',
+                note: 'Selected for v1 because it preserves user Git config, credential helpers, SSH agent behavior, LFS, hooks, and worktree semantics while Rust keeps command validation and output shaping inside the desktop backend.',
+                status: 'selected',
+            },
+            {
+                id: 'rustGitLibrary',
+                label: 'Rust git library',
+                note: 'Keep as a later candidate for isolated read-only operations if parser control or startup performance justify the credential/LFS/submodule compatibility work.',
+                status: 'future-candidate',
+            },
+            {
+                id: 'browserDisabled',
+                label: 'Browser Git',
+                note: 'Still deferred until the browser editor has explicit persistent project-handle and repository-access policy.',
+                status: 'deferred',
+            },
+        ],
+        recommendation: 'Keep the v1 desktop backend on validated Tauri commands that shell out to system git; revisit a Rust git library only for scoped read paths after credential and LFS parity are designed.',
+        runtime: options.runtime,
+        selectedEngineId: 'tauriGitCli',
     };
 }
 

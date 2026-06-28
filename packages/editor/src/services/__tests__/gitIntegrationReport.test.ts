@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createGitIntegrationReport, createGitRemotePolicyReport } from '../gitIntegrationReport';
+import { createGitBackendStrategyReport, createGitIntegrationReport, createGitRemotePolicyReport } from '../gitIntegrationReport';
 
 describe('gitIntegrationReport', () => {
     it('recommends a Tauri/Rust backend first on desktop', () => {
@@ -15,7 +15,8 @@ describe('gitIntegrationReport', () => {
         expect(report.strategies.find((strategy) => strategy.id === 'tauriRustBackend')).toMatchObject({
             desktop: 'recommended',
         });
-        expect(report.recommendedNextStep).toContain('Tauri/Rust');
+        expect(report.backendStrategy.selectedEngineId).toBe('tauriGitCli');
+        expect(report.recommendedNextStep).toContain('system git');
     });
 
     it('defers browser git until repository access policy is explicit', () => {
@@ -31,6 +32,28 @@ describe('gitIntegrationReport', () => {
             browser: 'deferred',
         });
         expect(report.recommendedNextStep).toContain('browser builds');
+    });
+
+    it('selects system git behind the Tauri backend as the v1 desktop engine', () => {
+        const report = createGitBackendStrategyReport({ runtime: 'desktop' });
+
+        expect(report.selectedEngineId).toBe('tauriGitCli');
+        expect(report.engines.find((engine) => engine.id === 'tauriGitCli')).toMatchObject({
+            status: 'selected',
+        });
+        expect(report.engines.find((engine) => engine.id === 'rustGitLibrary')).toMatchObject({
+            status: 'future-candidate',
+        });
+        expect(report.recommendation).toContain('shell out to system git');
+    });
+
+    it('keeps browser git disabled until repository access policy exists', () => {
+        const report = createGitBackendStrategyReport({ runtime: 'browser' });
+
+        expect(report.selectedEngineId).toBe('browserDisabled');
+        expect(report.engines.find((engine) => engine.id === 'browserDisabled')).toMatchObject({
+            status: 'selected',
+        });
     });
 
     it('classifies remote credential policy from effective push URLs', () => {

@@ -12,6 +12,7 @@ describe('defaultDockLayout', () => {
 
         expect(isUsableDockLayoutJson(layout)).toBe(true);
         expect(JSON.stringify(layout)).not.toContain('"type":"column"');
+        expect(JSON.stringify(layout)).toContain('"component":"git"');
         expect(JSON.stringify(layout)).not.toContain('"component":"localization"');
     });
 

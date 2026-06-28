@@ -1,3 +1,4 @@
+import { activateWorkbenchTab } from '../../services/activateWorkbenchTab';
 import { useWorkbenchStore } from '../useWorkbenchStore';
 
 export type ExecuteWorkbenchTabActionOptions =
@@ -11,19 +12,22 @@ export function executeWorkbenchTabAction(options: ExecuteWorkbenchTabActionOpti
 
     switch (options.action) {
         case 'activate': {
-            state.setActiveTab(options.tabId);
+            void activateWorkbenchTab(options.tabId);
             return;
         }
         case 'close': {
             state.closeTab(options.tabId);
+            activateCurrentWorkbenchTab();
             return;
         }
         case 'closeOthers': {
             state.closeOthers(options.tabId);
+            activateCurrentWorkbenchTab();
             return;
         }
         case 'closeToRight': {
             state.closeToRight(options.tabId);
+            activateCurrentWorkbenchTab();
             return;
         }
         case 'reorder': {
@@ -31,6 +35,11 @@ export function executeWorkbenchTabAction(options: ExecuteWorkbenchTabActionOpti
             return;
         }
     }
+}
+
+function activateCurrentWorkbenchTab(): void {
+    const activeTabId = useWorkbenchStore.getState().activeTabId;
+    if (activeTabId) void activateWorkbenchTab(activeTabId);
 }
 
 function reorderTabs(fromId: string, toIndexRaw: number): void {

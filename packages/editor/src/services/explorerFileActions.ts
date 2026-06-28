@@ -13,6 +13,11 @@ import {
     prepareAssetReferenceRewritePlan,
 } from './assetReferenceRewrite';
 import {
+    loadAssetLibraryMetadata,
+    moveAssetLibraryMetadataScope,
+    saveAssetLibraryMetadata,
+} from './assetLibraryMetadata';
+import {
     fsDirname,
     fsJoin,
     fsMkdir,
@@ -214,6 +219,7 @@ export async function moveAssetDirectoryPathToDirectory(oldPath: string, targetD
         }
 
         await fsRename(oldPath, newPath);
+        await applyAssetLibraryMetadataMove(assetPathChange);
         remapWorkbenchTabsForRename(oldPath, newPath);
         useProjectStore.setState((state) => ({
             activeFile: state.activeFile ? replacePathPrefix(state.activeFile, oldPath, newPath) : state.activeFile,
@@ -292,6 +298,7 @@ export async function moveAssetPathToDirectory(oldPath: string, targetDirectoryP
         }
 
         await fsRename(oldPath, newPath);
+        await applyAssetLibraryMetadataMove(assetPathChange);
         remapWorkbenchTabsForRename(oldPath, newPath);
         useProjectStore.setState((state) => ({
             activeFile: state.activeFile ? replacePathPrefix(state.activeFile, oldPath, newPath) : state.activeFile,
@@ -538,6 +545,26 @@ async function prepareAssetPathReferenceRewrite(
 function remapExpandedPathsForRename(expandedPaths: string[], oldPath: string, newPath: string): string[] {
     const remapped = expandedPaths.map((path) => replacePathPrefix(path, oldPath, newPath));
     return [...new Set(remapped)];
+}
+
+async function applyAssetLibraryMetadataMove(assetPathChange: ProjectAssetPathChange): Promise<void> {
+    try {
+        const metadata = await loadAssetLibraryMetadata(assetPathChange.projectPath);
+        const nextMetadata = moveAssetLibraryMetadataScope(
+            metadata,
+            assetPathChange.oldAssetUrl,
+            assetPathChange.newAssetUrl,
+        );
+
+        if (JSON.stringify(metadata.assets) === JSON.stringify(nextMetadata.assets)) {
+            return;
+        }
+
+        await saveAssetLibraryMetadata(assetPathChange.projectPath, nextMetadata);
+    } catch (error) {
+        console.warn('Asset library metadata move update failed:', error);
+        executeConsoleMessageAction('editor', 'warn', 'Asset library metadata was not updated after move:', String(error));
+    }
 }
 
 function remapWorkbenchTabsForRename(oldPath: string, newPath: string): void {

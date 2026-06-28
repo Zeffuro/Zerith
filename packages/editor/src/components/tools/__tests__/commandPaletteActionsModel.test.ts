@@ -49,6 +49,7 @@ function createDeps(overrides?: Partial<CommandPaletteActionDeps>): CommandPalet
         showGitCommitStaged: vi.fn(async () => {}),
         showGitCreateBranch: vi.fn(async () => {}),
         showGitIntegrationReport: vi.fn(),
+        showGitPushPreflight: vi.fn(async () => {}),
         showGitPushCurrentBranch: vi.fn(async () => {}),
         showGitStageAll: vi.fn(async () => {}),
         showGitStatusReport: vi.fn(async () => {}),
@@ -74,12 +75,12 @@ describe('commandPaletteActionsModel', () => {
 
         const actions = buildCommandPaletteActions(deps);
 
-        expect(actions).toHaveLength(32);
+        expect(actions).toHaveLength(33);
         expect(actions[0]?.id).toBe('find-project');
-        expect(actions[28]?.id).toBe('reset-layout');
-        expect(actions[29]?.id).toBe('save-layout-preset');
-        expect(actions[30]?.id).toBe('open-recent-/alpha/game.json');
-        expect(actions[31]?.id).toBe('open-recent-/beta/game.json');
+        expect(actions[29]?.id).toBe('reset-layout');
+        expect(actions[30]?.id).toBe('save-layout-preset');
+        expect(actions[31]?.id).toBe('open-recent-/alpha/game.json');
+        expect(actions[32]?.id).toBe('open-recent-/beta/game.json');
     });
 
     it('marks manual save before save and save-all actions', async () => {
@@ -215,6 +216,7 @@ describe('commandPaletteActionsModel', () => {
         await byId(actions, 'git-checkout-branch')?.action();
         await byId(actions, 'git-commit-staged')?.action();
         await byId(actions, 'git-stage-all')?.action();
+        await byId(actions, 'git-push-preflight')?.action();
         await byId(actions, 'git-push-current-branch')?.action();
         await byId(actions, 'show-git-status-report')?.action();
 
@@ -230,6 +232,7 @@ describe('commandPaletteActionsModel', () => {
         expect(deps.showGitCommitStaged).toHaveBeenCalledTimes(1);
         expect(deps.showGitCreateBranch).toHaveBeenCalledTimes(1);
         expect(deps.showGitIntegrationReport).toHaveBeenCalledTimes(1);
+        expect(deps.showGitPushPreflight).toHaveBeenCalledTimes(1);
         expect(deps.showGitPushCurrentBranch).toHaveBeenCalledTimes(1);
         expect(deps.showGitStageAll).toHaveBeenCalledTimes(1);
         expect(deps.showGitStatusReport).toHaveBeenCalledTimes(1);

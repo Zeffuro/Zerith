@@ -5,6 +5,8 @@ import type { WorkbenchState, WorkbenchTab } from '../types';
 import { createSliceHarness } from '../../../test-utils/createSliceHarness';
 
 const projectStoreMocks = vi.hoisted(() => ({
+    activeFile: undefined as string | undefined,
+    clearActiveFile: vi.fn(),
     clearFileDirty: vi.fn(),
     markFileDirty: vi.fn(),
 }));
@@ -68,6 +70,8 @@ function tab(kind: WorkbenchTab['kind'], path: string): WorkbenchTab {
 
 describe('workbench tabs slice', () => {
     beforeEach(() => {
+        projectStoreMocks.activeFile = undefined;
+        projectStoreMocks.clearActiveFile.mockReset();
         projectStoreMocks.clearFileDirty.mockReset();
         projectStoreMocks.markFileDirty.mockReset();
     });
@@ -127,6 +131,39 @@ describe('workbench tabs slice', () => {
         harness.get().clearTabs();
         expect(harness.get().tabs).toEqual([]);
         expect(harness.get().activeTabId).toBeUndefined();
+    });
+
+    it('clears the linked visual editor when its script tab is closed', () => {
+        const harness = createTabsState();
+        const scriptTab = tab('script', '/project/scripts/intro.json');
+        const dataTab = tab('json', '/project/data/items.json');
+
+        projectStoreMocks.activeFile = '/project/scripts/intro.json';
+        harness.setState({
+            activeTabId: scriptTab.id,
+            tabs: [scriptTab, dataTab],
+        });
+
+        harness.get().closeTab(scriptTab.id);
+
+        expect(projectStoreMocks.clearActiveFile).toHaveBeenCalledTimes(1);
+        expect(harness.get().activeTabId).toBe(dataTab.id);
+    });
+
+    it('keeps the linked visual editor when another tab for the same script file remains open', () => {
+        const harness = createTabsState();
+        const scriptTab = tab('script', '/project/scripts/intro.json');
+        const duplicateScriptTab = { ...scriptTab, id: 'script::/project/scripts/intro.json#preview' };
+
+        projectStoreMocks.activeFile = '/project/scripts/intro.json';
+        harness.setState({
+            activeTabId: scriptTab.id,
+            tabs: [scriptTab, duplicateScriptTab],
+        });
+
+        harness.get().closeTab(scriptTab.id);
+
+        expect(projectStoreMocks.clearActiveFile).not.toHaveBeenCalled();
     });
 
     it('renameTabPath updates tab id/path/title and tracks active renamed tab', () => {

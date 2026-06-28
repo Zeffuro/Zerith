@@ -53,6 +53,7 @@ export interface ProjectSessionSlice {
     activeFile: string | undefined;
     bumpTreeRevision: () => void;
     clearAllDirtyFiles: () => void;
+    clearActiveFile: () => void;
     clearFileDirty: (filePath: string) => void;
     dirtyFiles: Set<string>;
     expandedPaths: string[];

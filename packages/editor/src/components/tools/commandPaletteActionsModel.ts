@@ -38,6 +38,7 @@ export type CommandPaletteActionDeps = {
     showGitCommitStaged: () => Promise<void> | void;
     showGitCreateBranch: () => Promise<void> | void;
     showGitIntegrationReport: () => void;
+    showGitPushPreflight: () => Promise<void> | void;
     showGitPushCurrentBranch: () => Promise<void> | void;
     showGitStageAll: () => Promise<void> | void;
     showGitStatusReport: () => Promise<void> | void;
@@ -246,6 +247,15 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
             id: 'git-stage-all',
             keywords: 'git stage add project changes version control repository index',
             label: 'Git: Stage Project Changes...',
+        },
+        {
+            action: async () => {
+                if (!deps.projectPath) return;
+                await deps.showGitPushPreflight();
+            },
+            id: 'git-push-preflight',
+            keywords: 'git push check dry run credentials remote version control repository',
+            label: 'Git: Check Push...',
         },
         {
             action: async () => {

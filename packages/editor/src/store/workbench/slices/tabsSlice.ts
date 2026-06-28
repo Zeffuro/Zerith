@@ -2,6 +2,8 @@ import type { WorkbenchGet, WorkbenchSet, WorkbenchTab, WorkbenchTabsSlice } fro
 
 import { useProjectStore } from '../../storeBootstrap';
 
+const LINKED_EDITOR_TAB_KINDS = new Set<WorkbenchTab['kind']>(['macros', 'script']);
+
 export function createWorkbenchTabsSlice(set: WorkbenchSet, get: WorkbenchGet): WorkbenchTabsSlice {
     return {
         activeTab: () => {
@@ -9,12 +11,18 @@ export function createWorkbenchTabsSlice(set: WorkbenchSet, get: WorkbenchGet): 
             return s.tabs.find((t: WorkbenchTab) => t.id === s.activeTabId);
         },
         activeTabId: undefined,
-        clearTabs: () => set({ activeTabId: undefined, tabs: [] }),
+        clearTabs: () =>
+            set((state) => {
+                clearLinkedEditorIfRemoved(state.tabs, []);
+                return { activeTabId: undefined, tabs: [] };
+            }),
 
         closeOthers: (tabId) =>
             set((state) => {
                 const keep = state.tabs.find((t: WorkbenchTab) => t.id === tabId);
                 if (!keep) return {};
+                const removedTabs = state.tabs.filter((tab) => tab.id !== tabId);
+                clearLinkedEditorIfRemoved(removedTabs, [keep]);
                 return { activeTabId: tabId, tabs: [keep] };
             }),
 
@@ -23,12 +31,15 @@ export function createWorkbenchTabsSlice(set: WorkbenchSet, get: WorkbenchGet): 
                 const index = state.tabs.findIndex((t: WorkbenchTab) => t.id === tabId);
                 if (index === -1) return {};
 
+                const removedTab = state.tabs[index];
                 const nextTabs = state.tabs.filter((t: WorkbenchTab) => t.id !== tabId);
                 let nextActive = state.activeTabId;
 
                 if (state.activeTabId === tabId) {
                     nextActive = nextTabs.length === 0 ? undefined : nextTabs[Math.max(0, index - 1)]?.id ?? nextTabs[0].id;
                 }
+
+                clearLinkedEditorIfRemoved([removedTab], nextTabs);
 
                 return { activeTabId: nextActive, tabs: nextTabs };
             }),
@@ -38,7 +49,9 @@ export function createWorkbenchTabsSlice(set: WorkbenchSet, get: WorkbenchGet): 
                 const index = state.tabs.findIndex((t: WorkbenchTab) => t.id === tabId);
                 if (index === -1) return {};
                 const nextTabs = state.tabs.slice(0, index + 1);
+                const removedTabs = state.tabs.slice(index + 1);
                 const activeStillExists = nextTabs.some((t: WorkbenchTab) => t.id === state.activeTabId);
+                clearLinkedEditorIfRemoved(removedTabs, nextTabs);
                 return {
                     activeTabId: activeStillExists ? state.activeTabId : tabId,
                     tabs: nextTabs,
@@ -119,5 +132,31 @@ function basename(path: string) {
 
 function tabKey(kind: WorkbenchTab['kind'], path: string) {
     return `${kind}::${path}`;
+}
+
+function clearLinkedEditorIfRemoved(removedTabs: WorkbenchTab[], keptTabs: WorkbenchTab[]): void {
+    const project = useProjectStore.getState();
+    const activeFile = project.activeFile;
+    if (!activeFile) return;
+
+    const removedLinkedActiveFile = removedTabs.some((tab) => isLinkedEditorTab(tab) && samePath(tab.path, activeFile));
+    if (!removedLinkedActiveFile) return;
+
+    const keptLinkedActiveFile = keptTabs.some((tab) => isLinkedEditorTab(tab) && samePath(tab.path, activeFile));
+    if (keptLinkedActiveFile) return;
+
+    project.clearActiveFile();
+}
+
+function isLinkedEditorTab(tab: WorkbenchTab): boolean {
+    return LINKED_EDITOR_TAB_KINDS.has(tab.kind);
+}
+
+function normalizePath(path: string): string {
+    return path.replaceAll('\\', '/').replace(/\/+$/u, '').toLowerCase();
+}
+
+function samePath(left: string, right: string): boolean {
+    return normalizePath(left) === normalizePath(right);
 }
 

@@ -2,6 +2,7 @@ import type { GlobalSearchProjectData } from '../globalSearch';
 import type { AssetDependencyGraph, ReferenceLocation, ReferenceScannerResult } from './types';
 
 import { isRecord, toRecord } from '../../utils/typeGuards';
+import { ASSET_LIBRARY_METADATA_FILE_NAME } from '../assetLibraryMetadata';
 import { fsJoin, fsReadDirectory, fsReadTextFile } from '../fs';
 import { resolveFilePath } from './paths';
 
@@ -216,6 +217,10 @@ async function walkAssetDirectory(directoryPath: string, assetPrefix: string, ou
     }
 
     for (const entry of entries) {
+        if (assetPrefix === '/assets' && entry.name === ASSET_LIBRARY_METADATA_FILE_NAME) {
+            continue;
+        }
+
         const absoluteChildPath = await fsJoin(directoryPath, entry.name);
         const childAssetPath = `${assetPrefix}/${entry.name}`.replaceAll(/\/+/g, '/');
 

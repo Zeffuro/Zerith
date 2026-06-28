@@ -11,6 +11,15 @@ export function createProjectSessionSlice(
         activeFile: undefined,
         bumpTreeRevision: () => set((s) => ({ treeRevision: s.treeRevision + 1 })),
         clearAllDirtyFiles: () => set({ dirtyFiles: new Set<string>() }),
+        clearActiveFile: () => {
+            set({
+                activeFile: undefined,
+                activeMacroName: undefined,
+                editingAllMacrosFile: false,
+                macroEntries: [],
+            });
+            scriptBridge.setScript([]);
+        },
         clearFileDirty: (filePath: string) =>
             set((state) => {
                 if (!state.dirtyFiles.has(filePath)) return {};

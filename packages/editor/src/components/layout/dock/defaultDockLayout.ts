@@ -4,14 +4,17 @@ import { deepClone } from 'core';
 
 import { DOCK_PANELS } from './dockPanelIds';
 
-export const DOCK_LAYOUT_VERSION = 11 as const;
+export const DOCK_LAYOUT_VERSION = 12 as const;
 
 export const DEFAULT_DOCK_LAYOUT = {
     global: { splitterSize: 4, tabEnableClose: false },
     layout: {
         children:[
             {
-                children:[{ component: 'explorer', id: 'explorer', name: 'Explorer', type: 'tab' }],
+                children:[
+                    { component: 'explorer', id: 'explorer', name: 'Explorer', type: 'tab' },
+                    { component: 'git', id: 'git', name: 'Git', type: 'tab' }
+                ],
                 type: 'tabset',
                 weight: 20,
             },

@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+    createEmptyAssetLibraryMetadata,
+    setAssetLibraryAssetMetadata,
+} from '../../../services/assetLibraryMetadata';
+import {
     areAllUnusedAssetsSelected,
     classifyAssetLibraryKind,
+    collectAssetDependencyGraphUrls,
+    collectAssetUsageEntryUrls,
     createAssetKindSummary,
+    createAssetOrganizationSummary,
     filterAssetDependencyGraph,
     getSelectedUnusedAssets,
     groupUnusedAssetsByFolder,
@@ -176,6 +183,56 @@ describe('assetDependencyPanelModel', () => {
         ]);
     });
 
+    it('collects unique visible asset URLs from dependency graph rows', () => {
+        expect(collectAssetDependencyGraphUrls({
+            missing: [
+                {
+                    assetUrl: '/assets/audio/missing.ogg',
+                    references: [],
+                },
+            ],
+            unused: [
+                '/assets/bg/unused.png',
+                '/assets/sprites/hero.png',
+            ],
+            used: [
+                {
+                    assetUrl: '/assets/audio/missing.ogg',
+                    references: [],
+                },
+                {
+                    assetUrl: '/assets/bg/court.png',
+                    references: [],
+                },
+            ],
+        })).toEqual([
+            '/assets/audio/missing.ogg',
+            '/assets/bg/court.png',
+            '/assets/bg/unused.png',
+            '/assets/sprites/hero.png',
+        ]);
+    });
+
+    it('collects unique asset URLs from usage entries', () => {
+        expect(collectAssetUsageEntryUrls([
+            {
+                assetUrl: '/assets/audio/theme.ogg',
+                references: [],
+            },
+            {
+                assetUrl: '/assets/sprites/hero.png',
+                references: [],
+            },
+            {
+                assetUrl: '/assets/audio/theme.ogg',
+                references: [],
+            },
+        ])).toEqual([
+            '/assets/audio/theme.ogg',
+            '/assets/sprites/hero.png',
+        ]);
+    });
+
     it('adds and removes scoped unused asset selections', () => {
         expect(selectUnusedAssetScope(['/assets/b.png'], ['/assets/a.png', '/assets/b.png'])).toEqual([
             '/assets/a.png',
@@ -186,5 +243,70 @@ describe('assetDependencyPanelModel', () => {
             '/assets/a.png',
             '/assets/c.png',
         ]);
+    });
+
+    it('summarizes and filters asset metadata tags and collections', () => {
+        const graph = {
+            missing: [
+                {
+                    assetUrl: '/assets/audio/missing.ogg',
+                    references: [{ commandType: 'play_bgm', filePath: '/project/scripts/intro.json', path: [3, 'src'], sceneName: 'intro' }],
+                },
+            ],
+            unused: ['/assets/bg/unused.png', '/assets/sprites/hero.png'],
+            used: [
+                {
+                    assetUrl: '/assets/audio/theme.ogg',
+                    references: [{ commandType: 'play_bgm', filePath: '/project/scripts/intro.json', path: [1, 'src'], sceneName: 'intro' }],
+                },
+                {
+                    assetUrl: '/assets/sprites/judge.png',
+                    references: [{ commandType: 'show_sprite', filePath: '/project/scripts/trial.json', path: [2, 'sprite'], sceneName: 'trial' }],
+                },
+                {
+                    assetUrl: '/assets/audio/missing.ogg',
+                    references: [{ commandType: 'play_bgm', filePath: '/project/scripts/intro.json', path: [3, 'src'], sceneName: 'intro' }],
+                },
+            ],
+        };
+        const metadata = setAssetLibraryAssetMetadata(
+            setAssetLibraryAssetMetadata(
+                setAssetLibraryAssetMetadata(
+                    createEmptyAssetLibraryMetadata(),
+                    '/assets/sprites/judge.png',
+                    { collections: ['Characters'], tags: ['trial'] },
+                ),
+                '/assets/sprites/hero.png',
+                { collections: ['Characters'], tags: ['hero'] },
+            ),
+            '/assets/audio/missing.ogg',
+            { collections: ['Audio'], tags: ['needs replacement'] },
+        );
+
+        expect(createAssetOrganizationSummary(graph, metadata)).toEqual({
+            collections: [
+                { label: 'Audio', missing: 1, total: 1, unused: 0, used: 0 },
+                { label: 'Characters', missing: 0, total: 2, unused: 1, used: 1 },
+            ],
+            tags: [
+                { label: 'hero', missing: 0, total: 1, unused: 1, used: 0 },
+                { label: 'needs replacement', missing: 1, total: 1, unused: 0, used: 0 },
+                { label: 'trial', missing: 0, total: 1, unused: 0, used: 1 },
+            ],
+            total: 5,
+            unorganized: 2,
+        });
+
+        expect(filterAssetDependencyGraph(graph, '', 'all', metadata, { kind: 'collection', label: 'Characters' })).toEqual({
+            missing: [],
+            unused: ['/assets/sprites/hero.png'],
+            used: [{ assetUrl: '/assets/sprites/judge.png', references: graph.used[1].references }],
+        });
+
+        expect(filterAssetDependencyGraph(graph, 'replacement', 'all', metadata, { kind: 'tag', label: 'needs replacement' })).toEqual({
+            missing: [{ assetUrl: '/assets/audio/missing.ogg', references: graph.missing[0].references }],
+            unused: [],
+            used: [{ assetUrl: '/assets/audio/missing.ogg', references: graph.used[2].references }],
+        });
     });
 });

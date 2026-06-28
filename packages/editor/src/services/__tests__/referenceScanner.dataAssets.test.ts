@@ -3,9 +3,11 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ReferenceScannerResult } from '../referenceScanner';
 
 import { createGlobalSearchProjectData } from '../../test-utils/projectDataBuilder';
-import { collectDataAssetReferences } from '../referenceScanner/assets';
+import { collectDataAssetReferences, listProjectAssetFiles } from '../referenceScanner/assets';
 
 const fsMocks = vi.hoisted(() => ({
+    fsJoin: vi.fn((...parts: string[]) => Promise.resolve(parts.join('/').replaceAll(/\/+/gu, '/'))),
+    fsReadDirectory: vi.fn<(_path: string) => Promise<Array<{ isDirectory: boolean; isFile: boolean; isSymlink: boolean; name: string }>>>(),
     fsReadTextFile: vi.fn<(_path: string) => Promise<string>>(),
 }));
 
@@ -13,6 +15,8 @@ vi.mock('../fs', async () => {
     const actual = await vi.importActual<typeof import('../fs')>('../fs');
     return {
         ...actual,
+        fsJoin: fsMocks.fsJoin,
+        fsReadDirectory: fsMocks.fsReadDirectory,
         fsReadTextFile: fsMocks.fsReadTextFile,
     };
 });
@@ -99,6 +103,31 @@ describe('referenceScanner data asset enrichment', () => {
 
         expect(result.assetFiles['/assets/sprites/phoenixsheet.sheet.json']).toHaveLength(1);
         expect(result.assetFiles['/assets/sprites/phoenixsheet.png']).toBeUndefined();
+    });
+
+    it('skips the asset library metadata file when listing project assets', async () => {
+        fsMocks.fsReadDirectory.mockImplementation((path) => {
+            if (path === '/project/assets') {
+                return Promise.resolve([
+                    { isDirectory: false, isFile: true, isSymlink: false, name: '.zerith-library.json' },
+                    { isDirectory: true, isFile: false, isSymlink: false, name: 'bg' },
+                    { isDirectory: false, isFile: true, isSymlink: false, name: 'loose.png' },
+                ]);
+            }
+
+            if (path === '/project/assets/bg') {
+                return Promise.resolve([
+                    { isDirectory: false, isFile: true, isSymlink: false, name: 'office.png' },
+                ]);
+            }
+
+            return Promise.resolve([]);
+        });
+
+        await expect(listProjectAssetFiles('/project')).resolves.toEqual([
+            '/assets/bg/office.png',
+            '/assets/loose.png',
+        ]);
     });
 });
 

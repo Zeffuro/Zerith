@@ -5,11 +5,15 @@ import {
     createGitBranchSummaryReport,
     createGitCheckoutBranchReport,
     createGitCommitStagedReport,
+    createGitDiffFileReport,
     createGitDiffSummaryReport,
+    createGitInitRepositoryReport,
     createGitPushCurrentBranchReport,
     createGitRemoteSummaryReport,
     createGitStageAllReport,
+    createGitStageFileReport,
     createGitStatusReport,
+    createGitUnstageFileReport,
 } from '../gitIntegration';
 
 describe('gitIntegration', () => {
@@ -96,6 +100,60 @@ describe('gitIntegration', () => {
             reason: 'Git repository: none found for /project',
             runtime: 'desktop',
             status: 'not-repository',
+        });
+    });
+
+    it('reports browser git repository initialization as unsupported without invoking Tauri', async () => {
+        let wasInvoked = false;
+        const invoke = <T>() => {
+            wasInvoked = true;
+            return Promise.resolve({} as T);
+        };
+
+        const report = await createGitInitRepositoryReport('/project', {
+            invoke,
+            isTauriRuntime: () => false,
+        });
+
+        expect(report).toEqual({
+            reason: 'Git repository initialization is disabled in browser builds until repository access and project-handle persistence are designed.',
+            runtime: 'browser',
+            status: 'unsupported',
+        });
+        expect(wasInvoked).toBe(false);
+    });
+
+    it('invokes the desktop git repository initialization command and normalizes the response', async () => {
+        const nativeResponse = {
+            initialized: true,
+            isRepository: true,
+            rawOutput: 'Initialized empty Git repository',
+            repositoryRoot: ' /repo/game ',
+        };
+        const invokeCalls: Array<{ arguments_?: Record<string, unknown>; command: string; }> = [];
+        const invoke = <T>(command: string, arguments_?: Record<string, unknown>) => {
+            invokeCalls.push({ arguments_, command });
+            return Promise.resolve(nativeResponse as T);
+        };
+
+        const report = await createGitInitRepositoryReport(' /repo/game ', {
+            invoke,
+            isTauriRuntime: () => true,
+        });
+
+        expect(invokeCalls).toEqual([
+            {
+                arguments_: { request: { projectPath: '/repo/game' } },
+                command: 'git_init_repository',
+            },
+        ]);
+        expect(report).toEqual({
+            initialized: true,
+            isRepository: true,
+            rawOutput: 'Initialized empty Git repository',
+            repositoryRoot: '/repo/game',
+            runtime: 'desktop',
+            status: 'initialized',
         });
     });
 
@@ -238,6 +296,40 @@ describe('gitIntegration', () => {
         });
     });
 
+    it('passes optional commit descriptions to the staged commit command', async () => {
+        const nativeResponse = {
+            commitHash: ' abc1234 ',
+            isRepository: true,
+            rawOutput: '[main abc1234] Update intro',
+        };
+        const invokeCalls: Array<{ arguments_?: Record<string, unknown>; command: string; }> = [];
+        const invoke = <T>(command: string, arguments_?: Record<string, unknown>) => {
+            invokeCalls.push({ arguments_, command });
+            return Promise.resolve(nativeResponse as T);
+        };
+
+        const report = await createGitCommitStagedReport(' /repo/game ', ' Update intro ', {
+            description: ' Adds localized intro copy. ',
+        }, {
+            invoke,
+            isTauriRuntime: () => true,
+        });
+
+        expect(invokeCalls).toEqual([
+            {
+                arguments_: {
+                    request: {
+                        description: 'Adds localized intro copy.',
+                        message: 'Update intro',
+                        projectPath: '/repo/game',
+                    },
+                },
+                command: 'git_commit_staged',
+            },
+        ]);
+        expect(report.status).toBe('committed');
+    });
+
     it('reports non-repository staged commit responses without treating them as successful', async () => {
         const report = await createGitCommitStagedReport('/project', 'Update intro', {
             invoke: <T>() => Promise.resolve({ isRepository: false } as T),
@@ -248,6 +340,74 @@ describe('gitIntegration', () => {
             reason: 'Git repository: none found for /project',
             runtime: 'desktop',
             status: 'not-repository',
+        });
+    });
+
+    it('invokes the desktop git file staging command and normalizes the response', async () => {
+        const nativeResponse = {
+            isRepository: true,
+            path: ' scripts/intro.json ',
+            rawOutput: '',
+            repositoryRoot: ' /repo ',
+            stagedCount: 3,
+        };
+        const invokeCalls: Array<{ arguments_?: Record<string, unknown>; command: string; }> = [];
+        const invoke = <T>(command: string, arguments_?: Record<string, unknown>) => {
+            invokeCalls.push({ arguments_, command });
+            return Promise.resolve(nativeResponse as T);
+        };
+
+        const report = await createGitStageFileReport(' /repo/game ', ' scripts/intro.json ', {
+            invoke,
+            isTauriRuntime: () => true,
+        });
+
+        expect(invokeCalls).toEqual([
+            {
+                arguments_: { request: { path: 'scripts/intro.json', projectPath: '/repo/game' } },
+                command: 'git_stage_file',
+            },
+        ]);
+        expect(report).toEqual({
+            path: 'scripts/intro.json',
+            rawOutput: '',
+            repositoryRoot: '/repo',
+            runtime: 'desktop',
+            stagedCount: 3,
+            status: 'staged',
+        });
+    });
+
+    it('invokes the desktop git file unstaging command and normalizes the response', async () => {
+        const nativeResponse = {
+            isRepository: true,
+            path: ' scripts/intro.json ',
+            rawOutput: '',
+            stagedCount: 2,
+        };
+        const invokeCalls: Array<{ arguments_?: Record<string, unknown>; command: string; }> = [];
+        const invoke = <T>(command: string, arguments_?: Record<string, unknown>) => {
+            invokeCalls.push({ arguments_, command });
+            return Promise.resolve(nativeResponse as T);
+        };
+
+        const report = await createGitUnstageFileReport(' /repo/game ', ' scripts/intro.json ', {
+            invoke,
+            isTauriRuntime: () => true,
+        });
+
+        expect(invokeCalls).toEqual([
+            {
+                arguments_: { request: { path: 'scripts/intro.json', projectPath: '/repo/game' } },
+                command: 'git_unstage_file',
+            },
+        ]);
+        expect(report).toEqual({
+            path: 'scripts/intro.json',
+            rawOutput: '',
+            runtime: 'desktop',
+            stagedCount: 2,
+            status: 'unstaged',
         });
     });
 
@@ -331,6 +491,80 @@ describe('gitIntegration', () => {
             status: 'unsupported',
         });
         expect(wasInvoked).toBe(false);
+    });
+
+    it('reports missing git file diff paths before invoking Tauri', async () => {
+        let wasInvoked = false;
+        const invoke = <T>() => {
+            wasInvoked = true;
+            return Promise.resolve({} as T);
+        };
+
+        const report = await createGitDiffFileReport('/project', ' ', {
+            invoke,
+            isTauriRuntime: () => true,
+        });
+
+        expect(report).toEqual({
+            reason: 'Git file path is required.',
+            runtime: 'desktop',
+            status: 'error',
+        });
+        expect(wasInvoked).toBe(false);
+    });
+
+    it('reports browser git file diffs as unsupported without invoking Tauri', async () => {
+        let wasInvoked = false;
+        const invoke = <T>() => {
+            wasInvoked = true;
+            return Promise.resolve({} as T);
+        };
+
+        const report = await createGitDiffFileReport('/project', 'scripts/intro.json', {
+            invoke,
+            isTauriRuntime: () => false,
+        });
+
+        expect(report).toEqual({
+            reason: 'Git file diffs are disabled in browser builds until repository access and project-handle persistence are designed.',
+            runtime: 'browser',
+            status: 'unsupported',
+        });
+        expect(wasInvoked).toBe(false);
+    });
+
+    it('invokes the desktop git file diff command and normalizes the response', async () => {
+        const nativeResponse = {
+            isRepository: true,
+            path: ' scripts/intro.json ',
+            rawDiff: 'diff --git a/scripts/intro.json b/scripts/intro.json',
+            repositoryRoot: ' /repo ',
+        };
+        const invokeCalls: Array<{ arguments_?: Record<string, unknown>; command: string; }> = [];
+        const invoke = <T>(command: string, arguments_?: Record<string, unknown>) => {
+            invokeCalls.push({ arguments_, command });
+            return Promise.resolve(nativeResponse as T);
+        };
+
+        const report = await createGitDiffFileReport(' /repo/game ', ' scripts/intro.json ', {
+            invoke,
+            isTauriRuntime: () => true,
+        });
+
+        expect(invokeCalls).toEqual([
+            {
+                arguments_: { request: { path: 'scripts/intro.json', projectPath: '/repo/game' } },
+                command: 'git_diff_file',
+            },
+        ]);
+        expect(report).toEqual({
+            isRepository: true,
+            path: 'scripts/intro.json',
+            rawDiff: 'diff --git a/scripts/intro.json b/scripts/intro.json',
+            repositoryRoot: '/repo',
+            runtime: 'desktop',
+            status: 'ready',
+        });
     });
 
     it('invokes the desktop git diff summary command and normalizes the response', async () => {

@@ -15,6 +15,7 @@ import { AssetDependencyPanel } from '../tools/AssetDependencyPanel';
 import { CommandPalette } from '../tools/CommandPalette';
 import { ConsolePanel } from '../tools/ConsolePanel';
 import { GlobalSearchContent, GlobalSearchPanel } from '../tools/GlobalSearchPanel';
+import { GitPanel } from '../tools/GitPanel';
 import { LocalizationPanel } from '../tools/LocalizationPanel';
 import { ProjectValidationPanel } from '../tools/ProjectValidationPanel';
 import { ReferenceTrackerPanel } from '../tools/ReferenceTrackerPanel';
@@ -247,6 +248,9 @@ export function DockLayoutHost() {
             }
             case DOCK_PANELS.explorer: {
                 return <Explorer />;
+            }
+            case DOCK_PANELS.git: {
+                return <GitPanel />;
             }
             case DOCK_PANELS.globalSearch: {
                 return <GlobalSearchPanel />;

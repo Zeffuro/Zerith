@@ -7,6 +7,7 @@ export type WorkbenchResourceKind =
     | 'audiosheet'
     | 'characters'
     | 'engineConfig'
+    | 'gitDiff'
     | 'items'
     | 'json'
     | 'localization'
@@ -30,6 +31,8 @@ export type WorkbenchTab = {
     id: string;
     jsonSelectionPath?: string[];
     kind: WorkbenchResourceKind;
+    gitDiffFilePath?: string;
+    gitDiffRepositoryRoot?: string;
     localizationFilter?: string;
     path: string;
 

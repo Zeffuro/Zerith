@@ -9,6 +9,7 @@ import { resolveComponentScale, editorTheme as t } from '../../theme/editorTheme
 import { AssetPreviewPanel } from '../tools/AssetPreviewPanel';
 import { LocalizationPanel } from '../tools/LocalizationPanel';
 import { Timeline } from './timeline/Timeline';
+import { GitDiffViewer } from './workbench/GitDiffViewer';
 
 const ScriptJsonEditor = lazy(() => import('./workbench/ScriptJsonEditor').then((m) => ({ default: m.ScriptJsonEditor })));
 const ManifestEditor = lazy(() => import('./workbench/ManifestEditor').then((m) => ({ default: m.ManifestEditor })));
@@ -133,6 +134,10 @@ export function EditorSurface() {
 
     if (activeTab.kind === 'localization') {
         return <LocalizationPanel initialQuery={activeTab.localizationFilter} />;
+    }
+
+    if (activeTab.kind === 'gitDiff') {
+        return <GitDiffViewer tab={activeTab} uiScale={uiScale} />;
     }
 
     if (activeTab.kind in kindEditorMap) {
