@@ -30,14 +30,6 @@ const defaultDependencies: AssetLibraryMetadataDependencies = {
     writeTextFile: fsWriteTextFile,
 };
 
-export function createEmptyAssetLibraryMetadata(): AssetLibraryMetadata {
-    return {
-        assets: {},
-        schemaVersion: ASSET_LIBRARY_METADATA_SCHEMA_VERSION,
-        type: ASSET_LIBRARY_METADATA_TYPE,
-    };
-}
-
 export function addAssetLibraryCollectionToAssets(
     metadata: AssetLibraryMetadata,
     assetUrls: readonly string[],
@@ -74,6 +66,14 @@ export function addAssetLibraryMetadataToAssets(
     return normalizeAssetLibraryMetadata(next);
 }
 
+export function createEmptyAssetLibraryMetadata(): AssetLibraryMetadata {
+    return {
+        assets: {},
+        schemaVersion: ASSET_LIBRARY_METADATA_SCHEMA_VERSION,
+        type: ASSET_LIBRARY_METADATA_TYPE,
+    };
+}
+
 export async function loadAssetLibraryMetadata(
     projectPath: string,
     dependencies: AssetLibraryMetadataDependencies = defaultDependencies,
@@ -91,7 +91,9 @@ export async function loadAssetLibraryMetadata(
     try {
         parsed = JSON.parse(raw);
     } catch (error) {
-        throw new Error(`Asset library metadata is invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(`Asset library metadata is invalid JSON: ${error instanceof Error ? error.message : String(error)}`, {
+            cause: error,
+        });
     }
 
     return normalizeAssetLibraryMetadata(parsed);
@@ -262,6 +264,10 @@ async function assetLibraryMetadataPath(
     return dependencies.join(assetsPath, ASSET_LIBRARY_METADATA_FILE_NAME);
 }
 
+function labelKey(label: string): string {
+    return label.toLocaleLowerCase();
+}
+
 function mergeAssetLibraryAssetMetadata(
     left: AssetLibraryAssetMetadata | undefined,
     right: AssetLibraryAssetMetadata,
@@ -278,10 +284,6 @@ function normalizeAssetLibraryAssetMetadata(value: unknown): AssetLibraryAssetMe
         collections: normalizeAssetLibraryLabels(record.collections),
         tags: normalizeAssetLibraryLabels(record.tags),
     };
-}
-
-function labelKey(label: string): string {
-    return label.toLocaleLowerCase();
 }
 
 function normalizeAssetLibraryAssetUrl(assetUrl: string): string | undefined {

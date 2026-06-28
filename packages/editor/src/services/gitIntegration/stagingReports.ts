@@ -1,6 +1,3 @@
-import { normalizeGitFileActionResponse, normalizeGitStageAllResponse } from './normalizers';
-import { loadTauriInvoke, resolveGitRuntime, stringifyError } from './runtime';
-
 import type { NativeGitFileActionResponse, NativeGitStageAllResponse } from './nativeTypes';
 import type {
     GitStageAllReport,
@@ -8,6 +5,9 @@ import type {
     GitStatusDependencies,
     GitUnstageFileReport,
 } from './types';
+
+import { normalizeGitFileActionResponse, normalizeGitStageAllResponse } from './normalizers';
+import { loadTauriInvoke, resolveGitRuntime, stringifyError } from './runtime';
 
 export async function createGitStageAllReport(
     projectPath: string | undefined,

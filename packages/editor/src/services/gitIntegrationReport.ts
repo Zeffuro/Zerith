@@ -1,19 +1,5 @@
 import type { GitRemoteEntry } from './gitIntegration';
 
-export type GitIntegrationReport = {
-    backendStrategy: GitBackendStrategyReport;
-    recommendedNextStep: string;
-    runtime: GitIntegrationRuntime;
-    strategies: GitIntegrationStrategy[];
-    summary: Record<GitIntegrationStrategyStatus, number>;
-};
-
-export type GitIntegrationReportOptions = {
-    runtime: GitIntegrationRuntime;
-};
-
-export type GitIntegrationRuntime = 'browser' | 'desktop';
-
 export type GitBackendEngineId =
     | 'browserDisabled'
     | 'rustGitLibrary'
@@ -37,6 +23,20 @@ export type GitBackendStrategyReport = {
     runtime: GitIntegrationRuntime;
     selectedEngineId: GitBackendEngineId;
 };
+
+export type GitIntegrationReport = {
+    backendStrategy: GitBackendStrategyReport;
+    recommendedNextStep: string;
+    runtime: GitIntegrationRuntime;
+    strategies: GitIntegrationStrategy[];
+    summary: Record<GitIntegrationStrategyStatus, number>;
+};
+
+export type GitIntegrationReportOptions = {
+    runtime: GitIntegrationRuntime;
+};
+
+export type GitIntegrationRuntime = 'browser' | 'desktop';
 
 export type GitIntegrationStrategy = {
     browser: GitIntegrationStrategyStatus;
@@ -113,26 +113,6 @@ const GIT_STRATEGIES: readonly GitIntegrationStrategy[] = [
     },
 ];
 
-export function createGitIntegrationReport(options: GitIntegrationReportOptions): GitIntegrationReport {
-    const runtimeStatuses = GIT_STRATEGIES.map((strategy) => strategy[options.runtime]);
-    const backendStrategy = createGitBackendStrategyReport(options);
-
-    return {
-        backendStrategy,
-        recommendedNextStep: options.runtime === 'desktop'
-            ? backendStrategy.recommendation
-            : 'Keep git disabled or read-only in browser builds until project-handle persistence and repository access are explicitly designed.',
-        runtime: options.runtime,
-        strategies: GIT_STRATEGIES.map((strategy) => ({ ...strategy })),
-        summary: {
-            deferred: runtimeStatuses.filter((status) => status === 'deferred').length,
-            limited: runtimeStatuses.filter((status) => status === 'limited').length,
-            recommended: runtimeStatuses.filter((status) => status === 'recommended').length,
-            unsupported: runtimeStatuses.filter((status) => status === 'unsupported').length,
-        },
-    };
-}
-
 export function createGitBackendStrategyReport(options: GitIntegrationReportOptions): GitBackendStrategyReport {
     if (options.runtime === 'browser') {
         return {
@@ -180,6 +160,26 @@ export function createGitBackendStrategyReport(options: GitIntegrationReportOpti
         recommendation: 'Keep the v1 desktop backend on validated Tauri commands that shell out to system git; revisit a Rust git library only for scoped read paths after credential and LFS parity are designed.',
         runtime: options.runtime,
         selectedEngineId: 'tauriGitCli',
+    };
+}
+
+export function createGitIntegrationReport(options: GitIntegrationReportOptions): GitIntegrationReport {
+    const runtimeStatuses = GIT_STRATEGIES.map((strategy) => strategy[options.runtime]);
+    const backendStrategy = createGitBackendStrategyReport(options);
+
+    return {
+        backendStrategy,
+        recommendedNextStep: options.runtime === 'desktop'
+            ? backendStrategy.recommendation
+            : 'Keep git disabled or read-only in browser builds until project-handle persistence and repository access are explicitly designed.',
+        runtime: options.runtime,
+        strategies: GIT_STRATEGIES.map((strategy) => ({ ...strategy })),
+        summary: {
+            deferred: runtimeStatuses.filter((status) => status === 'deferred').length,
+            limited: runtimeStatuses.filter((status) => status === 'limited').length,
+            recommended: runtimeStatuses.filter((status) => status === 'recommended').length,
+            unsupported: runtimeStatuses.filter((status) => status === 'unsupported').length,
+        },
     };
 }
 

@@ -21,32 +21,53 @@ import {
     textInputStyle,
 } from './gitPanelStyles';
 
-export function GitRepositorySection({
-    changeSummary,
-    currentBranchLabel,
-    lastMessage,
-    statusReport,
+export function GitBackendSection({
+    backendStrategy,
     uiScale,
 }: {
-    changeSummary: GitPanelChangeSummary;
-    currentBranchLabel: string;
-    lastMessage: string | undefined;
-    statusReport: GitStatusReport | undefined;
+    backendStrategy: GitBackendStrategyReport;
+    uiScale: number;
+}) {
+    const selected = backendStrategy.engines.find((engine) => engine.id === backendStrategy.selectedEngineId);
+
+    return (
+        <section style={sectionStyle(uiScale)}>
+            <div style={sectionTitleWithIconStyle(uiScale)}>
+                <ServerCog size={13 * uiScale} />
+                <span>Backend Strategy</span>
+            </div>
+            <KeyValue label="Selected" uiScale={uiScale} value={selected?.label ?? backendStrategy.selectedEngineId} />
+            <div style={emptyStateStyle(uiScale)}>{backendStrategy.recommendation}</div>
+            {backendStrategy.engines.map((engine) => (
+                <div key={engine.id} style={remoteRowStyle(uiScale, engine.status === 'selected' ? 'ready' : 'review')}>
+                    <span style={{ color: t.text.primary, fontWeight: 700 }}>{engine.label}</span>
+                    <span>{engine.status}</span>
+                </div>
+            ))}
+        </section>
+    );
+}
+
+export function GitBranchesSection({
+    branchReport,
+    uiScale,
+}: {
+    branchReport: GitBranchSummaryReport | undefined;
     uiScale: number;
 }) {
     return (
         <section style={sectionStyle(uiScale)}>
-            <div style={sectionTitleStyle(uiScale)}>Repository</div>
-            <KeyValue label="Branch" uiScale={uiScale} value={currentBranchLabel} />
-            {statusReport?.status === 'ready' && statusReport.isRepository ? (
-                <>
-                    <KeyValue label="Ahead / behind" uiScale={uiScale} value={`${statusReport.ahead} / ${statusReport.behind}`} />
-                    <KeyValue label="Changed files" uiScale={uiScale} value={String(changeSummary.total)} />
-                    <KeyValue label="Staged / unstaged" uiScale={uiScale} value={`${changeSummary.staged} / ${changeSummary.unstaged}`} />
-                    <KeyValue label="Diff" uiScale={uiScale} value={`+${changeSummary.insertions} / -${changeSummary.deletions}`} />
-                </>
+            <div style={sectionTitleStyle(uiScale)}>Branches</div>
+            {branchReport?.status === 'ready' && branchReport.isRepository && branchReport.branches.length > 0 ? (
+                branchReport.branches.slice(0, 12).map((branch) => (
+                    <div key={branch.name} style={branchRowStyle(uiScale, branch.current)}>
+                        <span>{branch.current ? '*' : ''}</span>
+                        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{branch.name}</span>
+                        {branch.upstream ? <span style={{ color: t.text.faint }}>{'->'} {branch.upstream}</span> : undefined}
+                    </div>
+                ))
             ) : (
-                <div style={emptyStateStyle(uiScale)}>{lastMessage}</div>
+                <div style={emptyStateStyle(uiScale)}>No branch summary available.</div>
             )}
         </section>
     );
@@ -102,31 +123,6 @@ export function GitCommitSection({
                 <CheckSquare size={13 * uiScale} />
                 <span>{isCommitting ? 'Committing...' : `Commit ${stagedCount} File${stagedCount === 1 ? '' : 's'}`}</span>
             </button>
-        </section>
-    );
-}
-
-export function GitBranchesSection({
-    branchReport,
-    uiScale,
-}: {
-    branchReport: GitBranchSummaryReport | undefined;
-    uiScale: number;
-}) {
-    return (
-        <section style={sectionStyle(uiScale)}>
-            <div style={sectionTitleStyle(uiScale)}>Branches</div>
-            {branchReport?.status === 'ready' && branchReport.isRepository && branchReport.branches.length > 0 ? (
-                branchReport.branches.slice(0, 12).map((branch) => (
-                    <div key={branch.name} style={branchRowStyle(uiScale, branch.current)}>
-                        <span>{branch.current ? '*' : ''}</span>
-                        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{branch.name}</span>
-                        {branch.upstream ? <span style={{ color: t.text.faint }}>{'->'} {branch.upstream}</span> : undefined}
-                    </div>
-                ))
-            ) : (
-                <div style={emptyStateStyle(uiScale)}>No branch summary available.</div>
-            )}
         </section>
     );
 }
@@ -225,29 +221,33 @@ export function GitRemotesSection({
     );
 }
 
-export function GitBackendSection({
-    backendStrategy,
+export function GitRepositorySection({
+    changeSummary,
+    currentBranchLabel,
+    lastMessage,
+    statusReport,
     uiScale,
 }: {
-    backendStrategy: GitBackendStrategyReport;
+    changeSummary: GitPanelChangeSummary;
+    currentBranchLabel: string;
+    lastMessage: string | undefined;
+    statusReport: GitStatusReport | undefined;
     uiScale: number;
 }) {
-    const selected = backendStrategy.engines.find((engine) => engine.id === backendStrategy.selectedEngineId);
-
     return (
         <section style={sectionStyle(uiScale)}>
-            <div style={sectionTitleWithIconStyle(uiScale)}>
-                <ServerCog size={13 * uiScale} />
-                <span>Backend Strategy</span>
-            </div>
-            <KeyValue label="Selected" uiScale={uiScale} value={selected?.label ?? backendStrategy.selectedEngineId} />
-            <div style={emptyStateStyle(uiScale)}>{backendStrategy.recommendation}</div>
-            {backendStrategy.engines.map((engine) => (
-                <div key={engine.id} style={remoteRowStyle(uiScale, engine.status === 'selected' ? 'ready' : 'review')}>
-                    <span style={{ color: t.text.primary, fontWeight: 700 }}>{engine.label}</span>
-                    <span>{engine.status}</span>
-                </div>
-            ))}
+            <div style={sectionTitleStyle(uiScale)}>Repository</div>
+            <KeyValue label="Branch" uiScale={uiScale} value={currentBranchLabel} />
+            {statusReport?.status === 'ready' && statusReport.isRepository ? (
+                <>
+                    <KeyValue label="Ahead / behind" uiScale={uiScale} value={`${statusReport.ahead} / ${statusReport.behind}`} />
+                    <KeyValue label="Changed files" uiScale={uiScale} value={String(changeSummary.total)} />
+                    <KeyValue label="Staged / unstaged" uiScale={uiScale} value={`${changeSummary.staged} / ${changeSummary.unstaged}`} />
+                    <KeyValue label="Diff" uiScale={uiScale} value={`+${changeSummary.insertions} / -${changeSummary.deletions}`} />
+                </>
+            ) : (
+                <div style={emptyStateStyle(uiScale)}>{lastMessage}</div>
+            )}
         </section>
     );
 }

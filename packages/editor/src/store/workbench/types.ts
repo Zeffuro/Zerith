@@ -28,11 +28,11 @@ export interface WorkbenchState extends WorkbenchTabsSlice, WorkbenchViewPrefsSl
 export type WorkbenchTab = {
     assetPath?: string;
     dirty?: boolean;
+    gitDiffFilePath?: string;
+    gitDiffRepositoryRoot?: string;
     id: string;
     jsonSelectionPath?: string[];
     kind: WorkbenchResourceKind;
-    gitDiffFilePath?: string;
-    gitDiffRepositoryRoot?: string;
     localizationFilter?: string;
     path: string;
 

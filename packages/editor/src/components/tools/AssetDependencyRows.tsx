@@ -19,7 +19,7 @@ export function AssetMetadataChips({
     uiScale: number;
 }) {
     if (metadata.collections.length === 0 && metadata.tags.length === 0) {
-        return null;
+        return;
     }
 
     return (

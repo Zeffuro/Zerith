@@ -1,18 +1,18 @@
+import { importAssetsFromPicker } from '../../services/assetImport';
 import {
     addAssetLibraryCollectionToAssets,
     addAssetLibraryMetadataToAssets,
+    type AssetLibraryAssetMetadata,
+    type AssetLibraryMetadata,
     removeAssetLibraryCollection,
     renameAssetLibraryCollection,
     saveAssetLibraryMetadata,
     setAssetLibraryAssetMetadata,
-    type AssetLibraryAssetMetadata,
-    type AssetLibraryMetadata,
 } from '../../services/assetLibraryMetadata';
-import { importAssetsFromPicker } from '../../services/assetImport';
 import { deletePaths, moveAssetPathWithPicker, refreshProjectTree } from '../../services/explorerFileActions';
 import { fsJoin } from '../../services/fs';
 import { openProjectEntry } from '../../services/openProjectEntry';
-import { refreshReferenceScannerState, type ReferenceLocation } from '../../services/referenceScanner';
+import { type ReferenceLocation, refreshReferenceScannerState } from '../../services/referenceScanner';
 import { executeConsoleMessageAction } from '../../store/actions/consoleMessageActions';
 import { useEditorStore } from '../../store/useEditorStore';
 import {
@@ -20,25 +20,6 @@ import {
     type AssetAudioRoleAssetGroup,
 } from './assetAudioRoleModel';
 import { projectRelativeAssetPathFromUrl } from './assetDependencyPanelModel';
-
-export async function handleAddVisibleAssetCollection(
-    projectPath: string,
-    assetUrls: readonly string[],
-    collection: string,
-    metadata: AssetLibraryMetadata,
-    setAssetLibraryMetadata: (metadata: AssetLibraryMetadata) => void,
-    setIsSavingAssetOrganization: (value: boolean) => void,
-): Promise<void> {
-    if (assetUrls.length === 0) return;
-    const nextMetadata = addAssetLibraryCollectionToAssets(metadata, assetUrls, collection);
-    await persistAssetLibraryMetadataUpdate(
-        projectPath,
-        nextMetadata,
-        setAssetLibraryMetadata,
-        setIsSavingAssetOrganization,
-        `Added ${assetUrls.length} visible asset${assetUrls.length === 1 ? '' : 's'} to collection "${collection.trim()}".`,
-    );
-}
 
 export async function handleAddAssetMetadataToAssets(
     projectPath: string,
@@ -57,6 +38,25 @@ export async function handleAddAssetMetadataToAssets(
         setAssetLibraryMetadata,
         setIsSavingAssetOrganization,
         `Updated metadata for ${assetUrls.length} ${scopeLabel}${assetUrls.length === 1 ? '' : 's'}.`,
+    );
+}
+
+export async function handleAddVisibleAssetCollection(
+    projectPath: string,
+    assetUrls: readonly string[],
+    collection: string,
+    metadata: AssetLibraryMetadata,
+    setAssetLibraryMetadata: (metadata: AssetLibraryMetadata) => void,
+    setIsSavingAssetOrganization: (value: boolean) => void,
+): Promise<void> {
+    if (assetUrls.length === 0) return;
+    const nextMetadata = addAssetLibraryCollectionToAssets(metadata, assetUrls, collection);
+    await persistAssetLibraryMetadataUpdate(
+        projectPath,
+        nextMetadata,
+        setAssetLibraryMetadata,
+        setIsSavingAssetOrganization,
+        `Added ${assetUrls.length} visible asset${assetUrls.length === 1 ? '' : 's'} to collection "${collection.trim()}".`,
     );
 }
 
@@ -100,30 +100,6 @@ export async function handleDeleteSelectedUnusedAssets(
     } finally {
         setIsDeletingUnused(false);
         setShowDeleteUnusedDialog(false);
-    }
-}
-
-export async function handleSaveAssetMetadata(
-    projectPath: string,
-    assetUrl: string,
-    assetMetadata: AssetLibraryAssetMetadata,
-    metadata: AssetLibraryMetadata,
-    setAssetLibraryMetadata: (metadata: AssetLibraryMetadata) => void,
-    setSavingMetadataAssetUrl: (assetUrl: string | undefined) => void,
-): Promise<void> {
-    const nextMetadata = setAssetLibraryAssetMetadata(metadata, assetUrl, assetMetadata);
-
-    setSavingMetadataAssetUrl(assetUrl);
-    try {
-        await saveAssetLibraryMetadata(projectPath, nextMetadata);
-        setAssetLibraryMetadata(nextMetadata);
-        executeConsoleMessageAction('editor', 'info', `Updated asset organization for ${assetUrl}.`);
-    } catch (error) {
-        console.error('Asset library metadata save failed:', error);
-        executeConsoleMessageAction('editor', 'error', 'Asset library metadata save failed:', String(error));
-        throw error;
-    } finally {
-        setSavingMetadataAssetUrl(undefined);
     }
 }
 
@@ -234,6 +210,30 @@ export async function handleRenameAssetCollection(
         setIsSavingAssetOrganization,
         `Renamed asset collection "${oldCollection}" to "${newCollection.trim()}".`,
     );
+}
+
+export async function handleSaveAssetMetadata(
+    projectPath: string,
+    assetUrl: string,
+    assetMetadata: AssetLibraryAssetMetadata,
+    metadata: AssetLibraryMetadata,
+    setAssetLibraryMetadata: (metadata: AssetLibraryMetadata) => void,
+    setSavingMetadataAssetUrl: (assetUrl: string | undefined) => void,
+): Promise<void> {
+    const nextMetadata = setAssetLibraryAssetMetadata(metadata, assetUrl, assetMetadata);
+
+    setSavingMetadataAssetUrl(assetUrl);
+    try {
+        await saveAssetLibraryMetadata(projectPath, nextMetadata);
+        setAssetLibraryMetadata(nextMetadata);
+        executeConsoleMessageAction('editor', 'info', `Updated asset organization for ${assetUrl}.`);
+    } catch (error) {
+        console.error('Asset library metadata save failed:', error);
+        executeConsoleMessageAction('editor', 'error', 'Asset library metadata save failed:', String(error));
+        throw error;
+    } finally {
+        setSavingMetadataAssetUrl(undefined);
+    }
 }
 
 function basename(path: string): string {

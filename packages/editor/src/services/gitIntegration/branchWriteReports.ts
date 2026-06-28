@@ -1,12 +1,12 @@
-import { normalizeGitCheckoutBranchResponse, normalizeGitCreateBranchResponse } from './normalizers';
-import { loadTauriInvoke, resolveGitRuntime, stringifyError } from './runtime';
-
 import type { NativeGitCheckoutBranchResponse, NativeGitCreateBranchResponse } from './nativeTypes';
 import type {
     GitCheckoutBranchReport,
     GitCreateBranchReport,
     GitStatusDependencies,
 } from './types';
+
+import { normalizeGitCheckoutBranchResponse, normalizeGitCreateBranchResponse } from './normalizers';
+import { loadTauriInvoke, resolveGitRuntime, stringifyError } from './runtime';
 
 export async function createGitBranchReport(
     projectPath: string | undefined,

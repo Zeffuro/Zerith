@@ -8,6 +8,8 @@ import type {
     GitStatusReport,
 } from '../../services/gitIntegration';
 
+import { refreshProjectTree } from '../../services/explorerFileActions';
+import { openGitDiffWorkbenchTab } from '../../services/gitDiffWorkbench';
 import {
     createGitBranchReport,
     createGitBranchSummaryReport,
@@ -23,14 +25,13 @@ import {
     createGitStatusReport,
     createGitUnstageFileReport,
 } from '../../services/gitIntegration';
-import { refreshProjectTree } from '../../services/explorerFileActions';
-import { openGitDiffWorkbenchTab } from '../../services/gitDiffWorkbench';
 import { createGitBackendStrategyReport } from '../../services/gitIntegrationReport';
 import { isTauriRuntime } from '../../services/runtime/runtimeEnvironment';
 import { executeConsoleMessageAction } from '../../store/actions/consoleMessageActions';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { editorTheme as t } from '../../theme/editorTheme';
+import { GitPanelChangeGroup } from './GitPanelChangeGroup';
 import {
     createGitPanelChangeBuckets,
     createGitPanelChangeSummary,
@@ -39,7 +40,6 @@ import {
     findDefaultGitRemote,
     formatGitBranchLabel,
 } from './gitPanelModel';
-import { GitPanelChangeGroup } from './GitPanelChangeGroup';
 import {
     GitBackendSection,
     GitBranchesSection,
@@ -62,24 +62,24 @@ import {
 } from './gitPanelStyles';
 import { useGitPanelAutoRefresh } from './useGitPanelAutoRefresh';
 
+type GitPanelAction =
+    | 'checkout'
+    | 'commit'
+    | 'create-branch'
+    | 'init'
+    | 'push-preflight'
+    | 'push'
+    | 'refresh'
+    | 'stage-file'
+    | 'stage'
+    | 'unstage-file';
+
 type GitPanelReports = {
     branch: GitBranchSummaryReport | undefined;
     diff: GitDiffSummaryReport | undefined;
     remote: GitRemoteSummaryReport | undefined;
     status: GitStatusReport | undefined;
 };
-
-type GitPanelAction =
-    | 'checkout'
-    | 'commit'
-    | 'create-branch'
-    | 'init'
-    | 'push'
-    | 'push-preflight'
-    | 'refresh'
-    | 'stage'
-    | 'stage-file'
-    | 'unstage-file';
 
 const EMPTY_REPORTS: GitPanelReports = {
     branch: undefined,
@@ -101,8 +101,8 @@ export function GitPanel() {
     const [pushRemoteName, setPushRemoteName] = useState('');
     const [reports, setReports] = useState<GitPanelReports>(EMPTY_REPORTS);
     const [selectedDiffPath, setSelectedDiffPath] = useState<string>();
-    const busyActionRef = useRef<GitPanelAction | undefined>(undefined);
-    const selectedDiffPathRef = useRef<string | undefined>(undefined);
+    const busyActionReference = useRef<GitPanelAction | undefined>(undefined);
+    const selectedDiffPathReference = useRef<string | undefined>(undefined);
 
     const changeBuckets = useMemo(() => createGitPanelChangeBuckets(reports.status), [reports.status]);
     const changeSummary = useMemo(
@@ -131,11 +131,11 @@ export function GitPanel() {
     const canCommit = isRepository && changeBuckets.staged.length > 0 && commitSummary.trim().length > 0;
 
     useEffect(() => {
-        busyActionRef.current = busyAction;
+        busyActionReference.current = busyAction;
     }, [busyAction]);
 
     useEffect(() => {
-        selectedDiffPathRef.current = selectedDiffPath;
+        selectedDiffPathReference.current = selectedDiffPath;
     }, [selectedDiffPath]);
 
     useEffect(() => {
@@ -174,7 +174,7 @@ export function GitPanel() {
             ]);
 
             setReports({ branch, diff, remote, status });
-            const currentSelectedPath = selectedDiffPathRef.current;
+            const currentSelectedPath = selectedDiffPathReference.current;
             if (status.status !== 'ready' || !status.isRepository) {
                 setSelectedDiffPath(undefined);
             } else if (currentSelectedPath) {
@@ -198,7 +198,7 @@ export function GitPanel() {
         void refreshReports();
     }, [refreshReports]);
 
-    useGitPanelAutoRefresh({ busyActionRef, projectPath, refreshReports });
+    useGitPanelAutoRefresh({ busyActionRef: busyActionReference, projectPath, refreshReports });
 
     const runGitAction = useCallback(async (
         action: GitPanelAction,
@@ -444,8 +444,8 @@ export function GitPanel() {
                 <GitPanelChangeGroup
                     actionLabel="Stage"
                     actionTitle="Stage file"
-                    entries={changeBuckets.unstaged}
                     emptyLabel={isRepository ? 'No unstaged changes.' : 'No repository status available.'}
+                    entries={changeBuckets.unstaged}
                     icon="stage"
                     isBusy={isBusy}
                     isLoadingDiff={isLoadingDiff}
@@ -465,8 +465,8 @@ export function GitPanel() {
                 <GitPanelChangeGroup
                     actionLabel="Unstage"
                     actionTitle="Unstage file"
-                    entries={changeBuckets.staged}
                     emptyLabel={isRepository ? 'No staged changes.' : 'No repository status available.'}
+                    entries={changeBuckets.staged}
                     icon="unstage"
                     isBusy={isBusy}
                     isLoadingDiff={isLoadingDiff}

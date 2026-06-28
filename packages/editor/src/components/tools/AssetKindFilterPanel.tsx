@@ -23,7 +23,7 @@ export function AssetKindFilterPanel({
     total,
     uiScale,
 }: Properties) {
-    if (summary.length === 0) return null;
+    if (summary.length === 0) return;
 
     return (
         <div style={kindSummaryRowStyle(uiScale)}>

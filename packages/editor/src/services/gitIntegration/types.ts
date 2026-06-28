@@ -1,12 +1,3 @@
-export type GitStatusRuntime = 'browser' | 'desktop';
-
-export type TauriInvoke = <T>(command: string, arguments_?: Record<string, unknown>) => Promise<T>;
-
-export type GitStatusDependencies = {
-    invoke?: TauriInvoke;
-    isTauriRuntime?: () => boolean;
-};
-
 export type GitBranchEntry = {
     current: boolean;
     name: string;
@@ -122,13 +113,6 @@ export type GitCreateBranchSnapshot = {
     repositoryRoot?: string;
 };
 
-export type GitDiffFileSummary = {
-    binary: boolean;
-    deletions: number;
-    insertions: number;
-    path: string;
-};
-
 export type GitDiffFileReport =
     | {
         reason: string;
@@ -150,6 +134,13 @@ export type GitDiffFileSnapshot = {
     path: string;
     rawDiff: string;
     repositoryRoot?: string;
+};
+
+export type GitDiffFileSummary = {
+    binary: boolean;
+    deletions: number;
+    insertions: number;
+    path: string;
 };
 
 export type GitDiffSummaryReport =
@@ -315,6 +306,11 @@ export type GitStageFileReport =
         status: 'staged';
     } & GitFileActionSnapshot);
 
+export type GitStatusDependencies = {
+    invoke?: TauriInvoke;
+    isTauriRuntime?: () => boolean;
+};
+
 export type GitStatusEntry = {
     index: string;
     path: string;
@@ -336,6 +332,8 @@ export type GitStatusReport =
         runtime: 'desktop';
         status: 'ready';
     } & GitStatusSnapshot);
+
+export type GitStatusRuntime = 'browser' | 'desktop';
 
 export type GitStatusSnapshot = {
     ahead: number;
@@ -367,3 +365,5 @@ export type GitUnstageFileReport =
         runtime: 'desktop';
         status: 'unstaged';
     } & GitFileActionSnapshot);
+
+export type TauriInvoke = <T>(command: string, arguments_?: Record<string, unknown>) => Promise<T>;

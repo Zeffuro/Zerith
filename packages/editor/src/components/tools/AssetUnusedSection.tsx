@@ -3,7 +3,6 @@ import { CheckSquare, FolderInput, Square, Tag } from 'lucide-react';
 import type { AssetLibraryMetadata } from '../../services/assetLibraryMetadata';
 
 import { editorTheme as t } from '../../theme/editorTheme';
-import { AssetMetadataChips } from './AssetDependencyRows';
 import {
     getAssetLibraryAssetMetadata,
     type UnusedAssetFolderGroup,
@@ -17,6 +16,7 @@ import {
     sectionTitleRowStyle,
     unusedRowStyle,
 } from './assetDependencyPanelStyles';
+import { AssetMetadataChips } from './AssetDependencyRows';
 
 type Properties = {
     allUnusedAssetsSelected: boolean;

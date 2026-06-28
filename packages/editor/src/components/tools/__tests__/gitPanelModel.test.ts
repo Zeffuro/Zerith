@@ -46,8 +46,8 @@ describe('gitPanelModel', () => {
             insertions: 5,
             staged: 2,
             total: 4,
-            untracked: 1,
             unstaged: 3,
+            untracked: 1,
         });
         expect(createGitPanelChangeBuckets(statusReport)).toEqual({
             staged: [
@@ -63,7 +63,7 @@ describe('gitPanelModel', () => {
     });
 
     it('formats branch and status labels for unavailable, detached, and ready states', () => {
-        expect(formatGitBranchLabel(undefined)).toBe('Unavailable');
+        expect(formatGitBranchLabel()).toBe('Unavailable');
         expect(formatGitBranchLabel({
             ahead: 0,
             behind: 0,
@@ -100,8 +100,8 @@ describe('gitPanelModel', () => {
 
         expect(policy?.summary).toEqual({ blocked: 0, ready: 1, review: 1 });
         expect(findDefaultGitRemote(remoteReport.remotes, policy)).toBe('ssh');
-        expect(findDefaultGitRemote([{ name: 'origin' }], undefined)).toBe('origin');
-        expect(findDefaultGitRemote([], undefined)).toBe('origin');
+        expect(findDefaultGitRemote([{ name: 'origin' }])).toBe('origin');
+        expect(findDefaultGitRemote([])).toBe('origin');
     });
 
     it('builds push preflight details from remote policy', () => {
@@ -118,7 +118,7 @@ describe('gitPanelModel', () => {
         };
         const policy = createGitPanelRemotePolicy(remoteReport);
 
-        expect(createGitPanelPushPreflight(remoteReport.remotes, policy, undefined)).toMatchObject({
+        expect(createGitPanelPushPreflight(remoteReport.remotes, policy)).toMatchObject({
             canPush: true,
             credentialLabel: 'ssh / ssh-agent',
             remoteName: 'ssh',

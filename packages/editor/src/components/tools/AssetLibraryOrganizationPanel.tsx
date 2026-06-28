@@ -1,6 +1,12 @@
 import { Check, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
 
+import type {
+    AssetLibraryOrganizationFilter,
+    AssetLibraryOrganizationSummary,
+    AssetLibraryOrganizationSummaryEntry,
+} from './assetDependencyPanelModel';
+
 import { editorTheme as t } from '../../theme/editorTheme';
 import {
     kindSummaryChipStyle,
@@ -8,11 +14,6 @@ import {
     miniButtonStyle,
     searchInputStyle,
 } from './assetDependencyPanelStyles';
-import type {
-    AssetLibraryOrganizationFilter,
-    AssetLibraryOrganizationSummary,
-    AssetLibraryOrganizationSummaryEntry,
-} from './assetDependencyPanelModel';
 
 type Properties = {
     busy: boolean;
@@ -148,6 +149,50 @@ export function AssetLibraryOrganizationPanel({
     );
 }
 
+function collectionControlStyle(uiScale: number, selected: boolean) {
+    return {
+        alignItems: 'center',
+        background: selected ? t.bg.selected : t.bg.panel,
+        border: `1px solid ${selected ? t.accent.primary : t.border.subtle}`,
+        borderRadius: t.radius.sm,
+        display: 'inline-flex',
+        gap: `${2 * uiScale}px`,
+        padding: `${2 * uiScale}px`,
+    };
+}
+
+function collectionFilterButtonStyle(uiScale: number) {
+    return {
+        border: 'none',
+        color: t.text.normal,
+        cursor: 'pointer',
+        fontSize: `${11 * uiScale}px`,
+        padding: `${2 * uiScale}px ${4 * uiScale}px`,
+        whiteSpace: 'nowrap' as const,
+    };
+}
+
+function collectionFormStyle(uiScale: number) {
+    return {
+        alignItems: 'center',
+        display: 'flex',
+        flexWrap: 'wrap' as const,
+        gap: `${6 * uiScale}px`,
+    };
+}
+
+function collectionInputStyle(uiScale: number) {
+    return {
+        ...searchInputStyle(uiScale),
+        background: t.bg.input,
+        border: `1px solid ${t.border.input}`,
+        borderRadius: t.radius.sm,
+        flex: '0 1 180px',
+        minHeight: `${24 * uiScale}px`,
+        padding: `${3 * uiScale}px ${6 * uiScale}px`,
+    };
+}
+
 function CollectionSummaryControl({
     busy,
     editing,
@@ -252,50 +297,6 @@ function CollectionSummaryControl({
             </button>
         </span>
     );
-}
-
-function collectionControlStyle(uiScale: number, selected: boolean) {
-    return {
-        alignItems: 'center',
-        background: selected ? t.bg.selected : t.bg.panel,
-        border: `1px solid ${selected ? t.accent.primary : t.border.subtle}`,
-        borderRadius: t.radius.sm,
-        display: 'inline-flex',
-        gap: `${2 * uiScale}px`,
-        padding: `${2 * uiScale}px`,
-    };
-}
-
-function collectionFilterButtonStyle(uiScale: number) {
-    return {
-        border: 'none',
-        color: t.text.normal,
-        cursor: 'pointer',
-        fontSize: `${11 * uiScale}px`,
-        padding: `${2 * uiScale}px ${4 * uiScale}px`,
-        whiteSpace: 'nowrap' as const,
-    };
-}
-
-function collectionFormStyle(uiScale: number) {
-    return {
-        alignItems: 'center',
-        display: 'flex',
-        flexWrap: 'wrap' as const,
-        gap: `${6 * uiScale}px`,
-    };
-}
-
-function collectionInputStyle(uiScale: number) {
-    return {
-        ...searchInputStyle(uiScale),
-        background: t.bg.input,
-        border: `1px solid ${t.border.input}`,
-        borderRadius: t.radius.sm,
-        flex: '0 1 180px',
-        minHeight: `${24 * uiScale}px`,
-        padding: `${3 * uiScale}px ${6 * uiScale}px`,
-    };
 }
 
 function iconButtonStyle(uiScale: number, disabled: boolean) {

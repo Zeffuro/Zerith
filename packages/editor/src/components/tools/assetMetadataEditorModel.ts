@@ -1,6 +1,6 @@
 import {
-    parseAssetLibraryLabelInput,
     type AssetLibraryAssetMetadata,
+    parseAssetLibraryLabelInput,
 } from '../../services/assetLibraryMetadata';
 
 export type AssetMetadataEditorDraft = {

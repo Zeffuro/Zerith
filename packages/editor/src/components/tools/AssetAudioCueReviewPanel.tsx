@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 
 import type { AssetAudioCueReview } from '../../services/assetAudioCueReview';
 
-import { loadAssetAudioCueReview } from '../../services/assetAudioCueReview';
 import { exportAssetAudioCuesToProject } from '../../services/assetAudioCueExport';
+import { loadAssetAudioCueReview } from '../../services/assetAudioCueReview';
 import { refreshProjectTree } from '../../services/explorerFileActions';
 import { refreshReferenceScannerState } from '../../services/referenceScanner';
 import { editorTheme as t } from '../../theme/editorTheme';
@@ -113,7 +113,7 @@ export function AssetAudioCueReviewPanel({
         }
     };
 
-    if (!loading && review.entries.length === 0) return null;
+    if (!loading && review.entries.length === 0) return;
 
     const isExporting = exportingTarget !== undefined;
     const exportableVisibleCount = review.entries.filter((entry) => entry.cueCount > 0 && entry.sourceAvailable !== false).length;

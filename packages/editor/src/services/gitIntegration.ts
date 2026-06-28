@@ -5,16 +5,6 @@ export {
     createGitRemoteSummaryReport,
     createGitStatusReport,
 } from './gitIntegration/readReports';
-export {
-    createGitBranchReport,
-    createGitCheckoutBranchReport,
-    createGitCommitStagedReport,
-    createGitInitRepositoryReport,
-    createGitPushCurrentBranchReport,
-    createGitStageAllReport,
-    createGitStageFileReport,
-    createGitUnstageFileReport,
-} from './gitIntegration/writeReports';
 export type {
     GitBranchEntry,
     GitBranchSummaryReport,
@@ -51,3 +41,13 @@ export type {
     GitUnstageFileReport,
     TauriInvoke,
 } from './gitIntegration/types';
+export {
+    createGitBranchReport,
+    createGitCheckoutBranchReport,
+    createGitCommitStagedReport,
+    createGitInitRepositoryReport,
+    createGitPushCurrentBranchReport,
+    createGitStageAllReport,
+    createGitStageFileReport,
+    createGitUnstageFileReport,
+} from './gitIntegration/writeReports';

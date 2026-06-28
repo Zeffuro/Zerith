@@ -1,6 +1,6 @@
-import { parseAudiosheetDescriptor } from 'core/schemas';
-
 import type { AudiosheetDescriptor } from 'core/types';
+
+import { parseAudiosheetDescriptor } from 'core/schemas';
 
 import { detectDescriptorType } from '../utils/assetDescriptorUtilities';
 import { fsJoin, fsReadTextFile } from './fs';
@@ -9,6 +9,11 @@ export type AssetAudioCueReview = {
     entries: AssetAudioCueReviewEntry[];
     issueCount: number;
     totalCues: number;
+};
+
+export type AssetAudioCueReviewDependencies = {
+    join: (...parts: string[]) => Promise<string>;
+    readTextFile: (path: string) => Promise<string>;
 };
 
 export type AssetAudioCueReviewEntry = {
@@ -21,11 +26,6 @@ export type AssetAudioCueReviewEntry = {
     sourceAssetUrl?: string;
     sourceAvailable?: boolean;
     volumeOverrideCueCount: number;
-};
-
-export type AssetAudioCueReviewDependencies = {
-    join: (...parts: string[]) => Promise<string>;
-    readTextFile: (path: string) => Promise<string>;
 };
 
 const defaultDependencies: AssetAudioCueReviewDependencies = {
@@ -87,7 +87,7 @@ export async function loadAssetAudioCueReview(
     dependencies: AssetAudioCueReviewDependencies = defaultDependencies,
 ): Promise<AssetAudioCueReview> {
     const descriptorAssetUrls = [...new Set(assetUrls)]
-        .filter(isSheetDescriptorAssetUrl)
+        .filter((assetUrl) => isSheetDescriptorAssetUrl(assetUrl))
         .toSorted((left, right) => left.localeCompare(right));
     const entries: AssetAudioCueReviewEntry[] = [];
 
@@ -127,6 +127,32 @@ export function resolveAudiosheetSourceAssetUrl(
     return normalizeAssetUrl(baseSegments.join('/'));
 }
 
+function createIssueEntry(descriptorAssetUrl: string, issueMessage: string): AssetAudioCueReviewEntry {
+    return {
+        cueCount: 0,
+        descriptorAssetUrl,
+        finiteDurationSeconds: 0,
+        issueMessages: [issueMessage],
+        loopCueCount: 0,
+        openEndedCueCount: 0,
+        volumeOverrideCueCount: 0,
+    };
+}
+
+function errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+}
+
+function isSheetDescriptorAssetUrl(assetUrl: string): boolean {
+    return assetUrl.toLocaleLowerCase().endsWith('.sheet.json');
+}
+
+function normalizeAssetUrl(assetUrl: string): string | undefined {
+    const normalized = assetUrl.replaceAll('\\', '/').replaceAll(/\/+/gu, '/');
+    const withLeadingSlash = normalized.startsWith('/') ? normalized : `/${normalized}`;
+    return withLeadingSlash.startsWith('/assets/') ? withLeadingSlash : undefined;
+}
+
 async function readCueReviewEntry(
     projectPath: string,
     descriptorAssetUrl: string,
@@ -157,30 +183,4 @@ async function readCueReviewEntry(
     }
 
     return createAssetAudioCueReviewEntry(descriptorAssetUrl, descriptor.data, assetInventory);
-}
-
-function createIssueEntry(descriptorAssetUrl: string, issueMessage: string): AssetAudioCueReviewEntry {
-    return {
-        cueCount: 0,
-        descriptorAssetUrl,
-        finiteDurationSeconds: 0,
-        issueMessages: [issueMessage],
-        loopCueCount: 0,
-        openEndedCueCount: 0,
-        volumeOverrideCueCount: 0,
-    };
-}
-
-function errorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : String(error);
-}
-
-function isSheetDescriptorAssetUrl(assetUrl: string): boolean {
-    return assetUrl.toLocaleLowerCase().endsWith('.sheet.json');
-}
-
-function normalizeAssetUrl(assetUrl: string): string | undefined {
-    const normalized = assetUrl.replaceAll('\\', '/').replaceAll(/\/+/gu, '/');
-    const withLeadingSlash = normalized.startsWith('/') ? normalized : `/${normalized}`;
-    return withLeadingSlash.startsWith('/assets/') ? withLeadingSlash : undefined;
 }

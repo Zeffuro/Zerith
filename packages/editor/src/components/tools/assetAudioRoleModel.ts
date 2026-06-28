@@ -6,6 +6,18 @@ import {
 } from '../../services/assetLibraryMetadata';
 import { classifyAssetLibraryKind } from './assetDependencyPanelModel';
 
+export type AssetAudioRoleAssetGroup = {
+    assetUrls: string[];
+    label: string;
+    role: AssetLibraryAudioRole;
+};
+
+export type AssetAudioRoleMetadataApplyResult = {
+    assetCount: number;
+    metadata: AssetLibraryMetadata;
+    roleGroups: AssetAudioRoleAssetGroup[];
+};
+
 export type AssetLibraryAudioRole =
     | 'audio-region'
     | 'audiosheet'
@@ -22,18 +34,6 @@ export type AssetLibraryAudioRoleSummary = {
     total: number;
     unused: number;
     used: number;
-};
-
-export type AssetAudioRoleAssetGroup = {
-    assetUrls: string[];
-    label: string;
-    role: AssetLibraryAudioRole;
-};
-
-export type AssetAudioRoleMetadataApplyResult = {
-    assetCount: number;
-    metadata: AssetLibraryMetadata;
-    roleGroups: AssetAudioRoleAssetGroup[];
 };
 
 export function applyAssetAudioRoleMetadataToLibrary(
@@ -153,12 +153,24 @@ export function filterAssetDependencyGraphByAudioRole(
 
 export function formatAssetAudioRole(role: AssetLibraryAudioRole): string {
     switch (role) {
-        case 'audio-region': return 'Audio Region';
-        case 'audiosheet': return 'Audiosheet';
-        case 'bgm': return 'BGM';
-        case 'other': return 'Other Audio';
-        case 'sfx': return 'SFX';
-        case 'voice': return 'Voice';
+        case 'audio-region': {
+            return 'Audio Region';
+        }
+        case 'audiosheet': {
+            return 'Audiosheet';
+        }
+        case 'bgm': {
+            return 'BGM';
+        }
+        case 'other': {
+            return 'Other Audio';
+        }
+        case 'sfx': {
+            return 'SFX';
+        }
+        case 'voice': {
+            return 'Voice';
+        }
     }
 }
 
@@ -166,9 +178,9 @@ const ASSET_AUDIO_ROLE_ORDER: AssetLibraryAudioRole[] = ['bgm', 'sfx', 'voice', 
 
 function audioRoleFromText(value: string): AssetLibraryAudioRole | undefined {
     const normalized = normalizedAssetSearchText(value);
-    if (/(^|[\/_.-])(bgm|music|song|theme|loop)([\/_.-]|$)/u.test(normalized)) return 'bgm';
-    if (/(^|[\/_.-])(sfx|sound|effect|click|beep)([\/_.-]|$)/u.test(normalized)) return 'sfx';
-    if (/(^|[\/_.-])(voice|vo|dialogue|line)([\/_.-]|$)/u.test(normalized)) return 'voice';
+    if (/(^|[/_.-])(bgm|music|song|theme|loop)([/_.-]|$)/u.test(normalized)) return 'bgm';
+    if (/(^|[/_.-])(sfx|sound|effect|click|beep)([/_.-]|$)/u.test(normalized)) return 'sfx';
+    if (/(^|[/_.-])(voice|vo|dialogue|line)([/_.-]|$)/u.test(normalized)) return 'voice';
     return undefined;
 }
 

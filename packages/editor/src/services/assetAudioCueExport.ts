@@ -1,14 +1,15 @@
+import type { AudiosheetDescriptor } from 'core/types';
+
 import { parseAudiosheetDescriptor } from 'core/schemas';
 
-import type { AudiosheetDescriptor } from 'core/types';
 import type { AudioBufferLike, AudioRegion, AudioRegionBatchNamePreset } from '../utils/audioRegions';
 import type { SaveAudioRegionInput, SaveAudioRegionResult } from './audioRegionExport';
 
-import { saveAudioRegionWavToProject } from './audioRegionExport';
-import { fsDirname, fsJoin, fsReadTextFile } from './fs';
+import { detectDescriptorType } from '../utils/assetDescriptorUtilities';
 import { closeAudioContext, decodeAudioSource } from '../utils/audio';
 import { encodeAudioBufferRegionsToWavFiles } from '../utils/audioRegions';
-import { detectDescriptorType } from '../utils/assetDescriptorUtilities';
+import { saveAudioRegionWavToProject } from './audioRegionExport';
+import { fsDirname, fsJoin, fsReadTextFile } from './fs';
 
 export type AssetAudioCueExportDependencies = {
     decodeAudioSource: (path: string) => Promise<AudioBufferLike>;
@@ -36,6 +37,23 @@ export type AssetAudioCueExportResult = {
 };
 
 const DEFAULT_TARGET_FOLDER = 'assets/audio-regions';
+
+export function createAudiosheetCueExportRegions(
+    descriptor: AudiosheetDescriptor,
+    audioDuration: number,
+): AudioRegion[] {
+    return Object.entries(descriptor.cues)
+        .toSorted(([leftName], [rightName]) => leftName.localeCompare(rightName))
+        .map(([name, cue]) => {
+            const start = Math.max(0, cue.start);
+            const duration = cue.duration ?? Math.max(0.01, audioDuration - start);
+            return {
+                end: start + Math.max(0.01, duration),
+                name,
+                start,
+            };
+        });
+}
 
 export async function exportAssetAudioCuesToProject(
     projectPath: string,
@@ -90,23 +108,6 @@ export async function exportAssetAudioCuesToProject(
     };
 }
 
-export function createAudiosheetCueExportRegions(
-    descriptor: AudiosheetDescriptor,
-    audioDuration: number,
-): AudioRegion[] {
-    return Object.entries(descriptor.cues)
-        .toSorted(([leftName], [rightName]) => leftName.localeCompare(rightName))
-        .map(([name, cue]) => {
-            const start = Math.max(0, cue.start);
-            const duration = cue.duration ?? Math.max(0.01, audioDuration - start);
-            return {
-                end: start + Math.max(0.01, duration),
-                name,
-                start,
-            };
-        });
-}
-
 export async function resolveAudiosheetAudioPath(
     descriptorPath: string,
     source: string,
@@ -140,6 +141,26 @@ async function decodeWithTemporaryContext(path: string): Promise<AudioBufferLike
     }
 }
 
+function normalizePathSegments(path: string): string {
+    const normalized = path.replaceAll('\\', '/');
+    const prefixMatch = normalized.match(/^[a-z]:/iu);
+    const prefix = prefixMatch?.[0] ?? (normalized.startsWith('/') ? '/' : '');
+    const rest = prefixMatch ? normalized.slice(prefix.length) : normalized.slice(prefix.length);
+    const segments: string[] = [];
+
+    for (const segment of rest.split('/')) {
+        if (!segment || segment === '.') continue;
+        if (segment === '..') {
+            if (segments.length > 0) segments.pop();
+            continue;
+        }
+        segments.push(segment);
+    }
+
+    if (prefixMatch) return `${prefix}/${segments.join('/')}`;
+    return `${prefix}${segments.join('/')}` || '.';
+}
+
 async function readAudiosheetDescriptor(
     descriptorPath: string,
     dependencies: Pick<AssetAudioCueExportDependencies, 'readTextFile'>,
@@ -164,24 +185,4 @@ async function resolveProjectAssetPath(
 ): Promise<string> {
     const relativeAssetPath = assetUrl.replaceAll('\\', '/').replace(/^\/+/u, '');
     return dependencies.join(projectPath, relativeAssetPath);
-}
-
-function normalizePathSegments(path: string): string {
-    const normalized = path.replaceAll('\\', '/');
-    const prefixMatch = normalized.match(/^[a-z]:/iu);
-    const prefix = prefixMatch?.[0] ?? (normalized.startsWith('/') ? '/' : '');
-    const rest = prefixMatch ? normalized.slice(prefix.length) : normalized.slice(prefix.length);
-    const segments: string[] = [];
-
-    for (const segment of rest.split('/')) {
-        if (!segment || segment === '.') continue;
-        if (segment === '..') {
-            if (segments.length > 0) segments.pop();
-            continue;
-        }
-        segments.push(segment);
-    }
-
-    if (prefixMatch) return `${prefix}/${segments.join('/')}`;
-    return `${prefix}${segments.join('/')}` || '.';
 }

@@ -4,7 +4,6 @@ import type { AssetLibraryMetadata } from '../../services/assetLibraryMetadata';
 import type { AssetUsageEntry, ReferenceLocation } from '../../services/referenceScanner';
 
 import { editorTheme as t } from '../../theme/editorTheme';
-import { EntryBlock } from './AssetDependencyRows';
 import { getAssetLibraryAssetMetadata } from './assetDependencyPanelModel';
 import {
     miniButtonStyle,
@@ -12,6 +11,7 @@ import {
     sectionStyle,
     sectionTitleRowStyle,
 } from './assetDependencyPanelStyles';
+import { EntryBlock } from './AssetDependencyRows';
 
 type Properties = {
     assetLibraryMetadata: AssetLibraryMetadata;

@@ -1,3 +1,9 @@
+export type GitDiffLine = {
+    kind: GitDiffLineKind;
+    lineNumber: number;
+    text: string;
+};
+
 export type GitDiffLineKind =
     | 'addition'
     | 'blank'
@@ -6,12 +12,6 @@ export type GitDiffLineKind =
     | 'file'
     | 'hunk'
     | 'meta';
-
-export type GitDiffLine = {
-    kind: GitDiffLineKind;
-    lineNumber: number;
-    text: string;
-};
 
 export function buildGitDiffLines(rawDiff: string | undefined): GitDiffLine[] {
     const lines = (rawDiff ?? '').replaceAll('\r\n', '\n').split('\n');
@@ -42,6 +42,6 @@ export function classifyGitDiffLine(text: string): GitDiffLineKind {
     }
     if (text.startsWith('+')) return 'addition';
     if (text.startsWith('-')) return 'deletion';
-    if (text.startsWith('\\ No newline')) return 'meta';
+    if (text.startsWith(String.raw`\ No newline`)) return 'meta';
     return 'context';
 }

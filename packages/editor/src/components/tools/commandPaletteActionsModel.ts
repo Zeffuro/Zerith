@@ -38,8 +38,8 @@ export type CommandPaletteActionDeps = {
     showGitCommitStaged: () => Promise<void> | void;
     showGitCreateBranch: () => Promise<void> | void;
     showGitIntegrationReport: () => void;
-    showGitPushPreflight: () => Promise<void> | void;
     showGitPushCurrentBranch: () => Promise<void> | void;
+    showGitPushPreflight: () => Promise<void> | void;
     showGitStageAll: () => Promise<void> | void;
     showGitStatusReport: () => Promise<void> | void;
     themeKey: string;

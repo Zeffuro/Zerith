@@ -3,6 +3,7 @@ import { ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 import type { GitStatusEntry } from '../../services/gitIntegration';
 
 import { editorTheme as t } from '../../theme/editorTheme';
+import { formatGitStatusCode } from './gitPanelModel';
 import {
     changeGroupHeaderStyle,
     changeGroupStyle,
@@ -11,13 +12,12 @@ import {
     fileRowStyle,
     rowActionButtonStyle,
 } from './gitPanelStyles';
-import { formatGitStatusCode } from './gitPanelModel';
 
 export function GitPanelChangeGroup({
     actionLabel,
     actionTitle,
-    entries,
     emptyLabel,
+    entries,
     icon,
     isBusy,
     isLoadingDiff,
@@ -30,8 +30,8 @@ export function GitPanelChangeGroup({
 }: {
     actionLabel: string;
     actionTitle: string;
-    entries: GitStatusEntry[];
     emptyLabel: string;
+    entries: GitStatusEntry[];
     icon: 'stage' | 'unstage';
     isBusy: boolean;
     isLoadingDiff: boolean;

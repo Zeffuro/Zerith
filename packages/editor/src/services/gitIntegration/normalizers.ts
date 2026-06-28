@@ -1,16 +1,4 @@
 import type {
-    GitBranchEntry,
-    GitBranchSummarySnapshot,
-    GitDiffFileSnapshot,
-    GitDiffFileSummary,
-    GitDiffSummarySnapshot,
-    GitInitRepositorySnapshot,
-    GitRemoteEntry,
-    GitRemoteSummarySnapshot,
-    GitStatusEntry,
-    GitStatusSnapshot,
-} from './types';
-import type {
     NativeGitBranchEntry,
     NativeGitBranchSummaryResponse,
     NativeGitCheckoutBranchResponse,
@@ -28,6 +16,18 @@ import type {
     NativeGitStatusEntry,
     NativeGitStatusResponse,
 } from './nativeTypes';
+import type {
+    GitBranchEntry,
+    GitBranchSummarySnapshot,
+    GitDiffFileSnapshot,
+    GitDiffFileSummary,
+    GitDiffSummarySnapshot,
+    GitInitRepositorySnapshot,
+    GitRemoteEntry,
+    GitRemoteSummarySnapshot,
+    GitStatusEntry,
+    GitStatusSnapshot,
+} from './types';
 
 export function normalizeGitBranchSummaryResponse(response: NativeGitBranchSummaryResponse): GitBranchSummarySnapshot {
     const branches = normalizeBranchEntries(response.branches);

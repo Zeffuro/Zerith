@@ -33,7 +33,7 @@ export function AssetAudioReviewPanel({
     total,
     uiScale,
 }: Properties) {
-    if (total === 0) return null;
+    if (total === 0) return;
 
     return (
         <>

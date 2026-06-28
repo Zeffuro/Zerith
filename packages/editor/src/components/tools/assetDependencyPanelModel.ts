@@ -1,6 +1,5 @@
-import type { AssetDependencyGraph, AssetUsageEntry } from '../../services/referenceScanner';
-
 import type { AssetLibraryMetadata } from '../../services/assetLibraryMetadata';
+import type { AssetDependencyGraph, AssetUsageEntry } from '../../services/referenceScanner';
 
 import { AUDIO_EXT, FONT_EXT, getExtension, IMG_EXT, TEXT_EXT } from '../../utils/assetTypes';
 
@@ -66,6 +65,26 @@ export function classifyAssetLibraryKind(assetUrl: string): AssetLibraryKind {
     return 'other';
 }
 
+export function collectAssetDependencyGraphUrls(dependencyGraph: AssetDependencyGraph): string[] {
+    const assetUrls = new Set<string>();
+    for (const entry of dependencyGraph.missing) {
+        assetUrls.add(entry.assetUrl);
+    }
+    for (const entry of dependencyGraph.used) {
+        assetUrls.add(entry.assetUrl);
+    }
+    for (const assetUrl of dependencyGraph.unused) {
+        assetUrls.add(assetUrl);
+    }
+
+    return [...assetUrls].toSorted((left, right) => left.localeCompare(right));
+}
+
+export function collectAssetUsageEntryUrls(entries: readonly AssetUsageEntry[]): string[] {
+    return [...new Set(entries.map((entry) => entry.assetUrl))]
+        .toSorted((left, right) => left.localeCompare(right));
+}
+
 export function createAssetKindSummary(dependencyGraph: AssetDependencyGraph): AssetLibraryKindSummary[] {
     const summaries = new Map<AssetLibraryKind, AssetLibraryKindSummary>();
 
@@ -126,32 +145,12 @@ export function createAssetOrganizationSummary(
     };
 }
 
-export function collectAssetDependencyGraphUrls(dependencyGraph: AssetDependencyGraph): string[] {
-    const assetUrls = new Set<string>();
-    for (const entry of dependencyGraph.missing) {
-        assetUrls.add(entry.assetUrl);
-    }
-    for (const entry of dependencyGraph.used) {
-        assetUrls.add(entry.assetUrl);
-    }
-    for (const assetUrl of dependencyGraph.unused) {
-        assetUrls.add(assetUrl);
-    }
-
-    return [...assetUrls].toSorted((left, right) => left.localeCompare(right));
-}
-
-export function collectAssetUsageEntryUrls(entries: readonly AssetUsageEntry[]): string[] {
-    return [...new Set(entries.map((entry) => entry.assetUrl))]
-        .toSorted((left, right) => left.localeCompare(right));
-}
-
 export function filterAssetDependencyGraph(
     dependencyGraph: AssetDependencyGraph,
     query: string,
     kindFilter: AssetLibraryKindFilter = 'all',
     metadata?: AssetLibraryMetadata,
-    organizationFilter: AssetLibraryOrganizationFilter = { kind: 'all' },
+    organizationFilter: AssetLibraryOrganizationFilter = ALL_ASSET_ORGANIZATION_FILTER,
 ): AssetDependencyGraph {
     const normalizedQuery = normalizeAssetSearchQuery(query);
     if (!normalizedQuery && kindFilter === 'all' && organizationFilter.kind === 'all') {
@@ -214,6 +213,13 @@ export function projectRelativeAssetPathFromUrl(assetUrl: string): string | unde
 
 const ASSET_KIND_ORDER: AssetLibraryKind[] = ['image', 'audio', 'json', 'font', 'text', 'other'];
 
+type AssetOrganizationItem = {
+    assetUrl: string;
+    state: 'missing' | 'unused' | 'used';
+};
+
+const ALL_ASSET_ORGANIZATION_FILTER: AssetLibraryOrganizationFilter = { kind: 'all' };
+
 export function reconcileUnusedAssetSelection(
     selectedAssetUrls: readonly string[],
     unusedAssetUrls: readonly string[],
@@ -255,10 +261,22 @@ export function toggleUnusedAssetSelection(
     return [...next].toSorted((left, right) => left.localeCompare(right));
 }
 
-type AssetOrganizationItem = {
-    assetUrl: string;
-    state: 'missing' | 'unused' | 'used';
-};
+function assetOrganizationMatches(
+    assetUrl: string,
+    metadata: AssetLibraryMetadata | undefined,
+    organizationFilter: AssetLibraryOrganizationFilter,
+): boolean {
+    if (organizationFilter.kind === 'all') return true;
+
+    const assetMetadata = metadata?.assets[assetUrl];
+    const labels = organizationFilter.kind === 'collection'
+        ? assetMetadata?.collections
+        : assetMetadata?.tags;
+    if (!labels) return false;
+
+    const normalizedLabel = normalizedAssetSearchText(organizationFilter.label);
+    return labels.some((label) => normalizedAssetSearchText(label) === normalizedLabel);
+}
 
 function assetUrlMatches(
     assetUrl: string,
@@ -296,23 +314,6 @@ function assetUsageEntryMatches(
             reference.path.join('.'),
             reference.sceneName,
         ].some((value) => normalizedAssetSearchText(value).includes(normalizedQuery)));
-}
-
-function assetOrganizationMatches(
-    assetUrl: string,
-    metadata: AssetLibraryMetadata | undefined,
-    organizationFilter: AssetLibraryOrganizationFilter,
-): boolean {
-    if (organizationFilter.kind === 'all') return true;
-
-    const assetMetadata = metadata?.assets[assetUrl];
-    const labels = organizationFilter.kind === 'collection'
-        ? assetMetadata?.collections
-        : assetMetadata?.tags;
-    if (!labels) return false;
-
-    const normalizedLabel = normalizedAssetSearchText(organizationFilter.label);
-    return labels.some((label) => normalizedAssetSearchText(label) === normalizedLabel);
 }
 
 function collectAssetOrganizationItems(dependencyGraph: AssetDependencyGraph): AssetOrganizationItem[] {

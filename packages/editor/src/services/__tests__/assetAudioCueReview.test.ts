@@ -36,6 +36,13 @@ describe('assetAudioCueReview', () => {
 
     it('loads visible audiosheet descriptors and skips spritesheets', async () => {
         const files = new Map<string, string>([
+            ['F:/project/assets/sfx/broken.sheet.json', JSON.stringify({
+                cues: {
+                    bad: { start: -1 },
+                },
+                source: 'missing.wav',
+            })],
+            ['F:/project/assets/sfx/invalid.sheet.json', '{'],
             ['F:/project/assets/sfx/ui.sheet.json', JSON.stringify({
                 cues: {
                     click: { duration: 0.2, start: 0, volume: 0.6 },
@@ -43,18 +50,11 @@ describe('assetAudioCueReview', () => {
                 },
                 source: 'ui.wav',
             })],
-            ['F:/project/assets/sfx/broken.sheet.json', JSON.stringify({
-                cues: {
-                    bad: { start: -1 },
-                },
-                source: 'missing.wav',
-            })],
             ['F:/project/assets/sprites/hero.sheet.json', JSON.stringify({
                 format: 'atlas',
                 frames: {},
                 source: 'hero.png',
             })],
-            ['F:/project/assets/sfx/invalid.sheet.json', '{'],
         ]);
 
         const review = await loadAssetAudioCueReview(
@@ -68,11 +68,11 @@ describe('assetAudioCueReview', () => {
             ],
             ['/assets/sfx/ui.wav'],
             {
-                join: async (...parts) => parts.join('/'),
-                readTextFile: async (path) => {
+                join: (...parts) => Promise.resolve(parts.join('/')),
+                readTextFile: (path) => {
                     const value = files.get(path);
                     if (value === undefined) throw new Error('missing file');
-                    return value;
+                    return Promise.resolve(value);
                 },
             },
         );

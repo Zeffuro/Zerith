@@ -42,43 +42,43 @@ describe('assetAudioCueExport', () => {
             'F:/project/assets/sfx/ui.sheet.json',
             '../audio/ui.wav',
             {
-                dirname: async (path) => path.slice(0, path.lastIndexOf('/')),
-                join: async (...parts) => parts.join('/'),
+                dirname: (path) => Promise.resolve(path.slice(0, path.lastIndexOf('/'))),
+                join: (...parts) => Promise.resolve(parts.join('/')),
             },
         )).resolves.toBe('F:/project/assets/audio/ui.wav');
     });
 
     it('exports every cue from an audiosheet descriptor into project audio regions', async () => {
-        const savedRegions: Array<{ name?: string; start: number; end: number; }> = [];
+        const savedRegions: Array<{ end: number; name?: string; start: number; }> = [];
 
         const result = await exportAssetAudioCuesToProject('F:/project', {
             descriptorAssetUrl: '/assets/sfx/ui.sheet.json',
             targetFolder: 'assets/exported-cues',
         }, {
-            decodeAudioSource: async (path) => {
+            decodeAudioSource: (path) => {
                 expect(path).toBe('F:/project/assets/sfx/ui.wav');
-                return createAudioBuffer(1.25);
+                return Promise.resolve(createAudioBuffer(1.25));
             },
-            dirname: async (path) => path.slice(0, path.lastIndexOf('/')),
-            join: async (...parts) => parts.join('/'),
-            readTextFile: async (path) => {
+            dirname: (path) => Promise.resolve(path.slice(0, path.lastIndexOf('/'))),
+            join: (...parts) => Promise.resolve(parts.join('/')),
+            readTextFile: (path) => {
                 expect(path).toBe('F:/project/assets/sfx/ui.sheet.json');
-                return JSON.stringify({
+                return Promise.resolve(JSON.stringify({
                     cues: {
                         click: { duration: 0.2, start: 0 },
                         tail: { start: 0.75 },
                     },
                     source: 'ui.wav',
-                });
+                }));
             },
-            saveRegion: async (_projectPath, input) => {
+            saveRegion: (_projectPath, input) => {
                 savedRegions.push(input.region);
-                return {
+                return Promise.resolve({
                     assetUrl: `/assets/exported-cues/${input.region.name}.wav`,
                     collisionResolved: false,
                     targetName: `${input.region.name}.wav`,
                     targetPath: `F:/project/assets/exported-cues/${input.region.name}.wav`,
-                };
+                });
             },
         });
 
@@ -99,17 +99,15 @@ describe('assetAudioCueExport', () => {
         await expect(exportAssetAudioCuesToProject('F:/project', {
             descriptorAssetUrl: '/assets/sprites/hero.sheet.json',
         }, {
-            decodeAudioSource: async () => createAudioBuffer(),
-            dirname: async (path) => path,
-            join: async (...parts) => parts.join('/'),
-            readTextFile: async () => JSON.stringify({
+            decodeAudioSource: () => Promise.resolve(createAudioBuffer()),
+            dirname: (path) => Promise.resolve(path),
+            join: (...parts) => Promise.resolve(parts.join('/')),
+            readTextFile: () => Promise.resolve(JSON.stringify({
                 format: 'atlas',
                 frames: {},
                 source: 'hero.png',
-            }),
-            saveRegion: async () => {
-                throw new Error('should not save');
-            },
+            })),
+            saveRegion: () => Promise.reject(new Error('should not save')),
         })).rejects.toThrow('not an audiosheet');
     });
 });

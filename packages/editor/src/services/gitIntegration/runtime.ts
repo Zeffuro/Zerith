@@ -1,10 +1,6 @@
-import { isTauriRuntime } from '../runtime/runtimeEnvironment';
-
 import type { GitCommitStagedOptions, GitStatusDependencies, GitStatusRuntime, TauriInvoke } from './types';
 
-export function resolveGitRuntime(dependencies: GitStatusDependencies): GitStatusRuntime {
-    return (dependencies.isTauriRuntime ?? isTauriRuntime)() ? 'desktop' : 'browser';
-}
+import { isTauriRuntime } from '../runtime/runtimeEnvironment';
 
 export async function loadTauriInvoke(): Promise<TauriInvoke> {
     const { invoke } = await import('@tauri-apps/api/core');
@@ -29,6 +25,10 @@ export function resolveGitCommitArguments(
         dependencies: dependencies ?? {},
         options: optionsOrDependencies,
     };
+}
+
+export function resolveGitRuntime(dependencies: GitStatusDependencies): GitStatusRuntime {
+    return (dependencies.isTauriRuntime ?? isTauriRuntime)() ? 'desktop' : 'browser';
 }
 
 export function stringifyError(error: unknown): string {

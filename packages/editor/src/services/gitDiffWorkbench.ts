@@ -30,7 +30,7 @@ export function openGitDiffWorkbenchTab(options: OpenGitDiffWorkbenchTabOptions)
 }
 
 function basename(path: string): string {
-    return path.split('/').filter(Boolean).at(-1) ?? path;
+    return path.split('/').findLast(Boolean) ?? path;
 }
 
 function trimTrailingSlashes(path: string): string {

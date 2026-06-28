@@ -130,10 +130,6 @@ function basename(path: string) {
     return path.split(/[\\/]/).pop() || path;
 }
 
-function tabKey(kind: WorkbenchTab['kind'], path: string) {
-    return `${kind}::${path}`;
-}
-
 function clearLinkedEditorIfRemoved(removedTabs: WorkbenchTab[], keptTabs: WorkbenchTab[]): void {
     const project = useProjectStore.getState();
     const activeFile = project.activeFile;
@@ -158,5 +154,9 @@ function normalizePath(path: string): string {
 
 function samePath(left: string, right: string): boolean {
     return normalizePath(left) === normalizePath(right);
+}
+
+function tabKey(kind: WorkbenchTab['kind'], path: string) {
+    return `${kind}::${path}`;
 }
 

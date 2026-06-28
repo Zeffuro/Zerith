@@ -10,7 +10,7 @@ describe('gitDiffViewerModel', () => {
         expect(classifyGitDiffLine('@@ -1,2 +1,2 @@')).toBe('hunk');
         expect(classifyGitDiffLine('+added')).toBe('addition');
         expect(classifyGitDiffLine('-removed')).toBe('deletion');
-        expect(classifyGitDiffLine('\\ No newline at end of file')).toBe('meta');
+        expect(classifyGitDiffLine(String.raw`\ No newline at end of file`)).toBe('meta');
         expect(classifyGitDiffLine(' unchanged')).toBe('context');
     });
 

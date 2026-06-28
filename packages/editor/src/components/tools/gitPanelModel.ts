@@ -13,19 +13,19 @@ import {
     type GitRemotePolicyStatus,
 } from '../../services/gitIntegrationReport';
 
+export type GitPanelChangeBuckets = {
+    staged: GitStatusEntry[];
+    unstaged: GitStatusEntry[];
+};
+
 export type GitPanelChangeSummary = {
     binaryFiles: number;
     deletions: number;
     insertions: number;
     staged: number;
     total: number;
-    untracked: number;
     unstaged: number;
-};
-
-export type GitPanelChangeBuckets = {
-    staged: GitStatusEntry[];
-    unstaged: GitStatusEntry[];
+    untracked: number;
 };
 
 export type GitPanelPushPreflight = {
@@ -34,7 +34,7 @@ export type GitPanelPushPreflight = {
     effectivePushUrl?: string;
     note: string;
     remoteName: string;
-    status: GitRemotePolicyStatus | 'unavailable';
+    status: 'unavailable' | GitRemotePolicyStatus;
 };
 
 export function createGitPanelChangeBuckets(statusReport: GitStatusReport | undefined): GitPanelChangeBuckets {
@@ -43,8 +43,8 @@ export function createGitPanelChangeBuckets(statusReport: GitStatusReport | unde
         : [];
 
     return {
-        staged: statusEntries.filter(isStagedGitEntry),
-        unstaged: statusEntries.filter(isUnstagedGitEntry),
+        staged: statusEntries.filter((entry) => isStagedGitEntry(entry)),
+        unstaged: statusEntries.filter((entry) => isUnstagedGitEntry(entry)),
     };
 }
 
@@ -64,32 +64,15 @@ export function createGitPanelChangeSummary(
         insertions: diffFiles.reduce((total, file) => total + file.insertions, 0),
         staged: buckets.staged.length,
         total: new Set(statusEntries.map((entry) => entry.path)).size,
-        untracked: buckets.unstaged.filter((entry) => entry.index === '?' && entry.workingTree === '?').length,
         unstaged: buckets.unstaged.length,
+        untracked: buckets.unstaged.filter((entry) => entry.index === '?' && entry.workingTree === '?').length,
     };
-}
-
-export function createGitPanelRemotePolicy(
-    remoteReport: GitRemoteSummaryReport | undefined,
-): GitRemotePolicyReport | undefined {
-    if (remoteReport?.status !== 'ready' || !remoteReport.isRepository) {
-        return undefined;
-    }
-
-    return createGitRemotePolicyReport(remoteReport.remotes);
-}
-
-export function findDefaultGitRemote(remotes: readonly GitRemoteEntry[], policy: GitRemotePolicyReport | undefined): string {
-    return policy?.recommendedRemote
-        ?? remotes.find((remote) => remote.name === 'origin')?.name
-        ?? remotes[0]?.name
-        ?? 'origin';
 }
 
 export function createGitPanelPushPreflight(
     remotes: readonly GitRemoteEntry[],
     policy: GitRemotePolicyReport | undefined,
-    selectedRemoteName: string | undefined,
+    selectedRemoteName?: string,
 ): GitPanelPushPreflight {
     const remoteName = selectedRemoteName?.trim() || findDefaultGitRemote(remotes, policy);
     const policyEntry = findGitRemotePolicyEntry(policy, remoteName);
@@ -116,7 +99,24 @@ export function createGitPanelPushPreflight(
     };
 }
 
-export function formatGitBranchLabel(statusReport: GitStatusReport | undefined): string {
+export function createGitPanelRemotePolicy(
+    remoteReport: GitRemoteSummaryReport | undefined,
+): GitRemotePolicyReport | undefined {
+    if (remoteReport?.status !== 'ready' || !remoteReport.isRepository) {
+        return undefined;
+    }
+
+    return createGitRemotePolicyReport(remoteReport.remotes);
+}
+
+export function findDefaultGitRemote(remotes: readonly GitRemoteEntry[], policy?: GitRemotePolicyReport): string {
+    return policy?.recommendedRemote
+        ?? remotes.find((remote) => remote.name === 'origin')?.name
+        ?? remotes[0]?.name
+        ?? 'origin';
+}
+
+export function formatGitBranchLabel(statusReport?: GitStatusReport): string {
     if (statusReport?.status !== 'ready') return 'Unavailable';
     if (!statusReport.isRepository) return 'No repository';
     return statusReport.branch ?? 'Detached HEAD';
@@ -126,17 +126,17 @@ export function formatGitStatusCode(entry: GitStatusEntry): string {
     return `${entry.index}${entry.workingTree}`;
 }
 
+function findGitRemotePolicyEntry(
+    policy: GitRemotePolicyReport | undefined,
+    remoteName: string,
+): GitRemotePolicyEntry | undefined {
+    return policy?.entries.find((entry) => entry.name === remoteName);
+}
+
 function isStagedGitEntry(entry: GitStatusEntry): boolean {
     return entry.index !== ' ' && entry.index !== '?';
 }
 
 function isUnstagedGitEntry(entry: GitStatusEntry): boolean {
     return entry.index === '?' || entry.workingTree !== ' ';
-}
-
-function findGitRemotePolicyEntry(
-    policy: GitRemotePolicyReport | undefined,
-    remoteName: string,
-): GitRemotePolicyEntry | undefined {
-    return policy?.entries.find((entry) => entry.name === remoteName);
 }

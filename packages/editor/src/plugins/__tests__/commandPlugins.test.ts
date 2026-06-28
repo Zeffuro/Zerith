@@ -65,7 +65,7 @@ describe('commandPlugins', () => {
             assetUrl: '/assets/fx/pulse.png',
             type,
         }).success).toBe(true);
-    }, 10000);
+    }, 10_000);
 
     it('exposes registered command schemas to fallback inspector inference', async () => {
         installAudioFeatureProbeStub();

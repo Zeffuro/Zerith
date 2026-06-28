@@ -1,12 +1,3 @@
-import {
-    normalizeGitBranchSummaryResponse,
-    normalizeGitDiffFileResponse,
-    normalizeGitDiffSummaryResponse,
-    normalizeGitRemoteSummaryResponse,
-    normalizeGitStatusResponse,
-} from './normalizers';
-import { loadTauriInvoke, resolveGitRuntime, stringifyError } from './runtime';
-
 import type {
     NativeGitBranchSummaryResponse,
     NativeGitDiffFileResponse,
@@ -22,6 +13,15 @@ import type {
     GitStatusDependencies,
     GitStatusReport,
 } from './types';
+
+import {
+    normalizeGitBranchSummaryResponse,
+    normalizeGitDiffFileResponse,
+    normalizeGitDiffSummaryResponse,
+    normalizeGitRemoteSummaryResponse,
+    normalizeGitStatusResponse,
+} from './normalizers';
+import { loadTauriInvoke, resolveGitRuntime, stringifyError } from './runtime';
 
 export async function createGitBranchSummaryReport(
     projectPath: string | undefined,

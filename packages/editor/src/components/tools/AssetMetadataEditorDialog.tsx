@@ -2,14 +2,15 @@ import { Save, X } from 'lucide-react';
 import { type FormEvent, useEffect, useState } from 'react';
 
 import type { AssetLibraryAssetMetadata } from '../../services/assetLibraryMetadata';
+
 import { useBackdropDismissal } from '../../hooks/useBackdropDismissal';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { miniButtonStyle, searchInputStyle } from './assetDependencyPanelStyles';
+import { AssetMetadataChips } from './AssetDependencyRows';
 import {
     formatAssetMetadataEditorDraft,
     parseAssetMetadataEditorDraft,
 } from './assetMetadataEditorModel';
-import { AssetMetadataChips } from './AssetDependencyRows';
 
 type Properties = {
     assetUrl?: string;
@@ -47,7 +48,7 @@ export function AssetMetadataEditorDialog({
     }, [assetUrl, draft.collectionsInput, draft.tagsInput, subject]);
 
     const displaySubject = subject ?? assetUrl;
-    if (!displaySubject) return null;
+    if (!displaySubject) return;
 
     const parsedMetadata = parseAssetMetadataEditorDraft({ collectionsInput, tagsInput });
     const submit = (event: FormEvent) => {
@@ -58,7 +59,7 @@ export function AssetMetadataEditorDialog({
 
     return (
         <div {...backdropDismissal} style={backdropStyle}>
-            <form onSubmit={submit} style={dialogStyle(uiScale)} onClick={(event) => event.stopPropagation()}>
+            <form onClick={(event) => event.stopPropagation()} onSubmit={submit} style={dialogStyle(uiScale)}>
                 <div style={titleRowStyle(uiScale)}>
                     <div style={{ minWidth: 0 }}>
                         <div style={{ color: t.text.primary, fontSize: `${14 * uiScale}px`, fontWeight: 700 }}>{title}</div>
@@ -141,6 +142,17 @@ const backdropStyle = {
     zIndex: 2000,
 };
 
+function dialogInputStyle(uiScale: number) {
+    return {
+        ...searchInputStyle(uiScale),
+        background: t.bg.input,
+        border: `1px solid ${t.border.input}`,
+        borderRadius: t.radius.sm,
+        minHeight: `${28 * uiScale}px`,
+        padding: `${5 * uiScale}px ${7 * uiScale}px`,
+    };
+}
+
 function dialogStyle(uiScale: number) {
     return {
         background: t.bg.panel,
@@ -153,17 +165,6 @@ function dialogStyle(uiScale: number) {
         maxWidth: 'min(92vw, 520px)',
         padding: `${16 * uiScale}px`,
         width: `${420 * uiScale}px`,
-    };
-}
-
-function dialogInputStyle(uiScale: number) {
-    return {
-        ...searchInputStyle(uiScale),
-        background: t.bg.input,
-        border: `1px solid ${t.border.input}`,
-        borderRadius: t.radius.sm,
-        minHeight: `${28 * uiScale}px`,
-        padding: `${5 * uiScale}px ${7 * uiScale}px`,
     };
 }
 

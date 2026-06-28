@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import {
+    type AssetLibraryMetadata,
     createEmptyAssetLibraryMetadata,
     loadAssetLibraryMetadata,
-    type AssetLibraryMetadata,
 } from '../../services/assetLibraryMetadata';
 import { createAssetDependencyGraph } from '../../services/referenceScanner';
 import { executeConsoleMessageAction } from '../../store/actions/consoleMessageActions';
@@ -13,12 +13,14 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { AssetAudioCueReviewPanel } from './AssetAudioCueReviewPanel';
-import { AssetDependencyActionBar } from './AssetDependencyActionBar';
 import { AssetAudioReviewPanel } from './AssetAudioReviewPanel';
 import {
-    createBulkMetadataRequest,
-    type BulkMetadataRequest,
-} from './assetDependencyPanelBulkMetadata';
+    type AssetLibraryAudioRoleFilter,
+    collectAssetAudioRoleAssetGroups,
+    createAssetAudioRoleSummary,
+    filterAssetDependencyGraphByAudioRole,
+} from './assetAudioRoleModel';
+import { AssetDependencyActionBar } from './AssetDependencyActionBar';
 import {
     handleAddAssetMetadataToAssets,
     handleAddVisibleAssetCollection,
@@ -33,19 +35,13 @@ import {
     handleSaveAssetMetadata,
 } from './assetDependencyPanelActions';
 import {
-    type AssetLibraryAudioRoleFilter,
-    collectAssetAudioRoleAssetGroups,
-    createAssetAudioRoleSummary,
-    filterAssetDependencyGraphByAudioRole,
-} from './assetAudioRoleModel';
-import { AssetKindFilterPanel } from './AssetKindFilterPanel';
-import { AssetMetadataEditorDialog } from './AssetMetadataEditorDialog';
-import { AssetReferenceSection } from './AssetReferenceSection';
-import { AssetUnusedSection } from './AssetUnusedSection';
-import { AssetLibraryOrganizationPanel } from './AssetLibraryOrganizationPanel';
+    type BulkMetadataRequest,
+    createBulkMetadataRequest,
+} from './assetDependencyPanelBulkMetadata';
 import {
     areAllUnusedAssetsSelected,
     type AssetLibraryKindFilter,
+    type AssetLibraryOrganizationFilter,
     collectAssetDependencyGraphUrls,
     collectAssetUsageEntryUrls,
     createAssetKindSummary,
@@ -58,8 +54,12 @@ import {
     removeUnusedAssetScope,
     selectUnusedAssetScope,
     toggleUnusedAssetSelection,
-    type AssetLibraryOrganizationFilter,
 } from './assetDependencyPanelModel';
+import { AssetKindFilterPanel } from './AssetKindFilterPanel';
+import { AssetLibraryOrganizationPanel } from './AssetLibraryOrganizationPanel';
+import { AssetMetadataEditorDialog } from './AssetMetadataEditorDialog';
+import { AssetReferenceSection } from './AssetReferenceSection';
+import { AssetUnusedSection } from './AssetUnusedSection';
 
 export function AssetDependencyPanel() {
     const uiScale = useSettingsStore((state) => state.uiScale);
@@ -400,7 +400,7 @@ export function AssetDependencyPanel() {
                         setSavingMetadataAssetUrl,
                     )
                         .then(() => setMetadataEditorAssetUrl(undefined))
-                        .catch(() => undefined);
+                        .catch(() => {});
                 }}
                 uiScale={uiScale}
             />
@@ -425,7 +425,7 @@ export function AssetDependencyPanel() {
                         bulkMetadataRequest.scopeLabel,
                     )
                         .then(() => setBulkMetadataRequest(undefined))
-                        .catch(() => undefined);
+                        .catch(() => {});
                 }}
                 saveText="Apply labels"
                 subject={bulkMetadataRequest?.subject}

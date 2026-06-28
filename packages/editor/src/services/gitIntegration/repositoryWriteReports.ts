@@ -1,10 +1,3 @@
-import {
-    normalizeGitCommitStagedResponse,
-    normalizeGitInitRepositoryResponse,
-    normalizeGitPushCurrentBranchResponse,
-} from './normalizers';
-import { loadTauriInvoke, resolveGitCommitArguments, resolveGitRuntime, stringifyError } from './runtime';
-
 import type {
     NativeGitCommitStagedResponse,
     NativeGitInitRepositoryResponse,
@@ -18,6 +11,13 @@ import type {
     GitPushCurrentBranchReport,
     GitStatusDependencies,
 } from './types';
+
+import {
+    normalizeGitCommitStagedResponse,
+    normalizeGitInitRepositoryResponse,
+    normalizeGitPushCurrentBranchResponse,
+} from './normalizers';
+import { loadTauriInvoke, resolveGitCommitArguments, resolveGitRuntime, stringifyError } from './runtime';
 
 export async function createGitCommitStagedReport(
     projectPath: string | undefined,

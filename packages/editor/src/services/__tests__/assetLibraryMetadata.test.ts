@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-    ASSET_LIBRARY_METADATA_FILE_NAME,
     addAssetLibraryCollectionToAssets,
     addAssetLibraryMetadataToAssets,
+    ASSET_LIBRARY_METADATA_FILE_NAME,
+    type AssetLibraryMetadataDependencies,
     createEmptyAssetLibraryMetadata,
     loadAssetLibraryMetadata,
     moveAssetLibraryMetadataScope,
@@ -14,7 +15,6 @@ import {
     renameAssetLibraryCollection,
     saveAssetLibraryMetadata,
     setAssetLibraryAssetMetadata,
-    type AssetLibraryMetadataDependencies,
 } from '../assetLibraryMetadata';
 
 function createDependencies(
