@@ -21,7 +21,8 @@ import type { ScriptPath } from '../../../utils/scriptPathUtilities';
 import type { SceneComposerGraphTargetStatus, SceneComposerSnapshot } from './sceneComposerModel';
 
 import { editorTheme as t } from '../../../theme/editorTheme';
-import { resolveMissingGraphSceneCreations } from './sceneComposerModel';
+import { resolveMissingGraphMacroCreations, resolveMissingGraphSceneCreations } from './sceneComposerModel';
+import { formatSceneComposerPath } from './sceneComposerPathModel';
 
 type ComposerTileProperties = {
     detail?: string;
@@ -55,14 +56,19 @@ type Properties = {
     onCreateLabel?: (label: string, sourcePath: ScriptPath) => void;
     onCreateMissingLabels?: () => void;
     onCreateMissingMacro?: (macroName: string) => void;
+    onCreateMissingMacros?: (macroNames: string[]) => void;
     onCreateMissingScene?: (sceneName: string) => void;
     onCreateMissingScenes?: (sceneNames: string[]) => void;
     onOpenMacro?: (macroName: string) => void;
     onOpenMissingSceneTarget?: (sceneName: string) => void;
     onOpenScene?: (sceneName: string) => void;
+    onOpenSelectedJson?: () => void;
     onSelectPath?: (path: ScriptPath) => void;
     snapshot: SceneComposerSnapshot;
+    sourceDirty?: boolean;
+    sourceFilePath?: string;
     uiScale: number;
+    validationIssueCount?: number;
 };
 
 export function TimelineSceneComposerPanel({
@@ -71,18 +77,33 @@ export function TimelineSceneComposerPanel({
     onCreateLabel,
     onCreateMissingLabels,
     onCreateMissingMacro,
+    onCreateMissingMacros,
     onCreateMissingScene,
     onCreateMissingScenes,
     onOpenMacro,
     onOpenMissingSceneTarget,
     onOpenScene,
+    onOpenSelectedJson,
     onSelectPath,
     snapshot,
+    sourceDirty = false,
+    sourceFilePath,
     uiScale,
+    validationIssueCount = 0,
 }: Properties) {
     const scopeLabel = snapshot.targetIndex === undefined
         ? `Full scene - ${snapshot.totalCommands} commands`
         : `At command ${snapshot.targetIndex + 1} of ${snapshot.totalCommands}`;
+    const actionStatus = snapshot.graph.missingTargets > 0 ? 'guarded writes available' : 'read-only summary';
+    const graphStatus = snapshot.graph.missingTargets > 0
+        ? `${snapshot.graph.missingTargets} missing target${snapshot.graph.missingTargets === 1 ? '' : 's'}`
+        : 'connected';
+    const sourceFileName = sourceFilePath ? basename(sourceFilePath) : 'No scene file';
+    const selectionPathLabel = snapshot.selection.pathKey ?? 'scene root';
+    const selectionScopeLabel = snapshot.selection.breadcrumb ?? 'Full scene';
+    const validationStatus = validationIssueCount > 0
+        ? `${validationIssueCount} issue${validationIssueCount === 1 ? '' : 's'}`
+        : 'clean';
     const spriteValue = snapshot.sprites.length === 0
         ? 'none'
         : snapshot.sprites.map((sprite) => formatSpriteState(sprite)).join(', ');
@@ -94,6 +115,7 @@ export function TimelineSceneComposerPanel({
         canOpenScene,
     });
     const missingGotoLabelCount = countMissingGotoLabels(snapshot);
+    const missingMacros = resolveMissingGraphMacroCreations(snapshot.graph.calls);
     const missingJumpScenes = resolveMissingGraphSceneCreations(snapshot.graph.jumps);
 
     return (
@@ -117,6 +139,71 @@ export function TimelineSceneComposerPanel({
             >
                 <strong style={{ color: t.text.primary, fontSize: `${12 * uiScale}px` }}>Scene Composer</strong>
                 <span>{scopeLabel}</span>
+            </div>
+
+            <div
+                style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: `${5 * uiScale}px`,
+                }}
+            >
+                <ComposerStatusChip
+                    label="File"
+                    title={sourceFilePath}
+                    tone={sourceDirty ? 'warn' : undefined}
+                    uiScale={uiScale}
+                    value={`${sourceFileName}${sourceDirty ? ' *' : ''}`}
+                />
+                <ComposerStatusChip
+                    label="Scene"
+                    uiScale={uiScale}
+                    value={snapshot.graph.currentSceneName ?? 'unmapped'}
+                />
+                <ComposerStatusChip
+                    label="Scope"
+                    title={selectionScopeLabel}
+                    uiScale={uiScale}
+                    value={selectionScopeLabel}
+                />
+                <ComposerStatusChip
+                    label="Path"
+                    title={selectionPathLabel}
+                    uiScale={uiScale}
+                    value={selectionPathLabel}
+                />
+                <ComposerStatusChip
+                    label="Graph"
+                    tone={snapshot.graph.missingTargets > 0 ? 'warn' : undefined}
+                    uiScale={uiScale}
+                    value={graphStatus}
+                />
+                <ComposerStatusChip
+                    label="Validation"
+                    tone={validationIssueCount > 0 ? 'warn' : undefined}
+                    uiScale={uiScale}
+                    value={validationStatus}
+                />
+                <ComposerStatusChip
+                    label="Actions"
+                    tone={snapshot.graph.missingTargets > 0 ? 'warn' : undefined}
+                    uiScale={uiScale}
+                    value={actionStatus}
+                />
+                {onOpenSelectedJson ? (
+                    <button
+                        className="toolbar-btn"
+                        onClick={onOpenSelectedJson}
+                        style={composerHeaderActionStyle(uiScale)}
+                        title={snapshot.selection.breadcrumb
+                            ? `Open JSON at ${snapshot.selection.breadcrumb}`
+                            : 'Open scene JSON'}
+                        type="button"
+                    >
+                        <ExternalLink size={11 * uiScale} />
+                        <span>Open JSON</span>
+                    </button>
+                ) : undefined}
             </div>
 
             <div
@@ -212,6 +299,18 @@ export function TimelineSceneComposerPanel({
                                     <span>Create Scenes ({missingJumpScenes.length})</span>
                                 </button>
                             ) : undefined}
+                            {missingMacros.length > 1 && onCreateMissingMacros ? (
+                                <button
+                                    className="toolbar-btn"
+                                    onClick={() => onCreateMissingMacros(missingMacros)}
+                                    style={graphHeaderActionStyle(uiScale)}
+                                    title={`Create ${missingMacros.length} missing macros`}
+                                    type="button"
+                                >
+                                    <Plus size={11 * uiScale} />
+                                    <span>Create Macros ({missingMacros.length})</span>
+                                </button>
+                            ) : undefined}
                             <span>
                                 {snapshot.graph.labels.length} labels / {snapshot.graph.gotos.length + snapshot.graph.jumps.length} exits / {snapshot.graph.calls.length} calls
                             </span>
@@ -296,6 +395,10 @@ export function TimelineSceneComposerPanel({
     );
 }
 
+function basename(path: string): string {
+    return path.split(/[\\/]/u).pop() || path;
+}
+
 function buildGraphChips(
     snapshot: SceneComposerSnapshot,
     options: {
@@ -309,7 +412,7 @@ function buildGraphChips(
             kind: 'label' as const,
             label: label.name,
             path: label.path,
-            title: `Label: ${label.name}`,
+            title: `Label: ${label.name} at ${formatSceneComposerPath(label.path)}`,
         })),
         ...snapshot.graph.calls.map((call) => ({
             canCreateMacro: call.status === 'missing' && call.macroName.length > 0,
@@ -322,7 +425,7 @@ function buildGraphChips(
             path: call.path,
             status: call.status,
             targetMacro: call.macroName,
-            title: `Macro call: ${call.macroName || '(missing macro)'}`,
+            title: `Macro call: ${call.macroName || '(missing macro)'} at ${formatSceneComposerPath(call.path)}`,
         })),
         ...snapshot.graph.gotos.map((goto) => ({
             canCreateLabel: goto.status === 'missing' && goto.label.length > 0,
@@ -332,7 +435,7 @@ function buildGraphChips(
             path: goto.path,
             status: goto.status,
             targetPath: goto.targetPath,
-            title: `Goto: ${goto.label || '(missing label)'}`,
+            title: `Goto: ${goto.label || '(missing label)'} at ${formatSceneComposerPath(goto.path)}`,
         })),
         ...snapshot.graph.jumps.map((jump) => ({
             canCreateScene: jump.status === 'missing' && jump.targetScene.length > 0,
@@ -346,9 +449,65 @@ function buildGraphChips(
             path: jump.path,
             status: jump.status,
             targetScene: jump.targetScene,
-            title: `Jump: ${jump.targetScene || '(missing scene)'}`,
+            title: `Jump: ${jump.targetScene || '(missing scene)'} at ${formatSceneComposerPath(jump.path)}`,
         })),
     ];
+}
+
+function composerHeaderActionStyle(uiScale: number) {
+    return {
+        alignItems: 'center',
+        border: `1px solid ${t.border.subtle}`,
+        borderRadius: t.radius.sm,
+        color: t.text.normal,
+        cursor: 'pointer',
+        display: 'inline-flex',
+        fontSize: `${10 * uiScale}px`,
+        gap: `${4 * uiScale}px`,
+        minHeight: `${22 * uiScale}px`,
+        padding: `${2 * uiScale}px ${6 * uiScale}px`,
+        whiteSpace: 'nowrap',
+    } as const;
+}
+
+function ComposerStatusChip({
+    label,
+    title,
+    tone,
+    uiScale,
+    value,
+}: {
+    label: string;
+    title?: string;
+    tone?: 'warn';
+    uiScale: number;
+    value: string;
+}) {
+    const color = tone === 'warn' ? t.accent.yellow : t.text.muted;
+    return (
+        <span
+            style={{
+                alignItems: 'center',
+                background: t.bg.panel,
+                border: `1px solid ${tone === 'warn' ? t.accent.yellow : t.border.subtle}`,
+                borderRadius: t.radius.sm,
+                color: t.text.normal,
+                display: 'inline-flex',
+                fontSize: `${10 * uiScale}px`,
+                gap: `${4 * uiScale}px`,
+                maxWidth: `${220 * uiScale}px`,
+                minHeight: `${22 * uiScale}px`,
+                minWidth: 0,
+                overflow: 'hidden',
+                padding: `${2 * uiScale}px ${6 * uiScale}px`,
+                whiteSpace: 'nowrap',
+            }}
+            title={title ?? `${label}: ${value}`}
+        >
+            <span style={{ color, flexShrink: 0, textTransform: 'uppercase' }}>{label}</span>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</span>
+        </span>
+    );
 }
 
 function ComposerTile({ detail, icon, label, uiScale, value }: ComposerTileProperties) {

@@ -7,6 +7,7 @@ import type { DropIndicator } from './types';
 
 import { getPlugin } from '../../../plugins/commandPlugins';
 import { editorTheme as t } from '../../../theme/editorTheme';
+import { formatSceneComposerPath } from './sceneComposerPathModel';
 
 type Properties = {
     depth: number;
@@ -130,6 +131,9 @@ function TimelineNodeInner({
     const indicatorTitle = hasValidationError
         ? (validationMessage ?? 'Schema validation errors found')
         : 'This node looks incomplete/invalid';
+    const nodeBreadcrumb = formatSceneComposerPath(nodePath);
+    const nodePathKey = nodePath.join('.') || 'root';
+    const nestedScopeLabel = depth > 0 ? nodeBreadcrumb : undefined;
 
     return (
         <div style={{ ...CONTAINER_STYLE, gap: `${2 * uiScale}px` }}>
@@ -179,6 +183,7 @@ function TimelineNodeInner({
                     marginLeft: `${depth * 16 * uiScale}px`,
                     padding: `${6 * uiScale}px ${10 * uiScale}px`,
                 }}
+                title={`${nodeBreadcrumb} (${nodePathKey})`}
             >
                 <div
                     style={{
@@ -267,6 +272,15 @@ function TimelineNodeInner({
                     >
                         {highlightText(isMacroHeader ? `Macro: ${summary}` : summary, searchQuery, uiScale)}
                     </span>
+
+                    {nestedScopeLabel ? (
+                        <span
+                            style={pathBadgeStyle(uiScale)}
+                            title={`${nestedScopeLabel} (${nodePathKey})`}
+                        >
+                            {highlightText(nestedScopeLabel, searchQuery, uiScale)}
+                        </span>
+                    ) : undefined}
                 </div>
 
                 {depth === 0 && (
@@ -318,19 +332,31 @@ function TimelineNodeInner({
                 !isCollapsed &&
                 branches.map((branch, branchIndex) => {
                     const branchArrayPath = [...nodePath, ...branch.path];
+                    const branchBreadcrumb = formatSceneComposerPath(branchArrayPath);
+                    const branchPathKey = branchArrayPath.join('.');
                     const labelColor = branchIndex % 2 === 0 ? t.syntax.logic : t.syntax.flow;
 
                     return (
                         <React.Fragment key={`${nodePath.join('.')}-branch-${branchIndex}`}>
                             <div
                                 style={{
+                                    alignItems: 'center',
                                     color: labelColor,
+                                    display: 'flex',
                                     fontSize: '0.8em',
+                                    gap: `${6 * uiScale}px`,
                                     marginLeft: `${(depth + 1) * 16 * uiScale}px`,
                                     marginTop: branchIndex === 0 ? 0 : `${4 * uiScale}px`,
+                                    minWidth: 0,
                                 }}
                             >
-                                {branch.label}
+                                <span style={{ flexShrink: 0 }}>{branch.label}</span>
+                                <span
+                                    style={pathBadgeStyle(uiScale, labelColor)}
+                                    title={`${branchBreadcrumb} (${branchPathKey})`}
+                                >
+                                    {branchBreadcrumb}
+                                </span>
                             </div>
 
                             {branch.nodes.map((childNode, index) =>
@@ -456,6 +482,22 @@ function highlightText(text: string, query: string, uiScale: number) {
             })}
         </>
     );
+}
+
+function pathBadgeStyle(uiScale: number, borderColor: string = t.border.subtle): React.CSSProperties {
+    return {
+        border: `1px solid ${borderColor}`,
+        borderRadius: t.radius.sm,
+        color: t.text.faint,
+        flexShrink: 1,
+        fontSize: `${10 * uiScale}px`,
+        maxWidth: `${260 * uiScale}px`,
+        minWidth: 0,
+        overflow: 'hidden',
+        padding: `${1 * uiScale}px ${5 * uiScale}px`,
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+    };
 }
 
 

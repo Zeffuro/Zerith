@@ -1,5 +1,8 @@
 import type { PluginNode } from '../../../plugins/types';
 import type { ScriptPath } from '../../../utils/scriptPathUtilities';
+import type { SceneComposerSelectionSummary } from './sceneComposerPathModel';
+
+import { summarizeSceneComposerSelection } from './sceneComposerPathModel';
 
 export type SceneComposerCue = {
     detail: string;
@@ -71,6 +74,7 @@ export type SceneComposerSnapshot = {
     coveredCommands: number;
     graph: SceneComposerGraphSummary;
     recentCues: SceneComposerCue[];
+    selection: SceneComposerSelectionSummary;
     sprites: SceneComposerSpriteState[];
     targetIndex: number | undefined;
     totalCommands: number;
@@ -176,6 +180,23 @@ export function resolveMissingGraphLabelCreations(
     return creations.toSorted(compareMissingLabelCreationsForInsertion);
 }
 
+export function resolveMissingGraphMacroCreations(calls: readonly SceneComposerGraphMacroCall[]): string[] {
+    const macroNames: string[] = [];
+    const seenMacroNames = new Set<string>();
+
+    for (const call of calls) {
+        const macroName = call.macroName.trim();
+        if (call.status !== 'missing' || !macroName || seenMacroNames.has(macroName)) {
+            continue;
+        }
+
+        seenMacroNames.add(macroName);
+        macroNames.push(macroName);
+    }
+
+    return macroNames;
+}
+
 export function resolveMissingGraphSceneCreations(jumps: readonly SceneComposerGraphJump[]): string[] {
     const sceneNames: string[] = [];
     const seenSceneNames = new Set<string>();
@@ -215,11 +236,13 @@ export function summarizeSceneComposer(
     nodes: PluginNode[],
     options: SceneComposerOptions = {},
 ): SceneComposerSnapshot {
-    const targetIndex = resolveSceneComposerTargetIndex(options.selectedPaths ?? [], nodes.length);
+    const selectedPaths = options.selectedPaths ?? [];
+    const targetIndex = resolveSceneComposerTargetIndex(selectedPaths, nodes.length);
     const coveredCommands = targetIndex === undefined ? nodes.length : targetIndex + 1;
     const visitedNodes = nodes.slice(0, coveredCommands);
     const macros = new Map((options.macros ?? []).map((macro) => [macro.name, macro.commands]));
     const graph = summarizeSceneGraph(nodes, options);
+    const selection = summarizeSceneComposerSelection(selectedPaths, nodes.length);
 
     const totals: SceneComposerTotals = { ...DEFAULT_TOTALS };
     const sprites = new Map<string, SceneComposerSpriteState>();
@@ -382,6 +405,7 @@ export function summarizeSceneComposer(
         coveredCommands,
         graph,
         recentCues: recentCues.toReversed(),
+        selection,
         sprites: [...sprites.values()].toSorted((left, right) => left.id.localeCompare(right.id)),
         targetIndex,
         totalCommands: nodes.length,

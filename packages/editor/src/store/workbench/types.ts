@@ -1,3 +1,5 @@
+import type { ScriptPath } from '../../utils/scriptPathUtilities';
+
 export type ScriptViewMode = 'json' | 'timeline';
 
 export type WorkbenchGet = () => WorkbenchState;
@@ -31,7 +33,7 @@ export type WorkbenchTab = {
     gitDiffFilePath?: string;
     gitDiffRepositoryRoot?: string;
     id: string;
-    jsonSelectionPath?: string[];
+    jsonSelectionPath?: ScriptPath;
     kind: WorkbenchResourceKind;
     localizationFilter?: string;
     path: string;

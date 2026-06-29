@@ -341,6 +341,26 @@ describe('openProjectEntry tabOpeners', () => {
         });
     });
 
+    it('opens script tab with a JSON selection path', () => {
+        openScriptTab('/project/scripts/intro.json', 'json', [1, 'options', 0, 'commands', 2]);
+
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenNthCalledWith(1, {
+            action: 'setScriptView',
+            view: 'json',
+        });
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).toHaveBeenNthCalledWith(2, {
+            action: 'openTab',
+            tab: {
+                id: 'script:/project/scripts/intro.json',
+                jsonSelectionPath: [1, 'options', 0, 'commands', 2],
+                kind: 'script',
+                path: '/project/scripts/intro.json',
+                preferredView: 'json',
+                title: 'intro.json',
+            },
+        });
+    });
+
     it('opens macros tab without forcing view when not provided', () => {
         openMacrosTab('/project/scripts/macros.json');
 

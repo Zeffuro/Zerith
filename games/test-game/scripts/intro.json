@@ -1,8 +1,5 @@
 {
     "$schema": "zerith/scene",
-    "id": "intro",
-    "localeNamespace": "scene.intro",
-    "schemaVersion": 2,
     "commands": [
         {
             "action": "play",
@@ -164,5 +161,8 @@
             "to": "courtroom",
             "type": "jump"
         }
-    ]
+    ],
+    "id": "intro",
+    "localeNamespace": "scene.intro",
+    "schemaVersion": 2
 }

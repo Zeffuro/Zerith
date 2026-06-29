@@ -1,3 +1,4 @@
+import type { ScriptPath } from '../../utils/scriptPathUtilities';
 import type { ForceView } from './contracts';
 import type { JsonRoute } from './jsonRouting';
 
@@ -17,7 +18,7 @@ type HandleJsonRouteOptions = {
     forceView?: ForceView;
     fullPath: string;
     isMacrosObject: (value: unknown) => boolean;
-    jsonSelectionPath?: string[];
+    jsonSelectionPath?: ScriptPath;
     route: JsonRoute;
 };
 
@@ -61,7 +62,7 @@ export function handleJsonRoute(options: HandleJsonRouteOptions): void {
             throw new TypeError('Scene scripts must be JSON arrays or scene objects with a commands array.');
         }
         applyScriptFile(fullPath, data);
-        openScriptTab(fullPath, forceView);
+        openScriptTab(fullPath, forceView, jsonSelectionPath);
         return;
     }
 
@@ -70,7 +71,7 @@ export function handleJsonRoute(options: HandleJsonRouteOptions): void {
             throw new TypeError('Macros file must be a JSON object of command arrays.');
         }
         applyMacrosFile(fullPath, data as Record<string, unknown>);
-        openMacrosTab(fullPath, forceView);
+        openMacrosTab(fullPath, forceView, jsonSelectionPath);
         return;
     }
 

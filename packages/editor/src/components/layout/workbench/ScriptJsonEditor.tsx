@@ -13,6 +13,7 @@ import { useSettingsStore } from '../../../store/useSettingsStore';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
 import { isRecord } from '../../../utils/typeGuards';
+import { createJsonSelectionSignature, findJsonSelectionRange } from './jsonSelectionModel';
 
 type ApplyResult = {
     content?: string;
@@ -208,7 +209,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
     const [errorBySession, setErrorBySession] = useState<Record<string, string | undefined>>({});
     const value = draftBySession[sessionKey] ?? initial;
     const error = errorBySession[sessionKey];
-    const jsonSelectionSignature = activeTab?.jsonSelectionPath?.join('\u001F') ?? '';
+    const jsonSelectionSignature = createJsonSelectionSignature(activeTab?.jsonSelectionPath);
 
     const setDraft = useCallback((nextValue: string) => {
         setDraftBySession((previous) => ({ ...previous, [sessionKey]: nextValue }));
@@ -309,7 +310,7 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
     },[editingAllMacrosFile, mode, setLastMacrosView, setLastScriptView]);
 
     useEffect(() => {
-        if (mode !== 'file-json' || !activeTab?.jsonSelectionPath || jsonSelectionSignature.length === 0) return;
+        if (!JSON_EDITOR_MODES.has(mode) || !activeTab?.jsonSelectionPath || jsonSelectionSignature.length === 0) return;
 
         const token = `${sessionKey}:${jsonSelectionSignature}`;
         if (appliedJsonSelectionReference.current === token) return;
@@ -512,35 +513,6 @@ function createMonacoTheme(): Monaco.editor.IStandaloneThemeData {
     };
 }
 
-function findJsonObjectKeyRange(sourceText: string, path: string[]): { end: number; start: number } | undefined {
-    let cursor = 0;
-    let found: { end: number; start: number } | undefined;
-
-    for (const segment of path) {
-        const keyLiteral = JSON.stringify(segment);
-        let searchFrom = cursor;
-
-        while (searchFrom < sourceText.length) {
-            const start = sourceText.indexOf(keyLiteral, searchFrom);
-            if (start === -1) return found;
-
-            const end = start + keyLiteral.length;
-            let colonIndex = end;
-            while (/\s/u.test(sourceText[colonIndex] ?? '')) colonIndex++;
-
-            if (sourceText[colonIndex] === ':') {
-                found = { end, start };
-                cursor = colonIndex + 1;
-                break;
-            }
-
-            searchFrom = end;
-        }
-    }
-
-    return found;
-}
-
 function getMonacoColor(name: string, fallback: string): string {
     let raw = fallback;
     try {
@@ -603,10 +575,10 @@ function looseObjectSchema(
 function revealJsonSelection(
     editor: Monaco.editor.IStandaloneCodeEditor,
     sourceText: string,
-    path: string[],
+    path: readonly (number | string)[],
 ): boolean {
     const model = editor.getModel();
-    const range = findJsonObjectKeyRange(sourceText, path);
+    const range = findJsonSelectionRange(sourceText, path);
     if (!model || !range) return false;
 
     const start = model.getPositionAt(range.start);

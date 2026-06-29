@@ -6,10 +6,12 @@ import {
     resolveGraphLabelInsertIndex,
     resolveGraphLabelInsertion,
     resolveMissingGraphLabelCreations,
+    resolveMissingGraphMacroCreations,
     resolveMissingGraphSceneCreations,
     resolveSceneComposerTargetIndex,
     summarizeSceneComposer,
 } from '../sceneComposerModel';
+import { formatSceneComposerPath, summarizeSceneComposerSelection } from '../sceneComposerPathModel';
 
 describe('sceneComposerModel', () => {
     it('summarizes the active stage state through the full scene', () => {
@@ -57,6 +59,12 @@ describe('sceneComposerModel', () => {
 
         expect(snapshot.targetIndex).toBe(1);
         expect(snapshot.coveredCommands).toBe(2);
+        expect(snapshot.selection).toEqual({
+            breadcrumb: 'Command 2',
+            count: 1,
+            path: [1],
+            pathKey: '1',
+        });
         expect(snapshot.sprites).toEqual([
             {
                 action: 'show',
@@ -216,6 +224,25 @@ describe('sceneComposerModel', () => {
         expect(resolveSceneComposerTargetIndex([[4], [1]], 3)).toBe(1);
     });
 
+    it('formats nested command paths as author-facing breadcrumbs', () => {
+        expect(formatSceneComposerPath([])).toBe('Scene root');
+        expect(formatSceneComposerPath([1, 'options', 0, 'commands', 0])).toBe('Command 2 > Option 1 > Command 1');
+        expect(formatSceneComposerPath([2, 'onFalse', 0])).toBe('Command 3 > False branch > Command 1');
+        expect(formatSceneComposerPath([0, 'body', 1])).toBe('Command 1 > Body > Command 2');
+    });
+
+    it('summarizes the first valid selected command path', () => {
+        expect(summarizeSceneComposerSelection([
+            [8],
+            [2, 'options', 1, 'commands', 0],
+        ], 4)).toEqual({
+            breadcrumb: 'Command 3 > Option 2 > Command 1',
+            count: 2,
+            path: [2, 'options', 1, 'commands', 0],
+            pathKey: '2.options.1.commands.0',
+        });
+    });
+
     it('resolves root insertion points for graph label creation', () => {
         expect(resolveGraphLabelInsertIndex([2, 'options', 0, 'commands', 0], 5)).toBe(3);
         expect(resolveGraphLabelInsertIndex(['options', 0], 5)).toBe(5);
@@ -273,5 +300,15 @@ describe('sceneComposerModel', () => {
             { path: [3], status: 'missing', targetScene: ' bonus ' },
             { path: [4], status: 'missing', targetScene: '' },
         ])).toEqual(['ending', 'bonus']);
+    });
+
+    it('resolves unique missing macro calls for bulk creation', () => {
+        expect(resolveMissingGraphMacroCreations([
+            { macroName: 'setup', path: [0], status: 'missing' },
+            { macroName: 'known', path: [1], status: 'ok' },
+            { macroName: 'setup', path: [2], status: 'missing' },
+            { macroName: ' reveal ', path: [3], status: 'missing' },
+            { macroName: '', path: [4], status: 'missing' },
+        ])).toEqual(['setup', 'reveal']);
     });
 });

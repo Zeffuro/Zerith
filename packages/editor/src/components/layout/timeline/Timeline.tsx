@@ -68,6 +68,7 @@ export function Timeline() {
 
     const editingAllMacrosFile = useProjectStore((s) => s.editingAllMacrosFile);
     const activeFile = useProjectStore((s) => s.activeFile);
+    const dirtyFiles = useProjectStore((s) => s.dirtyFiles);
     const manifest = useProjectStore((s) => s.manifest);
     const setLastScriptView = useWorkbenchStore((s) => s.setLastScriptView);
     const setLastMacrosView = useWorkbenchStore((s) => s.setLastMacrosView);
@@ -156,6 +157,7 @@ export function Timeline() {
     } = useTimelineSearch(rootNodes, typeFilter);
 
     const validationEntries = useMemo(() => Object.entries(validationErrors), [validationErrors]);
+    const validationIssueCount = useMemo(() => countValidationMessages(validationEntries), [validationEntries]);
 
     const minimapRows = useMemo<TimelineMinimapRow[]>(() => {
         const renderedNodes = flattenRenderedNodes(visibleRoot, {
@@ -453,6 +455,14 @@ export function Timeline() {
         setSelectionAnchorPath(path);
     }, [setSelectedNodePaths, setSelectionAnchorPath]);
 
+    const handleOpenComposerJson = useCallback(() => {
+        if (!activeFile) return;
+        void openProjectEntry(activeFile, basename(activeFile), {
+            forceView: 'json',
+            jsonSelectionPath: sceneComposerSnapshot?.selection.path ?? [],
+        });
+    }, [activeFile, sceneComposerSnapshot?.selection.path]);
+
     const handleCreateGraphLabel = useCallback((label: string, sourcePath: ScriptPath) => {
         const trimmedLabel = label.trim();
         if (!trimmedLabel || editingAllMacrosFile) return;
@@ -534,6 +544,38 @@ export function Timeline() {
             }
 
             const macroIndex = useProjectStore.getState().macroEntries.findIndex((entry) => entry.name === result.macroName);
+            if (macroIndex === -1) return;
+            const targetPath: ScriptPath = [macroIndex];
+            setSelectedNodePaths([targetPath]);
+            setSelectionAnchorPath(targetPath);
+        })();
+    }, [setSelectedNodePaths, setSelectionAnchorPath]);
+
+    const handleCreateMissingGraphMacros = useCallback((macroNames: string[]) => {
+        void (async () => {
+            let lastMacroName: string | undefined;
+
+            for (const macroName of macroNames) {
+                const project = useProjectStore.getState();
+                const result = await createMissingCallMacro({
+                    dirtyFiles: project.dirtyFiles,
+                    macroName,
+                    manifest: project.manifest,
+                    projectPath: project.projectPath,
+                }, {
+                    reloadManifest: project.loadManifest,
+                });
+
+                if (result.status === 'blocked') {
+                    globalThis.alert?.(result.message);
+                    return;
+                }
+
+                lastMacroName = result.macroName;
+            }
+
+            if (!lastMacroName) return;
+            const macroIndex = useProjectStore.getState().macroEntries.findIndex((entry) => entry.name === lastMacroName);
             if (macroIndex === -1) return;
             const targetPath: ScriptPath = [macroIndex];
             setSelectedNodePaths([targetPath]);
@@ -716,14 +758,19 @@ export function Timeline() {
                         onCreateLabel={handleCreateGraphLabel}
                         onCreateMissingLabels={handleCreateMissingGraphLabels}
                         onCreateMissingMacro={handleCreateMissingGraphMacro}
+                        onCreateMissingMacros={handleCreateMissingGraphMacros}
                         onCreateMissingScene={handleCreateMissingGraphScene}
                         onCreateMissingScenes={handleCreateMissingGraphScenes}
                         onOpenMacro={handleOpenGraphMacro}
                         onOpenMissingSceneTarget={handleOpenMissingGraphSceneTarget}
                         onOpenScene={handleOpenGraphScene}
+                        onOpenSelectedJson={activeFile ? handleOpenComposerJson : undefined}
                         onSelectPath={handleSelectComposerPath}
                         snapshot={sceneComposerSnapshot}
+                        sourceDirty={activeFile ? dirtyFiles.has(activeFile) : false}
+                        sourceFilePath={activeFile}
                         uiScale={uiScale}
+                        validationIssueCount={validationIssueCount}
                     />
                 )}
 
@@ -827,6 +874,10 @@ export function Timeline() {
 
 function basename(path: string): string {
     return path.split(/[\\/]/).pop() || path;
+}
+
+function countValidationMessages(validationEntries: [string, string[]][]): number {
+    return validationEntries.reduce((total, [, messages]) => total + messages.length, 0);
 }
 
 function flattenRenderedNodes(

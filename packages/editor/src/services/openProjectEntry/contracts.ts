@@ -1,3 +1,5 @@
+import type { ScriptPath } from '../../utils/scriptPathUtilities';
+
 export type ForceView = 'json' | 'timeline';
 
 export type JsonHintKind = 'macros' | 'script' | JsonResourceKind | undefined;
@@ -6,7 +8,7 @@ export type JsonResourceKind = 'characters' | 'engineConfig' | 'items' | 'manife
 
 export type OpenProjectEntryOptions = {
 	forceView?: ForceView;
-	jsonSelectionPath?: string[];
+	jsonSelectionPath?: ScriptPath;
 	openInSpritesheetEditor?: boolean;
 };
 
