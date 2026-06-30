@@ -30,6 +30,7 @@ import {
     handleMoveAsset,
     handleOpenAssetUrl,
     handleOpenLocation,
+    handlePreviewAssetUrl,
     handleRemoveAssetCollection,
     handleRenameAssetCollection,
     handleSaveAssetMetadata,
@@ -341,6 +342,15 @@ export function AssetDependencyPanel() {
                 onOpenAsset={(assetUrl) => {
                     void handleOpenAssetUrl(projectPath, assetUrl);
                 }}
+                onOpenSourceAsset={(assetUrl) => {
+                    void handlePreviewAssetUrl(projectPath, assetUrl);
+                }}
+                onOrganizeCueAssets={(assetUrls) => setBulkMetadataRequest(createBulkMetadataRequest(
+                    assetUrls,
+                    'cue-linked asset',
+                    'cue-linked',
+                    'Organize Visible Cue Assets',
+                ))}
                 projectPath={projectPath}
                 uiScale={uiScale}
             />

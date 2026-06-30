@@ -718,6 +718,29 @@ export function Timeline() {
                     paddingBottom: `${4 * uiScale}px`,
                 }}
             >
+                {sceneComposerSnapshot && (
+                    <TimelineSceneComposerPanel
+                        canOpenMacro={canOpenGraphMacro}
+                        canOpenScene={canOpenGraphScene}
+                        onCreateLabel={handleCreateGraphLabel}
+                        onCreateMissingLabels={handleCreateMissingGraphLabels}
+                        onCreateMissingMacro={handleCreateMissingGraphMacro}
+                        onCreateMissingMacros={handleCreateMissingGraphMacros}
+                        onCreateMissingScene={handleCreateMissingGraphScene}
+                        onCreateMissingScenes={handleCreateMissingGraphScenes}
+                        onOpenMacro={handleOpenGraphMacro}
+                        onOpenMissingSceneTarget={handleOpenMissingGraphSceneTarget}
+                        onOpenScene={handleOpenGraphScene}
+                        onOpenSelectedJson={activeFile ? handleOpenComposerJson : undefined}
+                        onSelectPath={handleSelectComposerPath}
+                        snapshot={sceneComposerSnapshot}
+                        sourceDirty={activeFile ? dirtyFiles.has(activeFile) : false}
+                        sourceFilePath={activeFile}
+                        uiScale={uiScale}
+                        validationIssueCount={validationIssueCount}
+                    />
+                )}
+
                 <TimelineCommandBar
                     commandMenuItems={commandMenuItems}
                     getQuickMeta={getQuickMeta}
@@ -749,29 +772,6 @@ export function Timeline() {
                             + Add Macro
                         </button>
                     </div>
-                )}
-
-                {sceneComposerSnapshot && (
-                    <TimelineSceneComposerPanel
-                        canOpenMacro={canOpenGraphMacro}
-                        canOpenScene={canOpenGraphScene}
-                        onCreateLabel={handleCreateGraphLabel}
-                        onCreateMissingLabels={handleCreateMissingGraphLabels}
-                        onCreateMissingMacro={handleCreateMissingGraphMacro}
-                        onCreateMissingMacros={handleCreateMissingGraphMacros}
-                        onCreateMissingScene={handleCreateMissingGraphScene}
-                        onCreateMissingScenes={handleCreateMissingGraphScenes}
-                        onOpenMacro={handleOpenGraphMacro}
-                        onOpenMissingSceneTarget={handleOpenMissingGraphSceneTarget}
-                        onOpenScene={handleOpenGraphScene}
-                        onOpenSelectedJson={activeFile ? handleOpenComposerJson : undefined}
-                        onSelectPath={handleSelectComposerPath}
-                        snapshot={sceneComposerSnapshot}
-                        sourceDirty={activeFile ? dirtyFiles.has(activeFile) : false}
-                        sourceFilePath={activeFile}
-                        uiScale={uiScale}
-                        validationIssueCount={validationIssueCount}
-                    />
                 )}
 
                 <TimelineSearchBar

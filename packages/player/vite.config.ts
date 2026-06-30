@@ -18,7 +18,7 @@ function resolveConfiguredPath(configuredPath: string | undefined, fallbackPath:
 export default defineConfig(({ command }) => {
     const gameDirectory = resolveConfiguredPath(
         process.env.ZERITH_GAME_DIR,
-        path.resolve(workspaceRoot, 'games/test-game'),
+        path.resolve(workspaceRoot, 'games/classic-vn-starter'),
     );
     const outDirectory = resolveConfiguredPath(
         process.env.ZERITH_OUT_DIR,

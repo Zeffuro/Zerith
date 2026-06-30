@@ -39,8 +39,8 @@ describe('exportGame profiles', () => {
 
     it('parses desktop export output paths from build stdout', () => {
         expect(resolveDesktopExportOutputPath(
-            String.raw`Built game from F:\Coding\Zerith\games\test-game to F:\Coding\Zerith\dist\test-game (base: ./)` + '\n',
-        )).toBe(String.raw`F:\Coding\Zerith\dist\test-game`);
+            String.raw`Built game from F:\Coding\Zerith\games\classic-vn-starter to F:\Coding\Zerith\dist\classic-vn-starter (base: ./)` + '\n',
+        )).toBe(String.raw`F:\Coding\Zerith\dist\classic-vn-starter`);
         expect(resolveDesktopExportOutputPath('', 'dist/fallback')).toBe('dist/fallback');
     });
 

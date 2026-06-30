@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+    collectAssetAudioCueOrganizationAssetUrls,
     createAssetAudioCueReviewEntry,
     createAssetAudioCueReviewSummary,
     filterAssetAudioCueReviewEntries,
     isAssetAudioCueReviewEntryExportable,
     loadAssetAudioCueReview,
     resolveAudiosheetSourceAssetUrl,
+    searchAssetAudioCueReviewEntries,
 } from '../assetAudioCueReview';
 
 describe('assetAudioCueReview', () => {
@@ -28,6 +30,7 @@ describe('assetAudioCueReview', () => {
 
         expect(entry).toEqual({
             cueCount: 2,
+            cueNames: ['click', 'loop'],
             descriptorAssetUrl: '/assets/sfx/ui.sheet.json',
             finiteDurationSeconds: 0.25,
             issueMessages: ['Cue "loop" has no duration.'],
@@ -71,6 +74,32 @@ describe('assetAudioCueReview', () => {
         expect(filterAssetAudioCueReviewEntries(entries, 'issues')).toEqual([missingSource, issueOnly]);
         expect(filterAssetAudioCueReviewEntries(entries, 'missing-source')).toEqual([missingSource]);
         expect(isAssetAudioCueReviewEntryExportable(missingSource)).toBe(false);
+    });
+
+    it('searches cue reviews and collects visible cue organization assets', () => {
+        const ui = createAssetAudioCueReviewEntry('/assets/sfx/ui.sheet.json', {
+            cues: {
+                click: { duration: 0.25, start: 0 },
+                confirm: { duration: 0.4, start: 0.5 },
+            },
+            source: 'ui.wav',
+        }, ['/assets/sfx/ui.wav']);
+        const voice = createAssetAudioCueReviewEntry('/assets/voice/lines.sheet.json', {
+            cues: {
+                line_001: { duration: 1.2, start: 0 },
+            },
+            source: 'lines.wav',
+        }, []);
+        const entries = [ui, voice];
+
+        expect(searchAssetAudioCueReviewEntries(entries, 'confirm')).toEqual([ui]);
+        expect(searchAssetAudioCueReviewEntries(entries, 'voice missing')).toEqual([voice]);
+        expect(searchAssetAudioCueReviewEntries(entries, 'sheet')).toEqual(entries);
+        expect(collectAssetAudioCueOrganizationAssetUrls(entries)).toEqual([
+            '/assets/sfx/ui.sheet.json',
+            '/assets/sfx/ui.wav',
+            '/assets/voice/lines.sheet.json',
+        ]);
     });
 
     it('loads visible audiosheet descriptors and skips spritesheets', async () => {
@@ -127,6 +156,7 @@ describe('assetAudioCueReview', () => {
         expect(review.entries[1].issueMessages[0]).toContain('Descriptor JSON invalid');
         expect(review.entries[2]).toMatchObject({
             cueCount: 2,
+            cueNames: ['click', 'loop'],
             finiteDurationSeconds: 1.7,
             loopCueCount: 1,
             sourceAssetUrl: '/assets/sfx/ui.wav',

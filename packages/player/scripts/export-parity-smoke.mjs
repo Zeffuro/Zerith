@@ -260,7 +260,7 @@ async function run() {
     const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     const repoRoot = path.resolve(packageRoot, '..', '..');
     const args = parseArgs(process.argv.slice(2));
-    const gamePath = toAbsolutePath(args.game ?? 'games/test-game', repoRoot);
+    const gamePath = toAbsolutePath(args.game ?? 'games/classic-vn-starter', repoRoot);
     const outputPath = toAbsolutePath(args.outDir, repoRoot)
         ?? path.resolve(repoRoot, 'dist', `${path.basename(gamePath)}-parity`);
     const base = args.base ?? './';

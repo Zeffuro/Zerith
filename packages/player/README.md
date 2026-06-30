@@ -4,12 +4,12 @@ This package provides a standalone runtime build for shipping a game as a static
 
 ## Commands
 
-- `npm run dev:player` from repo root: launches the player against `games/test-game`.
-- `npm run build:game -- --game=games/test-game`: builds a distributable to `dist/<game-name>`.
-- `npm run build:game -- --game=games/test-game --outDir=dist/custom-output`: builds to a custom output folder.
-- `npm run build:game:zip -- --game=games/test-game`: builds and creates `dist/<game-name>.zip`.
-- `npm run build:game -- --game=games/test-game --zip --zipFile=dist/my-upload.zip`: custom zip path.
-- `npm run build:game -- --game=games/test-game --base=./`: optional explicit base override.
+- `npm run dev:player` from repo root: launches the player against `games/classic-vn-starter`.
+- `npm run build:game -- --game=games/classic-vn-starter`: builds a distributable to `dist/<game-name>`.
+- `npm run build:game -- --game=games/classic-vn-starter --outDir=dist/custom-output`: builds to a custom output folder.
+- `npm run build:game:zip -- --game=games/classic-vn-starter`: builds and creates `dist/<game-name>.zip`.
+- `npm run build:game -- --game=games/classic-vn-starter --zip --zipFile=dist/my-upload.zip`: custom zip path.
+- `npm run build:game -- --game=games/classic-vn-starter --base=./`: optional explicit base override.
 
 ## How it works
 
@@ -28,7 +28,7 @@ This package provides a standalone runtime build for shipping a game as a static
 
 ## Itch upload checklist
 
-- Build with zip: `npm run build:game:zip -- --game=games/test-game`
+- Build with zip: `npm run build:game:zip -- --game=games/classic-vn-starter`
 - Upload the generated zip file (default: `dist/<game-name>.zip`) directly to itch.
 - The zip root must contain `index.html` and `assets/` (this build script zips the output root, not a parent folder).
 - Zip creation is implemented in Node and is cross-platform (no OS-specific zip shell dependency).

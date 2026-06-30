@@ -1,4 +1,4 @@
-import { AlertTriangle, Download, ExternalLink } from 'lucide-react';
+import { AlertTriangle, Download, ExternalLink, Tags } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import type {
@@ -8,10 +8,12 @@ import type {
 
 import { exportAssetAudioCuesToProject } from '../../services/assetAudioCueExport';
 import {
+    collectAssetAudioCueOrganizationAssetUrls,
     createAssetAudioCueReviewSummary,
     filterAssetAudioCueReviewEntries,
     isAssetAudioCueReviewEntryExportable,
     loadAssetAudioCueReview,
+    searchAssetAudioCueReviewEntries,
 } from '../../services/assetAudioCueReview';
 import { refreshProjectTree } from '../../services/explorerFileActions';
 import { refreshReferenceScannerState } from '../../services/referenceScanner';
@@ -20,6 +22,7 @@ import {
     kindSummaryChipStyle,
     kindSummaryRowStyle,
     miniButtonStyle,
+    searchInputStyle,
     sectionHeaderStyle,
     sectionStyle,
     sectionTitleRowStyle,
@@ -29,6 +32,8 @@ type Properties = {
     assetInventory: string[];
     assetUrls: string[];
     onOpenAsset: (assetUrl: string) => void;
+    onOpenSourceAsset?: (assetUrl: string) => void;
+    onOrganizeCueAssets?: (assetUrls: string[]) => void;
     projectPath: string;
     uiScale: number;
 };
@@ -37,12 +42,15 @@ export function AssetAudioCueReviewPanel({
     assetInventory,
     assetUrls,
     onOpenAsset,
+    onOpenSourceAsset,
+    onOrganizeCueAssets,
     projectPath,
     uiScale,
 }: Properties) {
     const [review, setReview] = useState<AssetAudioCueReview>({ entries: [], issueCount: 0, totalCues: 0 });
     const [exportMessage, setExportMessage] = useState<string>();
     const [exportingTarget, setExportingTarget] = useState<string>();
+    const [cueSearchQuery, setCueSearchQuery] = useState('');
     const [reviewFilter, setReviewFilter] = useState<AssetAudioCueReviewFilter>('all');
     const [loading, setLoading] = useState(false);
 
@@ -127,9 +135,11 @@ export function AssetAudioCueReviewPanel({
     if (!loading && review.entries.length === 0) return;
 
     const summary = createAssetAudioCueReviewSummary(review.entries);
-    const visibleEntries = filterAssetAudioCueReviewEntries(review.entries, reviewFilter);
+    const filterEntries = filterAssetAudioCueReviewEntries(review.entries, reviewFilter);
+    const visibleEntries = searchAssetAudioCueReviewEntries(filterEntries, cueSearchQuery);
     const visibleSummary = createAssetAudioCueReviewSummary(visibleEntries);
     const isExporting = exportingTarget !== undefined;
+    const cueOrganizationAssetUrls = collectAssetAudioCueOrganizationAssetUrls(visibleEntries);
     const exportableVisibleCount = visibleSummary.exportableEntryCount;
 
     return (
@@ -140,6 +150,19 @@ export function AssetAudioCueReviewPanel({
                     <span aria-live="polite" role="status" style={{ color: t.text.faint, fontSize: `${11 * uiScale}px` }}>
                         {loading ? 'Loading...' : `${visibleEntries.length}/${summary.totalEntryCount} sheet${summary.totalEntryCount === 1 ? '' : 's'} | ${visibleSummary.totalCueCount} cue${visibleSummary.totalCueCount === 1 ? '' : 's'}`}
                     </span>
+                    {onOrganizeCueAssets ? (
+                        <button
+                            className="toolbar-btn"
+                            disabled={cueOrganizationAssetUrls.length === 0 || isExporting}
+                            onClick={() => onOrganizeCueAssets(cueOrganizationAssetUrls)}
+                            style={miniButtonStyle(uiScale, cueOrganizationAssetUrls.length === 0 || isExporting)}
+                            title="Organize visible cue sheets and available source audio"
+                            type="button"
+                        >
+                            <Tags size={13 * uiScale} />
+                            <span>Organize Cue Assets ({cueOrganizationAssetUrls.length})</span>
+                        </button>
+                    ) : undefined}
                     <button
                         className="toolbar-btn"
                         disabled={isExporting || exportableVisibleCount === 0}
@@ -190,6 +213,13 @@ export function AssetAudioCueReviewPanel({
                     uiScale={uiScale}
                 />
             </div>
+            <input
+                aria-label="Search audio cue review"
+                onChange={(event) => setCueSearchQuery(event.currentTarget.value)}
+                placeholder="Find cue, sheet, source, or issue"
+                style={{ ...searchInputStyle(uiScale), minHeight: `${24 * uiScale}px` }}
+                value={cueSearchQuery}
+            />
             {review.issueCount > 0 ? (
                 <div style={{ alignItems: 'center', color: t.accent.yellow, display: 'flex', fontSize: `${11 * uiScale}px`, gap: `${5 * uiScale}px` }}>
                     <AlertTriangle size={13 * uiScale} />
@@ -210,6 +240,11 @@ export function AssetAudioCueReviewPanel({
                         <span style={{ color: t.text.muted, fontSize: `${11 * uiScale}px` }}>
                             {entry.cueCount} cue{entry.cueCount === 1 ? '' : 's'} | {formatSeconds(entry.finiteDurationSeconds)} finite | {entry.loopCueCount} loop | {entry.volumeOverrideCueCount} volume override{entry.volumeOverrideCueCount === 1 ? '' : 's'}
                         </span>
+                        {entry.cueNames.length > 0 ? (
+                            <span style={{ color: t.text.faint, fontSize: `${11 * uiScale}px`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                Cues: {formatCueNames(entry.cueNames)}
+                            </span>
+                        ) : undefined}
                         {entry.sourceAssetUrl ? (
                             <span style={{ color: entry.sourceAvailable === false ? t.accent.red : t.text.faint, fontSize: `${11 * uiScale}px` }}>
                                 Source: {entry.sourceAssetUrl}
@@ -249,7 +284,10 @@ export function AssetAudioCueReviewPanel({
                             <button
                                 className="toolbar-btn"
                                 disabled={entry.sourceAvailable === false}
-                                onClick={() => onOpenAsset(entry.sourceAssetUrl ?? '')}
+                                onClick={() => {
+                                    const sourceAssetUrl = entry.sourceAssetUrl ?? '';
+                                    (onOpenSourceAsset ?? onOpenAsset)(sourceAssetUrl);
+                                }}
                                 style={miniButtonStyle(uiScale, entry.sourceAvailable === false)}
                                 title={`Open source audio ${entry.sourceAssetUrl}`}
                                 type="button"
@@ -321,6 +359,12 @@ function cueRowStyle(uiScale: number, hasIssue: boolean) {
         justifyContent: 'space-between',
         padding: `${6 * uiScale}px ${8 * uiScale}px`,
     };
+}
+
+function formatCueNames(cueNames: readonly string[]): string {
+    const preview = cueNames.slice(0, 6).join(', ');
+    const remaining = cueNames.length - 6;
+    return remaining > 0 ? `${preview}, +${remaining} more` : preview;
 }
 
 function formatSeconds(value: number): string {

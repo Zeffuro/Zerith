@@ -137,10 +137,10 @@ async function run() {
     const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     const repoRoot = path.resolve(packageRoot, '..', '..');
     const args = parseArgs(process.argv.slice(2));
-    const gamePath = toAbsolutePath(args.game ?? 'games/test-game', repoRoot);
+    const gamePath = toAbsolutePath(args.game ?? 'games/classic-vn-starter', repoRoot);
 
     if (!gamePath) {
-        throw new Error('Missing --game value. Example: --game=games/test-game');
+        throw new Error('Missing --game value. Example: --game=games/classic-vn-starter');
     }
 
     assertGamePath(gamePath);

@@ -11,7 +11,7 @@ import {
 } from '../../services/assetLibraryMetadata';
 import { deletePaths, moveAssetPathWithPicker, refreshProjectTree } from '../../services/explorerFileActions';
 import { fsJoin } from '../../services/fs';
-import { openProjectEntry } from '../../services/openProjectEntry';
+import { openAssetEntry, openProjectEntry } from '../../services/openProjectEntry';
 import { type ReferenceLocation, refreshReferenceScannerState } from '../../services/referenceScanner';
 import { executeConsoleMessageAction } from '../../store/actions/consoleMessageActions';
 import { useEditorStore } from '../../store/useEditorStore';
@@ -169,6 +169,17 @@ export async function handleOpenLocation(location: ReferenceLocation) {
     const editor = useEditorStore.getState();
     editor.setSelectedNodePaths([location.path]);
     editor.setSelectionAnchorPath(location.path);
+}
+
+export async function handlePreviewAssetUrl(projectPath: string, assetUrl: string): Promise<void> {
+    const relativeAssetPath = projectRelativeAssetPathFromUrl(assetUrl);
+    if (!relativeAssetPath) {
+        executeConsoleMessageAction('editor', 'warn', `Open asset aborted: '${assetUrl}' is not a project asset URL.`);
+        return;
+    }
+
+    const assetPath = await fsJoin(projectPath, relativeAssetPath);
+    openAssetEntry(assetPath);
 }
 
 export async function handleRemoveAssetCollection(

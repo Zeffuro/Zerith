@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react';
-
 import {
     AlertTriangle,
     ArrowRight,
+    ChevronDown,
+    ChevronRight,
     CloudRain,
     ExternalLink,
     Flag,
@@ -16,6 +16,7 @@ import {
     Settings,
     User,
 } from 'lucide-react';
+import { type ReactNode, useState } from 'react';
 
 import type { ScriptPath } from '../../../utils/scriptPathUtilities';
 import type { SceneComposerGraphTargetStatus, SceneComposerSnapshot } from './sceneComposerModel';
@@ -91,6 +92,7 @@ export function TimelineSceneComposerPanel({
     uiScale,
     validationIssueCount = 0,
 }: Properties) {
+    const [overviewOpen, setOverviewOpen] = useState(false);
     const scopeLabel = snapshot.targetIndex === undefined
         ? `Full scene - ${snapshot.totalCommands} commands`
         : `At command ${snapshot.targetIndex + 1} of ${snapshot.totalCommands}`;
@@ -184,74 +186,96 @@ export function TimelineSceneComposerPanel({
                     uiScale={uiScale}
                     value={validationStatus}
                 />
-                <ComposerStatusChip
-                    label="Actions"
-                    tone={snapshot.graph.missingTargets > 0 ? 'warn' : undefined}
-                    uiScale={uiScale}
-                    value={actionStatus}
-                />
                 {onOpenSelectedJson ? (
                     <button
                         className="toolbar-btn"
                         onClick={onOpenSelectedJson}
                         style={composerHeaderActionStyle(uiScale)}
                         title={snapshot.selection.breadcrumb
-                            ? `Open JSON at ${snapshot.selection.breadcrumb}`
-                            : 'Open scene JSON'}
+                            ? `Reveal ${snapshot.selection.breadcrumb} in JSON`
+                            : 'Reveal scene root in JSON'}
                         type="button"
                     >
                         <ExternalLink size={11 * uiScale} />
-                        <span>Open JSON</span>
+                        <span>Reveal in JSON</span>
                     </button>
                 ) : undefined}
+                <button
+                    aria-expanded={overviewOpen}
+                    className="toolbar-btn"
+                    onClick={() => setOverviewOpen((current) => !current)}
+                    style={composerHeaderActionStyle(uiScale)}
+                    title={overviewOpen ? 'Hide scene overview' : 'Show scene overview'}
+                    type="button"
+                >
+                    {overviewOpen ? <ChevronDown size={11 * uiScale} /> : <ChevronRight size={11 * uiScale} />}
+                    <span>Overview</span>
+                </button>
             </div>
 
-            <div
-                style={{
-                    display: 'grid',
-                    gap: `${6 * uiScale}px`,
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-                }}
-            >
-                <ComposerTile
-                    icon={<ImageIcon aria-hidden color={t.accent.teal} size={14 * uiScale} />}
-                    label="BG"
-                    uiScale={uiScale}
-                    value={snapshot.background ?? 'none'}
-                />
-                <ComposerTile
-                    icon={<Music aria-hidden color={t.accent.purple} size={14 * uiScale} />}
-                    label="BGM"
-                    uiScale={uiScale}
-                    value={snapshot.bgm ?? 'none'}
-                />
-                <ComposerTile
-                    icon={<User aria-hidden color={t.accent.orange} size={14 * uiScale} />}
-                    label="Sprites"
-                    uiScale={uiScale}
-                    value={spriteValue}
-                />
-                <ComposerTile
-                    icon={<CloudRain aria-hidden color={t.accent.blue} size={14 * uiScale} />}
-                    label="Weather"
-                    uiScale={uiScale}
-                    value={weatherValue}
-                />
-                <ComposerTile
-                    detail={`${snapshot.totals.voice} voiced`}
-                    icon={<MessageSquare aria-hidden color={t.accent.green} size={14 * uiScale} />}
-                    label="Dialogue"
-                    uiScale={uiScale}
-                    value={`${snapshot.totals.dialogue} lines`}
-                />
-                <ComposerTile
-                    detail={`${snapshot.totals.jumps + snapshot.totals.sceneChanges} exits`}
-                    icon={<GitFork aria-hidden color={t.accent.yellow} size={14 * uiScale} />}
-                    label="Branches"
-                    uiScale={uiScale}
-                    value={`${snapshot.totals.choices} choices`}
-                />
-            </div>
+            {overviewOpen ? (
+                <>
+                    <div
+                        style={{
+                            alignItems: 'center',
+                            color: t.text.muted,
+                            display: 'flex',
+                            fontSize: `${11 * uiScale}px`,
+                            gap: `${8 * uiScale}px`,
+                            justifyContent: 'space-between',
+                        }}
+                    >
+                        <strong style={{ color: t.text.primary, fontSize: `${12 * uiScale}px` }}>Scene Composer Overview</strong>
+                        <span>{actionStatus}</span>
+                    </div>
+
+                    <div
+                        aria-label="Scene overview"
+                        style={{
+                            display: 'grid',
+                            gap: `${6 * uiScale}px`,
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                        }}
+                    >
+                        <ComposerTile
+                            icon={<ImageIcon aria-hidden color={t.accent.teal} size={14 * uiScale} />}
+                            label="BG"
+                            uiScale={uiScale}
+                            value={snapshot.background ?? 'none'}
+                        />
+                        <ComposerTile
+                            icon={<Music aria-hidden color={t.accent.purple} size={14 * uiScale} />}
+                            label="BGM"
+                            uiScale={uiScale}
+                            value={snapshot.bgm ?? 'none'}
+                        />
+                        <ComposerTile
+                            icon={<User aria-hidden color={t.accent.orange} size={14 * uiScale} />}
+                            label="Sprites"
+                            uiScale={uiScale}
+                            value={spriteValue}
+                        />
+                        <ComposerTile
+                            icon={<CloudRain aria-hidden color={t.accent.blue} size={14 * uiScale} />}
+                            label="Weather"
+                            uiScale={uiScale}
+                            value={weatherValue}
+                        />
+                        <ComposerTile
+                            detail={`${snapshot.totals.voice} voiced`}
+                            icon={<MessageSquare aria-hidden color={t.accent.green} size={14 * uiScale} />}
+                            label="Dialogue"
+                            uiScale={uiScale}
+                            value={`${snapshot.totals.dialogue} lines`}
+                        />
+                        <ComposerTile
+                            detail={`${snapshot.totals.jumps + snapshot.totals.sceneChanges} exits`}
+                            icon={<GitFork aria-hidden color={t.accent.yellow} size={14 * uiScale} />}
+                            label="Branches"
+                            uiScale={uiScale}
+                            value={`${snapshot.totals.choices} choices`}
+                        />
+                    </div>
 
             {graphChips.length > 0 && (
                 <div
@@ -391,6 +415,8 @@ export function TimelineSceneComposerPanel({
                     ))}
                 </div>
             )}
+                </>
+            ) : undefined}
         </div>
     );
 }
@@ -464,7 +490,7 @@ function composerHeaderActionStyle(uiScale: number) {
         display: 'inline-flex',
         fontSize: `${10 * uiScale}px`,
         gap: `${4 * uiScale}px`,
-        minHeight: `${22 * uiScale}px`,
+        minHeight: `${24 * uiScale}px`,
         padding: `${2 * uiScale}px ${6 * uiScale}px`,
         whiteSpace: 'nowrap',
     } as const;
@@ -496,7 +522,7 @@ function ComposerStatusChip({
                 fontSize: `${10 * uiScale}px`,
                 gap: `${4 * uiScale}px`,
                 maxWidth: `${220 * uiScale}px`,
-                minHeight: `${22 * uiScale}px`,
+                minHeight: `${24 * uiScale}px`,
                 minWidth: 0,
                 overflow: 'hidden',
                 padding: `${2 * uiScale}px ${6 * uiScale}px`,

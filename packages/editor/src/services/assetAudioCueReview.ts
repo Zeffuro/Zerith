@@ -18,6 +18,7 @@ export type AssetAudioCueReviewDependencies = {
 
 export type AssetAudioCueReviewEntry = {
     cueCount: number;
+    cueNames: string[];
     descriptorAssetUrl: string;
     finiteDurationSeconds: number;
     issueMessages: string[];
@@ -44,13 +45,28 @@ const defaultDependencies: AssetAudioCueReviewDependencies = {
     readTextFile: fsReadTextFile,
 };
 
+export function collectAssetAudioCueOrganizationAssetUrls(
+    entries: readonly AssetAudioCueReviewEntry[],
+): string[] {
+    const assetUrls = new Set<string>();
+    for (const entry of entries) {
+        assetUrls.add(entry.descriptorAssetUrl);
+        if (entry.sourceAssetUrl && entry.sourceAvailable !== false) {
+            assetUrls.add(entry.sourceAssetUrl);
+        }
+    }
+    return [...assetUrls].toSorted((left, right) => left.localeCompare(right));
+}
+
 export function createAssetAudioCueReviewEntry(
     descriptorAssetUrl: string,
     descriptor: AudiosheetDescriptor,
     assetInventory: readonly string[],
 ): AssetAudioCueReviewEntry {
     const inventory = new Set(assetInventory);
-    const cueEntries = Object.entries(descriptor.cues);
+    const cueEntries = Object.entries(descriptor.cues)
+        .toSorted(([left], [right]) => left.localeCompare(right));
+    const cueNames = cueEntries.map(([cueName]) => cueName);
     const issueMessages: string[] = [];
     let finiteDurationSeconds = 0;
     let loopCueCount = 0;
@@ -80,6 +96,7 @@ export function createAssetAudioCueReviewEntry(
 
     return {
         cueCount: cueEntries.length,
+        cueNames,
         descriptorAssetUrl,
         finiteDurationSeconds,
         issueMessages,
@@ -191,9 +208,36 @@ export function resolveAudiosheetSourceAssetUrl(
     return normalizeAssetUrl(baseSegments.join('/'));
 }
 
+export function searchAssetAudioCueReviewEntries(
+    entries: readonly AssetAudioCueReviewEntry[],
+    query: string,
+): AssetAudioCueReviewEntry[] {
+    const terms = query
+        .trim()
+        .toLocaleLowerCase()
+        .split(/\s+/u)
+        .filter(Boolean);
+    if (terms.length === 0) return [...entries];
+
+    return entries.filter((entry) => {
+        const haystack = [
+            entry.descriptorAssetUrl,
+            entry.sourceAssetUrl,
+            ...entry.cueNames,
+            ...entry.issueMessages,
+        ]
+            .filter((value): value is string => typeof value === 'string')
+            .join('\n')
+            .toLocaleLowerCase();
+
+        return terms.every((term) => haystack.includes(term));
+    });
+}
+
 function createIssueEntry(descriptorAssetUrl: string, issueMessage: string): AssetAudioCueReviewEntry {
     return {
         cueCount: 0,
+        cueNames: [],
         descriptorAssetUrl,
         finiteDurationSeconds: 0,
         issueMessages: [issueMessage],
