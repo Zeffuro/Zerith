@@ -28,6 +28,17 @@ export type AssetAudioCueReviewEntry = {
     volumeOverrideCueCount: number;
 };
 
+export type AssetAudioCueReviewFilter = 'all' | 'exportable' | 'issues' | 'missing-source';
+
+export type AssetAudioCueReviewSummary = {
+    exportableCueCount: number;
+    exportableEntryCount: number;
+    issueEntryCount: number;
+    missingSourceEntryCount: number;
+    totalCueCount: number;
+    totalEntryCount: number;
+};
+
 const defaultDependencies: AssetAudioCueReviewDependencies = {
     join: fsJoin,
     readTextFile: fsReadTextFile,
@@ -78,6 +89,59 @@ export function createAssetAudioCueReviewEntry(
         sourceAvailable,
         volumeOverrideCueCount,
     };
+}
+
+export function createAssetAudioCueReviewSummary(
+    entries: readonly AssetAudioCueReviewEntry[],
+): AssetAudioCueReviewSummary {
+    let exportableCueCount = 0;
+    let exportableEntryCount = 0;
+    let issueEntryCount = 0;
+    let missingSourceEntryCount = 0;
+    let totalCueCount = 0;
+
+    for (const entry of entries) {
+        totalCueCount += entry.cueCount;
+        if (isAssetAudioCueReviewEntryExportable(entry)) {
+            exportableEntryCount += 1;
+            exportableCueCount += entry.cueCount;
+        }
+        if (entry.issueMessages.length > 0) issueEntryCount += 1;
+        if (entry.sourceAvailable === false) missingSourceEntryCount += 1;
+    }
+
+    return {
+        exportableCueCount,
+        exportableEntryCount,
+        issueEntryCount,
+        missingSourceEntryCount,
+        totalCueCount,
+        totalEntryCount: entries.length,
+    };
+}
+
+export function filterAssetAudioCueReviewEntries(
+    entries: readonly AssetAudioCueReviewEntry[],
+    filter: AssetAudioCueReviewFilter,
+): AssetAudioCueReviewEntry[] {
+    switch (filter) {
+        case 'all': {
+            return [...entries];
+        }
+        case 'exportable': {
+            return entries.filter((entry) => isAssetAudioCueReviewEntryExportable(entry));
+        }
+        case 'issues': {
+            return entries.filter((entry) => entry.issueMessages.length > 0);
+        }
+        case 'missing-source': {
+            return entries.filter((entry) => entry.sourceAvailable === false);
+        }
+    }
+}
+
+export function isAssetAudioCueReviewEntryExportable(entry: AssetAudioCueReviewEntry): boolean {
+    return entry.cueCount > 0 && entry.sourceAvailable !== false;
 }
 
 export async function loadAssetAudioCueReview(

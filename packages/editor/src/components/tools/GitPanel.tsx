@@ -390,13 +390,13 @@ export function GitPanel() {
         return (
             <div style={panelStyle(uiScale)}>
                 <strong>Git</strong>
-                <div style={emptyStateStyle(uiScale)}>Open a project to inspect Git status.</div>
+                <div aria-live="polite" role="status" style={emptyStateStyle(uiScale)}>Open a project to inspect Git status.</div>
             </div>
         );
     }
 
     return (
-        <div className="zerith-scrollbar" style={panelStyle(uiScale)}>
+        <div aria-busy={isBusy || isLoadingDiff} className="zerith-scrollbar" style={panelStyle(uiScale)}>
             <div style={headerRowStyle(uiScale)}>
                 <div style={{ alignItems: 'center', display: 'flex', gap: `${6 * uiScale}px`, minWidth: 0 }}>
                     <FolderGit2 color={t.syntax.logic} size={16 * uiScale} />
@@ -513,7 +513,7 @@ export function GitPanel() {
 
             <GitBackendSection backendStrategy={backendStrategy} uiScale={uiScale} />
 
-            {lastMessage ? <div style={messageStyle(uiScale)}>{lastMessage}</div> : undefined}
+            {lastMessage ? <div aria-live="polite" role="status" style={messageStyle(uiScale)}>{lastMessage}</div> : undefined}
         </div>
     );
 }

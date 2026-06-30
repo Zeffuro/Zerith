@@ -14,6 +14,7 @@ import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';
 import { isRecord } from '../../../utils/typeGuards';
 import { createJsonSelectionSignature, findJsonSelectionRange } from './jsonSelectionModel';
+import { createScriptJsonEditorAccessibilityOptions } from './scriptJsonEditorAccessibilityModel';
 
 type ApplyResult = {
     content?: string;
@@ -171,6 +172,9 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
 
     const themeKey = useSettingsStore((s) => s.themeKey);
     const customThemes = useSettingsStore((s) => s.customThemes);
+    const codeEditorLargeText = useSettingsStore((s) => s.codeEditorLargeText);
+    const codeEditorPlainTextComfort = useSettingsStore((s) => s.codeEditorPlainTextComfort);
+    const codeEditorScreenReaderMode = useSettingsStore((s) => s.codeEditorScreenReaderMode);
 
     const mode = useMemo<EditorMode>(() => {
         if (!activeTab) return 'readonly';
@@ -406,6 +410,12 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
     const title = titleForMode(mode, activeTab?.title);
     const language = languageForMode(mode, activeTab?.path);
     const monacoModelPath = toMonacoModelPath(activeTab?.path, sessionKey, mode);
+    const accessibilityOptions = useMemo(() => createScriptJsonEditorAccessibilityOptions({
+        codeEditorLargeText,
+        codeEditorPlainTextComfort,
+        codeEditorScreenReaderMode,
+        uiScale,
+    }), [codeEditorLargeText, codeEditorPlainTextComfort, codeEditorScreenReaderMode, uiScale]);
 
     const onMount = ((editor: Monaco.editor.IStandaloneCodeEditor, monaco: MonacoThemeApi) => {
         editorReference.current = editor;
@@ -453,14 +463,12 @@ export function ScriptJsonEditor({ uiScale }: { uiScale: number }) {
                     }}
                     onMount={onMount}
                     options={{
+                        ...accessibilityOptions,
                         automaticLayout: true,
                         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                        fontSize: Math.round(12 * uiScale),
                         insertSpaces: true,
-                        minimap: { enabled: true },
                         mouseWheelZoom: true,
                         tabSize: 2,
-                        wordWrap: 'off',
                     }}
                     path={monacoModelPath}
                     value={value}

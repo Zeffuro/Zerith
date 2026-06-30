@@ -55,6 +55,17 @@ export function ProjectValidationPanel() {
         () => report ? summarizeProjectValidationPanelReport(report) : undefined,
         [report],
     );
+    const statusMessage = useMemo(
+        () => createValidationStatusMessage({
+            errorMessage,
+            filteredRowCount: filteredRows.length,
+            isFiltering: query.trim().length > 0,
+            rowCount: rows.length,
+            runState,
+            summary,
+        }),
+        [errorMessage, filteredRows.length, query, rows.length, runState, summary],
+    );
 
     const runValidation = async () => {
         if (!projectPath || runState === 'running') return;
@@ -100,6 +111,7 @@ export function ProjectValidationPanel() {
 
     return (
         <div
+            aria-busy={runState === 'running'}
             className="zerith-scrollbar"
             style={{
                 background: t.bg.app,
@@ -126,6 +138,10 @@ export function ProjectValidationPanel() {
                     <RefreshCw size={14 * uiScale} />
                     <span>{runState === 'running' ? 'Validating...' : 'Validate'}</span>
                 </button>
+            </div>
+
+            <div aria-live="polite" role="status" style={statusMessageStyle(uiScale)}>
+                {statusMessage}
             </div>
 
             {summary ? (
@@ -198,9 +214,32 @@ function cleanStateStyle(uiScale: number): CSSProperties {
     };
 }
 
+function createValidationStatusMessage({
+    errorMessage,
+    filteredRowCount,
+    isFiltering,
+    rowCount,
+    runState,
+    summary,
+}: {
+    errorMessage: string | undefined;
+    filteredRowCount: number;
+    isFiltering: boolean;
+    rowCount: number;
+    runState: ValidationRunState;
+    summary: ReturnType<typeof summarizeProjectValidationPanelReport> | undefined;
+}): string {
+    if (runState === 'running') return 'Validation is running.';
+    if (errorMessage) return `Validation failed: ${errorMessage}`;
+    if (!summary) return 'Validation has not run yet.';
+    if (runState === 'ok' && rowCount === 0) return 'Validation complete. No issues found.';
+    if (isFiltering) return `Validation showing ${filteredRowCount} of ${rowCount} issue rows.`;
+    return `Validation complete. ${rowCount} issue row${rowCount === 1 ? '' : 's'} found.`;
+}
+
 function EmptyPanelMessage({ message, uiScale }: { message: string; uiScale: number }) {
     return (
-        <div style={{ color: t.text.faint, fontStyle: 'italic', padding: `${12 * uiScale}px` }}>
+        <div aria-live="polite" role="status" style={{ color: t.text.faint, fontStyle: 'italic', padding: `${12 * uiScale}px` }}>
             {message}
         </div>
     );
@@ -318,6 +357,14 @@ function runButtonStyle(uiScale: number, disabled: boolean): CSSProperties {
     };
 }
 
+function statusMessageStyle(uiScale: number): CSSProperties {
+    return {
+        color: t.text.muted,
+        fontSize: `${11 * uiScale}px`,
+        minHeight: `${16 * uiScale}px`,
+    };
+}
+
 function SummaryChip({
     label,
     tone,
@@ -396,7 +443,14 @@ function ValidationRow({ row, uiScale }: { row: ProjectValidationPanelRow; uiSca
                     className="toolbar-btn"
                     key={`${action.kind}-${action.query}`}
                     onClick={() => {
-                        if (action.kind === 'localization') openLocalizationWorkbenchTab({ query: action.query });
+                        if (action.kind === 'localization') {
+                            openLocalizationWorkbenchTab({
+                                locale: action.locale,
+                                namespace: action.namespace,
+                                query: action.query,
+                                status: action.status,
+                            });
+                        }
                     }}
                     style={rowActionButtonStyle(uiScale)}
                     title={action.title}

@@ -1,9 +1,10 @@
 import { Save, X } from 'lucide-react';
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useId, useRef, useState } from 'react';
 
 import type { AssetLibraryAssetMetadata } from '../../services/assetLibraryMetadata';
 
 import { useBackdropDismissal } from '../../hooks/useBackdropDismissal';
+import { useDialogFocusTrap } from '../../hooks/useDialogFocusTrap';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { miniButtonStyle, searchInputStyle } from './assetDependencyPanelStyles';
 import { AssetMetadataChips } from './AssetDependencyRows';
@@ -39,6 +40,9 @@ export function AssetMetadataEditorDialog({
 }: Properties) {
     const [collectionsInput, setCollectionsInput] = useState('');
     const [tagsInput, setTagsInput] = useState('');
+    const dialogReference = useRef<HTMLFormElement | null>(null);
+    const subjectId = useId();
+    const titleId = useId();
     const backdropDismissal = useBackdropDismissal(onCancel, { disabled: busy });
     const draft = formatAssetMetadataEditorDraft(metadata);
 
@@ -46,6 +50,7 @@ export function AssetMetadataEditorDialog({
         setCollectionsInput(draft.collectionsInput);
         setTagsInput(draft.tagsInput);
     }, [assetUrl, draft.collectionsInput, draft.tagsInput, subject]);
+    useDialogFocusTrap({ active: Boolean(assetUrl ?? subject), containerReference: dialogReference });
 
     const displaySubject = subject ?? assetUrl;
     if (!displaySubject) return;
@@ -59,11 +64,22 @@ export function AssetMetadataEditorDialog({
 
     return (
         <div {...backdropDismissal} style={backdropStyle}>
-            <form onClick={(event) => event.stopPropagation()} onSubmit={submit} style={dialogStyle(uiScale)}>
+            <form
+                aria-busy={busy}
+                aria-describedby={subjectId}
+                aria-labelledby={titleId}
+                aria-modal="true"
+                onClick={(event) => event.stopPropagation()}
+                onSubmit={submit}
+                ref={dialogReference}
+                role="dialog"
+                style={dialogStyle(uiScale)}
+                tabIndex={-1}
+            >
                 <div style={titleRowStyle(uiScale)}>
                     <div style={{ minWidth: 0 }}>
-                        <div style={{ color: t.text.primary, fontSize: `${14 * uiScale}px`, fontWeight: 700 }}>{title}</div>
-                        <div style={{ color: t.text.faint, fontSize: `${11 * uiScale}px`, overflowWrap: 'anywhere' }}>{displaySubject}</div>
+                        <div id={titleId} style={{ color: t.text.primary, fontSize: `${14 * uiScale}px`, fontWeight: 700 }}>{title}</div>
+                        <div id={subjectId} style={{ color: t.text.faint, fontSize: `${11 * uiScale}px`, overflowWrap: 'anywhere' }}>{displaySubject}</div>
                     </div>
                     <button
                         className="toolbar-btn"

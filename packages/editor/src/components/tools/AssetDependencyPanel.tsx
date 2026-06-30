@@ -42,11 +42,14 @@ import {
     areAllUnusedAssetsSelected,
     type AssetLibraryKindFilter,
     type AssetLibraryOrganizationFilter,
+    type AssetLibraryStatusFilter,
     collectAssetDependencyGraphUrls,
     collectAssetUsageEntryUrls,
     createAssetKindSummary,
     createAssetOrganizationSummary,
+    createAssetStatusSummary,
     filterAssetDependencyGraph,
+    filterAssetDependencyGraphByStatus,
     getAssetLibraryAssetMetadata,
     getSelectedUnusedAssets,
     groupUnusedAssetsByFolder,
@@ -59,6 +62,7 @@ import { AssetKindFilterPanel } from './AssetKindFilterPanel';
 import { AssetLibraryOrganizationPanel } from './AssetLibraryOrganizationPanel';
 import { AssetMetadataEditorDialog } from './AssetMetadataEditorDialog';
 import { AssetReferenceSection } from './AssetReferenceSection';
+import { AssetStatusFilterPanel } from './AssetStatusFilterPanel';
 import { AssetUnusedSection } from './AssetUnusedSection';
 
 export function AssetDependencyPanel() {
@@ -77,6 +81,7 @@ export function AssetDependencyPanel() {
     const [metadataEditorAssetUrl, setMetadataEditorAssetUrl] = useState<string>();
     const [assetOrganizationFilter, setAssetOrganizationFilter] = useState<AssetLibraryOrganizationFilter>({ kind: 'all' });
     const [assetSearchQuery, setAssetSearchQuery] = useState('');
+    const [assetStatusFilter, setAssetStatusFilter] = useState<AssetLibraryStatusFilter>('all');
     const [isLoadingAssetMetadata, setIsLoadingAssetMetadata] = useState(false);
     const [isSavingAssetOrganization, setIsSavingAssetOrganization] = useState(false);
     const [movingAssetUrl, setMovingAssetUrl] = useState<string>();
@@ -100,7 +105,7 @@ export function AssetDependencyPanel() {
         () => filterAssetDependencyGraph(audioRoleFilteredDependencyGraph, '', assetKindFilter, assetLibraryMetadata),
         [assetKindFilter, assetLibraryMetadata, audioRoleFilteredDependencyGraph],
     );
-    const filteredDependencyGraph = useMemo(
+    const organizationFilteredDependencyGraph = useMemo(
         () => filterAssetDependencyGraph(
             kindFilteredDependencyGraph,
             '',
@@ -109,6 +114,14 @@ export function AssetDependencyPanel() {
             assetOrganizationFilter,
         ),
         [assetLibraryMetadata, assetOrganizationFilter, kindFilteredDependencyGraph],
+    );
+    const assetStatusSummary = useMemo(
+        () => createAssetStatusSummary(organizationFilteredDependencyGraph),
+        [organizationFilteredDependencyGraph],
+    );
+    const filteredDependencyGraph = useMemo(
+        () => filterAssetDependencyGraphByStatus(organizationFilteredDependencyGraph, assetStatusFilter),
+        [assetStatusFilter, organizationFilteredDependencyGraph],
     );
     const assetKindSummary = useMemo(
         () => createAssetKindSummary(searchedDependencyGraph),
@@ -146,7 +159,8 @@ export function AssetDependencyPanel() {
     const isFilteringAssets = assetSearchQuery.trim().length > 0
         || assetAudioRoleFilter !== 'all'
         || assetKindFilter !== 'all'
-        || assetOrganizationFilter.kind !== 'all';
+        || assetOrganizationFilter.kind !== 'all'
+        || assetStatusFilter !== 'all';
     const selectedUnusedAssetUrls = useMemo(
         () => getSelectedUnusedAssets(selectedUnusedAssets, filteredDependencyGraph.unused),
         [filteredDependencyGraph.unused, selectedUnusedAssets],
@@ -160,6 +174,30 @@ export function AssetDependencyPanel() {
     const metadataEditorMetadata = metadataEditorAssetUrl
         ? getAssetLibraryAssetMetadata(assetLibraryMetadata, metadataEditorAssetUrl)
         : { collections: [], tags: [] };
+    const showUsedAssets = assetStatusFilter === 'all' || assetStatusFilter === 'used';
+    const showUnusedAssets = assetStatusFilter === 'all' || assetStatusFilter === 'unused';
+    const showMissingAssets = assetStatusFilter === 'all' || assetStatusFilter === 'missing';
+    const statusMessage = useMemo(() => createAssetDependencyStatusMessage({
+        filteredDependencyGraph,
+        isDeletingUnused,
+        isFilteringAssets,
+        isImportingAssets,
+        isLoadingAssetMetadata,
+        isSavingAssetOrganization,
+        movingAssetUrl,
+        savingMetadataAssetUrl,
+        totalDependencyGraph: dependencyGraph,
+    }), [
+        dependencyGraph,
+        filteredDependencyGraph,
+        isDeletingUnused,
+        isFilteringAssets,
+        isImportingAssets,
+        isLoadingAssetMetadata,
+        isSavingAssetOrganization,
+        movingAssetUrl,
+        savingMetadataAssetUrl,
+    ]);
 
     useEffect(() => {
         setSelectedUnusedAssets((current) => reconcileUnusedAssetSelection(current, dependencyGraph.unused));
@@ -203,6 +241,7 @@ export function AssetDependencyPanel() {
 
     return (
         <div
+            aria-busy={isDeletingUnused || isImportingAssets || isLoadingAssetMetadata || isSavingAssetOrganization || movingAssetUrl !== undefined || savingMetadataAssetUrl !== undefined}
             className="zerith-scrollbar"
             style={{
                 background: t.bg.app,
@@ -217,8 +256,8 @@ export function AssetDependencyPanel() {
         >
             <strong>Asset Dependencies</strong>
 
-            <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
-                Used: {formatFilteredCount(filteredDependencyGraph.used.length, dependencyGraph.used.length, isFilteringAssets)} | Unused: {formatFilteredCount(filteredDependencyGraph.unused.length, dependencyGraph.unused.length, isFilteringAssets)} | Missing: {formatFilteredCount(filteredDependencyGraph.missing.length, dependencyGraph.missing.length, isFilteringAssets)}
+            <div aria-live="polite" role="status" style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
+                {statusMessage}
             </div>
 
             <AssetKindFilterPanel
@@ -289,10 +328,17 @@ export function AssetDependencyPanel() {
                 visibleAssetCount={visibleAssetUrls.length}
             />
 
+            <AssetStatusFilterPanel
+                filter={assetStatusFilter}
+                onFilterChange={setAssetStatusFilter}
+                summary={assetStatusSummary}
+                uiScale={uiScale}
+            />
+
             <AssetAudioCueReviewPanel
                 assetInventory={assetInventory}
                 assetUrls={visibleAssetUrls}
-                onOpenSheet={(assetUrl) => {
+                onOpenAsset={(assetUrl) => {
                     void handleOpenAssetUrl(projectPath, assetUrl);
                 }}
                 projectPath={projectPath}
@@ -302,84 +348,106 @@ export function AssetDependencyPanel() {
             <AssetDependencyActionBar
                 assetSearchQuery={assetSearchQuery}
                 isDeletingUnused={isDeletingUnused}
+                isFilteringAssets={isFilteringAssets}
                 isImportingAssets={isImportingAssets}
+                isOrganizingVisible={isSavingAssetOrganization}
+                onClearFilters={() => {
+                    setAssetSearchQuery('');
+                    setAssetAudioRoleFilter('all');
+                    setAssetKindFilter('all');
+                    setAssetOrganizationFilter({ kind: 'all' });
+                    setAssetStatusFilter('all');
+                }}
                 onDeleteSelectedUnused={() => setShowDeleteUnusedDialog(true)}
                 onImportAssets={() => {
                     void handleImportAssets(projectPath, setIsImportingAssets);
                 }}
+                onOrganizeVisible={() => setBulkMetadataRequest(createBulkMetadataRequest(
+                    visibleAssetUrls,
+                    'visible asset',
+                    'visible',
+                    'Organize Visible Assets',
+                ))}
                 onSearchQueryChange={setAssetSearchQuery}
                 selectedUnusedCount={selectedUnusedAssetUrls.length}
                 uiScale={uiScale}
+                visibleAssetCount={visibleAssetUrls.length}
             />
 
-            <AssetReferenceSection
-                assetLibraryMetadata={assetLibraryMetadata}
-                bulkDisabled={isSavingAssetOrganization}
-                emptyMessage={isFilteringAssets ? 'No used assets match the current filter.' : 'No asset references found in scripts/macros.'}
-                entries={filteredDependencyGraph.used}
-                movingAssetUrl={movingAssetUrl}
-                onEditMetadata={setMetadataEditorAssetUrl}
-                onMoveAsset={(assetUrl) => {
-                    void handleMoveAsset(projectPath, assetUrl, setMovingAssetUrl);
-                }}
-                onOpenLocation={handleOpenLocation}
-                onOrganizeVisible={() => setBulkMetadataRequest(createBulkMetadataRequest(
-                    visibleUsedAssetUrls,
-                    'visible used asset',
-                    'used',
-                    'Organize Visible Used Assets',
-                ))}
-                subtitleForEntry={(entry) => `references: ${entry.references.length}`}
-                title="Used assets"
-                uiScale={uiScale}
-            />
+            {showUsedAssets ? (
+                <AssetReferenceSection
+                    assetLibraryMetadata={assetLibraryMetadata}
+                    bulkDisabled={isSavingAssetOrganization}
+                    emptyMessage={isFilteringAssets ? 'No used assets match the current filter.' : 'No asset references found in scripts/macros.'}
+                    entries={filteredDependencyGraph.used}
+                    movingAssetUrl={movingAssetUrl}
+                    onEditMetadata={setMetadataEditorAssetUrl}
+                    onMoveAsset={(assetUrl) => {
+                        void handleMoveAsset(projectPath, assetUrl, setMovingAssetUrl);
+                    }}
+                    onOpenLocation={handleOpenLocation}
+                    onOrganizeVisible={() => setBulkMetadataRequest(createBulkMetadataRequest(
+                        visibleUsedAssetUrls,
+                        'visible used asset',
+                        'used',
+                        'Organize Visible Used Assets',
+                    ))}
+                    subtitleForEntry={(entry) => `references: ${entry.references.length}`}
+                    title="Used assets"
+                    uiScale={uiScale}
+                />
+            ) : undefined}
 
-            <AssetUnusedSection
-                allUnusedAssetsSelected={allUnusedAssetsSelected}
-                assetLibraryMetadata={assetLibraryMetadata}
-                assetUrls={filteredDependencyGraph.unused}
-                isFilteringAssets={isFilteringAssets}
-                movingAssetUrl={movingAssetUrl}
-                onClearVisible={() => setSelectedUnusedAssets((current) => removeUnusedAssetScope(current, filteredDependencyGraph.unused))}
-                onEditMetadata={setMetadataEditorAssetUrl}
-                onMoveAsset={(assetUrl) => {
-                    void handleMoveAsset(projectPath, assetUrl, setMovingAssetUrl);
-                }}
-                onOrganizeSelected={() => setBulkMetadataRequest(createBulkMetadataRequest(
-                    selectedUnusedAssetUrls,
-                    'selected unused asset',
-                    'selected unused',
-                    'Organize Selected Assets',
-                ))}
-                onSelectFolder={setSelectedUnusedAssets}
-                onSelectVisible={() => setSelectedUnusedAssets((current) => selectUnusedAssetScope(current, filteredDependencyGraph.unused))}
-                onToggleAssetSelection={(assetUrl, selected) => {
-                    setSelectedUnusedAssets((current) => toggleUnusedAssetSelection(current, assetUrl, selected));
-                }}
-                savingMetadataAssetUrl={savingMetadataAssetUrl}
-                selectedAssetSet={selectedUnusedAssetSet}
-                selectedCount={selectedUnusedAssetUrls.length}
-                uiScale={uiScale}
-                unusedFolderGroups={unusedFolderGroups}
-            />
+            {showUnusedAssets ? (
+                <AssetUnusedSection
+                    allUnusedAssetsSelected={allUnusedAssetsSelected}
+                    assetLibraryMetadata={assetLibraryMetadata}
+                    assetUrls={filteredDependencyGraph.unused}
+                    isFilteringAssets={isFilteringAssets}
+                    movingAssetUrl={movingAssetUrl}
+                    onClearVisible={() => setSelectedUnusedAssets((current) => removeUnusedAssetScope(current, filteredDependencyGraph.unused))}
+                    onEditMetadata={setMetadataEditorAssetUrl}
+                    onMoveAsset={(assetUrl) => {
+                        void handleMoveAsset(projectPath, assetUrl, setMovingAssetUrl);
+                    }}
+                    onOrganizeSelected={() => setBulkMetadataRequest(createBulkMetadataRequest(
+                        selectedUnusedAssetUrls,
+                        'selected unused asset',
+                        'selected unused',
+                        'Organize Selected Assets',
+                    ))}
+                    onSelectFolder={setSelectedUnusedAssets}
+                    onSelectVisible={() => setSelectedUnusedAssets((current) => selectUnusedAssetScope(current, filteredDependencyGraph.unused))}
+                    onToggleAssetSelection={(assetUrl, selected) => {
+                        setSelectedUnusedAssets((current) => toggleUnusedAssetSelection(current, assetUrl, selected));
+                    }}
+                    savingMetadataAssetUrl={savingMetadataAssetUrl}
+                    selectedAssetSet={selectedUnusedAssetSet}
+                    selectedCount={selectedUnusedAssetUrls.length}
+                    uiScale={uiScale}
+                    unusedFolderGroups={unusedFolderGroups}
+                />
+            ) : undefined}
 
-            <AssetReferenceSection
-                assetLibraryMetadata={assetLibraryMetadata}
-                bulkDisabled={isSavingAssetOrganization}
-                emptyMessage={isFilteringAssets ? 'No missing assets match the current filter.' : 'No missing assets referenced.'}
-                entries={filteredDependencyGraph.missing}
-                onEditMetadata={setMetadataEditorAssetUrl}
-                onOpenLocation={handleOpenLocation}
-                onOrganizeVisible={() => setBulkMetadataRequest(createBulkMetadataRequest(
-                    visibleMissingAssetUrls,
-                    'visible missing asset',
-                    'missing',
-                    'Organize Visible Missing Assets',
-                ))}
-                subtitleForEntry={(entry) => `missing | references: ${entry.references.length}`}
-                title="Missing referenced assets"
-                uiScale={uiScale}
-            />
+            {showMissingAssets ? (
+                <AssetReferenceSection
+                    assetLibraryMetadata={assetLibraryMetadata}
+                    bulkDisabled={isSavingAssetOrganization}
+                    emptyMessage={isFilteringAssets ? 'No missing assets match the current filter.' : 'No missing assets referenced.'}
+                    entries={filteredDependencyGraph.missing}
+                    onEditMetadata={setMetadataEditorAssetUrl}
+                    onOpenLocation={handleOpenLocation}
+                    onOrganizeVisible={() => setBulkMetadataRequest(createBulkMetadataRequest(
+                        visibleMissingAssetUrls,
+                        'visible missing asset',
+                        'missing',
+                        'Organize Visible Missing Assets',
+                    ))}
+                    subtitleForEntry={(entry) => `missing | references: ${entry.references.length}`}
+                    title="Missing referenced assets"
+                    uiScale={uiScale}
+                />
+            ) : undefined}
 
             <AssetMetadataEditorDialog
                 assetUrl={metadataEditorAssetUrl}
@@ -482,7 +550,37 @@ export function AssetDependencyPanel() {
     );
 }
 
+function createAssetDependencyStatusMessage({
+    filteredDependencyGraph,
+    isDeletingUnused,
+    isFilteringAssets,
+    isImportingAssets,
+    isLoadingAssetMetadata,
+    isSavingAssetOrganization,
+    movingAssetUrl,
+    savingMetadataAssetUrl,
+    totalDependencyGraph,
+}: {
+    filteredDependencyGraph: ReturnType<typeof createAssetDependencyGraph>;
+    isDeletingUnused: boolean;
+    isFilteringAssets: boolean;
+    isImportingAssets: boolean;
+    isLoadingAssetMetadata: boolean;
+    isSavingAssetOrganization: boolean;
+    movingAssetUrl: string | undefined;
+    savingMetadataAssetUrl: string | undefined;
+    totalDependencyGraph: ReturnType<typeof createAssetDependencyGraph>;
+}): string {
+    const countSummary = `Used: ${formatFilteredCount(filteredDependencyGraph.used.length, totalDependencyGraph.used.length, isFilteringAssets)} | Unused: ${formatFilteredCount(filteredDependencyGraph.unused.length, totalDependencyGraph.unused.length, isFilteringAssets)} | Missing: ${formatFilteredCount(filteredDependencyGraph.missing.length, totalDependencyGraph.missing.length, isFilteringAssets)}`;
+    if (isImportingAssets) return `Importing assets. ${countSummary}`;
+    if (isDeletingUnused) return `Deleting selected unused assets. ${countSummary}`;
+    if (isSavingAssetOrganization) return `Saving asset organization metadata. ${countSummary}`;
+    if (isLoadingAssetMetadata) return `Loading asset metadata. ${countSummary}`;
+    if (movingAssetUrl) return `Moving ${movingAssetUrl}. ${countSummary}`;
+    if (savingMetadataAssetUrl) return `Saving metadata for ${savingMetadataAssetUrl}. ${countSummary}`;
+    return countSummary;
+}
+
 function formatFilteredCount(visibleCount: number, totalCount: number, isFiltering: boolean): string {
     return isFiltering ? `${visibleCount}/${totalCount}` : String(totalCount);
 }
-

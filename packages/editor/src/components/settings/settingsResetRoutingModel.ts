@@ -5,6 +5,9 @@ export type SettingsResetActions = {
     resetAudiosheetShortcutTargetMode: () => void;
     resetAutosaveEnabled: () => void;
     resetAutosaveIntervalMs: () => void;
+    resetCodeEditorLargeText: () => void;
+    resetCodeEditorPlainTextComfort: () => void;
+    resetCodeEditorScreenReaderMode: () => void;
     resetCustomThemes: () => void;
     resetDockLayoutPresets: () => void;
     resetEditorScale: () => void;
@@ -22,6 +25,9 @@ const controlResetActionById: Record<SettingsControlId, (actions: SettingsResetA
     audiosheetShortcutTargetMode: (actions) => actions.resetAudiosheetShortcutTargetMode(),
     autosaveEnabled: (actions) => actions.resetAutosaveEnabled(),
     autosaveIntervalMs: (actions) => actions.resetAutosaveIntervalMs(),
+    codeEditorLargeText: (actions) => actions.resetCodeEditorLargeText(),
+    codeEditorPlainTextComfort: (actions) => actions.resetCodeEditorPlainTextComfort(),
+    codeEditorScreenReaderMode: (actions) => actions.resetCodeEditorScreenReaderMode(),
     customThemes: (actions) => actions.resetCustomThemes(),
     dockLayoutPresets: (actions) => actions.resetDockLayoutPresets(),
     editorScale: (actions) => actions.resetEditorScale(),
@@ -45,6 +51,9 @@ export function runAllSettingsReset(actions: SettingsResetActions): void {
     actions.resetAutosaveIntervalMs();
     actions.resetAudio();
     actions.resetAudiosheetShortcutTargetMode();
+    actions.resetCodeEditorScreenReaderMode();
+    actions.resetCodeEditorPlainTextComfort();
+    actions.resetCodeEditorLargeText();
     actions.resetDockLayoutPresets();
     actions.resetQuickCommandTypes();
     actions.resetKeymapOverrides();

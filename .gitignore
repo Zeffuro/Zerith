@@ -7,6 +7,7 @@ yarn-error.log
 # Vite & IDEs
 .vite/
 .vite-temp/
+test-results/
 .idea/
 .vscode/
 

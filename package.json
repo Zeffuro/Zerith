@@ -20,10 +20,14 @@
     "build": "npm run build --workspaces --if-present",
     "lint": "eslint \"packages/**/*.{ts,tsx}\" --max-warnings 0",
     "lint:fix": "eslint \"packages/**/*.{ts,tsx}\" --max-warnings 0 --fix",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:visual": "playwright test -c playwright.config.mjs",
+    "test:visual:update": "playwright test -c playwright.config.mjs --update-snapshots"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.61.1",
     "eslint": "^10.5.0",
     "eslint-plugin-boundaries": "^6.0.2",
     "eslint-plugin-import-x": "^4.16.2",

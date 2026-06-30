@@ -133,7 +133,14 @@ export function EditorSurface() {
     if (activeTab.kind === 'asset') return <AssetPreviewPanel uiScale={uiScale} />;
 
     if (activeTab.kind === 'localization') {
-        return <LocalizationPanel initialQuery={activeTab.localizationFilter} />;
+        return (
+            <LocalizationPanel
+                initialLocale={activeTab.localizationInitialLocale}
+                initialNamespace={activeTab.localizationInitialNamespace}
+                initialQuery={activeTab.localizationFilter}
+                initialStatus={activeTab.localizationInitialStatus}
+            />
+        );
     }
 
     if (activeTab.kind === 'gitDiff') {

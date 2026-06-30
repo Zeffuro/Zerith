@@ -70,6 +70,9 @@ export function SettingsModal() {
     const addCustomTheme = useSettingsStore((state) => state.addCustomTheme);
     const activeDockLayoutPresetId = useSettingsStore((state) => state.activeDockLayoutPresetId);
     const audiosheetShortcutTargetMode = useSettingsStore((state) => state.audiosheetShortcutTargetMode);
+    const codeEditorLargeText = useSettingsStore((state) => state.codeEditorLargeText);
+    const codeEditorPlainTextComfort = useSettingsStore((state) => state.codeEditorPlainTextComfort);
+    const codeEditorScreenReaderMode = useSettingsStore((state) => state.codeEditorScreenReaderMode);
     const customThemes = useSettingsStore((state) => state.customThemes);
     const deleteDockLayoutPreset = useSettingsStore((state) => state.deleteDockLayoutPreset);
     const dockLayoutPresets = useSettingsStore((state) => state.dockLayoutPresets);
@@ -82,6 +85,9 @@ export function SettingsModal() {
     const setDockLayoutPresets = useSettingsStore((state) => state.setDockLayoutPresets);
     const setKeymapOverrides = useSettingsStore((state) => state.setKeymapOverrides);
     const setSettingsMuted = useSettingsStore((state) => state.setIsMuted);
+    const setCodeEditorLargeText = useSettingsStore((state) => state.setCodeEditorLargeText);
+    const setCodeEditorPlainTextComfort = useSettingsStore((state) => state.setCodeEditorPlainTextComfort);
+    const setCodeEditorScreenReaderMode = useSettingsStore((state) => state.setCodeEditorScreenReaderMode);
     const timelineScale = useSettingsStore((state) => state.timelineScale);
     const inspectorScale = useSettingsStore((state) => state.inspectorScale);
     const explorerScale = useSettingsStore((state) => state.explorerScale);
@@ -121,6 +127,9 @@ export function SettingsModal() {
             audiosheetShortcutTargetMode,
             autosaveEnabled,
             autosaveIntervalMs,
+            codeEditorLargeText,
+            codeEditorPlainTextComfort,
+            codeEditorScreenReaderMode,
             customThemes,
             dockLayoutPresets,
             editorScale,
@@ -132,7 +141,7 @@ export function SettingsModal() {
             timelineScale,
             uiScale,
         }),
-        [activeDockLayoutPresetId, audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, dockLayoutPresets, editorScale, explorerScale, inspectorScale, isMuted, quickCommandTypes, searchQuery, themeKey, timelineScale, uiScale],
+        [activeDockLayoutPresetId, audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, codeEditorLargeText, codeEditorPlainTextComfort, codeEditorScreenReaderMode, customThemes, dockLayoutPresets, editorScale, explorerScale, inspectorScale, isMuted, quickCommandTypes, searchQuery, themeKey, timelineScale, uiScale],
     );
 
     const changedControlIds = useMemo(
@@ -142,6 +151,9 @@ export function SettingsModal() {
                 audiosheetShortcutTargetMode,
                 autosaveEnabled,
                 autosaveIntervalMs,
+                codeEditorLargeText,
+                codeEditorPlainTextComfort,
+                codeEditorScreenReaderMode,
                 customThemes,
                 dockLayoutPresets,
                 editorScale,
@@ -158,6 +170,9 @@ export function SettingsModal() {
                 audiosheetShortcutTargetMode: defaultSettings.audiosheetShortcutTargetMode,
                 autosaveEnabled: defaultSettings.autosaveEnabled,
                 autosaveIntervalMs: defaultSettings.autosaveIntervalMs,
+                codeEditorLargeText: defaultSettings.codeEditorLargeText,
+                codeEditorPlainTextComfort: defaultSettings.codeEditorPlainTextComfort,
+                codeEditorScreenReaderMode: defaultSettings.codeEditorScreenReaderMode,
                 customThemes: defaultSettings.customThemes,
                 dockLayoutPresets: defaultSettings.dockLayoutPresets,
                 editorScale: defaultSettings.editorScale,
@@ -170,7 +185,7 @@ export function SettingsModal() {
                 uiScale: defaultSettings.uiScale,
             },
         ),
-        [activeDockLayoutPresetId, audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, dockLayoutPresets, editorScale, explorerScale, inspectorScale, isMuted, quickCommandTypes, themeKey, timelineScale, uiScale],
+        [activeDockLayoutPresetId, audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, codeEditorLargeText, codeEditorPlainTextComfort, codeEditorScreenReaderMode, customThemes, dockLayoutPresets, editorScale, explorerScale, inspectorScale, isMuted, quickCommandTypes, themeKey, timelineScale, uiScale],
     );
 
     const contentMatchedPanelIds = useMemo(() => {
@@ -179,6 +194,9 @@ export function SettingsModal() {
             audiosheetShortcutTargetMode,
             autosaveEnabled,
             autosaveIntervalMs,
+            codeEditorLargeText,
+            codeEditorPlainTextComfort,
+            codeEditorScreenReaderMode,
             customThemes,
             dockLayoutPresets,
             editorScale,
@@ -192,7 +210,7 @@ export function SettingsModal() {
         });
         if (filteredKeymapRows.length > 0) panelIds.add('keymap');
         return panelIds;
-    }, [activeDockLayoutPresetId, audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, dockLayoutPresets, editorScale, explorerScale, filteredKeymapRows.length, inspectorScale, isMuted, quickCommandTypes, searchQuery, themeKey, timelineScale, uiScale]);
+    }, [activeDockLayoutPresetId, audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, codeEditorLargeText, codeEditorPlainTextComfort, codeEditorScreenReaderMode, customThemes, dockLayoutPresets, editorScale, explorerScale, filteredKeymapRows.length, inspectorScale, isMuted, quickCommandTypes, searchQuery, themeKey, timelineScale, uiScale]);
 
     const filteredNodes = useMemo(() => {
         if (searchQuery.trim().length === 0) return baseFilteredNodes;
@@ -214,6 +232,9 @@ export function SettingsModal() {
                 audiosheetShortcutTargetMode,
                 autosaveEnabled,
                 autosaveIntervalMs,
+                codeEditorLargeText,
+                codeEditorPlainTextComfort,
+                codeEditorScreenReaderMode,
                 customThemes,
                 dockLayoutPresets,
                 editorScale,
@@ -230,6 +251,9 @@ export function SettingsModal() {
                 audiosheetShortcutTargetMode: defaultSettings.audiosheetShortcutTargetMode,
                 autosaveEnabled: defaultSettings.autosaveEnabled,
                 autosaveIntervalMs: defaultSettings.autosaveIntervalMs,
+                codeEditorLargeText: defaultSettings.codeEditorLargeText,
+                codeEditorPlainTextComfort: defaultSettings.codeEditorPlainTextComfort,
+                codeEditorScreenReaderMode: defaultSettings.codeEditorScreenReaderMode,
                 customThemes: defaultSettings.customThemes,
                 dockLayoutPresets: defaultSettings.dockLayoutPresets,
                 editorScale: defaultSettings.editorScale,
@@ -246,7 +270,7 @@ export function SettingsModal() {
         const keymapChangedCount = Object.keys(keymapOverrides).length;
         if (keymapChangedCount > 0) counts.keymap = keymapChangedCount;
         return counts;
-    }, [activeDockLayoutPresetId, audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, customThemes, dockLayoutPresets, editorScale, explorerScale, inspectorScale, isMuted, keymapOverrides, quickCommandTypes, themeKey, timelineScale, uiScale]);
+    }, [activeDockLayoutPresetId, audiosheetShortcutTargetMode, autosaveEnabled, autosaveIntervalMs, codeEditorLargeText, codeEditorPlainTextComfort, codeEditorScreenReaderMode, customThemes, dockLayoutPresets, editorScale, explorerScale, inspectorScale, isMuted, keymapOverrides, quickCommandTypes, themeKey, timelineScale, uiScale]);
 
     const changedNodeCounts = useMemo(() => buildSettingsNodeCountMap(filteredNodes, changedLeafCounts), [changedLeafCounts, filteredNodes]);
     const settingsTreeBadgeCounts = treeBadgeMode === 'changed' ? changedNodeCounts : filteredNodeLeafCounts;
@@ -398,6 +422,9 @@ export function SettingsModal() {
             resetAudiosheetShortcutTargetMode: () => setAudiosheetShortcutTargetMode(defaultSettings.audiosheetShortcutTargetMode),
             resetAutosaveEnabled: () => setAutosaveEnabled(defaultSettings.autosaveEnabled),
             resetAutosaveIntervalMs: () => setAutosaveIntervalMs(defaultSettings.autosaveIntervalMs),
+            resetCodeEditorLargeText: () => setCodeEditorLargeText(defaultSettings.codeEditorLargeText),
+            resetCodeEditorPlainTextComfort: () => setCodeEditorPlainTextComfort(defaultSettings.codeEditorPlainTextComfort),
+            resetCodeEditorScreenReaderMode: () => setCodeEditorScreenReaderMode(defaultSettings.codeEditorScreenReaderMode),
             resetCustomThemes: () => setCustomThemes(defaultSettings.customThemes),
             resetDockLayoutPresets: () => {
                 setActiveDockLayoutPresetId(defaultSettings.activeDockLayoutPresetId);
@@ -424,6 +451,9 @@ export function SettingsModal() {
             resetAudiosheetShortcutTargetMode: () => setAudiosheetShortcutTargetMode(defaultSettings.audiosheetShortcutTargetMode),
             resetAutosaveEnabled: () => setAutosaveEnabled(defaultSettings.autosaveEnabled),
             resetAutosaveIntervalMs: () => setAutosaveIntervalMs(defaultSettings.autosaveIntervalMs),
+            resetCodeEditorLargeText: () => setCodeEditorLargeText(defaultSettings.codeEditorLargeText),
+            resetCodeEditorPlainTextComfort: () => setCodeEditorPlainTextComfort(defaultSettings.codeEditorPlainTextComfort),
+            resetCodeEditorScreenReaderMode: () => setCodeEditorScreenReaderMode(defaultSettings.codeEditorScreenReaderMode),
             resetCustomThemes: () => setCustomThemes(defaultSettings.customThemes),
             resetDockLayoutPresets: () => {
                 setActiveDockLayoutPresetId(defaultSettings.activeDockLayoutPresetId);
@@ -468,6 +498,9 @@ export function SettingsModal() {
                             autosaveEnabled={autosaveEnabled}
                             autosaveIntervalMs={autosaveIntervalMs}
                             changedControlIds={changedControlIds}
+                            codeEditorLargeText={codeEditorLargeText}
+                            codeEditorPlainTextComfort={codeEditorPlainTextComfort}
+                            codeEditorScreenReaderMode={codeEditorScreenReaderMode}
                             conflictActionSequenceLength={conflictActionSequence.length}
                             conflictCount={conflictCount}
                             conflictEntries={conflictEntries}
@@ -528,6 +561,9 @@ export function SettingsModal() {
                             setAudiosheetShortcutTargetMode={setAudiosheetShortcutTargetMode}
                             setAutosaveEnabled={setAutosaveEnabled}
                             setAutosaveIntervalMs={setAutosaveIntervalMs}
+                            setCodeEditorLargeText={setCodeEditorLargeText}
+                            setCodeEditorPlainTextComfort={setCodeEditorPlainTextComfort}
+                            setCodeEditorScreenReaderMode={setCodeEditorScreenReaderMode}
                             setEditorScale={setEditorScale}
                             setExplorerScale={setExplorerScale}
                             setInspectorScale={setInspectorScale}

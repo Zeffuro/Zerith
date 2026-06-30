@@ -5,6 +5,7 @@ export * from './Backlog';
 export * from './Character';
 export * from './Commands';
 export * from './CompiledContent';
+export * from './DialogueVoice';
 export * from './Display';
 export * from './GameManifest';
 export * from './Item';

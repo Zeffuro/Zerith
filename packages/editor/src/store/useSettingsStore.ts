@@ -19,6 +19,9 @@ type SettingsStore = {
     setAudiosheetShortcutTargetMode: (mode: SettingsState['audiosheetShortcutTargetMode']) => void;
     setAutosaveEnabled: (autosaveEnabled: boolean) => void;
     setAutosaveIntervalMs: (autosaveIntervalMs: number) => void;
+    setCodeEditorLargeText: (codeEditorLargeText: boolean) => void;
+    setCodeEditorPlainTextComfort: (codeEditorPlainTextComfort: boolean) => void;
+    setCodeEditorScreenReaderMode: (codeEditorScreenReaderMode: SettingsState['codeEditorScreenReaderMode']) => void;
     setCustomThemes: (customThemes: SettingsState['customThemes']) => void;
     setDockLayoutPresets: (dockLayoutPresets: SettingsState['dockLayoutPresets']) => void;
     setEditorScale: (editorScale: number | undefined) => void;
@@ -93,6 +96,9 @@ export const useSettingsStore = create<SettingsStore>()(
             setAudiosheetShortcutTargetMode: (audiosheetShortcutTargetMode) => set({ audiosheetShortcutTargetMode }),
             setAutosaveEnabled: (autosaveEnabled) => set({ autosaveEnabled }),
             setAutosaveIntervalMs: (autosaveIntervalMs) => set({ autosaveIntervalMs: sanitizeAutosaveInterval(autosaveIntervalMs) }),
+            setCodeEditorLargeText: (codeEditorLargeText) => set({ codeEditorLargeText }),
+            setCodeEditorPlainTextComfort: (codeEditorPlainTextComfort) => set({ codeEditorPlainTextComfort }),
+            setCodeEditorScreenReaderMode: (codeEditorScreenReaderMode) => set({ codeEditorScreenReaderMode }),
             setCustomThemes: (customThemes) => set({ customThemes }),
             setDockLayoutPresets: (dockLayoutPresets) => set({ dockLayoutPresets }),
             setEditorScale: (editorScale) => set({ editorScale }),
@@ -134,6 +140,9 @@ export const useSettingsStore = create<SettingsStore>()(
                 audiosheetShortcutTargetMode: state.audiosheetShortcutTargetMode,
                 autosaveEnabled: state.autosaveEnabled,
                 autosaveIntervalMs: state.autosaveIntervalMs,
+                codeEditorLargeText: state.codeEditorLargeText,
+                codeEditorPlainTextComfort: state.codeEditorPlainTextComfort,
+                codeEditorScreenReaderMode: state.codeEditorScreenReaderMode,
                 customThemes: state.customThemes,
                 dockLayoutPresets: state.dockLayoutPresets,
                 editorScale: state.editorScale,

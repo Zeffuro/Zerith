@@ -13,6 +13,9 @@ const state = {
     audiosheetShortcutTargetMode: 'cursor' as const,
     autosaveEnabled: true,
     autosaveIntervalMs: 30_000,
+    codeEditorLargeText: false,
+    codeEditorPlainTextComfort: false,
+    codeEditorScreenReaderMode: 'auto' as const,
     customThemes: [
         {
             baseThemeKey: 'classic',
@@ -48,12 +51,30 @@ describe('settingsControlRegistry', () => {
         expect([...getMatchedSettingsControlIds('toolbar timeline dialogue', state)]).toEqual(['quickCommandTypes']);
         expect([...getMatchedSettingsControlIds('layout a', state)]).toEqual(['dockLayoutPresets']);
         expect([...getMatchedSettingsControlIds('inspector scale', state)]).toEqual(['inspectorScale']);
+        expect([...getMatchedSettingsControlIds('screen reader accessibility', state)]).toEqual(['codeEditorScreenReaderMode']);
     });
 
     it('returns all controls for blank query', () => {
         const matched = [...getMatchedSettingsControlIds(' '.repeat(3), state)];
 
-        expect(matched).toEqual(['audio', 'audiosheetShortcutTargetMode', 'autosaveEnabled', 'autosaveIntervalMs', 'customThemes', 'dockLayoutPresets', 'editorScale', 'explorerScale', 'inspectorScale', 'quickCommandTypes', 'theme', 'timelineScale', 'uiScale']);
+        expect(matched).toEqual([
+            'audio',
+            'audiosheetShortcutTargetMode',
+            'autosaveEnabled',
+            'autosaveIntervalMs',
+            'codeEditorLargeText',
+            'codeEditorPlainTextComfort',
+            'codeEditorScreenReaderMode',
+            'customThemes',
+            'dockLayoutPresets',
+            'editorScale',
+            'explorerScale',
+            'inspectorScale',
+            'quickCommandTypes',
+            'theme',
+            'timelineScale',
+            'uiScale',
+        ]);
     });
 
     it('derives panel ids from matched controls', () => {
@@ -66,6 +87,7 @@ describe('settingsControlRegistry', () => {
         expect(getVisibleSettingsControls('general-layout')).toEqual(['dockLayoutPresets']);
         expect(getVisibleSettingsControls('general-playback')).toEqual(['audio', 'audiosheetShortcutTargetMode']);
         expect(getVisibleSettingsControls('general-quickbuttons')).toEqual(['quickCommandTypes']);
+        expect(getVisibleSettingsControls('editor-monaco')).toEqual(['codeEditorLargeText', 'codeEditorPlainTextComfort', 'codeEditorScreenReaderMode']);
     });
 
     it('builds changed control counts by leaf panel', () => {
@@ -75,6 +97,9 @@ describe('settingsControlRegistry', () => {
                 audiosheetShortcutTargetMode: 'playhead',
                 autosaveEnabled: false,
                 autosaveIntervalMs: 60_000,
+                codeEditorLargeText: true,
+                codeEditorPlainTextComfort: true,
+                codeEditorScreenReaderMode: 'on',
                 customThemes: [],
                 dockLayoutPresets: [],
                 editorScale: 1.1,
@@ -92,6 +117,7 @@ describe('settingsControlRegistry', () => {
         expect(changedCounts).toEqual({
             'appearance-scale': 5,
             'appearance-theme': 2,
+            'editor-monaco': 3,
             'general-autosave': 2,
             'general-layout': 1,
             'general-playback': 2,
@@ -106,6 +132,9 @@ describe('settingsControlRegistry', () => {
                 audiosheetShortcutTargetMode: 'playhead',
                 autosaveEnabled: false,
                 autosaveIntervalMs: 60_000,
+                codeEditorLargeText: true,
+                codeEditorPlainTextComfort: true,
+                codeEditorScreenReaderMode: 'on',
                 customThemes: [],
                 dockLayoutPresets: [],
                 editorScale: 1.1,
@@ -125,6 +154,9 @@ describe('settingsControlRegistry', () => {
             'audiosheetShortcutTargetMode',
             'autosaveEnabled',
             'autosaveIntervalMs',
+            'codeEditorLargeText',
+            'codeEditorPlainTextComfort',
+            'codeEditorScreenReaderMode',
             'customThemes',
             'dockLayoutPresets',
             'editorScale',

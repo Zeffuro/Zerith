@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useId, useRef } from 'react';
 
 import { useBackdropDismissal } from '../hooks/useBackdropDismissal';
+import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
 import { useEditorStore } from '../store/useEditorStore';
 import { editorTheme as t } from '../theme/editorTheme';
 import { styles } from '../theme/styleHelpers';
@@ -22,6 +23,9 @@ type Properties = {
 
 export function ConfirmDialog({ cancelText = 'Cancel', confirmText = 'Confirm', danger = false, extraActionDanger = false, extraActionText, message, onCancel, onConfirm, onExtraAction, open, title = 'Confirm', zIndex = 2000 }: Properties) {
     const uiScale = useEditorStore(s => s.uiScale);
+    const dialogReference = useRef<HTMLDivElement | null>(null);
+    const titleId = useId();
+    const messageId = useId();
 
     useEffect(() => {
         if (!open) return;
@@ -32,26 +36,37 @@ export function ConfirmDialog({ cancelText = 'Cancel', confirmText = 'Confirm', 
         globalThis.addEventListener('keydown', onKey);
         return () => globalThis.removeEventListener('keydown', onKey);
     },[open, onCancel, onConfirm]);
+    useDialogFocusTrap({ active: open, containerReference: dialogReference });
     const backdropDismissal = useBackdropDismissal(onCancel);
 
     if (!open) return;
 
     return (
         <div {...backdropDismissal} style={{ background: 'rgba(0,0,0,.45)', display: 'grid', inset: 0, placeItems: 'center', position: 'fixed', zIndex }}>
-            <div onClick={(event) => event.stopPropagation()} style={{ background: t.bg.panel, border: `1px solid ${t.border.normal}`, borderRadius: t.radius.lg, boxShadow: t.shadow.popupStrong, color: t.text.primary, padding: `${16 * uiScale}px`, width: `${380 * uiScale}px` }}>
-                <div style={{ fontSize: `${14 * uiScale}px`, fontWeight: 700, marginBottom: `${8 * uiScale}px` }}>{title}</div>
-                <div style={{ color: t.text.normal, fontSize: `${13 * uiScale}px`, marginBottom: `${16 * uiScale}px`, opacity: .9, whiteSpace: 'pre-wrap' }}>{message}</div>
+            <div
+                aria-describedby={messageId}
+                aria-labelledby={titleId}
+                aria-modal="true"
+                onClick={(event) => event.stopPropagation()}
+                ref={dialogReference}
+                role="dialog"
+                style={{ background: t.bg.panel, border: `1px solid ${t.border.normal}`, borderRadius: t.radius.lg, boxShadow: t.shadow.popupStrong, color: t.text.primary, padding: `${16 * uiScale}px`, width: `${380 * uiScale}px` }}
+                tabIndex={-1}
+            >
+                <div id={titleId} style={{ fontSize: `${14 * uiScale}px`, fontWeight: 700, marginBottom: `${8 * uiScale}px` }}>{title}</div>
+                <div id={messageId} style={{ color: t.text.normal, fontSize: `${13 * uiScale}px`, marginBottom: `${16 * uiScale}px`, opacity: .9, whiteSpace: 'pre-wrap' }}>{message}</div>
                 <div style={{ display: 'flex', gap: `${8 * uiScale}px`, justifyContent: 'flex-end' }}>
                     {extraActionText && onExtraAction ? (
                         <button
                             onClick={onExtraAction}
                             style={{ ...styles.buttonBase(uiScale), background: extraActionDanger ? t.accent.red : undefined, border: extraActionDanger ? 'none' : undefined, color: extraActionDanger ? '#fff' : undefined }}
+                            type="button"
                         >
                             {extraActionText}
                         </button>
                     ) : undefined}
-                    <button onClick={onCancel} style={{ ...styles.buttonBase(uiScale) }}>{cancelText}</button>
-                    <button onClick={onConfirm} style={{ ...styles.buttonBase(uiScale), background: danger ? t.accent.red : t.accent.primary, border: 'none', color: '#fff' }}>
+                    <button onClick={onCancel} style={{ ...styles.buttonBase(uiScale) }} type="button">{cancelText}</button>
+                    <button onClick={onConfirm} style={{ ...styles.buttonBase(uiScale), background: danger ? t.accent.red : t.accent.primary, border: 'none', color: '#fff' }} type="button">
                         {confirmText}
                     </button>
                 </div>

@@ -6,7 +6,7 @@ import {
 } from 'react';
 
 import type { NonMacroEditorCommandType } from '../../plugins/types';
-import type { CustomThemeEntry, DockLayoutPreset } from '../../store/settings/SettingsSchema';
+import type { CodeEditorScreenReaderMode, CustomThemeEntry, DockLayoutPreset } from '../../store/settings/SettingsSchema';
 
 import { editorTheme as t } from '../../theme/editorTheme';
 import { type SettingsControlId } from './settingsControlRegistry';
@@ -19,6 +19,9 @@ export type SettingsModalMainPaneProperties = {
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
     changedControlIds: ReadonlySet<string>;
+    codeEditorLargeText: boolean;
+    codeEditorPlainTextComfort: boolean;
+    codeEditorScreenReaderMode: CodeEditorScreenReaderMode;
     customThemes: CustomThemeEntry[];
     detailContainerReference: RefObject<HTMLDivElement | null>;
     dockLayoutPresets: DockLayoutPreset[];
@@ -48,6 +51,9 @@ export type SettingsModalMainPaneProperties = {
     setAudiosheetShortcutTargetMode: (mode: 'cursor' | 'playhead') => void;
     setAutosaveEnabled: (enabled: boolean) => void;
     setAutosaveIntervalMs: (intervalMs: number) => void;
+    setCodeEditorLargeText: (enabled: boolean) => void;
+    setCodeEditorPlainTextComfort: (enabled: boolean) => void;
+    setCodeEditorScreenReaderMode: (mode: CodeEditorScreenReaderMode) => void;
     setEditorScale: (scale: number | undefined) => void;
     setExplorerScale: (scale: number | undefined) => void;
     setInspectorScale: (scale: number | undefined) => void;
@@ -104,6 +110,9 @@ export function SettingsModalMainPane({
     autosaveEnabled,
     autosaveIntervalMs,
     changedControlIds,
+    codeEditorLargeText,
+    codeEditorPlainTextComfort,
+    codeEditorScreenReaderMode,
     conflictActionSequenceLength,
     conflictCount,
     conflictEntries,
@@ -148,6 +157,9 @@ export function SettingsModalMainPane({
     setAudiosheetShortcutTargetMode,
     setAutosaveEnabled,
     setAutosaveIntervalMs,
+    setCodeEditorLargeText,
+    setCodeEditorPlainTextComfort,
+    setCodeEditorScreenReaderMode,
     setEditorScale,
     setExplorerScale,
     setInspectorScale,
@@ -273,6 +285,9 @@ export function SettingsModalMainPane({
                     autosaveEnabled={autosaveEnabled}
                     autosaveIntervalMs={autosaveIntervalMs}
                     changedControlIds={changedControlIds}
+                    codeEditorLargeText={codeEditorLargeText}
+                    codeEditorPlainTextComfort={codeEditorPlainTextComfort}
+                    codeEditorScreenReaderMode={codeEditorScreenReaderMode}
                     customThemes={customThemes}
                     detailContainerReference={detailContainerReference}
                     dockLayoutPresets={dockLayoutPresets}
@@ -297,6 +312,9 @@ export function SettingsModalMainPane({
                     setAudiosheetShortcutTargetMode={setAudiosheetShortcutTargetMode}
                     setAutosaveEnabled={setAutosaveEnabled}
                     setAutosaveIntervalMs={setAutosaveIntervalMs}
+                    setCodeEditorLargeText={setCodeEditorLargeText}
+                    setCodeEditorPlainTextComfort={setCodeEditorPlainTextComfort}
+                    setCodeEditorScreenReaderMode={setCodeEditorScreenReaderMode}
                     setEditorScale={setEditorScale}
                     setExplorerScale={setExplorerScale}
                     setInspectorScale={setInspectorScale}

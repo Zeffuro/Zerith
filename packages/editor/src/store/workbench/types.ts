@@ -36,6 +36,9 @@ export type WorkbenchTab = {
     jsonSelectionPath?: ScriptPath;
     kind: WorkbenchResourceKind;
     localizationFilter?: string;
+    localizationInitialLocale?: string;
+    localizationInitialNamespace?: string;
+    localizationInitialStatus?: string;
     path: string;
 
     preferredView?: ScriptViewMode;

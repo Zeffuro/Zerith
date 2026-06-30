@@ -30,6 +30,7 @@ export type EditorSet = (
 export interface EditorState
     extends ClipboardValidationAssetSlice,
         DockLayoutSlice,
+        OperationStatusSlice,
         PlaybackQuickCommandsSlice,
         SelectionSlice,
         UiPrefsSlice {}
@@ -43,6 +44,20 @@ export type EditorWindowState = {
 } | undefined;
 
 export type GlobalSearchLaunchMode = 'find' | 'replace';
+
+export type OperationStatus = {
+    id: number;
+    message: string;
+    tone: OperationStatusTone;
+};
+
+export interface OperationStatusSlice {
+    announceOperationStatus: (message: string, tone?: OperationStatusTone) => void;
+    clearOperationStatus: () => void;
+    lastOperationStatus: OperationStatus | undefined;
+}
+
+export type OperationStatusTone = 'error' | 'info' | 'success' | 'warning';
 
 export type PendingDeleteRequest = {
     paths: ScriptPath[];

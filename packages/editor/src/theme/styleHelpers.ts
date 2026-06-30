@@ -1,5 +1,9 @@
 import { editorTheme as t } from './editorTheme';
 
+export function minimumInteractiveTargetSize(uiScale: number): number {
+    return Math.max(28 * uiScale, 24);
+}
+
 export const styles = {
     buttonBase: (uiScale: number) => ({
         alignItems: 'center',
@@ -11,13 +15,19 @@ export const styles = {
         display: 'flex',
         fontSize: 'inherit',
         gap: `${6 * uiScale}px`,
+        minHeight: `${minimumInteractiveTargetSize(uiScale)}px`,
         padding: `${4 * uiScale}px ${12 * uiScale}px`,
     }),
     iconButton: (uiScale: number) => ({
+        alignItems: 'center',
         background: 'transparent',
         border: 'none',
         color: '#aaa',
         cursor: 'pointer',
+        display: 'inline-flex',
+        justifyContent: 'center',
+        minHeight: `${minimumInteractiveTargetSize(uiScale)}px`,
+        minWidth: `${minimumInteractiveTargetSize(uiScale)}px`,
         padding: `${4 * uiScale}px`,
     }),
     input: (uiScale: number) => ({

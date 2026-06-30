@@ -1,7 +1,7 @@
 import { type RefObject } from 'react';
 
 import type { NonMacroEditorCommandType } from '../../plugins/types';
-import type { CustomThemeEntry, DockLayoutPreset } from '../../store/settings/SettingsSchema';
+import type { CodeEditorScreenReaderMode, CustomThemeEntry, DockLayoutPreset } from '../../store/settings/SettingsSchema';
 
 import { editorTheme as t } from '../../theme/editorTheme';
 import { SettingsAppearancePanel } from './SettingsAppearancePanel';
@@ -16,6 +16,9 @@ type SettingsDetailPanelProperties = {
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
     changedControlIds: ReadonlySet<string>;
+    codeEditorLargeText: boolean;
+    codeEditorPlainTextComfort: boolean;
+    codeEditorScreenReaderMode: CodeEditorScreenReaderMode;
     customThemes: CustomThemeEntry[];
     detailContainerReference: RefObject<HTMLDivElement | null>;
     dockLayoutPresets: DockLayoutPreset[];
@@ -40,6 +43,9 @@ type SettingsDetailPanelProperties = {
     setAudiosheetShortcutTargetMode: (mode: 'cursor' | 'playhead') => void;
     setAutosaveEnabled: (enabled: boolean) => void;
     setAutosaveIntervalMs: (intervalMs: number) => void;
+    setCodeEditorLargeText: (enabled: boolean) => void;
+    setCodeEditorPlainTextComfort: (enabled: boolean) => void;
+    setCodeEditorScreenReaderMode: (mode: CodeEditorScreenReaderMode) => void;
     setEditorScale: (scale: number | undefined) => void;
     setExplorerScale: (scale: number | undefined) => void;
     setInspectorScale: (scale: number | undefined) => void;
@@ -60,6 +66,9 @@ export function SettingsDetailPanel({
     autosaveEnabled,
     autosaveIntervalMs,
     changedControlIds,
+    codeEditorLargeText,
+    codeEditorPlainTextComfort,
+    codeEditorScreenReaderMode,
     customThemes,
     detailContainerReference,
     dockLayoutPresets,
@@ -84,6 +93,9 @@ export function SettingsDetailPanel({
     setAudiosheetShortcutTargetMode,
     setAutosaveEnabled,
     setAutosaveIntervalMs,
+    setCodeEditorLargeText,
+    setCodeEditorPlainTextComfort,
+    setCodeEditorScreenReaderMode,
     setEditorScale,
     setExplorerScale,
     setInspectorScale,
@@ -163,8 +175,18 @@ export function SettingsDetailPanel({
 
             {panelId.startsWith('editor') ? (
                 <SettingsEditorPanel
+                    changedControlIds={changedControlIds}
+                    codeEditorLargeText={codeEditorLargeText}
+                    codeEditorPlainTextComfort={codeEditorPlainTextComfort}
+                    codeEditorScreenReaderMode={codeEditorScreenReaderMode}
+                    focusedControlId={focusedControlId}
+                    matchedControlIds={matchedControlIds}
+                    onSetDetailRowReference={onSetDetailRowReference}
                     panelId={panelId}
                     searchQuery={searchQuery}
+                    setCodeEditorLargeText={setCodeEditorLargeText}
+                    setCodeEditorPlainTextComfort={setCodeEditorPlainTextComfort}
+                    setCodeEditorScreenReaderMode={setCodeEditorScreenReaderMode}
                     showChangedOnly={showChangedOnly}
                     uiScale={uiScale}
                 />

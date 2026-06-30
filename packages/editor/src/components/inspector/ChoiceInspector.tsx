@@ -4,6 +4,7 @@ import { Plus, Trash2 } from 'lucide-react';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { editorTheme as t } from '../../theme/editorTheme';
+import { minimumInteractiveTargetSize } from '../../theme/styleHelpers';
 
 export function ChoiceInspector({ index, node }: { index?: null | number; node: ChoiceCommand; }) {
     const { applyNodePatch, inputStyle, labelStyle, uiScale } = useInspectorFieldEditor(index);
@@ -44,6 +45,8 @@ export function ChoiceInspector({ index, node }: { index?: null | number; node: 
         display: 'inline-flex',
         fontSize: '0.85em',
         gap: '6px',
+        minHeight: `${minimumInteractiveTargetSize(uiScale)}px`,
+        minWidth: `${minimumInteractiveTargetSize(uiScale)}px`,
         padding: `${6 * uiScale}px ${8 * uiScale}px`,
     } as const;
 

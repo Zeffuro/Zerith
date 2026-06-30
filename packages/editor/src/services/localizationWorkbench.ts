@@ -3,7 +3,10 @@ import { useProjectStore } from '../store/storeBootstrap';
 import { makeTabId } from '../store/useWorkbenchStore';
 
 export type OpenLocalizationWorkbenchTabOptions = {
+    locale?: string;
+    namespace?: string;
     query?: string;
+    status?: string;
 };
 
 export function openLocalizationWorkbenchTab(options: OpenLocalizationWorkbenchTabOptions = {}): boolean {
@@ -17,6 +20,9 @@ export function openLocalizationWorkbenchTab(options: OpenLocalizationWorkbenchT
             id: makeTabId('localization', path),
             kind: 'localization',
             localizationFilter: options.query ?? '',
+            localizationInitialLocale: options.locale,
+            localizationInitialNamespace: options.namespace,
+            localizationInitialStatus: options.status,
             path,
             title: 'Localization',
         },

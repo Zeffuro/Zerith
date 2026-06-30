@@ -41,6 +41,15 @@ export type AssetLibraryOrganizationSummaryEntry = {
     used: number;
 };
 
+export type AssetLibraryStatusFilter = 'all' | 'missing' | 'unused' | 'used';
+
+export type AssetLibraryStatusSummary = {
+    missing: number;
+    total: number;
+    unused: number;
+    used: number;
+};
+
 export type UnusedAssetFolderGroup = {
     assetUrls: string[];
     folder: string;
@@ -145,6 +154,15 @@ export function createAssetOrganizationSummary(
     };
 }
 
+export function createAssetStatusSummary(dependencyGraph: AssetDependencyGraph): AssetLibraryStatusSummary {
+    return {
+        missing: dependencyGraph.missing.length,
+        total: dependencyGraph.missing.length + dependencyGraph.unused.length + dependencyGraph.used.length,
+        unused: dependencyGraph.unused.length,
+        used: dependencyGraph.used.length,
+    };
+}
+
 export function filterAssetDependencyGraph(
     dependencyGraph: AssetDependencyGraph,
     query: string,
@@ -171,6 +189,25 @@ export function filterAssetDependencyGraph(
         used: dependencyGraph.used.filter((entry) => (
             assetUsageEntryMatches(entry, normalizedQuery, kindFilter, metadata, organizationFilter)
         )),
+    };
+}
+
+export function filterAssetDependencyGraphByStatus(
+    dependencyGraph: AssetDependencyGraph,
+    statusFilter: AssetLibraryStatusFilter,
+): AssetDependencyGraph {
+    if (statusFilter === 'all') {
+        return {
+            missing: [...dependencyGraph.missing],
+            unused: [...dependencyGraph.unused],
+            used: [...dependencyGraph.used],
+        };
+    }
+
+    return {
+        missing: statusFilter === 'missing' ? [...dependencyGraph.missing] : [],
+        unused: statusFilter === 'unused' ? [...dependencyGraph.unused] : [],
+        used: statusFilter === 'used' ? [...dependencyGraph.used] : [],
     };
 }
 

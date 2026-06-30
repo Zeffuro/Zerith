@@ -17,6 +17,15 @@ function createResetActions(order: string[]): SettingsResetActions {
         resetAutosaveIntervalMs: vi.fn(() => {
             order.push('autosaveIntervalMs');
         }),
+        resetCodeEditorLargeText: vi.fn(() => {
+            order.push('codeEditorLargeText');
+        }),
+        resetCodeEditorPlainTextComfort: vi.fn(() => {
+            order.push('codeEditorPlainTextComfort');
+        }),
+        resetCodeEditorScreenReaderMode: vi.fn(() => {
+            order.push('codeEditorScreenReaderMode');
+        }),
         resetCustomThemes: vi.fn(() => {
             order.push('customThemes');
         }),
@@ -69,6 +78,15 @@ describe('settingsResetRoutingModel', () => {
         expect(order).toEqual(['autosaveEnabled', 'autosaveIntervalMs']);
     });
 
+    it('routes editor monaco panel reset through profile controls', () => {
+        const order: string[] = [];
+        const actions = createResetActions(order);
+
+        runCurrentPanelReset('editor-monaco', getPanelSettingsControls, actions);
+
+        expect(order).toEqual(['codeEditorLargeText', 'codeEditorPlainTextComfort', 'codeEditorScreenReaderMode']);
+    });
+
     it('ignores unknown panels without throwing', () => {
         const order: string[] = [];
         const actions = createResetActions(order);
@@ -96,6 +114,9 @@ describe('settingsResetRoutingModel', () => {
             'autosaveIntervalMs',
             'audio',
             'audiosheetShortcutTargetMode',
+            'codeEditorScreenReaderMode',
+            'codeEditorPlainTextComfort',
+            'codeEditorLargeText',
             'dockLayoutPresets',
             'quickCommandTypes',
             'keymap',

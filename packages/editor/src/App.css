@@ -19,6 +19,7 @@
   --editor-border-input: #3c3c3c;
   --editor-border-button: #555;
   --editor-border-accent: #007fd4;
+  --editor-border-focus: #60a5fa;
   --editor-border-primary-btn: #1f7ab7;
 
   --editor-text-primary: #fff;
@@ -29,6 +30,11 @@
   --editor-accent-primary: #0e639c;
   --editor-accent-red: #f87171;
   --editor-accent-green: #22c55e;
+  --editor-accent-yellow: #fbbf24;
+  --editor-accent-blue: #60a5fa;
+  --editor-accent-purple: #a78bfa;
+  --editor-accent-teal: #34d399;
+  --editor-accent-orange: #f59e0b;
 
   --editor-syntax-logic: #4ec9b0;
   --editor-syntax-flow: #f59e0b;
@@ -58,6 +64,11 @@ html, body {
 
 pre, code, input, textarea {
   user-select: text;
+}
+
+:where(button, input, select, textarea, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid var(--editor-border-focus);
+  outline-offset: 2px;
 }
 
 /* shared dark scrollbar for popups/lists */
@@ -106,12 +117,21 @@ pre, code, input, textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   background: transparent;
   border: 1px solid transparent;
   color: var(--editor-text-normal);
   border-radius: var(--editor-radius-sm);
   cursor: pointer;
+  line-height: 1.2;
+  min-height: max(24px, calc(28px * var(--ui-scale, 1)));
+  min-width: max(24px, calc(28px * var(--ui-scale, 1)));
   transition: all 0.1s ease;
+}
+
+.toolbar-btn:focus-visible {
+  border-color: var(--editor-border-focus);
+  box-shadow: 0 0 0 1px var(--editor-border-focus);
 }
 
 .toolbar-btn:hover {

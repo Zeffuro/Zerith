@@ -7,6 +7,7 @@ import {
 } from 'react';
 
 import { useBackdropDismissal } from '../../hooks/useBackdropDismissal';
+import { useDialogFocusTrap } from '../../hooks/useDialogFocusTrap';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { clamp } from '../../utils/math';
 
@@ -29,6 +30,7 @@ export function SettingsModalWindow({ children, onBackdropClick, uiScale }: Sett
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [modalSize, setModalSize] = useState({ height: defaultModalHeight, width: defaultModalWidth });
     const ignoreBackdropCloseUntilReference = useRef(0);
+    const modalReference = useRef<HTMLDivElement | null>(null);
     const modalWidth = modalSize.width;
     const modalHeight = modalSize.height;
     const sidebarWidth = Math.min(260 * uiScale, Math.max(180, modalWidth * 0.38));
@@ -123,6 +125,7 @@ export function SettingsModalWindow({ children, onBackdropClick, uiScale }: Sett
     const backdropDismissal = useBackdropDismissal(onBackdropClick, {
         shouldIgnore: () => Date.now() < ignoreBackdropCloseUntilReference.current,
     });
+    useDialogFocusTrap({ containerReference: modalReference });
 
     return (
         <div
@@ -137,7 +140,11 @@ export function SettingsModalWindow({ children, onBackdropClick, uiScale }: Sett
             }}
         >
             <div
+                aria-label="Settings"
+                aria-modal="true"
                 onClick={(event) => event.stopPropagation()}
+                ref={modalReference}
+                role="dialog"
                 style={{
                     background: t.bg.popup,
                     border: `1px solid ${t.border.normal}`,
@@ -156,6 +163,7 @@ export function SettingsModalWindow({ children, onBackdropClick, uiScale }: Sett
                     transform: 'translate(-50%, -50%)',
                     width: `${modalWidth}px`,
                 }}
+                tabIndex={-1}
             >
                 {children({ beginDrag, modalHeight, modalWidth, sidebarWidth })}
                 <div

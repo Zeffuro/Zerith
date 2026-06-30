@@ -226,6 +226,7 @@ export async function handleSaveAssetMetadata(
     try {
         await saveAssetLibraryMetadata(projectPath, nextMetadata);
         setAssetLibraryMetadata(nextMetadata);
+        await refreshAssetLibraryAfterMetadataWrite();
         executeConsoleMessageAction('editor', 'info', `Updated asset organization for ${assetUrl}.`);
     } catch (error) {
         console.error('Asset library metadata save failed:', error);
@@ -251,6 +252,7 @@ async function persistAssetLibraryMetadataUpdate(
     try {
         await saveAssetLibraryMetadata(projectPath, nextMetadata);
         setAssetLibraryMetadata(nextMetadata);
+        await refreshAssetLibraryAfterMetadataWrite();
         executeConsoleMessageAction('editor', 'info', successMessage);
     } catch (error) {
         console.error('Asset library metadata save failed:', error);
@@ -258,5 +260,19 @@ async function persistAssetLibraryMetadataUpdate(
         throw error;
     } finally {
         setIsSavingAssetOrganization(false);
+    }
+}
+
+async function refreshAssetLibraryAfterMetadataWrite(): Promise<void> {
+    try {
+        await refreshReferenceScannerState();
+    } catch (error) {
+        console.error('Asset library reference refresh failed:', error);
+        executeConsoleMessageAction(
+            'editor',
+            'warn',
+            'Asset library metadata saved, but reference refresh failed:',
+            String(error),
+        );
     }
 }

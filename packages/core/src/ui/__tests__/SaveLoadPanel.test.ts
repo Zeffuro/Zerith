@@ -19,6 +19,7 @@ describe('SaveLoadPanel', () => {
 
         expect(text.primary).toBe('Slot 2 - intro');
         expect(text.secondary).toBe('Aria: Welcome back.');
+        expect(text.tertiary).toContain('Scene intro');
         expect(text.tertiary).toContain('Save v1 / Content v2');
     });
 
@@ -47,6 +48,7 @@ describe('SaveLoadPanel', () => {
         });
 
         expect(text.primary).toBe('Slot 4 - Chapter One');
+        expect(text.tertiary).toContain('Scene intro');
         expect(text.tertiary).toContain('Bookmark chapter-one-start');
     });
 });

@@ -25,7 +25,19 @@ describe('projectValidationPanelModel', () => {
         expect(rows[2]?.actions).toEqual([{
             kind: 'localization',
             label: 'Locale',
+            locale: 'en',
+            namespace: 'scene.intro',
             query: 'scene.intro:intro.duplicate',
+            status: 'missing',
+            title: 'Open in localization editor',
+        }]);
+        expect(rows[3]?.actions).toEqual([{
+            kind: 'localization',
+            label: 'Locale',
+            locale: 'en',
+            namespace: 'scene.intro',
+            query: 'scene.intro:unused',
+            status: 'unused',
             title: 'Open in localization editor',
         }]);
         expect(rows[3]?.source).toEqual({

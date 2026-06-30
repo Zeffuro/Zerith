@@ -1,4 +1,5 @@
 import { editorTheme as t } from '../../theme/editorTheme';
+import { minimumInteractiveTargetSize } from '../../theme/styleHelpers';
 
 export function actionButtonStyle(uiScale: number, disabled: boolean, emphasized = false) {
     return {
@@ -9,6 +10,7 @@ export function actionButtonStyle(uiScale: number, disabled: boolean, emphasized
         cursor: disabled ? 'not-allowed' : 'pointer',
         display: 'inline-flex',
         gap: `${6 * uiScale}px`,
+        minHeight: `${minimumInteractiveTargetSize(uiScale)}px`,
         padding: `${6 * uiScale}px ${8 * uiScale}px`,
         textAlign: 'left' as const,
     };
@@ -25,6 +27,7 @@ export function folderGroupButtonStyle(uiScale: number, selected: boolean) {
         display: 'flex',
         fontSize: `${11 * uiScale}px`,
         gap: `${5 * uiScale}px`,
+        minHeight: `${minimumInteractiveTargetSize(uiScale)}px`,
         minWidth: 0,
         padding: `${4 * uiScale}px ${6 * uiScale}px`,
     };
@@ -46,6 +49,7 @@ export function kindSummaryChipStyle(uiScale: number, selected: boolean) {
         color: t.text.normal,
         cursor: 'pointer',
         fontSize: `${11 * uiScale}px`,
+        minHeight: `${minimumInteractiveTargetSize(uiScale)}px`,
         padding: `${3 * uiScale}px ${6 * uiScale}px`,
         whiteSpace: 'nowrap' as const,
     };
@@ -89,6 +93,7 @@ export function miniButtonStyle(uiScale: number, disabled: boolean) {
         display: 'inline-flex',
         fontSize: `${11 * uiScale}px`,
         gap: `${4 * uiScale}px`,
+        minHeight: `${minimumInteractiveTargetSize(uiScale)}px`,
         padding: `${4 * uiScale}px ${6 * uiScale}px`,
         whiteSpace: 'nowrap' as const,
     };
@@ -123,6 +128,7 @@ export function sectionHeaderStyle(uiScale: number) {
     return {
         color: t.text.primary,
         fontWeight: 700,
+        minHeight: `${minimumInteractiveTargetSize(uiScale)}px`,
         padding: `${2 * uiScale}px 0`,
     };
 }

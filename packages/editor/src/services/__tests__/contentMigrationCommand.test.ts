@@ -2,7 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { ContentMigrationPreviewResult } from '../contentMigrationPreview';
 
-import { executeContentMigrationCommand } from '../contentMigrationCommand';
+import {
+    executeContentMigrationCommand,
+    formatContentMigrationCommandStatus,
+    getContentMigrationCommandStatusTone,
+} from '../contentMigrationCommand';
 
 function previewWithChanges(): ContentMigrationPreviewResult {
     return {
@@ -115,5 +119,34 @@ describe('contentMigrationCommand', () => {
             'Content migration wrote 0 file(s), but 1 file(s) changed after preview:',
             '/project/game.json',
         );
+    });
+
+    it('formats migration command status for live operation feedback', () => {
+        const preview = previewWithChanges();
+        const applied = {
+            application: {
+                conflicts: [],
+                skipped: [],
+                written: preview.changes,
+            },
+            preview,
+            status: 'applied' as const,
+        };
+        const conflicted = {
+            application: {
+                conflicts: preview.changes,
+                skipped: [],
+                written: [],
+            },
+            preview,
+            status: 'conflicted' as const,
+        };
+
+        expect(formatContentMigrationCommandStatus(applied)).toBe('Content migration applied 1 file(s).');
+        expect(getContentMigrationCommandStatusTone(applied)).toBe('success');
+        expect(formatContentMigrationCommandStatus(conflicted)).toBe('Content migration wrote 0 file(s), but 1 file(s) changed after preview.');
+        expect(getContentMigrationCommandStatusTone(conflicted)).toBe('warning');
+        expect(formatContentMigrationCommandStatus({ preview, status: 'cancelled' })).toBe('Content migration cancelled.');
+        expect(formatContentMigrationCommandStatus({ status: 'no-project' })).toBe('Content migration requires an open project.');
     });
 });

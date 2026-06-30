@@ -1,3 +1,5 @@
+import type { DialogueVoiceAttachment } from './DialogueVoice';
+
 export interface DialogueBacklogEntry {
     backlogVisibility: 'hide' | 'show';
     expressionRef?: string;
@@ -8,5 +10,5 @@ export interface DialogueBacklogEntry {
     speaker: string;
     tags: string[];
     text: string;
-    voice?: unknown;
+    voice?: DialogueVoiceAttachment;
 }

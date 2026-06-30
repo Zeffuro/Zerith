@@ -247,6 +247,9 @@ function estimateTextCapacity(width: number, fontSize: number): number {
 
 function formatSaveContextLine(meta: SaveMeta): string {
     const parts: string[] = [];
+    if (meta.sceneName.trim()) {
+        parts.push(`Scene ${meta.sceneName}`);
+    }
     if (meta.kind === 'bookmark') {
         parts.push(meta.bookmarkId ? `Bookmark ${meta.bookmarkId}` : 'Bookmark');
     } else if (meta.kind === 'chapter') {

@@ -1,6 +1,7 @@
 import { type CSSProperties, useEffect } from 'react';
 
 import { ConfirmDialog } from './components/ConfirmDialog';
+import { EditorLiveStatus } from './components/EditorLiveStatus';
 import { SpritesheetAutoSliceDialog } from './components/editors/SpritesheetAutoSliceDialog';
 import { ExportGameModal } from './components/export/ExportGameModal';
 import { DockLayoutHost } from './components/layout/DockLayoutHost';
@@ -21,6 +22,7 @@ import { useWindowStateRestore } from './hooks/useWindowStateRestore';
 import { setupConsoleInterceptor } from './services/consoleInterceptor';
 import { useScriptStore } from './store/storeBootstrap';
 import { useSettingsStore } from './store/useSettingsStore';
+import { installEditorVisualSmokeHarness } from './testing/editorVisualSmokeHarness';
 import { applyTheme } from './theme/applyTheme';
 import { getThemeRegistry } from './theme/themeRegistry';
 import { getSheetDescriptorPath } from './utils/assetDescriptorUtilities';
@@ -61,6 +63,10 @@ function App() {
     }, []);
 
     useEffect(() => {
+        return installEditorVisualSmokeHarness();
+    }, []);
+
+    useEffect(() => {
         const themes = getThemeRegistry(customThemes);
         const selected = themes.find((t) => t.key === themeKey) ?? themes.find((t) => t.key === 'classic') ?? themes[0];
         if (selected) applyTheme(selected);
@@ -72,6 +78,7 @@ function App() {
             <SettingsModal />
             <ExportGameModal />
             <NewProjectModal />
+            <EditorLiveStatus uiScale={uiScale} />
             {editorDialogs}
             <ConfirmDialog
                 cancelText="Cancel"

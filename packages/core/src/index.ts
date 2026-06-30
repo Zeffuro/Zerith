@@ -49,6 +49,7 @@ export * from './utils/Backlog';
 export * from './utils/ChromaKey';
 export * from './utils/ContentCompiler';
 export * from './utils/deepClone';
+export * from './utils/DialogueVoice';
 export * from './utils/Localization';
 export * from './utils/Logger';
 export * from './utils/ManifestResolver';

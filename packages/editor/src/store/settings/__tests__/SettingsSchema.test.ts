@@ -24,6 +24,9 @@ describe('SettingsSchema', () => {
         expect(mergeSettings({ autosaveEnabled: 'yes' })).toEqual(defaultSettings);
         expect(mergeSettings({ autosaveIntervalMs: 0 })).toEqual(defaultSettings);
         expect(mergeSettings({ autosaveIntervalMs: Number.NaN })).toEqual(defaultSettings);
+        expect(mergeSettings({ codeEditorLargeText: 'yes' })).toEqual(defaultSettings);
+        expect(mergeSettings({ codeEditorPlainTextComfort: 1 })).toEqual(defaultSettings);
+        expect(mergeSettings({ codeEditorScreenReaderMode: 'always' })).toEqual(defaultSettings);
         expect(mergeSettings({ customThemes: 'invalid' })).toEqual(defaultSettings);
         expect(mergeSettings({ dockLayoutPresets: 'invalid' })).toEqual(defaultSettings);
         expect(mergeSettings({ isMuted: 'yes' })).toEqual(defaultSettings);
@@ -45,6 +48,19 @@ describe('SettingsSchema', () => {
         expect(mergeSettings({ autosaveEnabled: true })).toEqual({ ...defaultSettings, autosaveEnabled: true });
         expect(mergeSettings({ autosaveIntervalMs: 1250.9 })).toEqual({ ...defaultSettings, autosaveIntervalMs: 5000 });
         expect(mergeSettings({ autosaveIntervalMs: 9000.9 })).toEqual({ ...defaultSettings, autosaveIntervalMs: 9000 });
+    });
+
+    it('accepts code editor accessibility profile settings', () => {
+        expect(mergeSettings({
+            codeEditorLargeText: true,
+            codeEditorPlainTextComfort: true,
+            codeEditorScreenReaderMode: 'on',
+        })).toEqual({
+            ...defaultSettings,
+            codeEditorLargeText: true,
+            codeEditorPlainTextComfort: true,
+            codeEditorScreenReaderMode: 'on',
+        });
     });
 
     it('accepts audiosheet shortcut target mode', () => {
@@ -260,6 +276,10 @@ describe('SettingsSchema', () => {
         expect(extractPersistedSettings({ audiosheetShortcutTargetMode: 'bad' })).toEqual({});
         expect(extractPersistedSettings({ autosaveIntervalMs: 4500.5 })).toEqual({ autosaveIntervalMs: 5000 });
         expect(extractPersistedSettings({ autosaveIntervalMs: -1 })).toEqual({});
+        expect(extractPersistedSettings({ codeEditorLargeText: true })).toEqual({ codeEditorLargeText: true });
+        expect(extractPersistedSettings({ codeEditorPlainTextComfort: true })).toEqual({ codeEditorPlainTextComfort: true });
+        expect(extractPersistedSettings({ codeEditorScreenReaderMode: 'on' })).toEqual({ codeEditorScreenReaderMode: 'on' });
+        expect(extractPersistedSettings({ codeEditorScreenReaderMode: 'always' })).toEqual({});
         expect(extractPersistedSettings({ isMuted: true })).toEqual({ isMuted: true });
         expect(extractPersistedSettings({ isMuted: 'yes' })).toEqual({});
         expect(extractPersistedSettings({ quickCommandTypes: ['wait', 'wait', 'unknown'] })).toEqual({ quickCommandTypes: ['wait'] });

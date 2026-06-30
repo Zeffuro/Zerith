@@ -1,7 +1,11 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useDismissiblePopup } from '../../../hooks/useDismissiblePopup';
-import { executeContentMigrationCommand } from '../../../services/contentMigrationCommand';
+import {
+    executeContentMigrationCommand,
+    formatContentMigrationCommandStatus,
+    getContentMigrationCommandStatusTone,
+} from '../../../services/contentMigrationCommand';
 import { fsPickProjectManifest } from '../../../services/fs';
 import { openLocalizationWorkbenchTab } from '../../../services/localizationWorkbench';
 import { openProjectEntry } from '../../../services/openProjectEntry';
@@ -28,6 +32,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
 
     const {
         addRecentProject,
+        announceOperationStatus,
         captureDockLayoutJson,
         clearAllBreakpoints,
         clearRecentProjects,
@@ -156,17 +161,23 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         if (!projectPath) return;
 
         try {
+            announceOperationStatus('Content migration started. The editor remains usable while files are checked.');
             markManualSave();
             await saveAllDirtyFiles();
 
             const result = await executeContentMigrationCommand(projectPath);
+            announceOperationStatus(
+                formatContentMigrationCommandStatus(result),
+                getContentMigrationCommandStatusTone(result),
+            );
             if (result.status === 'applied' || result.status === 'conflicted') {
                 await useProjectStore.getState().loadManifest();
             }
         } catch (error) {
             console.error('Content migration from menu failed:', error);
+            announceOperationStatus(`Content migration failed: ${error instanceof Error ? error.message : String(error)}`, 'error');
         }
-    }, [markManualSave, projectPath, saveAllDirtyFiles]);
+    }, [announceOperationStatus, markManualSave, projectPath, saveAllDirtyFiles]);
 
     const handleExit = useCallback(() => {
         void closeEditorWindow();

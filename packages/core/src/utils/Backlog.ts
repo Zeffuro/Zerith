@@ -1,5 +1,7 @@
 import type { BaseCommand, DialogueBacklogEntry } from '../types';
 
+import { normalizeDialogueVoiceAttachment } from './DialogueVoice';
+
 export interface CollectDialogueBacklogOptions {
     includeHidden?: boolean;
     namespace?: string;
@@ -40,6 +42,7 @@ export function collectDialogueBacklogEntries(
         const backlogVisibility = dialogue.backlogVisibility ?? 'show';
         if (backlogVisibility === 'hide' && !includeHidden) return;
         if (typeof dialogue.speaker !== 'string' || typeof dialogue.text !== 'string') return;
+        const voice = normalizeDialogueVoiceAttachment(dialogue.voice);
 
         entries.push({
             backlogVisibility,
@@ -51,7 +54,7 @@ export function collectDialogueBacklogEntries(
             speaker: dialogue.speaker,
             tags: dialogue.tags ?? [],
             text: dialogue.text,
-            voice: dialogue.voice,
+            ...(voice ? { voice } : {}),
         });
     });
 

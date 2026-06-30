@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
     createAssetAudioCueReviewEntry,
+    createAssetAudioCueReviewSummary,
+    filterAssetAudioCueReviewEntries,
+    isAssetAudioCueReviewEntryExportable,
     loadAssetAudioCueReview,
     resolveAudiosheetSourceAssetUrl,
 } from '../assetAudioCueReview';
@@ -15,13 +18,15 @@ describe('assetAudioCueReview', () => {
     });
 
     it('creates cue summary entries with cue issues and source availability', () => {
-        expect(createAssetAudioCueReviewEntry('/assets/sfx/ui.sheet.json', {
+        const entry = createAssetAudioCueReviewEntry('/assets/sfx/ui.sheet.json', {
             cues: {
                 click: { duration: 0.25, start: 0, volume: 0.75 },
                 loop: { loop: true, start: 1 },
             },
             source: 'ui.wav',
-        }, ['/assets/sfx/ui.wav'])).toEqual({
+        }, ['/assets/sfx/ui.wav']);
+
+        expect(entry).toEqual({
             cueCount: 2,
             descriptorAssetUrl: '/assets/sfx/ui.sheet.json',
             finiteDurationSeconds: 0.25,
@@ -32,6 +37,40 @@ describe('assetAudioCueReview', () => {
             sourceAvailable: true,
             volumeOverrideCueCount: 1,
         });
+        expect(isAssetAudioCueReviewEntryExportable(entry)).toBe(true);
+    });
+
+    it('summarizes and filters cue review entries by export and source state', () => {
+        const exportable = createAssetAudioCueReviewEntry('/assets/sfx/ui.sheet.json', {
+            cues: {
+                click: { duration: 0.25, start: 0 },
+            },
+            source: 'ui.wav',
+        }, ['/assets/sfx/ui.wav']);
+        const missingSource = createAssetAudioCueReviewEntry('/assets/voice/lines.sheet.json', {
+            cues: {
+                line: { duration: 1.2, start: 0 },
+            },
+            source: 'lines.wav',
+        }, ['/assets/sfx/ui.wav']);
+        const issueOnly = createAssetAudioCueReviewEntry('/assets/sfx/empty.sheet.json', {
+            cues: {},
+            source: 'https://example.test/remote.wav',
+        }, []);
+        const entries = [exportable, missingSource, issueOnly];
+
+        expect(createAssetAudioCueReviewSummary(entries)).toEqual({
+            exportableCueCount: 1,
+            exportableEntryCount: 1,
+            issueEntryCount: 2,
+            missingSourceEntryCount: 1,
+            totalCueCount: 2,
+            totalEntryCount: 3,
+        });
+        expect(filterAssetAudioCueReviewEntries(entries, 'exportable')).toEqual([exportable]);
+        expect(filterAssetAudioCueReviewEntries(entries, 'issues')).toEqual([missingSource, issueOnly]);
+        expect(filterAssetAudioCueReviewEntries(entries, 'missing-source')).toEqual([missingSource]);
+        expect(isAssetAudioCueReviewEntryExportable(missingSource)).toBe(false);
     });
 
     it('loads visible audiosheet descriptors and skips spritesheets', async () => {

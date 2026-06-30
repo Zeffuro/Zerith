@@ -25,6 +25,8 @@ export type ContentMigrationCommandResult =
     | { preview: ContentMigrationPreviewResult; status: 'cancelled' | 'no-changes' }
     | { status: 'no-project' };
 
+export type ContentMigrationCommandStatusTone = 'info' | 'success' | 'warning';
+
 const defaultDependencies: ContentMigrationCommandDependencies = {
     applyPreview: applyContentMigrationPreview,
     confirm: (message) => confirmEditorAction({
@@ -78,6 +80,42 @@ export async function executeContentMigrationCommand(
 
     dependencies.log('editor', 'info', `Content migration applied ${application.written.length} file(s).`);
     return { application, preview, status: 'applied' };
+}
+
+export function formatContentMigrationCommandStatus(result: ContentMigrationCommandResult): string {
+    switch (result.status) {
+        case 'applied': {
+            return `Content migration applied ${result.application.written.length} file(s).`;
+        }
+        case 'cancelled': {
+            return 'Content migration cancelled.';
+        }
+        case 'conflicted': {
+            return `Content migration wrote ${result.application.written.length} file(s), but ${result.application.conflicts.length} file(s) changed after preview.`;
+        }
+        case 'no-changes': {
+            return 'Content migration checked the project and found no changes.';
+        }
+        case 'no-project': {
+            return 'Content migration requires an open project.';
+        }
+    }
+}
+
+export function getContentMigrationCommandStatusTone(result: ContentMigrationCommandResult): ContentMigrationCommandStatusTone {
+    switch (result.status) {
+        case 'applied': {
+            return 'success';
+        }
+        case 'cancelled':
+        case 'no-changes':
+        case 'no-project': {
+            return 'info';
+        }
+        case 'conflicted': {
+            return 'warning';
+        }
+    }
 }
 
 function toConfirmationMessage(preview: ContentMigrationPreviewResult): string {

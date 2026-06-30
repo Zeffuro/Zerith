@@ -1,7 +1,11 @@
-import { type KeyboardEventHandler, useCallback, useState } from 'react';
+import { type KeyboardEventHandler, useCallback, useEffect, useRef, useState } from 'react';
 
 import { createBrowserParityReport } from '../../services/browserParityReport';
-import { executeContentMigrationCommand } from '../../services/contentMigrationCommand';
+import {
+    executeContentMigrationCommand,
+    formatContentMigrationCommandStatus,
+    getContentMigrationCommandStatusTone,
+} from '../../services/contentMigrationCommand';
 import { fsOpenPath } from '../../services/fs';
 import { openLocalizationWorkbenchTab } from '../../services/localizationWorkbench';
 import { openProjectEntry } from '../../services/openProjectEntry';
@@ -15,6 +19,10 @@ import { useEditorStore } from '../../store/useEditorStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { getThemeRegistry } from '../../theme/themeRegistry';
+import {
+    createCommandPaletteAccessibilityState,
+    createCommandPaletteOptionAccessibility,
+} from './commandPaletteAccessibilityModel';
 import { buildCommandPaletteActions } from './commandPaletteActionsModel';
 import { executeSelectedAction, reduceCommandPaletteKey } from './commandPaletteInteractionModel';
 import {
@@ -32,8 +40,16 @@ type Properties = {
 };
 
 export function CommandPalette({ onRequestClose, uiScale }: Properties) {
+    const previousFocusReference = useRef<HTMLElement | undefined>(getActiveHTMLElement());
     const [query, setQuery] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
+
+    useEffect(() => () => {
+        const previousFocus = previousFocusReference.current;
+        if (previousFocus?.isConnected) {
+            previousFocus.focus();
+        }
+    }, []);
 
     const activeFile = useProjectStore((state) => state.activeFile);
     const projectPath = useProjectStore((state) => state.projectPath);
@@ -41,6 +57,7 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
     const saveAllDirtyFiles = useProjectStore((state) => state.saveAllDirtyFiles);
 
     const clearAllBreakpoints = useEditorStore((state) => state.clearAllBreakpoints);
+    const announceOperationStatus = useEditorStore((state) => state.announceOperationStatus);
     const captureDockLayoutJson = useEditorStore((state) => state.captureDockLayoutJson);
     const isPlaybackPaused = useEditorStore((state) => state.isPlaybackPaused);
     const markManualSave = useEditorStore((state) => state.markManualSave);
@@ -118,17 +135,23 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
         if (!projectPath) return;
 
         try {
+            announceOperationStatus('Content migration started. The editor remains usable while files are checked.');
             markManualSave();
             await saveAllDirtyFiles();
 
             const result = await executeContentMigrationCommand(projectPath);
+            announceOperationStatus(
+                formatContentMigrationCommandStatus(result),
+                getContentMigrationCommandStatusTone(result),
+            );
             if (result.status === 'applied' || result.status === 'conflicted') {
                 await useProjectStore.getState().loadManifest();
             }
         } catch (error) {
             console.error('Content migration from command palette failed:', error);
+            announceOperationStatus(`Content migration failed: ${error instanceof Error ? error.message : String(error)}`, 'error');
         }
-    }, [markManualSave, projectPath, saveAllDirtyFiles]);
+    }, [announceOperationStatus, markManualSave, projectPath, saveAllDirtyFiles]);
 
     const handleValidateProjectContent = useCallback(async () => {
         if (!projectPath) return;
@@ -226,6 +249,10 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
     const renderableActions = toRenderableActions(filteredActions);
     const clampedSelectedIndex = clampRenderSelection(selectedIndex, renderableActions.length);
     const showEmptyState = shouldShowEmptyActions(renderableActions.length);
+    const accessibility = createCommandPaletteAccessibilityState({
+        actionCount: renderableActions.length,
+        selectedIndex: clampedSelectedIndex,
+    });
 
     const handleActionClick = (index: number) => {
         void executeSelectedAction(filteredActions, index, onRequestClose);
@@ -270,6 +297,7 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
             }}
         >
             <div
+                {...accessibility.dialog}
                 onClick={(event) => event.stopPropagation()}
                 style={{
                     background: t.bg.popup,
@@ -284,6 +312,7 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
                 }}
             >
                 <input
+                    {...accessibility.input}
                     autoFocus
                     onChange={(event) => {
                         setQuery(event.target.value);
@@ -304,9 +333,14 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
                     value={query}
                 />
 
-                <div className="zerith-scrollbar" style={{ maxHeight: `min(60vh, ${500 * uiScale}px)`, overflowY: 'auto' }}>
+                <div
+                    {...accessibility.listbox}
+                    className="zerith-scrollbar"
+                    style={{ maxHeight: `min(60vh, ${500 * uiScale}px)`, overflowY: 'auto' }}
+                >
                     {showEmptyState && (
                         <div
+                            {...accessibility.status}
                             style={{
                                 color: t.text.faint,
                                 fontStyle: 'italic',
@@ -321,6 +355,7 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
                         const isActive = clampedSelectedIndex === index;
                         return (
                             <button
+                                {...createCommandPaletteOptionAccessibility(index, isActive)}
                                 key={action.id}
                                 onClick={() => {
                                     handleActionClick(index);
@@ -360,4 +395,9 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
             </div>
         </div>
     );
+}
+
+function getActiveHTMLElement(): HTMLElement | undefined {
+    const activeElement = globalThis.document?.activeElement;
+    return activeElement instanceof HTMLElement ? activeElement : undefined;
 }

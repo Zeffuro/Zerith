@@ -4,7 +4,7 @@ import { type FsDirectoryEntry, fsReadDirectory, fsReadTextFile } from '../servi
 import { useProjectStore } from '../store/storeBootstrap';
 import { AUDIO_EXT, FONT_EXT, getExtension, IMG_EXT } from '../utils/assetTypes';
 
-type AssetKind = 'all' | 'audio' | 'bg' | 'bgm' | 'font' | 'sfx' | 'sprite';
+type AssetKind = 'all' | 'audio' | 'bg' | 'bgm' | 'font' | 'sfx' | 'sprite' | 'voice';
 
 type AssetOption = {
     absPath: string;
@@ -13,7 +13,7 @@ type AssetOption = {
 };
 
 const BG_EXT = IMG_EXT;
-const AUDIO_KINDS = new Set<AssetKind>(['audio', 'bgm', 'sfx']);
+const AUDIO_KINDS = new Set<AssetKind>(['audio', 'bgm', 'sfx', 'voice']);
 const SPRITE_EXT = IMG_EXT;
 
 export function useAssetOptions(kind: AssetKind = 'all') {

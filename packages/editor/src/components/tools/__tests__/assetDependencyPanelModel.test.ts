@@ -11,7 +11,9 @@ import {
     collectAssetUsageEntryUrls,
     createAssetKindSummary,
     createAssetOrganizationSummary,
+    createAssetStatusSummary,
     filterAssetDependencyGraph,
+    filterAssetDependencyGraphByStatus,
     getSelectedUnusedAssets,
     groupUnusedAssetsByFolder,
     projectRelativeAssetPathFromUrl,
@@ -231,6 +233,53 @@ describe('assetDependencyPanelModel', () => {
             '/assets/audio/theme.ogg',
             '/assets/sprites/hero.png',
         ]);
+    });
+
+    it('summarizes and filters dependency rows by asset status', () => {
+        const graph = {
+            missing: [
+                {
+                    assetUrl: '/assets/audio/missing.ogg',
+                    references: [],
+                },
+            ],
+            unused: [
+                '/assets/bg/unused.png',
+                '/assets/sprites/hero.png',
+            ],
+            used: [
+                {
+                    assetUrl: '/assets/audio/theme.ogg',
+                    references: [],
+                },
+                {
+                    assetUrl: '/assets/bg/court.png',
+                    references: [],
+                },
+            ],
+        };
+
+        expect(createAssetStatusSummary(graph)).toEqual({
+            missing: 1,
+            total: 5,
+            unused: 2,
+            used: 2,
+        });
+        expect(filterAssetDependencyGraphByStatus(graph, 'used')).toEqual({
+            missing: [],
+            unused: [],
+            used: graph.used,
+        });
+        expect(filterAssetDependencyGraphByStatus(graph, 'unused')).toEqual({
+            missing: [],
+            unused: graph.unused,
+            used: [],
+        });
+        expect(filterAssetDependencyGraphByStatus(graph, 'missing')).toEqual({
+            missing: graph.missing,
+            unused: [],
+            used: [],
+        });
     });
 
     it('adds and removes scoped unused asset selections', () => {

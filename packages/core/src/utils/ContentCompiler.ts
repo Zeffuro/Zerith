@@ -6,6 +6,7 @@ import type {
     CompiledContentManifest,
 } from '../types/CompiledContent';
 
+import { toDialogueVoiceAssetReference } from './DialogueVoice';
 import { analyzeStoryGraph } from './StoryGraph';
 
 interface CompileContentManifestInput {
@@ -220,16 +221,7 @@ function addSpriteReference(assets: MutableAssetDependencies, assetUrl: string |
 }
 
 function addVoiceReference(assets: MutableAssetDependencies, voice: unknown): void {
-    if (typeof voice === 'string') {
-        addAudioReference(assets, voice);
-        return;
-    }
-
-    if (!isRecord(voice)) return;
-
-    const assetUrl = typeof voice.assetUrl === 'string' ? voice.assetUrl : undefined;
-    const cue = typeof voice.cue === 'string' ? voice.cue : undefined;
-    addAudioReference(assets, assetUrl && cue ? `${assetUrl}:${cue}` : assetUrl);
+    addAudioReference(assets, toDialogueVoiceAssetReference(voice));
 }
 
 function collectNextScenesByScene(sceneEdges: Array<{ fromScene: string; targetScene: string }>): Record<string, string[]> {

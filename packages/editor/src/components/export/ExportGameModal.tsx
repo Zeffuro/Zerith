@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { useBackdropDismissal } from '../../hooks/useBackdropDismissal';
+import { useDialogFocusTrap } from '../../hooks/useDialogFocusTrap';
 import {
     type ExportCachePolicy,
     exportGame,
@@ -23,6 +24,10 @@ export function ExportGameModal() {
     const uiScale = useEditorStore((state) => state.uiScale);
     const projectPath = useProjectStore((state) => state.projectPath);
     const saveAllDirtyFiles = useProjectStore((state) => state.saveAllDirtyFiles);
+    const dialogReference = useRef<HTMLDivElement | null>(null);
+    const descriptionId = useId();
+    const statusId = useId();
+    const titleId = useId();
 
     const profileCatalog = useMemo(() => getExportProfileCatalog(), []);
     const [profile, setProfile] = useState<ExportProfile>('itch-html5');
@@ -83,6 +88,7 @@ export function ExportGameModal() {
             globalThis.removeEventListener('keydown', onKeyDown);
         };
     }, [closeExportGameModal, isExporting, isOpen]);
+    useDialogFocusTrap({ active: isOpen, containerReference: dialogReference });
     const backdropDismissal = useBackdropDismissal(closeExportGameModal, { disabled: isExporting });
 
     if (!isOpen) {
@@ -186,7 +192,13 @@ export function ExportGameModal() {
             }}
         >
             <div
+                aria-busy={isExporting}
+                aria-describedby={`${descriptionId} ${statusId}`}
+                aria-labelledby={titleId}
+                aria-modal="true"
                 onClick={(event) => event.stopPropagation()}
+                ref={dialogReference}
+                role="dialog"
                 style={{
                     background: t.bg.panel,
                     border: `1px solid ${t.border.normal}`,
@@ -198,9 +210,10 @@ export function ExportGameModal() {
                     minWidth: `${560 * uiScale}px`,
                     padding: `${16 * uiScale}px`,
                 }}
+                tabIndex={-1}
             >
-                <div style={{ fontSize: `${15 * uiScale}px`, fontWeight: 700 }}>Export Game</div>
-                <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
+                <div id={titleId} style={{ fontSize: `${15 * uiScale}px`, fontWeight: 700 }}>Export Game</div>
+                <div id={descriptionId} style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
                     Configure export options without leaving the editor. Output logs are written to the Console panel.
                 </div>
 
@@ -286,7 +299,12 @@ export function ExportGameModal() {
                     />
                 </label>
 
-                <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px`, minHeight: `${16 * uiScale}px` }}>
+                <div
+                    aria-live="polite"
+                    id={statusId}
+                    role="status"
+                    style={{ color: t.text.muted, fontSize: `${12 * uiScale}px`, minHeight: `${16 * uiScale}px` }}
+                >
                     {statusMessage ?? (projectPath ? `Project: ${projectPath}` : 'Open a project first to export.')}
                 </div>
 

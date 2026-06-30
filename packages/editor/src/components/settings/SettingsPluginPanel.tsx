@@ -153,7 +153,7 @@ export function SettingsPluginPanel({ uiScale }: SettingsPluginPanelProperties) 
 
     return (
         <>
-            <section style={sectionStyle(uiScale)}>
+            <section aria-busy={isInstallingSourceRecord} style={sectionStyle(uiScale)}>
                 <div style={sectionHeaderStyle()}>
                     <span>Manifest Inspector</span>
                     <button
@@ -207,7 +207,11 @@ export function SettingsPluginPanel({ uiScale }: SettingsPluginPanelProperties) 
                                         <span>{isInstallingSourceRecord ? 'Copying Package...' : 'Copy Package...'}</span>
                                     </button>
                                     {sourceRecordInstallMessage ? (
-                                        <div style={{ color: sourceRecordInstallMessage.startsWith('Copied package') ? t.accent.green : t.accent.red, fontSize: `${11 * uiScale}px`, overflowWrap: 'anywhere' }}>
+                                        <div
+                                            aria-live="polite"
+                                            role="status"
+                                            style={{ color: sourceRecordInstallMessage.startsWith('Copied package') ? t.accent.green : t.accent.red, fontSize: `${11 * uiScale}px`, overflowWrap: 'anywhere' }}
+                                        >
                                             {sourceRecordInstallMessage}
                                         </div>
                                     ) : undefined}
@@ -266,7 +270,11 @@ export function SettingsPluginPanel({ uiScale }: SettingsPluginPanelProperties) 
                                             <span>Copy Source Record</span>
                                         </button>
                                         {sourceRecordMessage ? (
-                                            <div style={{ color: sourceRecordMessage.endsWith('copied.') ? t.accent.green : t.accent.red, fontSize: `${11 * uiScale}px`, overflowWrap: 'anywhere' }}>
+                                            <div
+                                                aria-live="polite"
+                                                role="status"
+                                                style={{ color: sourceRecordMessage.endsWith('copied.') ? t.accent.green : t.accent.red, fontSize: `${11 * uiScale}px`, overflowWrap: 'anywhere' }}
+                                            >
                                                 {sourceRecordMessage}
                                             </div>
                                         ) : undefined}
@@ -289,7 +297,7 @@ export function SettingsPluginPanel({ uiScale }: SettingsPluginPanelProperties) 
                 ) : undefined}
             </section>
 
-            <section style={sectionStyle(uiScale)}>
+            <section aria-busy={isLoadingInstalledPackages} style={sectionStyle(uiScale)}>
                 <div style={sectionHeaderStyle()}>
                     <span>Installed Package Loader</span>
                     <button
@@ -305,7 +313,7 @@ export function SettingsPluginPanel({ uiScale }: SettingsPluginPanelProperties) 
                 </div>
 
                 {installedPackageLoadSummary ? (
-                    <article style={pluginRowStyle(uiScale)}>
+                    <article aria-live="polite" role="status" style={pluginRowStyle(uiScale)}>
                         <div style={{ alignItems: 'center', display: 'flex', gap: `${8 * uiScale}px`, justifyContent: 'space-between' }}>
                             <div style={{ alignItems: 'center', color: t.text.primary, display: 'flex', fontWeight: 700, gap: `${6 * uiScale}px` }}>
                                 {installedPackageLoadSummary.tone === 'error'

@@ -1,7 +1,8 @@
 import { CheckCircle2, FolderOpen } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 import { useBackdropDismissal } from '../../hooks/useBackdropDismissal';
+import { useDialogFocusTrap } from '../../hooks/useDialogFocusTrap';
 import {
     createNewProject,
     getNewProjectTemplateDefaultName,
@@ -23,6 +24,10 @@ export function NewProjectModal() {
     const closeNewProjectModal = useEditorStore((state) => state.closeNewProjectModal);
     const isOpen = useEditorStore((state) => state.isNewProjectModalOpen);
     const uiScale = useEditorStore((state) => state.uiScale);
+    const dialogReference = useRef<HTMLDivElement | null>(null);
+    const descriptionId = useId();
+    const statusId = useId();
+    const titleId = useId();
 
     const [author, setAuthor] = useState('');
     const [directory, setDirectory] = useState('');
@@ -60,6 +65,7 @@ export function NewProjectModal() {
             globalThis.removeEventListener('keydown', onKeyDown);
         };
     }, [closeNewProjectModal, isCreating, isOpen]);
+    useDialogFocusTrap({ active: isOpen, containerReference: dialogReference });
     const backdropDismissal = useBackdropDismissal(closeNewProjectModal, { disabled: isCreating });
 
     if (!isOpen) {
@@ -149,7 +155,13 @@ export function NewProjectModal() {
             }}
         >
             <div
+                aria-busy={isCreating}
+                aria-describedby={`${descriptionId} ${statusId}`}
+                aria-labelledby={titleId}
+                aria-modal="true"
                 onClick={(event) => event.stopPropagation()}
+                ref={dialogReference}
+                role="dialog"
                 style={{
                     background: t.bg.panel,
                     border: `1px solid ${t.border.normal}`,
@@ -163,9 +175,10 @@ export function NewProjectModal() {
                     padding: `${16 * uiScale}px`,
                     width: `min(${680 * uiScale}px, calc(100vw - ${32 * uiScale}px))`,
                 }}
+                tabIndex={-1}
             >
-                <div style={{ fontSize: `${15 * uiScale}px`, fontWeight: 700 }}>New Project</div>
-                <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
+                <div id={titleId} style={{ fontSize: `${15 * uiScale}px`, fontWeight: 700 }}>New Project</div>
+                <div id={descriptionId} style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
                     {selectedTemplate.description}
                 </div>
 
@@ -322,7 +335,12 @@ export function NewProjectModal() {
                     </div>
                 </label>
 
-                <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px`, minHeight: `${16 * uiScale}px` }}>
+                <div
+                    aria-live="polite"
+                    id={statusId}
+                    role="status"
+                    style={{ color: t.text.muted, fontSize: `${12 * uiScale}px`, minHeight: `${16 * uiScale}px` }}
+                >
                     {statusMessage ?? `${selectedTemplate.label} opens ${selectedTemplate.initialEntry} after creation.`}
                 </div>
 

@@ -27,6 +27,8 @@ export const DEFAULT_QUICK_COMMAND_TYPES: NonMacroEditorCommandType[] = [
     'bgm',
 ];
 
+export type CodeEditorScreenReaderMode = 'auto' | 'off' | 'on';
+
 export type CustomThemeEntry = {
     baseThemeKey?: string;
     key: string;
@@ -247,6 +249,9 @@ const persistedSettingsSchema = z.object({
     audiosheetShortcutTargetMode: z.enum(['cursor', 'playhead']).optional(),
     autosaveEnabled: z.boolean().optional(),
     autosaveIntervalMs: z.number().finite().positive().transform(sanitizeAutosaveInterval).optional(),
+    codeEditorLargeText: z.boolean().optional(),
+    codeEditorPlainTextComfort: z.boolean().optional(),
+    codeEditorScreenReaderMode: z.enum(['auto', 'off', 'on']).optional(),
     customThemes: customThemesSchema,
     dockLayoutPresets: dockLayoutPresetsSchema,
     editorScale: z.number().finite().positive().optional(),
@@ -277,6 +282,9 @@ export type SettingsState = {
     audiosheetShortcutTargetMode: 'cursor' | 'playhead';
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
+    codeEditorLargeText: boolean;
+    codeEditorPlainTextComfort: boolean;
+    codeEditorScreenReaderMode: CodeEditorScreenReaderMode;
     customThemes: CustomThemeEntry[];
     dockLayoutPresets: DockLayoutPreset[];
     editorScale: number | undefined;
@@ -297,6 +305,9 @@ export const defaultSettings: SettingsState = {
     audiosheetShortcutTargetMode: 'cursor',
     autosaveEnabled: false,
     autosaveIntervalMs: 30 * 1000,
+    codeEditorLargeText: false,
+    codeEditorPlainTextComfort: false,
+    codeEditorScreenReaderMode: 'auto',
     customThemes: [],
     dockLayoutPresets: [],
     editorScale: undefined,

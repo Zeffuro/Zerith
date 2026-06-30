@@ -1,5 +1,5 @@
 import type { NonMacroEditorCommandType } from '../../plugins/types';
-import type { CustomThemeEntry, DockLayoutPreset } from '../../store/settings/SettingsSchema';
+import type { CodeEditorScreenReaderMode, CustomThemeEntry, DockLayoutPreset } from '../../store/settings/SettingsSchema';
 
 export type SettingsControlDefaults = SettingsControlSearchState;
 
@@ -8,6 +8,9 @@ export type SettingsControlId =
     | 'audiosheetShortcutTargetMode'
     | 'autosaveEnabled'
     | 'autosaveIntervalMs'
+    | 'codeEditorLargeText'
+    | 'codeEditorPlainTextComfort'
+    | 'codeEditorScreenReaderMode'
     | 'customThemes'
     | 'dockLayoutPresets'
     | 'editorScale'
@@ -23,6 +26,9 @@ export type SettingsControlSearchState = {
     audiosheetShortcutTargetMode: 'cursor' | 'playhead';
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
+    codeEditorLargeText: boolean;
+    codeEditorPlainTextComfort: boolean;
+    codeEditorScreenReaderMode: CodeEditorScreenReaderMode;
     customThemes: CustomThemeEntry[];
     dockLayoutPresets: DockLayoutPreset[];
     editorScale: number | undefined;
@@ -39,6 +45,9 @@ export type SettingsPanelId =
     | 'appearance-scale'
     | 'appearance-theme'
     | 'appearance'
+    | 'editor-behavior'
+    | 'editor-monaco'
+    | 'editor'
     | 'general-autosave'
     | 'general-layout'
     | 'general-playback'
@@ -77,6 +86,24 @@ const settingsControlRegistry: Record<SettingsControlId, SettingsControlDefiniti
         changed: (state, defaults) => state.autosaveIntervalMs !== defaults.autosaveIntervalMs,
         keywords: (state) => `autosave interval ${Math.round(state.autosaveIntervalMs / 1000)} seconds save`,
         panelIds: ['general', 'general-autosave'],
+    },
+    codeEditorLargeText: {
+        badgePanelId: 'editor-monaco',
+        changed: (state, defaults) => state.codeEditorLargeText !== defaults.codeEditorLargeText,
+        keywords: (state) => `code editor large text font size comfort monaco ${state.codeEditorLargeText ? 'enabled on true' : 'disabled off false'}`,
+        panelIds: ['editor', 'editor-monaco'],
+    },
+    codeEditorPlainTextComfort: {
+        badgePanelId: 'editor-monaco',
+        changed: (state, defaults) => state.codeEditorPlainTextComfort !== defaults.codeEditorPlainTextComfort,
+        keywords: (state) => `code editor plain text comfort word wrap minimap folding monaco ${state.codeEditorPlainTextComfort ? 'enabled on true' : 'disabled off false'}`,
+        panelIds: ['editor', 'editor-monaco'],
+    },
+    codeEditorScreenReaderMode: {
+        badgePanelId: 'editor-monaco',
+        changed: (state, defaults) => state.codeEditorScreenReaderMode !== defaults.codeEditorScreenReaderMode,
+        keywords: (state) => `code editor screen reader accessibility support monaco ${state.codeEditorScreenReaderMode}`,
+        panelIds: ['editor', 'editor-monaco'],
     },
     customThemes: {
         badgePanelId: 'appearance-theme',

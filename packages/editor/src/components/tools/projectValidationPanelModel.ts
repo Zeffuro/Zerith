@@ -8,7 +8,10 @@ import type {
 export type ProjectValidationPanelAction = {
     kind: 'localization';
     label: string;
+    locale?: string;
+    namespace?: string;
     query: string;
+    status?: 'missing' | 'unused';
     title: string;
 };
 
@@ -150,7 +153,7 @@ function buildLocalizationRows(report: ProjectValidationReport): ProjectValidati
 
         return [
             ...localeReport.missing.map((missing, index) => ({
-                actions: [localizationAction(missing.namespace, missing.lineId)],
+                actions: [localizationAction(localeReport.locale, missing.namespace, missing.lineId, 'missing')],
                 category: 'Localization' as const,
                 detail: `${missing.sceneName} @ ${formatCommandPath(missing.path)}`,
                 id: `locale-missing-${localeReport.locale}-${index}`,
@@ -159,6 +162,7 @@ function buildLocalizationRows(report: ProjectValidationReport): ProjectValidati
                 title: `Missing ${localeReport.locale} text: ${missing.namespace ?? '*'}:${missing.lineId}`,
             })),
             ...localeReport.unused.map((unused, index) => ({
+                actions: [localizationAction(localeReport.locale, unused.namespace, unused.lineId, 'unused')],
                 category: 'Localization' as const,
                 detail: `${unused.namespace}:${unused.lineId}`,
                 id: `locale-unused-${localeReport.locale}-${index}`,
@@ -180,11 +184,19 @@ function formatGraphIssueTitle(issue: Exclude<ProjectValidationReport['graph']['
     return `Missing scene: ${issue.targetScene}`;
 }
 
-function localizationAction(namespace: string | undefined, lineId: string): ProjectValidationPanelAction {
+function localizationAction(
+    locale: string,
+    namespace: string | undefined,
+    lineId: string,
+    status: 'missing' | 'unused',
+): ProjectValidationPanelAction {
     return {
         kind: 'localization',
         label: 'Locale',
+        locale,
+        namespace,
         query: namespace ? `${namespace}:${lineId}` : lineId,
+        status,
         title: 'Open in localization editor',
     };
 }
