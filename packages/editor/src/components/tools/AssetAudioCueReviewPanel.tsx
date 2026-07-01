@@ -1,4 +1,4 @@
-import { AlertTriangle, Download, ExternalLink, Tags } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, ExternalLink, Tags } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import type {
@@ -9,6 +9,7 @@ import type {
 import { exportAssetAudioCuesToProject } from '../../services/assetAudioCueExport';
 import {
     collectAssetAudioCueOrganizationAssetUrls,
+    createAssetAudioCueExportReadiness,
     createAssetAudioCueReviewSummary,
     filterAssetAudioCueReviewEntries,
     isAssetAudioCueReviewEntryExportable,
@@ -138,6 +139,7 @@ export function AssetAudioCueReviewPanel({
     const filterEntries = filterAssetAudioCueReviewEntries(review.entries, reviewFilter);
     const visibleEntries = searchAssetAudioCueReviewEntries(filterEntries, cueSearchQuery);
     const visibleSummary = createAssetAudioCueReviewSummary(visibleEntries);
+    const exportReadiness = createAssetAudioCueExportReadiness(visibleEntries);
     const isExporting = exportingTarget !== undefined;
     const cueOrganizationAssetUrls = collectAssetAudioCueOrganizationAssetUrls(visibleEntries);
     const exportableVisibleCount = visibleSummary.exportableEntryCount;
@@ -220,6 +222,18 @@ export function AssetAudioCueReviewPanel({
                 style={{ ...searchInputStyle(uiScale), minHeight: `${24 * uiScale}px` }}
                 value={cueSearchQuery}
             />
+            <div aria-label="Audio cue export readiness" style={cueExportReadinessStyle(uiScale, exportReadiness.status)}>
+                <span style={cueExportReadinessPillStyle(uiScale, exportReadiness.status)}>
+                    {exportReadiness.status === 'ready' ? <CheckCircle2 size={13 * uiScale} /> : <AlertTriangle size={13 * uiScale} />}
+                    <span>Export readiness: {formatReadinessStatus(exportReadiness.status)}</span>
+                </span>
+                <span style={{ color: t.text.muted }}>{exportReadiness.message}</span>
+                {exportReadiness.detailMessages.map((message) => (
+                    <span key={message} style={{ color: exportReadiness.status === 'ready' ? t.text.faint : t.accent.yellow }}>
+                        {message}
+                    </span>
+                ))}
+            </div>
             {review.issueCount > 0 ? (
                 <div style={{ alignItems: 'center', color: t.accent.yellow, display: 'flex', fontSize: `${11 * uiScale}px`, gap: `${5 * uiScale}px` }}>
                     <AlertTriangle size={13 * uiScale} />
@@ -293,7 +307,7 @@ export function AssetAudioCueReviewPanel({
                                 type="button"
                             >
                                 <ExternalLink size={13 * uiScale} />
-                                <span>Source</span>
+                                <span>Open Source</span>
                             </button>
                         ) : undefined}
                     </div>
@@ -310,6 +324,46 @@ export function AssetAudioCueReviewPanel({
             ) : undefined}
         </section>
     );
+}
+
+function cueExportReadinessPillStyle(
+    uiScale: number,
+    status: 'blocked' | 'limited' | 'ready',
+) {
+    const color = status === 'ready'
+        ? t.accent.green
+        : (status === 'limited' ? t.accent.yellow : t.accent.orange);
+    return {
+        alignItems: 'center',
+        border: `1px solid ${color}`,
+        borderRadius: t.radius.sm,
+        color,
+        display: 'inline-flex',
+        fontSize: `${11 * uiScale}px`,
+        fontWeight: 700,
+        gap: `${4 * uiScale}px`,
+        padding: `${3 * uiScale}px ${6 * uiScale}px`,
+        whiteSpace: 'nowrap' as const,
+    };
+}
+
+function cueExportReadinessStyle(
+    uiScale: number,
+    status: 'blocked' | 'limited' | 'ready',
+) {
+    const color = status === 'ready'
+        ? t.accent.green
+        : (status === 'limited' ? t.accent.yellow : t.accent.orange);
+    return {
+        alignItems: 'center',
+        border: `1px solid ${color}`,
+        borderRadius: t.radius.sm,
+        display: 'flex',
+        flexWrap: 'wrap' as const,
+        fontSize: `${11 * uiScale}px`,
+        gap: `${5 * uiScale}px`,
+        padding: `${5 * uiScale}px ${7 * uiScale}px`,
+    };
 }
 
 function CueReviewFilterButton({
@@ -365,6 +419,20 @@ function formatCueNames(cueNames: readonly string[]): string {
     const preview = cueNames.slice(0, 6).join(', ');
     const remaining = cueNames.length - 6;
     return remaining > 0 ? `${preview}, +${remaining} more` : preview;
+}
+
+function formatReadinessStatus(status: 'blocked' | 'limited' | 'ready'): string {
+    switch (status) {
+        case 'blocked': {
+            return 'Blocked';
+        }
+        case 'limited': {
+            return 'Limited';
+        }
+        case 'ready': {
+            return 'Ready';
+        }
+    }
 }
 
 function formatSeconds(value: number): string {

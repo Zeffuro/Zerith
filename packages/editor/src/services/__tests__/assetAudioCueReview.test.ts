@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
     collectAssetAudioCueOrganizationAssetUrls,
+    createAssetAudioCueExportReadiness,
     createAssetAudioCueReviewEntry,
     createAssetAudioCueReviewSummary,
     filterAssetAudioCueReviewEntries,
@@ -74,6 +75,57 @@ describe('assetAudioCueReview', () => {
         expect(filterAssetAudioCueReviewEntries(entries, 'issues')).toEqual([missingSource, issueOnly]);
         expect(filterAssetAudioCueReviewEntries(entries, 'missing-source')).toEqual([missingSource]);
         expect(isAssetAudioCueReviewEntryExportable(missingSource)).toBe(false);
+    });
+
+    it('reports cue export readiness for ready, limited, and blocked visible sheets', () => {
+        const ready = createAssetAudioCueReviewEntry('/assets/sfx/ui.sheet.json', {
+            cues: {
+                click: { duration: 0.25, start: 0 },
+            },
+            source: 'ui.wav',
+        }, ['/assets/sfx/ui.wav']);
+        const openEnded = createAssetAudioCueReviewEntry('/assets/sfx/ambience.sheet.json', {
+            cues: {
+                loop: { loop: true, start: 1 },
+            },
+            source: 'ambience.wav',
+        }, ['/assets/sfx/ambience.wav']);
+        const missingSource = createAssetAudioCueReviewEntry('/assets/voice/lines.sheet.json', {
+            cues: {
+                line: { duration: 1.2, start: 0 },
+            },
+            source: 'lines.wav',
+        }, []);
+
+        expect(createAssetAudioCueExportReadiness([ready])).toMatchObject({
+            blockedEntryCount: 0,
+            exportableCueCount: 1,
+            message: '1 cue WAV ready from 1 sheet.',
+            status: 'ready',
+        });
+
+        expect(createAssetAudioCueExportReadiness([ready, openEnded, missingSource])).toMatchObject({
+            blockedEntryCount: 1,
+            detailMessages: [
+                '1 sheet missing source audio.',
+                '1 open-ended cue will use source duration during export.',
+                '1 visible sheet will be skipped.',
+            ],
+            exportableCueCount: 2,
+            status: 'limited',
+        });
+
+        expect(createAssetAudioCueExportReadiness([missingSource])).toMatchObject({
+            blockedEntryCount: 1,
+            exportableCueCount: 0,
+            message: '1 visible sheet missing source audio.',
+            status: 'blocked',
+        });
+
+        expect(createAssetAudioCueExportReadiness([])).toMatchObject({
+            message: 'No visible cue sheets to export.',
+            status: 'blocked',
+        });
     });
 
     it('searches cue reviews and collects visible cue organization assets', () => {

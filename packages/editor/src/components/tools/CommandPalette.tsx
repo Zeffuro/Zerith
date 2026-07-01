@@ -353,9 +353,11 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
 
                     {renderableActions.map((action, index) => {
                         const isActive = clampedSelectedIndex === index;
+                        const isDisabled = Boolean(action.disabledReason);
                         return (
                             <button
                                 {...createCommandPaletteOptionAccessibility(index, isActive)}
+                                disabled={isDisabled}
                                 key={action.id}
                                 onClick={() => {
                                     handleActionClick(index);
@@ -364,8 +366,8 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
                                     alignItems: 'center',
                                     background: isActive ? t.bg.selected : 'transparent',
                                     border: 'none',
-                                    color: isActive ? t.text.primary : t.text.normal,
-                                    cursor: 'pointer',
+                                    color: isDisabled ? t.text.faint : (isActive ? t.text.primary : t.text.normal),
+                                    cursor: isDisabled ? 'not-allowed' : 'pointer',
                                     display: 'grid',
                                     gap: `${10 * uiScale}px`,
                                     gridTemplateColumns: '1fr auto',
@@ -376,7 +378,9 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
                                 type="button"
                             >
                                 <span>{action.label}</span>
-                                <span style={{ color: t.text.muted, fontSize: `${11 * uiScale}px` }}>{action.hintText}</span>
+                                <span style={{ color: isDisabled ? t.accent.yellow : t.text.muted, fontSize: `${11 * uiScale}px` }}>
+                                    {action.disabledReason ?? action.hintText}
+                                </span>
                             </button>
                         );
                     })}

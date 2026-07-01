@@ -141,6 +141,73 @@ describe('pluginManifestInspection', () => {
         });
     });
 
+    it('normalizes optional source-record package integrity metadata', () => {
+        const result = inspectEditorPluginSourceRecordText(JSON.stringify({
+            entryPath: '/source/example/dist/index.js',
+            install: { directoryName: 'example-ready', targetPath: '/plugins/example-ready' },
+            manifest: {
+                entry: 'dist/index.js',
+                id: 'Example Ready',
+                name: 'Example Ready',
+                version: '0.1.0',
+            },
+            manifestPath: '/source/example/plugin.json',
+            packageIntegrity: {
+                algorithm: 'sha256',
+                files: [
+                    {
+                        path: String.raw`\dist\index.js`,
+                        sha256: '039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81',
+                        size: 3,
+                    },
+                ],
+            },
+            packageRoot: '/source/example',
+            schemaVersion: 1,
+            source: '/source/example/plugin.json',
+            type: 'zerith.editorPluginSource',
+        }), '/records/example.source.json');
+
+        expect(result.status === 'ready' ? result.record.packageIntegrity : undefined).toEqual({
+            algorithm: 'sha256',
+            files: [
+                {
+                    path: 'dist/index.js',
+                    sha256: '039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81',
+                    size: 3,
+                },
+            ],
+        });
+    });
+
+    it('rejects invalid source-record package integrity metadata', () => {
+        expect(inspectEditorPluginSourceRecordText(JSON.stringify({
+            install: { directoryName: 'example-ready' },
+            manifest: {
+                id: 'Example Ready',
+                name: 'Example Ready',
+                version: '0.1.0',
+            },
+            manifestPath: '/source/example/plugin.json',
+            packageIntegrity: {
+                algorithm: 'sha256',
+                files: [
+                    {
+                        path: '../dist/index.js',
+                        sha256: '039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81',
+                        size: 3,
+                    },
+                ],
+            },
+            schemaVersion: 1,
+            source: '/source/example/plugin.json',
+            type: 'zerith.editorPluginSource',
+        }), '/records/example.source.json')).toMatchObject({
+            reason: 'packageIntegrity.files[0].path must be a relative package path',
+            status: 'rejected',
+        });
+    });
+
     it('rejects invalid JSON and incompatible plugin API versions', () => {
         expect(inspectEditorPluginManifestText('{', '/plugins/broken/plugin.json')).toMatchObject({
             source: '/plugins/broken/plugin.json',

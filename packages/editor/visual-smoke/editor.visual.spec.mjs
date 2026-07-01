@@ -73,6 +73,143 @@ test.describe('editor visual smoke', () => {
         await expect(page).toHaveScreenshot('global-live-operation-status.png', screenshotOptions);
     });
 
+    test('covers no-project new-project routing without creating files', async ({ page }) => {
+        await callVisualSmokeHarness(page, 'selectDockPanel', 'project_validation');
+        await expect(page.getByText('Open a project to validate content.')).toBeVisible();
+        await callVisualSmokeHarness(page, 'selectDockPanel', 'asset_dependencies');
+        await expect(page.getByText('Open a project to analyze assets.')).toBeVisible();
+        await callVisualSmokeHarness(page, 'selectDockPanel', 'reference_tracker');
+        await expect(page.getByText('Open a project to scan references.')).toBeVisible();
+
+        await callVisualSmokeHarness(page, 'openCommandPalette');
+        const commandPalette = page.getByRole('dialog', { name: 'Command palette' });
+        await expect(commandPalette).toBeVisible();
+        await commandPalette.getByPlaceholder('Type an action (e.g. Save All, Play, Reset Layout)').fill('new project');
+        await expect(commandPalette.getByRole('option', { name: /New Project/u })).toBeVisible();
+        await commandPalette.getByRole('option', { name: /New Project/u }).click();
+
+        await expect(commandPalette).toHaveCount(0);
+        const newProjectDialog = page.getByRole('dialog', { name: 'New Project' });
+        await expect(newProjectDialog).toBeVisible();
+        await expect(newProjectDialog.getByLabel('Project Name')).toHaveValue('My New Game');
+        await expect(newProjectDialog.getByRole('button', { name: 'Create Project' })).toBeDisabled();
+
+        await newProjectDialog.getByRole('radio', { name: /Classic VN/u }).click();
+        await expect(newProjectDialog.getByLabel('Project Name')).toHaveValue('Classic VN Starter');
+        await expect(newProjectDialog).toContainText('Classic VN sample with scenes, characters, localization, and SVG placeholder assets.');
+        await expect(newProjectDialog).toContainText('Localization-ready');
+        await expect(newProjectDialog).toContainText('Branch-ready');
+        await expect(newProjectDialog).toContainText('Asset-ready');
+        await expect(newProjectDialog.getByRole('status')).toContainText('Classic VN opens /scenes/intro.json after creation.');
+        await expect(newProjectDialog.getByRole('button', { name: 'Create Project' })).toBeDisabled();
+
+        await newProjectDialog.getByRole('button', { name: 'Cancel' }).click();
+        await expect(newProjectDialog).toHaveCount(0);
+        await expect(page.getByText('Open a project to scan references.')).toBeVisible();
+
+        await callVisualSmokeHarness(page, 'openCommandPalette');
+        const reopenedPalette = page.getByRole('dialog', { name: 'Command palette' });
+        await reopenedPalette.getByPlaceholder('Type an action (e.g. Save All, Play, Reset Layout)').fill('export game');
+        const disabledExport = reopenedPalette.getByRole('option', { name: /Export Game/u });
+        await expect(disabledExport).toBeDisabled();
+        await expect(disabledExport).toContainText('Open a project first.');
+        await reopenedPalette.getByPlaceholder('Type an action (e.g. Save All, Play, Reset Layout)').fill('playback stop');
+        const disabledStop = reopenedPalette.getByRole('option', { name: /Playback: Stop/u });
+        await expect(disabledStop).toBeDisabled();
+        await expect(disabledStop).toContainText('Start preview playback first.');
+        await callVisualSmokeHarness(page, 'closeCommandPalette');
+        await expect(reopenedPalette).toHaveCount(0);
+    });
+
+    test('covers settings browser parity readiness without requesting filesystem access', async ({ page }) => {
+        await callVisualSmokeHarness(page, 'openSettingsModal');
+        const settingsDialog = page.getByRole('dialog', { name: 'Settings' });
+        await expect(settingsDialog).toBeVisible();
+
+        const browserReadiness = settingsDialog.getByLabel('Browser editor parity readiness');
+        await expect(browserReadiness).toContainText('Browser parity blocked');
+        await expect(browserReadiness).toContainText('Browser editor shell');
+        await expect(browserReadiness).toContainText('Loose directory export');
+
+        await callVisualSmokeHarness(page, 'closeSettingsModal');
+        await expect(settingsDialog).toHaveCount(0);
+    });
+
+    test('covers settings plugin marketplace readiness without loading plugins', async ({ page }) => {
+        await callVisualSmokeHarness(page, 'openSettingsModal');
+        const settingsDialog = page.getByRole('dialog', { name: 'Settings' });
+        await expect(settingsDialog).toBeVisible();
+
+        await settingsDialog.getByRole('button', { name: 'Plugins' }).click();
+
+        const marketplaceReadiness = settingsDialog.getByLabel('Plugin marketplace readiness');
+        await expect(marketplaceReadiness).toContainText('Marketplace blocked');
+        await expect(marketplaceReadiness).toContainText('Manifest trust policy');
+        await expect(marketplaceReadiness).toContainText('limited');
+        await expect(marketplaceReadiness).toContainText('Package integrity');
+        await expect(settingsDialog.getByText('No manifest inspected.')).toBeVisible();
+
+        await callVisualSmokeHarness(page, 'closeSettingsModal');
+        await expect(settingsDialog).toHaveCount(0);
+    });
+
+    test('covers settings plugin local deactivation without loading external packages', async ({ page }) => {
+        await callVisualSmokeHarness(page, 'registerVisualSmokePlugin');
+        await callVisualSmokeHarness(page, 'openSettingsModal');
+        const settingsDialog = page.getByRole('dialog', { name: 'Settings' });
+        await expect(settingsDialog).toBeVisible();
+
+        await settingsDialog.getByRole('button', { name: 'Plugins' }).click();
+        const pluginRow = settingsDialog.locator('article').filter({ hasText: 'Visual Smoke Plugin' });
+        await expect(pluginRow).toContainText('Active');
+        await expect(pluginRow).toContainText('visual-smoke-memory');
+
+        await settingsDialog.getByRole('button', { name: 'Deactivate plugin Visual Smoke Plugin' }).click();
+
+        await expect(pluginRow).toContainText('Inactive');
+        await expect(settingsDialog.getByRole('button', { name: 'Deactivate plugin Visual Smoke Plugin' })).toHaveCount(0);
+
+        await callVisualSmokeHarness(page, 'closeSettingsModal');
+        await expect(settingsDialog).toHaveCount(0);
+    });
+
+    test('covers command palette browser parity report without opening a project', async ({ page }) => {
+        await callVisualSmokeHarness(page, 'openCommandPalette');
+        const commandPalette = page.getByRole('dialog', { name: 'Command palette' });
+        await expect(commandPalette).toBeVisible();
+        await commandPalette.getByPlaceholder('Type an action (e.g. Save All, Play, Reset Layout)').fill('browser parity report');
+        await expect(commandPalette.getByRole('option', { name: 'Show Browser Parity Report' })).toBeVisible();
+        await commandPalette.getByRole('option', { name: 'Show Browser Parity Report' }).click();
+
+        await expect(commandPalette).toHaveCount(0);
+        await callVisualSmokeHarness(page, 'selectDockPanel', 'console');
+        const consolePanel = page.locator('[data-console-panel="true"]');
+        await expect(consolePanel).toBeVisible();
+        await expect(consolePanel).toContainText('Editor runtime: browser');
+        await expect(consolePanel).toContainText('Export parity: matched=3, browser-limited=3, desktop-only=1');
+        await expect(consolePanel).toContainText('projectFileSystem: desktop=supported');
+        await expect(consolePanel).toContainText('looseOutput: desktop-only');
+    });
+
+    test('covers command palette Git integration report without opening a project', async ({ page }) => {
+        await callVisualSmokeHarness(page, 'openCommandPalette');
+        const commandPalette = page.getByRole('dialog', { name: 'Command palette' });
+        await expect(commandPalette).toBeVisible();
+        await commandPalette.getByPlaceholder('Type an action (e.g. Save All, Play, Reset Layout)').fill('git integration report');
+        await expect(commandPalette.getByRole('option', { name: 'Show Git Integration Report' })).toBeVisible();
+        await commandPalette.getByRole('option', { name: 'Show Git Integration Report' }).click();
+
+        await expect(commandPalette).toHaveCount(0);
+        await callVisualSmokeHarness(page, 'selectDockPanel', 'console');
+        const consolePanel = page.locator('[data-console-panel="true"]');
+        await expect(consolePanel).toBeVisible();
+        await expect(consolePanel).toContainText('Editor runtime: browser');
+        await expect(consolePanel).toContainText('Recommended: 0, limited: 0, deferred: 1, unsupported: 2');
+        await expect(consolePanel).toContainText('Backend: Browser Git disabled');
+        await expect(consolePanel).toContainText('backend/browserDisabled: selected');
+        await expect(consolePanel).toContainText('browserWebGit: desktop=unsupported, browser=deferred');
+    });
+
     test('covers scene editor hierarchy with a real project open', async ({ page }) => {
         const files = await readProjectFixture('games/classic-vn-starter');
         await callVisualSmokeHarness(page, 'openProjectFixture', {
@@ -92,6 +229,10 @@ test.describe('editor visual smoke', () => {
         await page.getByRole('button', { name: 'Overview' }).click();
         await expect(page.getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-expanded', 'true');
         await expect(page.locator('[aria-label="Scene overview"]')).toBeVisible();
+        const graphReadiness = page.getByLabel('Timeline graph readiness');
+        await expect(graphReadiness).toContainText('Graph canvas blocked');
+        await expect(graphReadiness).toContainText('Timeline overview graph');
+        await expect(graphReadiness).toContainText('Full graph canvas');
 
         await page.getByRole('button', { name: 'Reveal in JSON' }).click();
         await expect(page.getByText('Current: json')).toBeVisible();
@@ -133,15 +274,44 @@ test.describe('editor visual smoke', () => {
         const cueReview = page.locator('section').filter({ hasText: 'Audio cue review' });
         await expect(cueReview).toBeVisible();
         await expect(cueReview.getByRole('status').filter({ hasText: '1/1 sheet | 3 cues' })).toBeVisible();
+        const exportReadiness = cueReview.getByLabel('Audio cue export readiness');
+        await expect(exportReadiness).toContainText('Export readiness: Ready');
+        await expect(exportReadiness).toContainText('3 cue WAVs ready from 1 sheet.');
         await expect(cueReview).toContainText('/assets/sfx/voices.sheet.json');
         await expect(cueReview).toContainText('Source: /assets/sfx/voices.wav');
         await expect(cueReview.getByRole('button', { name: 'Organize Cue Assets (2)' })).toBeEnabled();
         await expect(cueReview.getByRole('button', { name: 'Open Sheet' })).toBeVisible();
-        await expect(cueReview.getByRole('button', { name: 'Source', exact: true })).toBeEnabled();
+        await expect(cueReview.getByRole('button', { name: 'Open Source', exact: true })).toBeEnabled();
 
         await cueReview.getByLabel('Search audio cue review').fill('holdit');
         await expect(cueReview.getByRole('status').filter({ hasText: '1/1 sheet | 3 cues' })).toBeVisible();
         await expect(cueReview).toContainText('holdit');
+    });
+
+    test('covers audio cue review missing-source readiness with a real project open', async ({ page }) => {
+        const files = await readProjectFixture('games/example-game');
+        delete files['assets/sfx/voices.wav'];
+
+        await callVisualSmokeHarness(page, 'openProjectFixture', {
+            entryPath: 'scenes/intro.json',
+            files,
+            rootName: 'example-game-missing-audio',
+            selectedPath: [0],
+        });
+        await callVisualSmokeHarness(page, 'selectDockPanel', 'asset_dependencies');
+
+        const cueReview = page.locator('section').filter({ hasText: 'Audio cue review' });
+        await expect(cueReview).toBeVisible();
+        const exportReadiness = cueReview.getByLabel('Audio cue export readiness');
+        await expect(exportReadiness).toContainText('Export readiness: Blocked');
+        await expect(exportReadiness).toContainText('1 visible sheet missing source audio.');
+        await expect(cueReview).toContainText('Source audio missing: /assets/sfx/voices.wav');
+        await expect(cueReview.getByRole('button', { name: 'Export Visible' })).toBeDisabled();
+        await expect(cueReview.getByRole('button', { name: 'Export', exact: true })).toBeDisabled();
+        await expect(cueReview.getByRole('button', { name: 'Open Source', exact: true })).toBeDisabled();
+
+        await cueReview.getByRole('button', { name: 'Missing source 1' }).click();
+        await expect(cueReview.getByRole('status').filter({ hasText: '1/1 sheet | 3 cues' })).toBeVisible();
     });
 
     test('covers audio cue review sheet routing with a real project open', async ({ page }) => {
@@ -180,7 +350,7 @@ test.describe('editor visual smoke', () => {
         const cueReview = page.locator('section').filter({ hasText: 'Audio cue review' });
         await expect(cueReview).toBeVisible();
         await expect(cueReview).toContainText('Source: /assets/sfx/voices.wav');
-        await cueReview.getByRole('button', { name: 'Source', exact: true }).click();
+        await cueReview.getByRole('button', { name: 'Open Source', exact: true }).click();
 
         await expect(page.getByText('voices.wav').first()).toBeVisible();
         await expect(page.getByText('Asset Preview')).toBeVisible();
@@ -231,6 +401,29 @@ test.describe('editor visual smoke', () => {
         await expect(gitPanel.getByRole('button', { name: 'Branch' })).toBeDisabled();
         await expect(gitPanel).toContainText('Browser Git disabled');
         await expect(gitPanel).toContainText('Keep browser Git disabled or read-only until repository access policy is designed.');
+    });
+
+    test('covers command palette Git status report browser fallback with a real project open', async ({ page }) => {
+        const files = await readProjectFixture('games/classic-vn-starter');
+        await callVisualSmokeHarness(page, 'openProjectFixture', {
+            entryPath: 'scenes/intro.json',
+            files,
+            rootName: 'classic-vn-starter',
+            selectedPath: [0],
+        });
+
+        await callVisualSmokeHarness(page, 'openCommandPalette');
+        const commandPalette = page.getByRole('dialog', { name: 'Command palette' });
+        await expect(commandPalette).toBeVisible();
+        await commandPalette.getByPlaceholder('Type an action (e.g. Save All, Play, Reset Layout)').fill('git status report');
+        await expect(commandPalette.getByRole('option', { name: 'Show Git Status Report' })).toBeVisible();
+        await commandPalette.getByRole('option', { name: 'Show Git Status Report' }).click();
+
+        await expect(commandPalette).toHaveCount(0);
+        await callVisualSmokeHarness(page, 'selectDockPanel', 'console');
+        const consolePanel = page.locator('[data-console-panel="true"]');
+        await expect(consolePanel).toBeVisible();
+        await expect(consolePanel).toContainText('Git status is disabled in browser builds until repository access and project-handle persistence are designed.');
     });
 
     test('covers command palette routing with a real project open', async ({ page }) => {
@@ -361,6 +554,37 @@ test.describe('editor visual smoke', () => {
         await expect(searchPopup.getByRole('button', { name: /Every classic visual novel/u })).toBeVisible();
     });
 
+    test('covers command palette find and replace routing with a real project open', async ({ page }) => {
+        const files = await readProjectFixture('games/classic-vn-starter');
+        await callVisualSmokeHarness(page, 'openProjectFixture', {
+            entryPath: 'scenes/intro.json',
+            files,
+            rootName: 'classic-vn-starter',
+            selectedPath: [0],
+        });
+
+        await callVisualSmokeHarness(page, 'openCommandPalette');
+        const commandPalette = page.getByRole('dialog', { name: 'Command palette' });
+        await expect(commandPalette).toBeVisible();
+        await commandPalette.getByPlaceholder('Type an action (e.g. Save All, Play, Reset Layout)').fill('find and replace');
+        await expect(commandPalette.getByRole('option', { name: 'Find and Replace in Project' })).toBeVisible();
+        await commandPalette.getByRole('option', { name: 'Find and Replace in Project' }).click();
+
+        await expect(commandPalette).toHaveCount(0);
+        const replacePopup = page
+            .locator('.zerith-scrollbar')
+            .filter({ has: page.getByPlaceholder('Replace text...') })
+            .filter({ hasText: 'Find and Replace in Project' });
+        await expect(replacePopup).toBeVisible();
+        await expect(replacePopup.getByPlaceholder('Replace text...')).toBeFocused();
+        await replacePopup.getByPlaceholder('Search scenes, macros, characters, items...').fill('Every classic visual novel');
+        await replacePopup.getByPlaceholder('Replace text...').fill('Every focused visual novel');
+        await expect(replacePopup).toContainText('1 result(s)');
+        await expect(replacePopup).toContainText('Preview replacements: 1');
+        await expect(replacePopup.getByRole('button', { name: 'Replace', exact: true })).toBeEnabled();
+        await expect(replacePopup.getByRole('button', { name: 'Replace All' })).toBeEnabled();
+    });
+
     test('covers validation and localization source jumps with a real project open', async ({ page }) => {
         const files = await readProjectFixture('games/classic-vn-starter');
         await callVisualSmokeHarness(page, 'openProjectFixture', {
@@ -466,6 +690,14 @@ test.describe('editor visual smoke', () => {
         await expect(page.getByRole('status').filter({ hasText: 'Project: /classic-vn-starter' })).toBeVisible();
         await expect(page.getByLabel(/Output Directory/u)).toHaveValue('dist/classic-vn-starter');
         await expect(page.getByLabel('Zip Output Path')).toHaveValue('dist/classic-vn-starter.zip');
+        const desktopReadiness = page.getByLabel('Desktop packaging readiness');
+        await expect(desktopReadiness).toContainText('Desktop package blocked');
+        await expect(desktopReadiness).toContainText('Export artifact contract');
+        await expect(desktopReadiness).toContainText('Scoped game permissions');
+        const pagesReadiness = page.getByLabel('GitHub Pages dual-site readiness');
+        await expect(pagesReadiness).toContainText('Pages dual site blocked');
+        await expect(pagesReadiness).toContainText('Playable deploy gate');
+        await expect(pagesReadiness).toContainText('Browser editor persistence');
         await expect(page.getByRole('button', { name: 'Export' })).toBeEnabled();
         await expect(page.getByRole('button', { name: 'Parity Smoke' })).toBeDisabled();
     });

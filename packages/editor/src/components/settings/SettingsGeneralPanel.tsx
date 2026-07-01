@@ -5,6 +5,7 @@ import type { DockLayoutPreset } from '../../store/settings/SettingsSchema';
 
 import { getAllPlugins } from '../../plugins/commandPlugins';
 import { editorTheme as t } from '../../theme/editorTheme';
+import { BrowserEditorReadinessPanel } from './BrowserEditorReadinessPanel';
 import { getVisibleSettingsControls, type SettingsControlId } from './settingsControlRegistry';
 
 type SettingsGeneralPanelProperties = {
@@ -89,8 +90,15 @@ export function SettingsGeneralPanel({
         visibleControlIds.has('quickCommandTypes')
         && matchedControlIds.has('quickCommandTypes')
         && (!showChangedOnly || quickCommandTypesChanged);
+    const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+    const showBrowserEditorReadiness = panelId === 'general'
+        && !showChangedOnly
+        && (
+            normalizedSearchQuery.length === 0
+            || 'browser editor parity filesystem export desktop integrations loose output'.includes(normalizedSearchQuery)
+        );
 
-    if (!showAutosaveRow && !showAutosaveIntervalRow && !showAudioRow && !showAudiosheetShortcutTargetModeRow && !showDockLayoutPresetsRow && !showQuickCommandTypesRow) {
+    if (!showBrowserEditorReadiness && !showAutosaveRow && !showAutosaveIntervalRow && !showAudioRow && !showAudiosheetShortcutTargetModeRow && !showDockLayoutPresetsRow && !showQuickCommandTypesRow) {
         return (
             <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
                 {showChangedOnly
@@ -102,6 +110,10 @@ export function SettingsGeneralPanel({
 
     return (
         <>
+            {showBrowserEditorReadiness ? (
+                <BrowserEditorReadinessPanel uiScale={uiScale} />
+            ) : undefined}
+
             {showAutosaveRow ? (
                 <>
                     <EditableSettingRow

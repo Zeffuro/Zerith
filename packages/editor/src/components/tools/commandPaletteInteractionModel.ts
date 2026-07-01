@@ -12,6 +12,7 @@ export type CommandPaletteInteractionState = {
 
 type ExecutableAction = {
     action: () => Promise<void> | void;
+    disabledReason?: string;
 };
 
 export function clampSelectionIndex(index: number, length: number): number {
@@ -28,6 +29,7 @@ export async function executeSelectedAction(
 ): Promise<void> {
     const selected = actions[index];
     if (!selected) return;
+    if (selected.disabledReason) return;
 
     await selected.action();
     onRequestClose();

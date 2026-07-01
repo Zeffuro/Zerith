@@ -35,6 +35,17 @@ export type EditorPluginManifestInspection =
         status: 'rejected';
     };
 
+export type EditorPluginPackageIntegrity = {
+    algorithm: 'sha256';
+    files: EditorPluginPackageIntegrityFile[];
+};
+
+export type EditorPluginPackageIntegrityFile = {
+    path: string;
+    sha256: string;
+    size: number;
+};
+
 export type EditorPluginSourceRecord = {
     entryPath?: string;
     install: {
@@ -43,6 +54,7 @@ export type EditorPluginSourceRecord = {
     };
     manifest: EditorPluginManifest;
     manifestPath: string;
+    packageIntegrity?: EditorPluginPackageIntegrity;
     packageRoot?: string;
     schemaVersion: typeof EDITOR_PLUGIN_SOURCE_RECORD_SCHEMA_VERSION;
     source: string;
@@ -318,6 +330,16 @@ export function inspectEditorPluginSourceRecordValue(
         };
     }
 
+    const packageIntegrity = parseOptionalPackageIntegrity(value.packageIntegrity);
+    if (!packageIntegrity.ok) {
+        return {
+            manifest: manifestResult.manifest,
+            reason: packageIntegrity.reason,
+            source,
+            status: 'rejected',
+        };
+    }
+
     const expectedEntryPath = manifestResult.manifest.entry && packageRoot.value
         ? joinDisplayPath(packageRoot.value, manifestResult.manifest.entry)
         : undefined;
@@ -340,6 +362,7 @@ export function inspectEditorPluginSourceRecordValue(
             manifest: manifestResult.manifest,
             manifestPath: manifestPath.value,
             ...(packageRoot.value === undefined ? {} : { packageRoot: packageRoot.value }),
+            ...(packageIntegrity.value === undefined ? {} : { packageIntegrity: packageIntegrity.value }),
             schemaVersion: EDITOR_PLUGIN_SOURCE_RECORD_SCHEMA_VERSION,
             source: sourcePath.value,
             type: 'zerith.editorPluginSource',
@@ -363,6 +386,74 @@ function joinDisplayPath(root: string | undefined, child: string): string {
     const normalizedRoot = root.replaceAll('\\', '/').replaceAll(/\/+$/gu, '');
     const normalizedChild = child.replaceAll('\\', '/').replaceAll(/^\/+/gu, '');
     return `${normalizedRoot}/${normalizedChild}`;
+}
+
+function normalizePackageIntegrityPath(path: string): string {
+    return path.trim().replaceAll('\\', '/').replaceAll(/^\/+/gu, '');
+}
+
+function parseOptionalPackageIntegrity(
+    value: unknown,
+): { ok: false; reason: string } | { ok: true; value?: EditorPluginPackageIntegrity } {
+    if (value === undefined) return { ok: true };
+
+    if (!isRecord(value)) {
+        return { ok: false, reason: 'packageIntegrity must be an object' };
+    }
+
+    if (value.algorithm !== 'sha256') {
+        return { ok: false, reason: 'packageIntegrity.algorithm must be sha256' };
+    }
+
+    if (!Array.isArray(value.files)) {
+        return { ok: false, reason: 'packageIntegrity.files must be an array' };
+    }
+
+    const files: EditorPluginPackageIntegrityFile[] = [];
+    const paths = new Set<string>();
+
+    for (const [index, file] of value.files.entries()) {
+        if (!isRecord(file)) {
+            return { ok: false, reason: `packageIntegrity.files[${index}] must be an object` };
+        }
+
+        const path = parseRecordString(file.path, `packageIntegrity.files[${index}].path`);
+        if (!path.ok) return path;
+
+        const normalizedPath = normalizePackageIntegrityPath(path.value);
+        if (normalizedPath.length === 0 || normalizedPath.split('/').includes('..')) {
+            return { ok: false, reason: `packageIntegrity.files[${index}].path must be a relative package path` };
+        }
+
+        if (paths.has(normalizedPath)) {
+            return { ok: false, reason: `packageIntegrity.files[${index}].path must be unique` };
+        }
+        paths.add(normalizedPath);
+
+        const sha256 = file.sha256;
+        if (typeof sha256 !== 'string' || !/^[a-f0-9]{64}$/u.test(sha256)) {
+            return { ok: false, reason: `packageIntegrity.files[${index}].sha256 must be a lowercase sha256 hex digest` };
+        }
+
+        const size = file.size;
+        if (typeof size !== 'number' || !Number.isSafeInteger(size) || size < 0) {
+            return { ok: false, reason: `packageIntegrity.files[${index}].size must be a non-negative integer` };
+        }
+
+        files.push({
+            path: normalizedPath,
+            sha256,
+            size,
+        });
+    }
+
+    return {
+        ok: true,
+        value: {
+            algorithm: 'sha256',
+            files: files.toSorted((left, right) => left.path.localeCompare(right.path)),
+        },
+    };
 }
 
 function parseOptionalRecordString(

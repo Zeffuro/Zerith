@@ -1,6 +1,7 @@
 import type { PaletteAction } from './commandPaletteActionsModel';
 
 export type RenderablePaletteAction = {
+    disabledReason?: string;
     hintText: string;
     id: string;
     label: string;
@@ -100,6 +101,7 @@ export function shouldShowEmptyActions(actionCount: number): boolean {
 
 export function toRenderableActions(actions: PaletteAction[]): RenderablePaletteAction[] {
     return actions.map((action) => ({
+        ...(action.disabledReason ? { disabledReason: action.disabledReason } : {}),
         hintText: action.shortcut ?? '',
         id: action.id,
         label: action.label,

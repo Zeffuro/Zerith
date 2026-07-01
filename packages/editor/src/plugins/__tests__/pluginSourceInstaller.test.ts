@@ -48,6 +48,24 @@ describe('pluginSourceInstaller', () => {
             '/install/example-plugin/zerith.editorPluginSource.json',
             expect.stringContaining('"targetPath": "/install/example-plugin"'),
         );
+
+        const recordText = vi.mocked(dependencies.writeTextFile).mock.calls[0]?.[1] ?? '{}';
+        const sourceRecord = JSON.parse(recordText) as Record<string, unknown>;
+        expect(sourceRecord.packageIntegrity).toEqual({
+            algorithm: 'sha256',
+            files: [
+                {
+                    path: 'dist/index.js',
+                    sha256: '039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81',
+                    size: 3,
+                },
+                {
+                    path: 'plugin.json',
+                    sha256: '2fa1b377bf67309f65e5e7bc9d924345ca648dec4e601a398a9cb497dcba3765',
+                    size: 2,
+                },
+            ],
+        });
     });
 
     it('rejects records without package roots', async () => {

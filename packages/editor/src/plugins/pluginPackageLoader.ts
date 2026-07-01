@@ -8,14 +8,16 @@ import type {
 import type { EditorPluginSourceRecord } from './pluginManifestInspection';
 import type { EditorPluginContribution } from './types';
 
-import { fsJoin, fsReadDirectory, fsReadTextFile } from '../services/fs';
+import { fsJoin, fsReadBinaryFile, fsReadDirectory, fsReadTextFile } from '../services/fs';
 import { loadDiscoveredEditorPlugins } from './pluginDiscovery';
 import { inspectEditorPluginSourceRecordText } from './pluginManifestInspection';
+import { verifyEditorPluginPackageIntegrity } from './pluginPackageIntegrity';
 import { createInstalledEditorPluginLoadTrustPolicy } from './pluginTrustPolicy';
 
 export type InstalledEditorPluginPackageDiscoveryDependencies = {
     join: (...parts: string[]) => Promise<string>;
     loadModule: (entryPath: string) => Promise<unknown>;
+    readBinaryFile: (path: string) => Promise<Uint8Array>;
     readDirectory: (path: string) => Promise<FsDirectoryEntry[]>;
     readTextFile: (path: string) => Promise<string>;
 };
@@ -34,6 +36,7 @@ export const EDITOR_PLUGIN_SOURCE_RECORD_FILE_NAME = 'zerith.editorPluginSource.
 const DEFAULT_INSTALLED_EDITOR_PLUGIN_PACKAGE_DISCOVERY_DEPENDENCIES: InstalledEditorPluginPackageDiscoveryDependencies = {
     join: fsJoin,
     loadModule: defaultLoadEditorPluginModule,
+    readBinaryFile: fsReadBinaryFile,
     readDirectory: fsReadDirectory,
     readTextFile: fsReadTextFile,
 };
@@ -71,6 +74,16 @@ export async function discoverInstalledEditorPluginPackages(
             rejected.push({
                 manifestId: inspection.manifest?.id,
                 reason: inspection.reason,
+                source: recordPath,
+            });
+            continue;
+        }
+
+        const integrity = await verifyEditorPluginPackageIntegrity(inspection.record, dependencies);
+        if (integrity.status === 'rejected') {
+            rejected.push({
+                manifestId: inspection.record.manifest.id,
+                reason: integrity.reason,
                 source: recordPath,
             });
             continue;

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { EditorPluginLoadResult } from '../../plugins/pluginDiscovery';
 import type { EditorPluginManifestInspection, EditorPluginSourceRecordInspection } from '../../plugins/pluginManifestInspection';
 
-import { getAllPlugins, getRegisteredEditorPlugins, registerEditorPlugin } from '../../plugins/commandPlugins';
+import { deactivateEditorPlugin, getAllPlugins, getRegisteredEditorPlugins, registerEditorPlugin } from '../../plugins/commandPlugins';
 import {
     createEditorPluginInstallPlan,
     createEditorPluginSourceRecord,
@@ -21,7 +21,8 @@ import {
 } from '../../plugins/pluginTrustPolicy';
 import { fsPickBinaryFiles, fsPickDirectory } from '../../services/fs';
 import { editorTheme as t } from '../../theme/editorTheme';
-import { createInstalledPluginLoadSummary } from './pluginSettingsModel';
+import { PluginMarketplaceReadinessPanel } from './PluginMarketplaceReadinessPanel';
+import { createInstalledPluginLoadSummary, createPluginSourceRecordIntegritySummary } from './pluginSettingsModel';
 
 type SettingsPluginPanelProperties = {
     uiScale: number;
@@ -46,6 +47,9 @@ export function SettingsPluginPanel({ uiScale }: SettingsPluginPanelProperties) 
     const sourceRecord = installPlan ? createEditorPluginSourceRecord(installPlan) : undefined;
     const sourceRecordTrustPolicy = sourceRecordInspection
         ? createEditorPluginSourceRecordTrustPolicy(sourceRecordInspection)
+        : undefined;
+    const sourceRecordIntegritySummary = sourceRecordInspection
+        ? createPluginSourceRecordIntegritySummary(sourceRecordInspection)
         : undefined;
     const installedPackageLoadSummary = installedPackageLoadResult
         ? createInstalledPluginLoadSummary(installedPackageLoadResult)
@@ -151,8 +155,16 @@ export function SettingsPluginPanel({ uiScale }: SettingsPluginPanelProperties) 
         })();
     };
 
+    const handleDeactivatePlugin = (pluginId: string) => {
+        if (deactivateEditorPlugin(pluginId)) {
+            bumpPluginRegistryRevision((current) => current + 1);
+        }
+    };
+
     return (
         <>
+            <PluginMarketplaceReadinessPanel uiScale={uiScale} />
+
             <section aria-busy={isInstallingSourceRecord} style={sectionStyle(uiScale)}>
                 <div style={sectionHeaderStyle()}>
                     <span>Manifest Inspector</span>
@@ -196,6 +208,13 @@ export function SettingsPluginPanel({ uiScale }: SettingsPluginPanelProperties) 
                                     ) : undefined}
                                     {sourceRecordTrustPolicy ? (
                                         <MetadataLine label="Load Policy" uiScale={uiScale} value={formatPluginTrustPolicy(sourceRecordTrustPolicy)} />
+                                    ) : undefined}
+                                    {sourceRecordIntegritySummary ? (
+                                        <MetadataLine
+                                            label="Package Integrity"
+                                            uiScale={uiScale}
+                                            value={`${sourceRecordIntegritySummary.status}: ${sourceRecordIntegritySummary.message}`}
+                                        />
                                     ) : undefined}
                                     <button
                                         disabled={isInstallingSourceRecord || !sourceRecordInspection.record.packageRoot}
@@ -371,7 +390,20 @@ export function SettingsPluginPanel({ uiScale }: SettingsPluginPanelProperties) 
                             <article key={plugin.manifest.id} style={pluginRowStyle(uiScale)}>
                                 <div style={{ alignItems: 'center', display: 'flex', gap: `${8 * uiScale}px`, justifyContent: 'space-between' }}>
                                     <div style={{ color: t.text.primary, fontWeight: 700 }}>{plugin.manifest.name}</div>
-                                    <span style={statusStyle(plugin.active, uiScale)}>{plugin.active ? 'Active' : 'Inactive'}</span>
+                                    <div style={{ alignItems: 'center', display: 'flex', gap: `${6 * uiScale}px` }}>
+                                        <span style={statusStyle(plugin.active, uiScale)}>{plugin.active ? 'Active' : 'Inactive'}</span>
+                                        {plugin.active ? (
+                                            <button
+                                                aria-label={`Deactivate plugin ${plugin.manifest.name}`}
+                                                onClick={() => handleDeactivatePlugin(plugin.manifest.id)}
+                                                style={inspectButtonStyle(uiScale)}
+                                                type="button"
+                                            >
+                                                <XCircle size={13 * uiScale} />
+                                                <span>Deactivate</span>
+                                            </button>
+                                        ) : undefined}
+                                    </div>
                                 </div>
                                 <div style={metadataStyle(uiScale)}>
                                     {plugin.manifest.id} | v{plugin.manifest.version}

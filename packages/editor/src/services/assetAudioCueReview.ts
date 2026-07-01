@@ -5,6 +5,21 @@ import { parseAudiosheetDescriptor } from 'core/schemas';
 import { detectDescriptorType } from '../utils/assetDescriptorUtilities';
 import { fsJoin, fsReadTextFile } from './fs';
 
+export type AssetAudioCueExportReadiness = {
+    blockedEntryCount: number;
+    detailMessages: string[];
+    exportableCueCount: number;
+    exportableEntryCount: number;
+    issueEntryCount: number;
+    message: string;
+    missingSourceEntryCount: number;
+    openEndedCueCount: number;
+    status: AssetAudioCueExportReadinessStatus;
+    totalEntryCount: number;
+};
+
+export type AssetAudioCueExportReadinessStatus = 'blocked' | 'limited' | 'ready';
+
 export type AssetAudioCueReview = {
     entries: AssetAudioCueReviewEntry[];
     issueCount: number;
@@ -56,6 +71,75 @@ export function collectAssetAudioCueOrganizationAssetUrls(
         }
     }
     return [...assetUrls].toSorted((left, right) => left.localeCompare(right));
+}
+
+export function createAssetAudioCueExportReadiness(
+    entries: readonly AssetAudioCueReviewEntry[],
+): AssetAudioCueExportReadiness {
+    const summary = createAssetAudioCueReviewSummary(entries);
+    const blockedEntryCount = entries.filter((entry) => !isAssetAudioCueReviewEntryExportable(entry)).length;
+    const openEndedCueCount = entries.reduce((total, entry) => total + entry.openEndedCueCount, 0);
+    const detailMessages = [
+        summary.missingSourceEntryCount > 0
+            ? `${summary.missingSourceEntryCount} ${pluralize(summary.missingSourceEntryCount, 'sheet')} missing source audio.`
+            : undefined,
+        openEndedCueCount > 0
+            ? `${openEndedCueCount} open-ended ${pluralize(openEndedCueCount, 'cue')} will use source duration during export.`
+            : undefined,
+        blockedEntryCount > 0 && summary.exportableEntryCount > 0
+            ? `${blockedEntryCount} visible ${pluralize(blockedEntryCount, 'sheet')} will be skipped.`
+            : undefined,
+    ].filter((message): message is string => message !== undefined);
+
+    if (summary.totalEntryCount === 0) {
+        return {
+            blockedEntryCount,
+            detailMessages,
+            exportableCueCount: 0,
+            exportableEntryCount: 0,
+            issueEntryCount: 0,
+            message: 'No visible cue sheets to export.',
+            missingSourceEntryCount: 0,
+            openEndedCueCount: 0,
+            status: 'blocked',
+            totalEntryCount: 0,
+        };
+    }
+
+    if (summary.exportableEntryCount === 0) {
+        return {
+            blockedEntryCount,
+            detailMessages,
+            exportableCueCount: 0,
+            exportableEntryCount: 0,
+            issueEntryCount: summary.issueEntryCount,
+            message: summary.missingSourceEntryCount > 0
+                ? `${summary.missingSourceEntryCount} visible ${pluralize(summary.missingSourceEntryCount, 'sheet')} missing source audio.`
+                : 'No visible cue sheets have exportable cues.',
+            missingSourceEntryCount: summary.missingSourceEntryCount,
+            openEndedCueCount,
+            status: 'blocked',
+            totalEntryCount: summary.totalEntryCount,
+        };
+    }
+
+    const baseMessage = `${summary.exportableCueCount} cue WAV${summary.exportableCueCount === 1 ? '' : 's'} ready from ${summary.exportableEntryCount} ${pluralize(summary.exportableEntryCount, 'sheet')}.`;
+    const status: AssetAudioCueExportReadinessStatus = blockedEntryCount > 0 || summary.issueEntryCount > 0
+        ? 'limited'
+        : 'ready';
+
+    return {
+        blockedEntryCount,
+        detailMessages,
+        exportableCueCount: summary.exportableCueCount,
+        exportableEntryCount: summary.exportableEntryCount,
+        issueEntryCount: summary.issueEntryCount,
+        message: status === 'limited' ? `${baseMessage} Review issues before export.` : baseMessage,
+        missingSourceEntryCount: summary.missingSourceEntryCount,
+        openEndedCueCount,
+        status,
+        totalEntryCount: summary.totalEntryCount,
+    };
 }
 
 export function createAssetAudioCueReviewEntry(
@@ -259,6 +343,10 @@ function normalizeAssetUrl(assetUrl: string): string | undefined {
     const normalized = assetUrl.replaceAll('\\', '/').replaceAll(/\/+/gu, '/');
     const withLeadingSlash = normalized.startsWith('/') ? normalized : `/${normalized}`;
     return withLeadingSlash.startsWith('/assets/') ? withLeadingSlash : undefined;
+}
+
+function pluralize(count: number, singular: string): string {
+    return count === 1 ? singular : `${singular}s`;
 }
 
 async function readCueReviewEntry(

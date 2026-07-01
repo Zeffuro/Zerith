@@ -16,6 +16,8 @@ import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { styles } from '../../theme/styleHelpers';
+import { DesktopPackagingReadinessPanel } from './DesktopPackagingReadinessPanel';
+import { GitHubPagesReadinessPanel } from './GitHubPagesReadinessPanel';
 
 export function ExportGameModal() {
     const closeExportGameModal = useEditorStore((state) => state.closeExportGameModal);
@@ -207,7 +209,10 @@ export function ExportGameModal() {
                     color: t.text.primary,
                     display: 'grid',
                     gap: `${10 * uiScale}px`,
+                    maxHeight: `min(92vh, ${900 * uiScale}px)`,
+                    maxWidth: `min(94vw, ${720 * uiScale}px)`,
                     minWidth: `${560 * uiScale}px`,
+                    overflowY: 'auto',
                     padding: `${16 * uiScale}px`,
                 }}
                 tabIndex={-1}
@@ -242,6 +247,8 @@ export function ExportGameModal() {
                         <span>{entry.description}</span>
                     </div>
                 ))}
+                <DesktopPackagingReadinessPanel uiScale={uiScale} />
+                <GitHubPagesReadinessPanel uiScale={uiScale} />
 
                 <label style={{ display: 'grid', fontSize: `${12 * uiScale}px`, gap: `${4 * uiScale}px` }}>
                     Compiled Content Cache

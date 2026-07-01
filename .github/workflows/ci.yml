@@ -26,11 +26,20 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Fixture policy guard
+        run: npm run test:fixture-policy
+
       - name: Lint
         run: npm run lint
 
       - name: Test
         run: npm test
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Playwright editor smoke
+        run: npm run test:visual:ci
 
       - name: Build packages
         run: npm run build
@@ -44,5 +53,11 @@ jobs:
       - name: Export example game
         run: npm run build:game -- --game=games/example-game --outDir=dist/example-game-ci --base=./
 
+      - name: Exported runtime smoke - example game
+        run: npm run test:runtime-smoke -- --game=games/example-game --outDir=dist/example-game-ci --skipBuild --expect="Rain on the glass" --expect="No borrowed cast"
+
       - name: Export classic VN starter
         run: npm run build:game -- --game=games/classic-vn-starter --outDir=dist/classic-vn-starter-ci --base=./
+
+      - name: Exported runtime smoke - classic VN starter
+        run: npm run test:runtime-smoke -- --game=games/classic-vn-starter --outDir=dist/classic-vn-starter-ci --skipBuild

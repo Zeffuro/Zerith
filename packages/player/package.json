@@ -9,7 +9,8 @@
     "build:game": "node ./scripts/build-game.mjs",
     "build:game:zip": "node ./scripts/build-game.mjs --zip",
     "export:parity-smoke": "node ./scripts/export-parity-smoke.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:runtime-smoke": "node ./scripts/exported-runtime-smoke.mjs"
   },
   "dependencies": {
     "core": "file:../core",

@@ -53,6 +53,7 @@ export type CommandPaletteActionDeps = {
 
 export type PaletteAction = {
     action: () => Promise<void> | void;
+    disabledReason?: string;
     id: string;
     keywords: string;
     label: string;
@@ -65,6 +66,16 @@ type RecentProjectLike = {
 };
 
 export function buildBasePaletteActions(deps: CommandPaletteActionDeps): PaletteAction[] {
+    const openFileFirst = deps.activeFile ? undefined : 'Open a file first.';
+    const openProjectFirst = deps.projectPath ? undefined : 'Open a project first.';
+    const startPreviewFirst = deps.isRunning ? undefined : 'Start preview playback first.';
+    const pauseDisabledReason = deps.isRunning
+        ? (deps.isPlaybackPaused ? 'Preview is already paused.' : undefined)
+        : 'Start preview playback first.';
+    const pausedPlaybackRequired = deps.isRunning
+        ? (deps.isPlaybackPaused ? undefined : 'Pause preview first.')
+        : 'Start preview playback first.';
+
     return [
         {
             action: () => {
@@ -90,6 +101,7 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
                 deps.markManualSave();
                 await deps.saveActiveFileFromCurrentScript();
             },
+            ...(openFileFirst ? { disabledReason: openFileFirst } : {}),
             id: 'save',
             keywords: 'save file write',
             label: 'Save Active File',
@@ -97,9 +109,11 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
         },
         {
             action: async () => {
+                if (!deps.projectPath) return;
                 deps.markManualSave();
                 await deps.saveAllDirtyFiles();
             },
+            ...(openProjectFirst ? { disabledReason: openProjectFirst } : {}),
             id: 'save-all',
             keywords: 'save all files write',
             label: 'Save All Files',
@@ -109,6 +123,7 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
             action: async () => {
                 await deps.saveProjectAs();
             },
+            ...(openProjectFirst ? { disabledReason: openProjectFirst } : {}),
             id: 'save-project-as',
             keywords: 'save project as duplicate clone workspace',
             label: 'Save Project As...',
@@ -128,6 +143,7 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
                 if (!deps.projectPath) return;
                 deps.openExportGameModal();
             },
+            ...(openProjectFirst ? { disabledReason: openProjectFirst } : {}),
             id: 'export-game',
             keywords: 'export game build package zip',
             label: 'Export Game...',
@@ -137,6 +153,7 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
                 if (!deps.projectPath) return;
                 await deps.openProjectFolder();
             },
+            ...(openProjectFirst ? { disabledReason: openProjectFirst } : {}),
             id: 'open-project-folder',
             keywords: 'open project folder explorer shell reveal',
             label: 'Open Project Folder',
@@ -147,6 +164,7 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
                 if (!deps.projectPath) return;
                 await deps.migrateProjectContent();
             },
+            ...(openProjectFirst ? { disabledReason: openProjectFirst } : {}),
             id: 'migrate-content-schema',
             keywords: 'migrate content schema version upgrade scene ids',
             label: 'Migrate Content Schema...',
@@ -156,6 +174,7 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
                 if (!deps.projectPath) return;
                 await deps.validateProjectContent();
             },
+            ...(openProjectFirst ? { disabledReason: openProjectFirst } : {}),
             id: 'validate-project-content',
             keywords: 'validate project content graph localization backlog line ids diagnostics',
             label: 'Validate Project Content...',
@@ -165,6 +184,7 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
                 if (!deps.projectPath) return;
                 deps.openLocalizationEditor();
             },
+            ...(openProjectFirst ? { disabledReason: openProjectFirst } : {}),
             id: 'open-localization',
             keywords: 'localization locale translation strings dialogue lines',
             label: 'Open Localization',
@@ -183,6 +203,7 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
             action: () => {
                 deps.closeProject();
             },
+            ...(openProjectFirst ? { disabledReason: openProjectFirst } : {}),
             id: 'close-project',
             keywords: 'close unload project workspace',
             label: 'Close Project',
@@ -217,6 +238,7 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
                 if (!deps.projectPath) return;
                 await deps.showGitCreateBranch();
             },
+            ...(openProjectFirst ? { disabledReason: openProjectFirst } : {}),
             id: 'git-create-branch',
             keywords: 'git create branch version control repository ref',
             label: 'Git: Create Branch...',
@@ -226,6 +248,7 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
                 if (!deps.projectPath) return;
                 await deps.showGitCheckoutBranch();
             },
+            ...(openProjectFirst ? { disabledReason: openProjectFirst } : {}),
             id: 'git-checkout-branch',
             keywords: 'git checkout switch branch version control repository clean worktree',
             label: 'Git: Checkout Branch...',
@@ -235,6 +258,7 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
                 if (!deps.projectPath) return;
                 await deps.showGitCommitStaged();
             },
+            ...(openProjectFirst ? { disabledReason: openProjectFirst } : {}),
             id: 'git-commit-staged',
             keywords: 'git commit staged version control repository message',
             label: 'Git: Commit Staged...',
@@ -244,6 +268,7 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
                 if (!deps.projectPath) return;
                 await deps.showGitStageAll();
             },
+            ...(openProjectFirst ? { disabledReason: openProjectFirst } : {}),
             id: 'git-stage-all',
             keywords: 'git stage add project changes version control repository index',
             label: 'Git: Stage Project Changes...',
@@ -253,6 +278,7 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
                 if (!deps.projectPath) return;
                 await deps.showGitPushPreflight();
             },
+            ...(openProjectFirst ? { disabledReason: openProjectFirst } : {}),
             id: 'git-push-preflight',
             keywords: 'git push check dry run credentials remote version control repository',
             label: 'Git: Check Push...',
@@ -262,6 +288,7 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
                 if (!deps.projectPath) return;
                 await deps.showGitPushCurrentBranch();
             },
+            ...(openProjectFirst ? { disabledReason: openProjectFirst } : {}),
             id: 'git-push-current-branch',
             keywords: 'git push current branch remote version control repository',
             label: 'Git: Push Current Branch...',
@@ -271,6 +298,7 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
                 if (!deps.projectPath) return;
                 await deps.showGitStatusReport();
             },
+            ...(openProjectFirst ? { disabledReason: openProjectFirst } : {}),
             id: 'show-git-status-report',
             keywords: 'git status repository version control changed files branch ahead behind tauri rust desktop',
             label: 'Show Git Status Report',
@@ -288,6 +316,7 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
             action: () => {
                 deps.triggerStop();
             },
+            ...(startPreviewFirst ? { disabledReason: startPreviewFirst } : {}),
             id: 'playback-stop',
             keywords: 'stop preview playback',
             label: 'Playback: Stop',
@@ -298,6 +327,7 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
                 if (!deps.isRunning || deps.isPlaybackPaused) return;
                 deps.triggerPause();
             },
+            ...(pauseDisabledReason ? { disabledReason: pauseDisabledReason } : {}),
             id: 'playback-pause',
             keywords: 'pause preview playback',
             label: 'Playback: Pause',
@@ -308,6 +338,7 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
                 if (!deps.isRunning || !deps.isPlaybackPaused) return;
                 deps.triggerResume();
             },
+            ...(pausedPlaybackRequired ? { disabledReason: pausedPlaybackRequired } : {}),
             id: 'playback-resume',
             keywords: 'resume continue preview playback',
             label: 'Playback: Resume',
@@ -318,6 +349,7 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
                 if (!deps.isRunning || !deps.isPlaybackPaused) return;
                 deps.triggerStep();
             },
+            ...(pausedPlaybackRequired ? { disabledReason: pausedPlaybackRequired } : {}),
             id: 'playback-step',
             keywords: 'step over debug playback',
             label: 'Playback: Step Over',

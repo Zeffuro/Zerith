@@ -105,9 +105,52 @@ describe('commandPaletteActionsModel', () => {
         expect(deps.saveActiveFileFromCurrentScript).not.toHaveBeenCalled();
     });
 
+    it('marks file and project scoped actions disabled when prerequisites are missing', () => {
+        const actions = buildCommandPaletteActions(createDeps({
+            activeFile: undefined,
+            projectPath: undefined,
+        }));
+
+        expect(byId(actions, 'save')?.disabledReason).toBe('Open a file first.');
+        for (const id of [
+            'save-all',
+            'save-project-as',
+            'export-game',
+            'open-project-folder',
+            'migrate-content-schema',
+            'validate-project-content',
+            'open-localization',
+            'close-project',
+            'git-create-branch',
+            'git-checkout-branch',
+            'git-commit-staged',
+            'git-stage-all',
+            'git-push-preflight',
+            'git-push-current-branch',
+            'show-git-status-report',
+        ]) {
+            expect(byId(actions, id)?.disabledReason).toBe('Open a project first.');
+        }
+        expect(byId(actions, 'new-project')?.disabledReason).toBeUndefined();
+        expect(byId(actions, 'show-browser-parity-report')?.disabledReason).toBeUndefined();
+        expect(byId(actions, 'show-git-integration-report')?.disabledReason).toBeUndefined();
+        expect(byId(actions, 'open-settings')?.disabledReason).toBeUndefined();
+    });
+
     it('guards pause, resume, and step actions by playback state', async () => {
+        const idleActions = buildCommandPaletteActions(createDeps());
+        expect(byId(idleActions, 'playback-stop')?.disabledReason).toBe('Start preview playback first.');
+        expect(byId(idleActions, 'playback-pause')?.disabledReason).toBe('Start preview playback first.');
+        expect(byId(idleActions, 'playback-resume')?.disabledReason).toBe('Start preview playback first.');
+        expect(byId(idleActions, 'playback-step')?.disabledReason).toBe('Start preview playback first.');
+
         const pausedDeps = createDeps({ isPlaybackPaused: true, isRunning: true });
         const pausedActions = buildCommandPaletteActions(pausedDeps);
+
+        expect(byId(pausedActions, 'playback-stop')?.disabledReason).toBeUndefined();
+        expect(byId(pausedActions, 'playback-pause')?.disabledReason).toBe('Preview is already paused.');
+        expect(byId(pausedActions, 'playback-resume')?.disabledReason).toBeUndefined();
+        expect(byId(pausedActions, 'playback-step')?.disabledReason).toBeUndefined();
 
         await byId(pausedActions, 'playback-pause')?.action();
         await byId(pausedActions, 'playback-resume')?.action();
@@ -119,6 +162,11 @@ describe('commandPaletteActionsModel', () => {
 
         const runningDeps = createDeps({ isPlaybackPaused: false, isRunning: true });
         const runningActions = buildCommandPaletteActions(runningDeps);
+
+        expect(byId(runningActions, 'playback-stop')?.disabledReason).toBeUndefined();
+        expect(byId(runningActions, 'playback-pause')?.disabledReason).toBeUndefined();
+        expect(byId(runningActions, 'playback-resume')?.disabledReason).toBe('Pause preview first.');
+        expect(byId(runningActions, 'playback-step')?.disabledReason).toBe('Pause preview first.');
 
         await byId(runningActions, 'playback-pause')?.action();
         await byId(runningActions, 'playback-resume')?.action();

@@ -38,9 +38,15 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
       - name: Build example game
         run: node scripts/build-game.mjs --game=games/example-game --outDir=dist/example-game --base="/${{ github.event.repository.name }}/"
         working-directory: packages/player
+
+      - name: Exported runtime smoke - example game
+        run: npm run test:runtime-smoke -- --game=games/example-game --outDir=dist/example-game --base="/${{ github.event.repository.name }}/" --skipBuild --expect="Rain on the glass" --expect="No borrowed cast"
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

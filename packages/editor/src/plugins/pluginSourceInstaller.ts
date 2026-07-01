@@ -1,5 +1,5 @@
 import type { FsDirectoryEntry } from '../services/fs';
-import type { EditorPluginSourceRecord } from './pluginManifestInspection';
+import type { EditorPluginPackageIntegrityFile, EditorPluginSourceRecord } from './pluginManifestInspection';
 
 import {
     fsJoin,
@@ -10,6 +10,7 @@ import {
     fsWriteTextFile,
 } from '../services/fs';
 import { serializeEditorPluginSourceRecord } from './pluginManifestInspection';
+import { createEditorPluginPackageIntegrityFile } from './pluginPackageIntegrity';
 
 export type EditorPluginPackageInstallDependencies = {
     join: (...parts: string[]) => Promise<string>;
@@ -62,8 +63,9 @@ export async function installEditorPluginSourceRecord(
     await dependencies.mkdir(targetPath, true);
 
     const copiedFiles: string[] = [];
+    const integrityFiles: EditorPluginPackageIntegrityFile[] = [];
     const skippedEntries: string[] = [];
-    await copyPluginPackageDirectory(record.packageRoot, targetPath, dependencies, copiedFiles, skippedEntries);
+    await copyPluginPackageDirectory(record.packageRoot, targetPath, '', dependencies, copiedFiles, integrityFiles, skippedEntries);
 
     const recordPath = await dependencies.join(targetPath, SOURCE_RECORD_FILE_NAME);
     await dependencies.writeTextFile(recordPath, serializeEditorPluginSourceRecord({
@@ -71,6 +73,10 @@ export async function installEditorPluginSourceRecord(
         install: {
             ...record.install,
             targetPath,
+        },
+        packageIntegrity: {
+            algorithm: 'sha256',
+            files: integrityFiles.toSorted((left, right) => left.path.localeCompare(right.path)),
         },
     }));
 
@@ -113,8 +119,10 @@ function assertTargetOutsideSource(packageRoot: string, targetPath: string): voi
 async function copyPluginPackageDirectory(
     sourceDirectory: string,
     targetDirectory: string,
+    relativeDirectory: string,
     dependencies: EditorPluginPackageInstallDependencies,
     copiedFiles: string[],
+    integrityFiles: EditorPluginPackageIntegrityFile[],
     skippedEntries: string[],
 ): Promise<void> {
     const entries = await dependencies.readDirectory(sourceDirectory);
@@ -123,6 +131,7 @@ async function copyPluginPackageDirectory(
     for (const entry of entries) {
         const sourcePath = await dependencies.join(sourceDirectory, entry.name);
         const targetPath = await dependencies.join(targetDirectory, entry.name);
+        const relativePath = joinPackageRelativePath(relativeDirectory, entry.name);
 
         if (entry.isSymlink) {
             skippedEntries.push(sourcePath);
@@ -135,7 +144,15 @@ async function copyPluginPackageDirectory(
                 continue;
             }
 
-            await copyPluginPackageDirectory(sourcePath, targetPath, dependencies, copiedFiles, skippedEntries);
+            await copyPluginPackageDirectory(
+                sourcePath,
+                targetPath,
+                relativePath,
+                dependencies,
+                copiedFiles,
+                integrityFiles,
+                skippedEntries,
+            );
             continue;
         }
 
@@ -144,9 +161,15 @@ async function copyPluginPackageDirectory(
             continue;
         }
 
-        await dependencies.writeBinaryFile(targetPath, await dependencies.readBinaryFile(sourcePath));
+        const bytes = await dependencies.readBinaryFile(sourcePath);
+        await dependencies.writeBinaryFile(targetPath, bytes);
         copiedFiles.push(targetPath);
+        integrityFiles.push(await createEditorPluginPackageIntegrityFile(relativePath, bytes));
     }
+}
+
+function joinPackageRelativePath(directory: string, name: string): string {
+    return (directory ? `${directory}/${name}` : name).replaceAll('\\', '/').replaceAll(/^\/+/gu, '');
 }
 
 function normalizeComparablePath(path: string): string {

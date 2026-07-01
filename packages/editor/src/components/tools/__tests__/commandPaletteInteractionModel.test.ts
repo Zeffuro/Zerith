@@ -60,6 +60,16 @@ describe('commandPaletteInteractionModel', () => {
         expect(close).toHaveBeenCalledTimes(1);
     });
 
+    it('does not execute or close for disabled actions', async () => {
+        const action = vi.fn(async () => {});
+        const close = vi.fn();
+
+        await executeSelectedAction([{ action, disabledReason: 'Open a project first.' }], 0, close);
+
+        expect(action).not.toHaveBeenCalled();
+        expect(close).not.toHaveBeenCalled();
+    });
+
     it('does nothing for an out-of-range action index', async () => {
         const close = vi.fn();
 

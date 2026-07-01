@@ -1,6 +1,7 @@
 import type { ScriptPath } from '../utils/scriptPathUtilities';
 
 import { DOCK_PANELS, type DockPanelId } from '../components/layout/dock/dockPanelIds';
+import { registerEditorPlugin } from '../plugins/commandPlugins';
 import { type BrowserDirectoryHandle, type BrowserEntryHandle, type BrowserFileHandle, browserFsAdapter, type BrowserWritableFileStream } from '../services/fs/browserFsAdapter';
 import { openLocalizationWorkbenchTab } from '../services/localizationWorkbench';
 import { openProjectEntry } from '../services/openProjectEntry';
@@ -21,6 +22,7 @@ export type EditorVisualSmokeHarness = {
     openProjectFixture: (fixture: VisualSmokeProjectFixture) => Promise<void>;
     openSettingsModal: () => void;
     playPreviewFrom: (index: number) => void;
+    registerVisualSmokePlugin: () => void;
     resetEditorChrome: () => void;
     selectDockPanel: (panelId: DockPanelId) => void;
     stopPreview: () => void;
@@ -146,6 +148,21 @@ export function installEditorVisualSmokeHarness(): () => void {
         },
         playPreviewFrom: (index) => {
             useEditorStore.getState().triggerPlayFrom(index);
+        },
+        registerVisualSmokePlugin: () => {
+            registerEditorPlugin({
+                commands: [{
+                    label: 'Visual Smoke Signal',
+                    type: 'visual_smoke_signal',
+                }],
+                manifest: {
+                    capabilities: ['commands'],
+                    id: 'visual.smoke.plugin',
+                    name: 'Visual Smoke Plugin',
+                    pluginApiVersion: 1,
+                    version: '1.0.0',
+                },
+            }, { source: 'visual-smoke-memory' });
         },
         resetEditorChrome: () => {
             const store = useEditorStore.getState();

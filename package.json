@@ -21,11 +21,13 @@
     "lint": "eslint \"packages/**/*.{ts,tsx}\" --max-warnings 0",
     "lint:fix": "eslint \"packages/**/*.{ts,tsx}\" --max-warnings 0 --fix",
     "test": "vitest run",
+    "test:fixture-policy": "node scripts/guard-safe-fixtures.mjs",
+    "test:runtime-smoke": "npm run test:runtime-smoke --workspace=player --",
     "test:visual": "playwright test -c playwright.config.mjs",
+    "test:visual:ci": "playwright test -c playwright.config.mjs --grep-invert \"captures\"",
     "test:visual:update": "playwright test -c playwright.config.mjs --update-snapshots"
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.1",
     "eslint": "^10.5.0",

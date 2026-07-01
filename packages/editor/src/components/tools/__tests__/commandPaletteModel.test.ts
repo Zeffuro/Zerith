@@ -59,6 +59,7 @@ describe('commandPaletteModel', () => {
     it('maps actions into renderable rows with hint fallback', () => {
         const actions = [
             { action: () => {}, id: 'save', keywords: 'save', label: 'Save', shortcut: 'Ctrl+S' },
+            { action: () => {}, disabledReason: 'Open a project first.', id: 'export', keywords: 'export', label: 'Export' },
             { action: () => {}, id: 'play', keywords: 'play', label: 'Play' },
         ];
 
@@ -66,6 +67,7 @@ describe('commandPaletteModel', () => {
 
         expect(renderable).toEqual([
             { hintText: 'Ctrl+S', id: 'save', label: 'Save' },
+            { disabledReason: 'Open a project first.', hintText: '', id: 'export', label: 'Export' },
             { hintText: '', id: 'play', label: 'Play' },
         ]);
     });
