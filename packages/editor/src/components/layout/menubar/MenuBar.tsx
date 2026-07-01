@@ -6,6 +6,11 @@ import {
     formatContentMigrationCommandStatus,
     getContentMigrationCommandStatusTone,
 } from '../../../services/contentMigrationCommand';
+import {
+    formatEditorUpdateFlowResult,
+    getEditorUpdateFlowResultTone,
+    runEditorUpdateCheck,
+} from '../../../services/editorUpdateClient';
 import { fsPickProjectManifest } from '../../../services/fs';
 import { openLocalizationWorkbenchTab } from '../../../services/localizationWorkbench';
 import { openProjectEntry } from '../../../services/openProjectEntry';
@@ -43,6 +48,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         openGlobalSearchPopup,
         openGlobalSearchReplacePopup,
         openNewProjectModal,
+        openReleaseNotesModal,
         openSettingsModal,
         playTrigger,
         resetDockLayout,
@@ -186,6 +192,23 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
     const handleOpenRepository = useCallback(async () => {
         await openExternalUrl(REPOSITORY_URL);
     }, []);
+
+    const handleCheckForUpdates = useCallback(async () => {
+        try {
+            announceOperationStatus('Checking for editor updates...');
+            const result = await runEditorUpdateCheck({
+                onProgress: ({ downloadedBytes, totalBytes }) => {
+                    if (!totalBytes) return;
+                    const percent = Math.min(100, Math.round((downloadedBytes / totalBytes) * 100));
+                    announceOperationStatus(`Downloading editor update... ${percent}%`);
+                },
+            });
+            announceOperationStatus(formatEditorUpdateFlowResult(result), getEditorUpdateFlowResultTone(result));
+        } catch (error) {
+            console.error('Editor update check failed:', error);
+            announceOperationStatus(`Editor update check failed: ${error instanceof Error ? error.message : String(error)}`, 'error');
+        }
+    }, [announceOperationStatus]);
 
     const isRunning = playTrigger > stopTrigger;
             const handleSaveLayoutPreset = useCallback(() => {
@@ -382,9 +405,15 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
     const helpItems = useMemo<MenuItem[]>(
         () =>[
             { label: 'GitHub Repository', onClick: () => { void handleOpenRepository(); } },
+            {
+                disabled: !isTauriRuntime(),
+                label: 'Check for Updates...',
+                onClick: () => { void handleCheckForUpdates(); },
+            },
+            { label: 'Release Notes...', onClick: openReleaseNotesModal },
             { disabled: true, label: 'About Zerith Editor' },
         ],
-        [handleOpenRepository]
+        [handleCheckForUpdates, handleOpenRepository, openReleaseNotesModal]
     );
 
     const menuMap: Record<MenuKey, MenuItem[]> = {

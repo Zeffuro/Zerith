@@ -254,6 +254,17 @@ describe('createUiPrefsSlice', () => {
         expect(set).toHaveBeenNthCalledWith(2, { isNewProjectModalOpen: false });
     });
 
+    it('opens and closes release notes modal through direct actions', () => {
+        const set = vi.fn();
+        const slice = createUiPrefsSlice(set as never);
+
+        slice.openReleaseNotesModal();
+        slice.closeReleaseNotesModal();
+
+        expect(set).toHaveBeenNthCalledWith(1, { isReleaseNotesModalOpen: true });
+        expect(set).toHaveBeenNthCalledWith(2, { isReleaseNotesModalOpen: false });
+    });
+
     it('toggles settings modal visibility with a state updater', () => {
         const set = vi.fn(
             (

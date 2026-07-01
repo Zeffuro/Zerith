@@ -1,6 +1,20 @@
 {
   "name": "zerith",
+  "description": "TypeScript visual novel engine, desktop editor, and static player export pipeline.",
   "private": true,
+  "license": "MIT",
+  "keywords": [
+    "game-engine",
+    "interactive-fiction",
+    "react",
+    "tauri",
+    "typescript",
+    "visual-novel"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Zeffuro/Zerith.git"
+  },
   "workspaces": [
     "packages/*"
   ],
@@ -20,12 +34,19 @@
     "build": "npm run build --workspaces --if-present",
     "lint": "eslint \"packages/**/*.{ts,tsx}\" --max-warnings 0",
     "lint:fix": "eslint \"packages/**/*.{ts,tsx}\" --max-warnings 0 --fix",
+    "report:editor-artifacts": "node scripts/report-editor-artifacts.mjs",
+    "report:editor-distribution": "node scripts/report-editor-distribution-readiness.mjs",
+    "report:editor-updater": "node scripts/report-editor-updater-readiness.mjs",
+    "report:release-readiness": "node scripts/report-release-readiness.mjs",
+    "report:version-policy": "node scripts/report-version-policy.mjs",
     "test": "vitest run",
     "test:fixture-policy": "node scripts/guard-safe-fixtures.mjs",
+    "test:public-readiness": "node scripts/check-public-readiness.mjs",
     "test:runtime-smoke": "npm run test:runtime-smoke --workspace=player --",
     "test:visual": "playwright test -c playwright.config.mjs",
     "test:visual:ci": "playwright test -c playwright.config.mjs --grep-invert \"captures\"",
-    "test:visual:update": "playwright test -c playwright.config.mjs --update-snapshots"
+    "test:visual:update": "playwright test -c playwright.config.mjs --update-snapshots",
+    "version:editor": "node scripts/bump-editor-version.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

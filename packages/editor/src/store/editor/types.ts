@@ -119,6 +119,7 @@ export interface UiPrefsSlice {
     closeExportGameModal: () => void;
     closeGlobalSearchPopup: () => void;
     closeNewProjectModal: () => void;
+    closeReleaseNotesModal: () => void;
     closeSettingsModal: () => void;
     globalSearchLaunchMode: GlobalSearchLaunchMode;
     isCommandPaletteOpen: boolean;
@@ -127,6 +128,7 @@ export interface UiPrefsSlice {
     isMuted: boolean;
     isNewProjectModalOpen: boolean;
     isProjectCloseRequested: boolean;
+    isReleaseNotesModalOpen: boolean;
     isSettingsModalOpen: boolean;
     lastManualSaveAt: number;
     markManualSave: () => void;
@@ -135,6 +137,7 @@ export interface UiPrefsSlice {
     openGlobalSearchPopup: (mode?: GlobalSearchLaunchMode) => void;
     openGlobalSearchReplacePopup: () => void;
     openNewProjectModal: () => void;
+    openReleaseNotesModal: () => void;
     openSettingsModal: () => void;
     previewLocale: string | undefined;
     recentProjects: RecentProject[];
@@ -151,6 +154,7 @@ export interface UiPrefsSlice {
     toggleGlobalSearchPopup: () => void;
     toggleMute: () => void;
     toggleNewProjectModal: () => void;
+    toggleReleaseNotesModal: () => void;
     toggleSettingsModal: () => void;
     uiScale: number;
     windowState: EditorWindowState;

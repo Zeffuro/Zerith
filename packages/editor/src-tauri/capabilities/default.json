@@ -18,6 +18,8 @@
     "core:window:allow-close",
     "core:window:allow-destroy",
     "core:webview:allow-create-webview-window",
+    "updater:default",
+    "process:default",
     {
       "identifier": "fs:allow-read-dir",
       "allow": [{ "path": "**" }]

@@ -1,6 +1,8 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
+import editorPackage from "./package.json" with { type: "json" };
+
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
@@ -38,6 +40,9 @@ export default defineConfig(() => ({
   },
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   clearScreen: false,
+  define: {
+    __ZERITH_EDITOR_VERSION__: JSON.stringify(editorPackage.version),
+  },
 
   plugins: [react()],
   server: {

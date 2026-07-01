@@ -17,10 +17,12 @@ function createDeps(overrides?: Partial<CommandPaletteActionDeps>): CommandPalet
         addRecentProject: vi.fn(),
         availableThemeKeys: ['classic', 'classic-light', 'custom-a'],
         captureDockLayoutJson: vi.fn(() => ({ global: { splitterSize: 4 }, layout: { children: [], type: 'row' } })),
+        checkForEditorUpdates: vi.fn(async () => {}),
         clearAllBreakpoints: vi.fn(),
         closeProject: vi.fn(),
         deleteDockLayoutPreset: vi.fn(),
         dockLayoutPresets: [],
+        editorUpdatesSupported: true,
         isPlaybackPaused: false,
         isRunning: false,
         markManualSave: vi.fn(),
@@ -33,6 +35,7 @@ function createDeps(overrides?: Partial<CommandPaletteActionDeps>): CommandPalet
         openNewProjectModal: vi.fn(),
         openProjectFolder: vi.fn(async () => {}),
         openProjectInCurrentWindow: vi.fn(() => Promise.resolve({ status: 'opened-current' as const })),
+        openReleaseNotesModal: vi.fn(),
         openSettingsModal: vi.fn(),
         projectPath: '/project',
         recentProjects: [],
@@ -75,12 +78,12 @@ describe('commandPaletteActionsModel', () => {
 
         const actions = buildCommandPaletteActions(deps);
 
-        expect(actions).toHaveLength(33);
+        expect(actions).toHaveLength(35);
         expect(actions[0]?.id).toBe('find-project');
-        expect(actions[29]?.id).toBe('reset-layout');
-        expect(actions[30]?.id).toBe('save-layout-preset');
-        expect(actions[31]?.id).toBe('open-recent-/alpha/game.json');
-        expect(actions[32]?.id).toBe('open-recent-/beta/game.json');
+        expect(actions[31]?.id).toBe('reset-layout');
+        expect(actions[32]?.id).toBe('save-layout-preset');
+        expect(actions[33]?.id).toBe('open-recent-/alpha/game.json');
+        expect(actions[34]?.id).toBe('open-recent-/beta/game.json');
     });
 
     it('marks manual save before save and save-all actions', async () => {
@@ -135,6 +138,13 @@ describe('commandPaletteActionsModel', () => {
         expect(byId(actions, 'show-browser-parity-report')?.disabledReason).toBeUndefined();
         expect(byId(actions, 'show-git-integration-report')?.disabledReason).toBeUndefined();
         expect(byId(actions, 'open-settings')?.disabledReason).toBeUndefined();
+        expect(byId(actions, 'show-release-notes')?.disabledReason).toBeUndefined();
+    });
+
+    it('marks editor update checks disabled outside the desktop app', () => {
+        const actions = buildCommandPaletteActions(createDeps({ editorUpdatesSupported: false }));
+
+        expect(byId(actions, 'check-editor-updates')?.disabledReason).toBe('Desktop app required.');
     });
 
     it('guards pause, resume, and step actions by playback state', async () => {
@@ -258,7 +268,9 @@ describe('commandPaletteActionsModel', () => {
         await byId(actions, 'export-game')?.action();
         await byId(actions, 'validate-project-content')?.action();
         await byId(actions, 'open-localization')?.action();
+        await byId(actions, 'show-release-notes')?.action();
         await byId(actions, 'show-browser-parity-report')?.action();
+        await byId(actions, 'check-editor-updates')?.action();
         await byId(actions, 'show-git-integration-report')?.action();
         await byId(actions, 'git-create-branch')?.action();
         await byId(actions, 'git-checkout-branch')?.action();
@@ -275,7 +287,9 @@ describe('commandPaletteActionsModel', () => {
         expect(deps.openExportGameModal).toHaveBeenCalledTimes(1);
         expect(deps.validateProjectContent).toHaveBeenCalledTimes(1);
         expect(deps.openLocalizationEditor).toHaveBeenCalledTimes(1);
+        expect(deps.openReleaseNotesModal).toHaveBeenCalledTimes(1);
         expect(deps.showBrowserParityReport).toHaveBeenCalledTimes(1);
+        expect(deps.checkForEditorUpdates).toHaveBeenCalledTimes(1);
         expect(deps.showGitCheckoutBranch).toHaveBeenCalledTimes(1);
         expect(deps.showGitCommitStaged).toHaveBeenCalledTimes(1);
         expect(deps.showGitCreateBranch).toHaveBeenCalledTimes(1);

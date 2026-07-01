@@ -6,6 +6,7 @@ import { SpritesheetAutoSliceDialog } from './components/editors/SpritesheetAuto
 import { ExportGameModal } from './components/export/ExportGameModal';
 import { DockLayoutHost } from './components/layout/DockLayoutHost';
 import { NewProjectModal } from './components/project/NewProjectModal';
+import { ReleaseNotesModal } from './components/ReleaseNotesModal';
 import { SettingsModal } from './components/settings/SettingsModal';
 import './App.css';
 import { useAutosave } from './hooks/useAutosave';
@@ -78,6 +79,7 @@ function App() {
             <SettingsModal />
             <ExportGameModal />
             <NewProjectModal />
+            <ReleaseNotesModal />
             <EditorLiveStatus uiScale={uiScale} />
             {editorDialogs}
             <ConfirmDialog

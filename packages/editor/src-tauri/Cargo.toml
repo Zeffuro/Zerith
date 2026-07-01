@@ -1,8 +1,8 @@
 [package]
 name = "editor"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+version = "0.1.1"
+description = "Zerith desktop authoring editor"
+authors = ["Zeffuro"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -25,3 +25,5 @@ serde_json = "1.0.150"
 tauri-plugin-dialog = "2.7.1"
 tauri-plugin-fs = "2.5.1"
 notify = "8.2.0"
+tauri-plugin-updater = "2.10.1"
+tauri-plugin-process = "2.3.1"

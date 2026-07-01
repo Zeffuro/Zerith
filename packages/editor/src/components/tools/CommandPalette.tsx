@@ -6,6 +6,11 @@ import {
     formatContentMigrationCommandStatus,
     getContentMigrationCommandStatusTone,
 } from '../../services/contentMigrationCommand';
+import {
+    formatEditorUpdateFlowResult,
+    getEditorUpdateFlowResultTone,
+    runEditorUpdateCheck,
+} from '../../services/editorUpdateClient';
 import { fsOpenPath } from '../../services/fs';
 import { openLocalizationWorkbenchTab } from '../../services/localizationWorkbench';
 import { openProjectEntry } from '../../services/openProjectEntry';
@@ -65,6 +70,7 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
     const openGlobalSearchPopup = useEditorStore((state) => state.openGlobalSearchPopup);
     const openGlobalSearchReplacePopup = useEditorStore((state) => state.openGlobalSearchReplacePopup);
     const openNewProjectModal = useEditorStore((state) => state.openNewProjectModal);
+    const openReleaseNotesModal = useEditorStore((state) => state.openReleaseNotesModal);
     const openSettingsModal = useEditorStore((state) => state.openSettingsModal);
     const setDockLayoutJson = useEditorStore((state) => state.setDockLayoutJson);
     const setThemeKey = useEditorStore((state) => state.setThemeKey);
@@ -169,6 +175,23 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
         openLocalizationWorkbenchTab({ query: '' });
     }, []);
 
+    const handleCheckForUpdates = useCallback(async () => {
+        try {
+            announceOperationStatus('Checking for editor updates...');
+            const result = await runEditorUpdateCheck({
+                onProgress: ({ downloadedBytes, totalBytes }) => {
+                    if (!totalBytes) return;
+                    const percent = Math.min(100, Math.round((downloadedBytes / totalBytes) * 100));
+                    announceOperationStatus(`Downloading editor update... ${percent}%`);
+                },
+            });
+            announceOperationStatus(formatEditorUpdateFlowResult(result), getEditorUpdateFlowResultTone(result));
+        } catch (error) {
+            console.error('Editor update check from command palette failed:', error);
+            announceOperationStatus(`Editor update check failed: ${error instanceof Error ? error.message : String(error)}`, 'error');
+        }
+    }, [announceOperationStatus]);
+
     const handleShowBrowserParityReport = useCallback(() => {
         const runtime = isTauriRuntime() ? 'desktop' : 'browser';
         const browserGlobal = globalThis as { showDirectoryPicker?: unknown };
@@ -199,10 +222,12 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
         addRecentProject,
         availableThemeKeys,
         captureDockLayoutJson,
+        checkForEditorUpdates: handleCheckForUpdates,
         clearAllBreakpoints,
         closeProject: executeCloseProjectAction,
         deleteDockLayoutPreset,
         dockLayoutPresets,
+        editorUpdatesSupported: isTauriRuntime(),
         isPlaybackPaused,
         isRunning,
         markManualSave,
@@ -215,6 +240,7 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
         openNewProjectModal,
         openProjectFolder: handleOpenProjectFolder,
         openProjectInCurrentWindow: executeOpenProjectInCurrentWindow,
+        openReleaseNotesModal,
         openSettingsModal,
         projectPath,
         recentProjects: isTauriRuntime() ? recentProjects : [],

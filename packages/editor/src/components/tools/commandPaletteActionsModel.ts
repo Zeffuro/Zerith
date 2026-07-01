@@ -6,10 +6,12 @@ export type CommandPaletteActionDeps = {
     addRecentProject: (manifestPath: string) => void;
     availableThemeKeys: string[];
     captureDockLayoutJson: () => unknown;
+    checkForEditorUpdates: () => Promise<void>;
     clearAllBreakpoints: () => void;
     closeProject: () => void;
     deleteDockLayoutPreset: (id: string) => void;
     dockLayoutPresets: Array<{ id: string; layoutJson: unknown; name: string; }>;
+    editorUpdatesSupported: boolean;
     isPlaybackPaused: boolean;
     isRunning: boolean;
     markManualSave: () => void;
@@ -22,6 +24,7 @@ export type CommandPaletteActionDeps = {
     openNewProjectModal: () => void;
     openProjectFolder: () => Promise<void>;
     openProjectInCurrentWindow: (manifestPath: string) => Promise<ProjectOpenResult>;
+    openReleaseNotesModal: () => void;
     openSettingsModal: () => void;
     projectPath: string | undefined;
     recentProjects: RecentProjectLike[] | undefined;
@@ -216,6 +219,23 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
             keywords: 'settings preferences keymap theme autosave',
             label: 'Open Settings',
             shortcut: 'Ctrl+Alt+S',
+        },
+        {
+            action: () => {
+                deps.openReleaseNotesModal();
+            },
+            id: 'show-release-notes',
+            keywords: 'release notes changelog editor version changes',
+            label: 'Show Release Notes...',
+        },
+        {
+            action: async () => {
+                await deps.checkForEditorUpdates();
+            },
+            ...(deps.editorUpdatesSupported ? {} : { disabledReason: 'Desktop app required.' }),
+            id: 'check-editor-updates',
+            keywords: 'check install update editor updater release version',
+            label: 'Check for Editor Updates...',
         },
         {
             action: () => {

@@ -1,0 +1,83 @@
+name: Editor Package Preview
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-editor:
+    name: Build editor packages (${{ matrix.label }})
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            label: linux-x64
+            args: ''
+          - platform: windows-latest
+            label: windows-x64
+            args: ''
+          - platform: macos-latest
+            label: macos-arm64
+            args: --target aarch64-apple-darwin
+          - platform: macos-latest
+            label: macos-x64
+            args: --target x86_64-apple-darwin
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Linux Tauri dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          cache: npm
+          node-version: 22
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: packages/editor/src-tauri -> target
+
+      - name: Install
+        run: npm ci
+
+      - name: Public readiness
+        run: npm run test:public-readiness
+
+      - name: Fixture policy guard
+        run: npm run test:fixture-policy
+
+      - name: Version policy
+        run: npm run report:version-policy -- --json
+
+      - name: Editor artifact contract
+        run: npm run report:editor-artifacts -- --json
+
+      - name: Editor updater readiness
+        run: npm run report:editor-updater -- --json
+
+      - name: Editor distribution readiness
+        run: npm run report:editor-distribution -- --json
+
+      - name: Build Tauri editor packages
+        uses: tauri-apps/tauri-action@v1
+        with:
+          args: ${{ matrix.args }}
+          projectPath: packages/editor
+          uploadWorkflowArtifacts: true
+          workflowArtifactNamePattern: Zerith-Editor-[version]-[platform]-[arch]-[bundle]
