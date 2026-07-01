@@ -1,5 +1,5 @@
-import { WEATHER_PRESET_DEFAULTS, type WeatherCommand, type WeatherPreset } from 'core';
 import { useState } from 'react';
+import { WEATHER_PRESET_DEFAULTS, type WeatherCommand, type WeatherPreset } from 'zerith-core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { editorTheme as t } from '../../theme/editorTheme';

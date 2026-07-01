@@ -5,7 +5,9 @@ const root = process.cwd();
 const findings = [];
 
 const rootManifest = await readJson('package.json');
+const coreManifest = await readJson('packages/core/package.json');
 const editorManifest = await readJson('packages/editor/package.json');
+const playerManifest = await readJson('packages/player/package.json');
 const rootReadme = await readText('README.md');
 const editorReadme = await readText('packages/editor/README.md');
 const licenseText = await readText('LICENSE');
@@ -25,6 +27,19 @@ assertEquals(
     rootManifest.repository?.url,
     'git+ssh://git@github.com/Zeffuro/Zerith.git',
     'Root package repository URL must match the configured GitHub remote.',
+);
+assertEquals(coreManifest.name, 'zerith-core', 'Core workspace package must use the branded npm package name.');
+assertEquals(editorManifest.name, 'zerith-editor', 'Editor workspace package must use the branded npm package name.');
+assertEquals(playerManifest.name, 'zerith-player', 'Player workspace package must use the branded npm package name.');
+assertEquals(
+    editorManifest.dependencies?.['zerith-core'],
+    'file:../core',
+    'Editor package must depend on zerith-core through the local workspace path.',
+);
+assertEquals(
+    playerManifest.dependencies?.['zerith-core'],
+    'file:../core',
+    'Player package must depend on zerith-core through the local workspace path.',
 );
 for (const keyword of ['game-engine', 'interactive-fiction', 'react', 'tauri', 'typescript', 'visual-novel']) {
     if (!rootManifest.keywords?.includes(keyword)) {
@@ -51,7 +66,9 @@ assertRootScript('build');
 assertRootScript('lint');
 assertRootScript('report:editor-artifacts');
 assertRootScript('report:editor-distribution');
+assertRootScript('report:editor-published-release');
 assertRootScript('report:editor-updater');
+assertRootScript('report:package-publication');
 assertRootScript('report:release-readiness');
 assertRootScript('report:version-policy');
 assertRootScript('test:fixture-policy');
@@ -76,7 +93,7 @@ for (const command of [
 
 for (const command of [
     'npm run dev:editor',
-    'npm run build --workspace=editor',
+    'npm run build --workspace=zerith-editor',
     'npm run dev',
     'npm run build',
     'npm run tauri -- dev',

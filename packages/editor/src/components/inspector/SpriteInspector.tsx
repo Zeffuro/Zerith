@@ -1,4 +1,4 @@
-import type { SpriteCommand } from 'core';
+import type { SpriteCommand } from 'zerith-core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { useProjectStore } from '../../store/storeBootstrap';

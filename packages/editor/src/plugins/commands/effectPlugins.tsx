@@ -1,5 +1,5 @@
-import { WEATHER_PRESET_DEFAULTS, type WeatherPreset } from 'core';
 import { CloudRain } from 'lucide-react';
+import { WEATHER_PRESET_DEFAULTS, type WeatherPreset } from 'zerith-core';
 
 import { FlashInspector } from '../../components/inspector/FlashInspector';
 import { SetInspector } from '../../components/inspector/SetInspector';

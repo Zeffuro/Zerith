@@ -1,7 +1,7 @@
 {
-  "name": "editor",
+  "name": "zerith-editor",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,7 +17,7 @@
     "@tauri-apps/plugin-opener": "^2.5.4",
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-updater": "^2.10.1",
-    "core": "file:../core",
+    "zerith-core": "file:../core",
     "fflate": "^0.8.3",
     "flexlayout-react": "^0.9.1",
     "lucide-react": "^1.18.0",

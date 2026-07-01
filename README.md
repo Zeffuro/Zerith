@@ -8,9 +8,9 @@ The public docs are intentionally small. The source of truth is the code, packag
 
 ## Packages
 
-- `packages/core`: runtime engine, command schemas, content helpers, save/backlog/localization/story-graph utilities.
-- `packages/editor`: Tauri + React desktop workbench for authoring projects, assets, localization, validation, export, Git, and plugins.
-- `packages/player`: static runtime and build scripts for playable web exports.
+- `packages/core` (`zerith-core`): runtime engine, command schemas, content helpers, save/backlog/localization/story-graph utilities.
+- `packages/editor` (`zerith-editor`): Tauri + React desktop workbench for authoring projects, assets, localization, validation, export, Git, and plugins.
+- `packages/player` (`zerith-player`): static runtime and build scripts for playable web exports.
 - `games/classic-vn-starter`: canonical starter fixture for new-project and export flows.
 - `games/example-game`: first-party showcase fixture used for example deploy/runtime coverage.
 

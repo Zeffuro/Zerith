@@ -124,11 +124,11 @@ const checks = [
             : 'No editor update check/install UI or service exists yet.',
     },
     {
-        detail: 'Portable zip downloads remain manual-replace artifacts unless a separate tested updater model is added for portable installs.',
-        id: 'portableZipUpdates',
-        label: 'Portable zip updates',
-        status: 'blocked',
-        summary: 'Portable zip self-update behavior is intentionally unavailable.',
+        detail: 'Portable/manual downloads remain manual-replace artifacts by policy. The supported in-app update path is installer-managed Tauri static JSON updates.',
+        id: 'portableUpdatePolicy',
+        label: 'Portable update policy',
+        status: 'ready',
+        summary: 'Portable/manual downloads have an explicit manual-replace update policy.',
     },
 ];
 
@@ -146,7 +146,7 @@ const report = {
         releaseAsset: 'latest.json',
     },
     ready,
-    recommendation: 'Use Tauri static JSON updates from GitHub Releases for installer artifacts first. Keep portable zip updates manual until a separate portable-update path is implemented and verified.',
+    recommendation: 'Use Tauri static JSON updates from GitHub Releases for installer-managed artifacts. Keep portable/manual downloads on the explicit manual-replace path.',
     status: blocked > 0 ? 'blocked' : (limited > 0 ? 'limited' : 'ready'),
 };
 

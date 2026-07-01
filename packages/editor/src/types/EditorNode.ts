@@ -1,4 +1,4 @@
-import type { Command } from 'core';
+import type { Command } from 'zerith-core';
 
 export type EditorNode = Command | MacroHeaderNode;
 

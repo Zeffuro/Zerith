@@ -1,5 +1,5 @@
-import type { Engine } from 'core';
 import type { RefObject } from 'react';
+import type { Engine } from 'zerith-core';
 
 import { useCallback } from 'react';
 

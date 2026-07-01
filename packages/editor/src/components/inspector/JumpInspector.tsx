@@ -1,4 +1,4 @@
-import type { JumpCommand } from 'core';
+import type { JumpCommand } from 'zerith-core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { useProjectStore } from '../../store/storeBootstrap';

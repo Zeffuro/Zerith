@@ -65,6 +65,9 @@ jobs:
       - name: Version policy
         run: npm run report:version-policy -- --json
 
+      - name: Package publication readiness
+        run: npm run report:package-publication -- --json
+
       - name: Editor artifact contract
         run: npm run report:editor-artifacts -- --json
 

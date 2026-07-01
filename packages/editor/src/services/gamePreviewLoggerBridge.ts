@@ -1,4 +1,4 @@
-import { Logger } from 'core';
+import { Logger } from 'zerith-core';
 
 import { executeConsoleMessageAction } from '../store/actions/consoleMessageActions';
 

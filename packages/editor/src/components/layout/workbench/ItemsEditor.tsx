@@ -1,4 +1,4 @@
-import type { ItemManifestEntry } from 'core';
+import type { ItemManifestEntry } from 'zerith-core';
 
 import { useMemo, useState } from 'react';
 

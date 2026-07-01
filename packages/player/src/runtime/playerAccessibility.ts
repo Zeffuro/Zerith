@@ -1,4 +1,4 @@
-import type { DialogueAnnouncement, EngineConfig } from 'core';
+import type { DialogueAnnouncement, EngineConfig } from 'zerith-core';
 
 export type PlayerAccessibilityAppendTarget = {
     append: (child: PlayerAccessibilityLiveRegion) => unknown;

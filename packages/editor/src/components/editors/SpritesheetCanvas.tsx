@@ -1,5 +1,5 @@
-import { applyChromaKey, type SpriteFrame } from 'core';
 import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { applyChromaKey, type SpriteFrame } from 'zerith-core';
 
 import { editorTheme as t } from '../../theme/editorTheme';
 import {

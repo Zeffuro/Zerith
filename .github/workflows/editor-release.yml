@@ -65,6 +65,9 @@ jobs:
       - name: Version policy
         run: npm run report:version-policy -- --json
 
+      - name: Package publication readiness
+        run: npm run report:package-publication -- --json
+
       - name: Editor artifact contract
         run: npm run report:editor-artifacts -- --json
 
@@ -84,7 +87,7 @@ jobs:
           args: ${{ matrix.args }}
           generateReleaseNotes: true
           projectPath: packages/editor
-          releaseBody: Installer artifacts are the supported install path. Portable zip artifacts, if attached, are manual-replace downloads.
+          releaseBody: Installer artifacts are the supported install path. Portable/manual downloads, if attached, are manual-replace downloads.
           releaseDraft: true
           releaseName: Zerith Editor v__VERSION__
           tagName: editor-v__VERSION__

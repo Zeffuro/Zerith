@@ -1,4 +1,4 @@
-import { SchemaRegistry } from 'core/schemas';
+import { SchemaRegistry } from 'zerith-core/schemas';
 import { z } from 'zod';
 
 import type { EditorNode } from '../../types/EditorNode';

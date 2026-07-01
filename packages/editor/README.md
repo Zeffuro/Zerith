@@ -8,7 +8,7 @@ From the repository root:
 
 ```bash
 npm run dev:editor
-npm run build --workspace=editor
+npm run build --workspace=zerith-editor
 ```
 
 From this package:

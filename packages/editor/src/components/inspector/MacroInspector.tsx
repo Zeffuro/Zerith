@@ -1,4 +1,4 @@
-import type { BaseCommand } from 'core';
+import type { BaseCommand } from 'zerith-core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { editorTheme as t } from '../../theme/editorTheme';

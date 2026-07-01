@@ -1,6 +1,6 @@
-import { generateGridFrames, parseSpritesheetDescriptor, type SpritesheetDescriptor } from 'core';
 import { Check, Columns3, Copy, Grid3x3, type LucideIcon, MousePointer2, Pipette, RotateCcw, Rows3, Save, Scissors, SquareDashedMousePointer, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { generateGridFrames, parseSpritesheetDescriptor, type SpritesheetDescriptor } from 'zerith-core';
 
 import type { WorkbenchTab } from '../../store/workbench/types';
 

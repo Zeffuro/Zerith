@@ -32,6 +32,9 @@ jobs:
       - name: Public README readiness
         run: npm run test:public-readiness
 
+      - name: Package publication readiness
+        run: npm run report:package-publication -- --json
+
       - name: Lint
         run: npm run lint
 

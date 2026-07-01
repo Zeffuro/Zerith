@@ -1,5 +1,5 @@
 {
-  "name": "player",
+  "name": "zerith-player",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -13,7 +13,7 @@
     "test:runtime-smoke": "node ./scripts/exported-runtime-smoke.mjs"
   },
   "dependencies": {
-    "core": "file:../core",
+    "zerith-core": "file:../core",
     "fflate": "^0.8.3"
   },
   "devDependencies": {

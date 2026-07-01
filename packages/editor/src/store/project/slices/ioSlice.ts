@@ -1,4 +1,4 @@
-import type { Command } from 'core';
+import type { Command } from 'zerith-core';
 
 import type { ProjectGet, ProjectIoSlice, ProjectScriptBridge } from '../types';
 

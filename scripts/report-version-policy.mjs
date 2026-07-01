@@ -20,18 +20,23 @@ const semverPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/
 const editorVersionIsSemver = semverPattern.test(editorVersion);
 const workspaceIsPrivate = [rootManifest, coreManifest, editorManifest, playerManifest]
     .every((manifest) => manifest.private === true);
+const workspacePackageNamesAreBranded = coreManifest.name === 'zerith-core'
+    && editorManifest.name === 'zerith-editor'
+    && playerManifest.name === 'zerith-player';
 
 const policy = {
     artifactNamePattern: `Zerith-Editor-${editorVersion}-{platform}-{kind}`,
     editorVersion,
     internalPackageVersions: {
-        core: coreManifest.version,
-        player: playerManifest.version,
+        [coreManifest.name]: coreManifest.version,
+        [playerManifest.name]: playerManifest.version,
     },
-    packagePublication: 'private-workspace-no-npm-publication',
+    packagePublication: 'branded-private-workspace-separate-npm-lane',
     releaseChannel: 'editor-artifacts',
     rootVersion: rootManifest.version ?? null,
-    status: versionAligned && editorVersionIsSemver && workspaceIsPrivate ? 'ready' : 'blocked',
+    status: versionAligned && editorVersionIsSemver && workspaceIsPrivate && workspacePackageNamesAreBranded
+        ? 'ready'
+        : 'blocked',
     tagPattern: `editor-v${editorVersion}`,
     versionSource: 'packages/editor/package.json',
 };
@@ -54,11 +59,19 @@ const checks = [
             : 'Editor package, Tauri config, Cargo manifest, and Cargo lock versions do not match.',
     },
     {
-        id: 'workspacePublication',
-        label: 'Workspace publication policy',
+        id: 'workspacePackageNames',
+        label: 'Workspace package names',
+        status: workspacePackageNamesAreBranded ? 'ready' : 'blocked',
+        summary: workspacePackageNamesAreBranded
+            ? 'Workspace packages use zerith-core, zerith-player, and zerith-editor.'
+            : 'Workspace packages do not use the expected Zerith-specific names.',
+    },
+    {
+        id: 'workspacePublicationGuard',
+        label: 'Workspace publication guard',
         status: workspaceIsPrivate ? 'ready' : 'blocked',
         summary: workspaceIsPrivate
-            ? 'Workspace packages are private by policy; releases are editor artifacts, not npm packages.'
+            ? 'Workspace packages remain private until a separate npm package lane is deliberately enabled.'
             : 'Workspace packages are publishable, but no npm package release lane is defined.',
     },
     {
@@ -66,8 +79,8 @@ const checks = [
         label: 'Internal runtime packages',
         status: coreManifest.version === '0.0.0' && playerManifest.version === '0.0.0' ? 'ready' : 'blocked',
         summary: coreManifest.version === '0.0.0' && playerManifest.version === '0.0.0'
-            ? 'Core and player package versions remain internal placeholders by artifact-release policy.'
-            : 'Core and player package versions are non-placeholder values, but no npm package release lane is defined.',
+            ? 'Zerith core/player package versions remain internal placeholders by artifact-release policy.'
+            : 'Zerith core/player package versions are non-placeholder values, but no npm package release lane is defined.',
     },
 ];
 

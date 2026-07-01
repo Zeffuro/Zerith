@@ -6,7 +6,7 @@ import {
     type LocaleBundle,
     parseLocaleBundle,
     parseSceneFile,
-} from 'core';
+} from 'zerith-core';
 
 import type { ProjectGet, ProjectManifestSlice, ProjectSet } from '../types';
 

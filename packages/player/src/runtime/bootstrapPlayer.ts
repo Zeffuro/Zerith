@@ -8,7 +8,7 @@ import {
     resolveManifestValue,
     resolveScenes,
     type Script,
-} from 'core';
+} from 'zerith-core';
 
 import { mergeEngineConfigs } from './bootstrapConfig';
 import {

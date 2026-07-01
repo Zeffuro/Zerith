@@ -7,15 +7,15 @@ import type {
     Script,
     StoryGraphAnalysis,
     TextLocalizationReference,
-} from 'core/types';
+} from 'zerith-core/types';
 
-import { GameManifestSchema, parseLocaleBundle, parseSceneFile } from 'core/schemas';
-import { collectDialogueBacklogEntries } from 'core/utils/Backlog';
+import { GameManifestSchema, parseLocaleBundle, parseSceneFile } from 'zerith-core/schemas';
+import { collectDialogueBacklogEntries } from 'zerith-core/utils/Backlog';
 import {
     collectTextLocalizationReferences,
     validateLocalizationCoverage,
-} from 'core/utils/Localization';
-import { analyzeStoryGraph } from 'core/utils/StoryGraph';
+} from 'zerith-core/utils/Localization';
+import { analyzeStoryGraph } from 'zerith-core/utils/StoryGraph';
 
 import { fsReadTextFile } from './fs';
 

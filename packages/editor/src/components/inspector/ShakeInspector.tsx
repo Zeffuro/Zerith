@@ -1,4 +1,4 @@
-import type { ShakeCommand } from 'core';
+import type { ShakeCommand } from 'zerith-core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';

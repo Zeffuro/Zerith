@@ -1,8 +1,8 @@
-import type { DialogueCommand } from 'core';
+import type { DialogueCommand } from 'zerith-core';
 
-import { resolveLocalizedText } from 'core/utils/Localization';
 import { Archive, Bold, Clock, FastForward, Italic, Languages, Palette, Underline, Volume2, Wand2, X } from 'lucide-react';
 import { type ReactNode, useMemo, useRef } from 'react';
+import { resolveLocalizedText } from 'zerith-core/utils/Localization';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { resolvePreviewLocaleBundle } from '../../services/localizationPreview';

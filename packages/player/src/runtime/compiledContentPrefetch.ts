@@ -1,4 +1,4 @@
-import type { BaseCommand, CompiledAssetDependencies, CompiledContentManifest, Script } from 'core';
+import type { BaseCommand, CompiledAssetDependencies, CompiledContentManifest, Script } from 'zerith-core';
 
 type IdleTaskHandle = number | ReturnType<typeof globalThis.setTimeout>;
 

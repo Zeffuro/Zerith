@@ -34,7 +34,7 @@ const mocks = vi.hoisted(() => {
     };
 });
 
-vi.mock('core', () => ({
+vi.mock('zerith-core', () => ({
     bootstrapEngine: mocks.bootstrapEngine,
     EngineConfigSchema: {
         safeParse: (value: unknown) => ({ data: value, success: true }),

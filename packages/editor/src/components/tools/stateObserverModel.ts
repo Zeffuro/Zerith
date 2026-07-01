@@ -1,4 +1,4 @@
-import type { EvidenceItem, Serializable } from 'core';
+import type { EvidenceItem, Serializable } from 'zerith-core';
 
 export type DraftValueKind = 'boolean' | 'json' | 'null' | 'number' | 'string';
 

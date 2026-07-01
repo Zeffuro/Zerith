@@ -1,4 +1,4 @@
-import type { TransitionCommand } from 'core';
+import type { TransitionCommand } from 'zerith-core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';

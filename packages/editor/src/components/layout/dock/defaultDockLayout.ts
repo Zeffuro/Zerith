@@ -1,6 +1,6 @@
 import type { IJsonModel } from 'flexlayout-react';
 
-import { deepClone } from 'core';
+import { deepClone } from 'zerith-core';
 
 import { DOCK_PANELS } from './dockPanelIds';
 

@@ -1,5 +1,5 @@
-import { SchemaRegistry } from 'core/schemas';
-import { BuiltInCommandTypes } from 'core/types';
+import { SchemaRegistry } from 'zerith-core/schemas';
+import { BuiltInCommandTypes } from 'zerith-core/types';
 
 import type { EditorCommandType, NonMacroEditorCommandType } from './types';
 

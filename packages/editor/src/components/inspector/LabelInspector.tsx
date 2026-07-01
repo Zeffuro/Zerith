@@ -1,4 +1,4 @@
-import type { LabelCommand } from 'core';
+import type { LabelCommand } from 'zerith-core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';

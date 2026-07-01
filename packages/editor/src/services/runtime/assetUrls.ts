@@ -1,4 +1,4 @@
-import type { AssetResolver } from 'core';
+import type { AssetResolver } from 'zerith-core';
 
 import { fsReadBinaryFile } from '../fs';
 import { isTauriRuntime } from './runtimeEnvironment';

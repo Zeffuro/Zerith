@@ -1,4 +1,4 @@
-import { CURRENT_CONTENT_SCHEMA_VERSION } from 'core/schemas';
+import { CURRENT_CONTENT_SCHEMA_VERSION } from 'zerith-core/schemas';
 
 import { fsJoin, fsMkdir, fsWriteTextFile } from './fs';
 

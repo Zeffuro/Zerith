@@ -19,6 +19,11 @@ const updaterConfig = tauriConfig.plugins?.updater;
 const createsUpdaterArtifacts = tauriConfig.bundle?.createUpdaterArtifacts === true;
 const hasUpdaterPubkey = typeof updaterConfig?.pubkey === 'string' && updaterConfig.pubkey.trim().length > 0;
 const hasUpdaterEndpoint = Array.isArray(updaterConfig?.endpoints) && updaterConfig.endpoints.length > 0;
+const installerUpdatesSupported = hasUpdaterDependency
+    && Boolean(updaterConfig)
+    && createsUpdaterArtifacts
+    && hasUpdaterPubkey
+    && hasUpdaterEndpoint;
 
 const artifacts = [
     {
@@ -26,8 +31,8 @@ const artifacts = [
         installMode: 'installer',
         kind: 'installer',
         platform: 'windows-x64',
-        updateMode: 'future-tauri-updater',
-        updateSupported: false,
+        updateMode: 'tauri-static-json',
+        updateSupported: installerUpdatesSupported,
         userAction: 'Run the setup executable.',
     },
     {
@@ -35,8 +40,8 @@ const artifacts = [
         installMode: 'installer',
         kind: 'installer',
         platform: 'windows-x64',
-        updateMode: 'future-tauri-updater',
-        updateSupported: false,
+        updateMode: 'tauri-static-json',
+        updateSupported: installerUpdatesSupported,
         userAction: 'Run the MSI package.',
     },
     {
@@ -44,8 +49,8 @@ const artifacts = [
         installMode: 'installer',
         kind: 'installer',
         platform: 'macos-arm64',
-        updateMode: 'future-tauri-updater',
-        updateSupported: false,
+        updateMode: 'tauri-static-json',
+        updateSupported: installerUpdatesSupported,
         userAction: 'Open the DMG and drag the app into Applications.',
     },
     {
@@ -53,8 +58,8 @@ const artifacts = [
         installMode: 'installer',
         kind: 'installer',
         platform: 'macos-x64',
-        updateMode: 'future-tauri-updater',
-        updateSupported: false,
+        updateMode: 'tauri-static-json',
+        updateSupported: installerUpdatesSupported,
         userAction: 'Open the DMG and drag the app into Applications.',
     },
     {
@@ -62,18 +67,18 @@ const artifacts = [
         installMode: 'portable',
         kind: 'installer',
         platform: 'linux-x64',
-        updateMode: 'future-tauri-updater',
-        updateSupported: false,
+        updateMode: 'tauri-static-json',
+        updateSupported: installerUpdatesSupported,
         userAction: 'Mark the AppImage executable and run it.',
     },
     {
-        id: 'portable-zip',
+        id: 'manual-portable-fallback',
         installMode: 'manual-extract',
-        kind: 'zip',
+        kind: 'portable',
         platform: 'manual',
         updateMode: 'manual-replace',
         updateSupported: false,
-        userAction: 'Extract the zip into a user-chosen folder and launch the editor from that folder.',
+        userAction: 'Download a portable/manual artifact, place it in a user-chosen folder, and replace it manually for updates.',
     },
 ];
 
@@ -81,6 +86,7 @@ const contract = {
     artifactNamePattern: `${filePrefix}-${version}-{platform}-{kind}`,
     packagePreview: {
         installerArtifacts: editorPackagePreviewWorkflowExists,
+        manualPortableFallback: true,
         portableZip: false,
         workflow: editorPackagePreviewWorkflowExists ? 'editor-package-preview.yml' : undefined,
     },
@@ -91,10 +97,10 @@ const contract = {
         createsUpdaterArtifacts ? undefined : 'Updater artifact generation',
         hasUpdaterPubkey ? undefined : 'Signing keys',
         hasUpdaterEndpoint ? undefined : 'Hosted update metadata endpoint',
-        editorPackagePreviewWorkflowExists ? 'Portable zip packaging check' : 'Installer and portable zip packaging checks',
+        editorPackagePreviewWorkflowExists ? undefined : 'Installer packaging checks',
     ].filter(Boolean),
     productName,
-    recommendation: 'Publish installer artifacts as the primary path. Publish a portable zip as a manual-extract fallback, but do not promise self-updating zip behavior until it is explicitly implemented and verified.',
+    recommendation: 'Publish installer artifacts as the primary path. Treat portable/manual downloads as explicit manual-replace fallbacks; in-app updates are installer-managed.',
     version,
 };
 

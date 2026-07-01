@@ -1,4 +1,4 @@
-import type { EngineConfig } from 'core';
+import type { EngineConfig } from 'zerith-core';
 
 export function mergeEngineConfigs(...configs: (EngineConfig | undefined)[]): EngineConfig {
     const merged: EngineConfig = {};

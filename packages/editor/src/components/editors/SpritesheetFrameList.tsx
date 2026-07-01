@@ -1,6 +1,6 @@
-import { type SpriteFrame } from 'core';
 import { Image as ImageIcon, Plus, Rows3, Search, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { type SpriteFrame } from 'zerith-core';
 
 import { editorTheme as t } from '../../theme/editorTheme';
 import { ConfirmDialog } from '../ConfirmDialog';

@@ -1,3 +1,4 @@
+import type { Zippable } from 'fflate';
 import type {
     CharacterDefinition,
     CompiledAssetDependencies,
@@ -8,11 +9,10 @@ import type {
     LocaleBundle,
     SceneFile,
     Script,
-} from 'core';
-import type { Zippable } from 'fflate';
+} from 'zerith-core';
 
-import { collectCompiledContentCacheSources, compileContentManifest, mergeAssetDependencies } from 'core';
 import { strToU8, zipSync } from 'fflate';
+import { collectCompiledContentCacheSources, compileContentManifest, mergeAssetDependencies } from 'zerith-core';
 
 import type { BrowserDesktopExportArtifactManifest } from './browserParityReport';
 import type { ExportCachePolicy, ExportGameOptions, ExportGameResult } from './exportGame';

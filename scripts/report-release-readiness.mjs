@@ -27,8 +27,9 @@ const editorVersionAligned = editorManifest.version === tauriConfig.version && e
 const hasEditorUpdateClient = await sourceTreeIncludes('packages/editor/src', '@tauri-apps/plugin-updater');
 const hasEditorReleaseNotesSurface = await sourceTreeIncludes('packages/editor/src', 'loadEditorReleaseNotes')
     && await sourceTreeIncludes('packages/editor/src', 'isReleaseNotesModalOpen');
-const hasPrivateWorkspaceArtifactPolicy = arePackagesPrivate(rootManifest, coreManifest, editorManifest, playerManifest)
-    && versionPolicyExists;
+const hasPackagePublicationPolicy = hasBrandedWorkspacePackageNames()
+    && arePackagesPrivate(rootManifest, coreManifest, editorManifest, playerManifest)
+    && await fileExists('scripts/report-package-publication-readiness.mjs');
 const remainingUpdaterReleaseNeeds = getRemainingUpdaterReleaseNeeds();
 
 const requirements = [
@@ -78,17 +79,17 @@ const requirements = [
             : 'The editor has no in-app release notes or changelog surface.',
     },
     {
-        detail: 'The editor release channel is GitHub editor artifacts. Keeping the workspace packages private is a release-policy guard that prevents accidental npm publication until a separate scoped package product exists.',
+        detail: 'The editor release channel is GitHub editor artifacts. Workspace package names are Zerith-specific and remain guarded from accidental npm publication until a separate npm package lane has built output, declarations, tags, provenance, and support policy.',
         id: 'packagePublicationPolicy',
         label: 'Package publication policy',
-        status: hasPrivateWorkspaceArtifactPolicy ? 'ready' : 'blocked',
-        summary: hasPrivateWorkspaceArtifactPolicy
-            ? 'Npm package publication is intentionally disabled for editor artifact releases.'
-            : 'Package publication policy is not explicit enough for release readiness.',
+        status: hasPackagePublicationPolicy ? 'ready' : 'blocked',
+        summary: hasPackagePublicationPolicy
+            ? 'Workspace packages use branded names and publication remains explicitly guarded.'
+            : 'Package names or publication policy are not explicit enough for release readiness.',
     },
     {
         detail: versionPolicyExists
-            ? 'The source version policy defines editor artifact releases from the editor app version and keeps private core/player package versions internal.'
+            ? 'The source version policy defines editor artifact releases from the editor app version and keeps private zerith-core/zerith-player package versions internal.'
             : 'Package versions are still placeholder/internal values and no source policy defines how they map to tags or artifacts.',
         id: 'versionPolicy',
         label: 'Version policy',
@@ -148,6 +149,7 @@ function hasCiReleaseGate(workflow) {
     return [
         'npm run test:fixture-policy',
         'npm run test:public-readiness',
+        'npm run report:package-publication -- --json',
         'npm run lint',
         'npm test',
         'npm run test:visual:ci',
@@ -166,6 +168,12 @@ function hasSourceMetadata(manifest) {
         && manifest.repository?.url === 'git+ssh://git@github.com/Zeffuro/Zerith.git'
         && Array.isArray(manifest.keywords)
         && manifest.keywords.length >= 5;
+}
+
+function hasBrandedWorkspacePackageNames() {
+    return coreManifest.name === 'zerith-core'
+        && editorManifest.name === 'zerith-editor'
+        && playerManifest.name === 'zerith-player';
 }
 
 function hasEditorDistributionUpdatePath() {

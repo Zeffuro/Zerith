@@ -1,4 +1,4 @@
-import type { IfCommand } from 'core';
+import type { IfCommand } from 'zerith-core';
 
 import { useMemo } from 'react';
 

@@ -1,4 +1,4 @@
-import type { GameManifest } from 'core';
+import type { GameManifest } from 'zerith-core';
 
 import type { JsonHintKind } from './contracts';
 

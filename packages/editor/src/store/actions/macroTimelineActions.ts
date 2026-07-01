@@ -1,4 +1,4 @@
-import { deepClone } from 'core';
+import { deepClone } from 'zerith-core';
 
 import { useProjectStore } from '../storeBootstrap';
 import { useEditorStore } from '../useEditorStore';

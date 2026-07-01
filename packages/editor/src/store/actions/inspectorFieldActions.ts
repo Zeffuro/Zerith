@@ -1,4 +1,4 @@
-import type { Command } from 'core';
+import type { Command } from 'zerith-core';
 
 import { getAtPath, setAtPath } from '../../utils/scriptPathUtilities';
 import { useProjectStore, useScriptStore } from '../storeBootstrap';

@@ -1,4 +1,4 @@
-import { deepClone } from 'core';
+import { deepClone } from 'zerith-core';
 
 import type { EditorNode } from '../../types/EditorNode';
 import type { ScriptPath } from '../../utils/scriptPathUtilities';

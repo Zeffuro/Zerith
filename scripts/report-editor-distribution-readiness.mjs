@@ -59,13 +59,13 @@ const requirements = [
                 : 'Installer bundling is not configured.'),
     },
     {
-        detail: 'A portable/manual zip is useful for users who avoid installers. The source artifact contract defines it as a manual-extract fallback rather than an installer-managed app.',
-        id: 'manualZipArtifact',
-        label: 'Manual zip artifact',
-        status: artifactContractExists ? 'limited' : 'blocked',
+        detail: 'Portable/manual downloads are a useful fallback for users who avoid installers. The source artifact contract defines them as manual-replace artifacts rather than installer-managed apps.',
+        id: 'manualPortableArtifact',
+        label: 'Manual portable artifact policy',
+        status: artifactContractExists ? 'ready' : 'blocked',
         summary: artifactContractExists
-            ? 'Portable zip distribution has a manual-extract contract.'
-            : 'Editor zip distribution needs an explicit artifact contract.',
+            ? 'Portable/manual distribution has an explicit manual-replace contract.'
+            : 'Editor portable/manual distribution needs an explicit artifact contract.',
     },
     {
         detail: 'Tauri updater support needs the JS/Rust updater plugin, updater configuration, generated updater artifacts, signing keys, and hosted endpoints.',
@@ -97,11 +97,11 @@ const requirements = [
             : 'Editor update check/install UI or service is missing.',
     },
     {
-        detail: 'A zip download can be released beside installers, but self-updating a portable zip should not be promised until the artifact/update model is explicitly tested.',
-        id: 'zipUpdatePolicy',
-        label: 'Zip update policy',
-        status: 'limited',
-        summary: 'Portable zip releases are supported as manual-replace artifacts; self-update remains installer-only.',
+        detail: 'Portable/manual downloads can be released beside installers, but the supported update path is manual replacement. In-app updates are installer-managed.',
+        id: 'portableUpdatePolicy',
+        label: 'Portable update policy',
+        status: 'ready',
+        summary: 'Portable/manual releases are supported as manual-replace artifacts; in-app updates remain installer-managed.',
     },
     {
         detail: 'A release workflow publishes signed artifacts to GitHub Releases. The manual package-preview workflow only proves bundle output and uploads workflow artifacts for inspection.',
@@ -125,7 +125,7 @@ const report = {
     blocked,
     limited,
     ready,
-    recommendation: 'Ship installer artifacts as the primary path and a portable zip as a manual-extract fallback. In-app updates are wired for installer-managed desktop builds; portable zip users replace files manually.',
+    recommendation: 'Ship installer artifacts as the primary path and portable/manual downloads as explicit manual-replace fallbacks. In-app updates are wired for installer-managed desktop builds.',
     requirements,
     status: blocked > 0 ? 'blocked' : (limited > 0 ? 'limited' : 'ready'),
 };

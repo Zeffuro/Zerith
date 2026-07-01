@@ -1,4 +1,4 @@
-import type { CompiledContentManifest, Script } from 'core';
+import type { CompiledContentManifest, Script } from 'zerith-core';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 

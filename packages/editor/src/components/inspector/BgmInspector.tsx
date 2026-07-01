@@ -1,4 +1,4 @@
-import type { BgmCommand } from 'core';
+import type { BgmCommand } from 'zerith-core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';

@@ -1,5 +1,5 @@
-import { type SpriteFrame, type SpritesheetDescriptor } from 'core';
 import { describe, expect, it } from 'vitest';
+import { type SpriteFrame, type SpritesheetDescriptor } from 'zerith-core';
 
 import {
     addSliceLine,

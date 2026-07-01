@@ -1,4 +1,4 @@
-import type { WaitCommand } from 'core';
+import type { WaitCommand } from 'zerith-core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';
