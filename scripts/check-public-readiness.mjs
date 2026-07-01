@@ -10,6 +10,7 @@ const editorManifest = await readJson('packages/editor/package.json');
 const playerManifest = await readJson('packages/player/package.json');
 const rootReadme = await readText('README.md');
 const editorReadme = await readText('packages/editor/README.md');
+const playwrightConfig = await readText('playwright.config.mjs');
 const licenseText = await readText('LICENSE');
 
 await assertFileExists('.github/assets/editor-preview.png');
@@ -57,6 +58,16 @@ assertIncludes(rootReadme, 'games/example-game', 'Root README must keep the show
 
 assertNoIncludes(editorReadme, 'Tauri + React + Typescript', 'Editor README must not regress to the stock Tauri template title.');
 assertNoIncludes(editorReadme, 'This template', 'Editor README must not regress to stock template copy.');
+assertIncludes(
+    playwrightConfig,
+    'npm run dev --workspace=zerith-editor',
+    'Playwright visual smoke web server must target the branded editor workspace.',
+);
+assertNoIncludes(
+    playwrightConfig,
+    '--workspace=editor',
+    'Playwright visual smoke web server must not target the old editor workspace name.',
+);
 
 assertRootScript('dev:player');
 assertRootScript('dev:editor');
