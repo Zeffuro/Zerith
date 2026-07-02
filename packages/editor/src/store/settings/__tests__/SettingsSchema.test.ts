@@ -24,6 +24,7 @@ describe('SettingsSchema', () => {
         expect(mergeSettings({ autosaveEnabled: 'yes' })).toEqual(defaultSettings);
         expect(mergeSettings({ autosaveIntervalMs: 0 })).toEqual(defaultSettings);
         expect(mergeSettings({ autosaveIntervalMs: Number.NaN })).toEqual(defaultSettings);
+        expect(mergeSettings({ checkForUpdatesOnStartup: 'yes' })).toEqual(defaultSettings);
         expect(mergeSettings({ codeEditorLargeText: 'yes' })).toEqual(defaultSettings);
         expect(mergeSettings({ codeEditorPlainTextComfort: 1 })).toEqual(defaultSettings);
         expect(mergeSettings({ codeEditorScreenReaderMode: 'always' })).toEqual(defaultSettings);
@@ -48,6 +49,13 @@ describe('SettingsSchema', () => {
         expect(mergeSettings({ autosaveEnabled: true })).toEqual({ ...defaultSettings, autosaveEnabled: true });
         expect(mergeSettings({ autosaveIntervalMs: 1250.9 })).toEqual({ ...defaultSettings, autosaveIntervalMs: 5000 });
         expect(mergeSettings({ autosaveIntervalMs: 9000.9 })).toEqual({ ...defaultSettings, autosaveIntervalMs: 9000 });
+    });
+
+    it('accepts startup update check settings', () => {
+        expect(mergeSettings({ checkForUpdatesOnStartup: false })).toEqual({
+            ...defaultSettings,
+            checkForUpdatesOnStartup: false,
+        });
     });
 
     it('accepts code editor accessibility profile settings', () => {
@@ -270,6 +278,8 @@ describe('SettingsSchema', () => {
 
     it('extracts only valid persisted settings', () => {
         expect(extractPersistedSettings({ autosaveEnabled: true })).toEqual({ autosaveEnabled: true });
+        expect(extractPersistedSettings({ checkForUpdatesOnStartup: false })).toEqual({ checkForUpdatesOnStartup: false });
+        expect(extractPersistedSettings({ checkForUpdatesOnStartup: 'no' })).toEqual({});
         expect(extractPersistedSettings({ activeDockLayoutPresetId: 'layout-a' })).toEqual({ activeDockLayoutPresetId: 'layout-a' });
         expect(extractPersistedSettings({ activeDockLayoutPresetId: '' })).toEqual({});
         expect(extractPersistedSettings({ audiosheetShortcutTargetMode: 'cursor' })).toEqual({ audiosheetShortcutTargetMode: 'cursor' });

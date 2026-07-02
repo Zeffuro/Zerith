@@ -64,6 +64,7 @@ describe('filterSettingsTree', () => {
             'general-layout': 0,
             'general-playback': 0,
             'general-quickbuttons': 0,
+            'general-updates': 0,
             keymap: 3,
             plugins: 0,
         });

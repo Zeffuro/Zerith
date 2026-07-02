@@ -14,6 +14,7 @@ type SettingsGeneralPanelProperties = {
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
     changedControlIds: ReadonlySet<string>;
+    checkForUpdatesOnStartup: boolean;
     dockLayoutPresets: DockLayoutPreset[];
     focusedControlId: SettingsControlId | undefined;
     isMuted: boolean;
@@ -30,6 +31,7 @@ type SettingsGeneralPanelProperties = {
     setAudiosheetShortcutTargetMode: (mode: 'cursor' | 'playhead') => void;
     setAutosaveEnabled: (enabled: boolean) => void;
     setAutosaveIntervalMs: (intervalMs: number) => void;
+    setCheckForUpdatesOnStartup: (enabled: boolean) => void;
     showChangedOnly: boolean;
     toggleMute: () => void;
     toggleQuickCommandType: (type: NonMacroEditorCommandType) => void;
@@ -42,6 +44,7 @@ export function SettingsGeneralPanel({
     autosaveEnabled,
     autosaveIntervalMs,
     changedControlIds,
+    checkForUpdatesOnStartup,
     dockLayoutPresets,
     focusedControlId,
     isMuted,
@@ -58,6 +61,7 @@ export function SettingsGeneralPanel({
     setAudiosheetShortcutTargetMode,
     setAutosaveEnabled,
     setAutosaveIntervalMs,
+    setCheckForUpdatesOnStartup,
     showChangedOnly,
     toggleMute,
     toggleQuickCommandType,
@@ -70,6 +74,7 @@ export function SettingsGeneralPanel({
 
     const autosaveChanged = changedControlIds.has('autosaveEnabled');
     const autosaveIntervalChanged = changedControlIds.has('autosaveIntervalMs');
+    const checkForUpdatesOnStartupChanged = changedControlIds.has('checkForUpdatesOnStartup');
     const audioChanged = changedControlIds.has('audio');
     const audiosheetShortcutTargetModeChanged = changedControlIds.has('audiosheetShortcutTargetMode');
     const dockLayoutPresetsChanged = changedControlIds.has('dockLayoutPresets');
@@ -77,6 +82,10 @@ export function SettingsGeneralPanel({
 
     const showAutosaveRow = visibleControlIds.has('autosaveEnabled') && matchedControlIds.has('autosaveEnabled') && (!showChangedOnly || autosaveChanged);
     const showAutosaveIntervalRow = visibleControlIds.has('autosaveIntervalMs') && matchedControlIds.has('autosaveIntervalMs') && (!showChangedOnly || autosaveIntervalChanged);
+    const showCheckForUpdatesOnStartupRow =
+        visibleControlIds.has('checkForUpdatesOnStartup')
+        && matchedControlIds.has('checkForUpdatesOnStartup')
+        && (!showChangedOnly || checkForUpdatesOnStartupChanged);
     const showAudioRow = visibleControlIds.has('audio') && matchedControlIds.has('audio') && (!showChangedOnly || audioChanged);
     const showAudiosheetShortcutTargetModeRow =
         visibleControlIds.has('audiosheetShortcutTargetMode')
@@ -98,7 +107,7 @@ export function SettingsGeneralPanel({
             || 'browser editor parity filesystem export desktop integrations loose output'.includes(normalizedSearchQuery)
         );
 
-    if (!showBrowserEditorReadiness && !showAutosaveRow && !showAutosaveIntervalRow && !showAudioRow && !showAudiosheetShortcutTargetModeRow && !showDockLayoutPresetsRow && !showQuickCommandTypesRow) {
+    if (!showBrowserEditorReadiness && !showAutosaveRow && !showAutosaveIntervalRow && !showCheckForUpdatesOnStartupRow && !showAudioRow && !showAudiosheetShortcutTargetModeRow && !showDockLayoutPresetsRow && !showQuickCommandTypesRow) {
         return (
             <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
                 {showChangedOnly
@@ -194,6 +203,26 @@ export function SettingsGeneralPanel({
                             type="checkbox"
                         />
                         Unmuted
+                    </label>
+                </EditableSettingRow>
+            ) : undefined}
+
+            {showCheckForUpdatesOnStartupRow ? (
+                <EditableSettingRow
+                    controlId="checkForUpdatesOnStartup"
+                    isChanged={checkForUpdatesOnStartupChanged}
+                    isFocused={focusedControlId === 'checkForUpdatesOnStartup'}
+                    label="Update Checks"
+                    onSetDetailRowReference={onSetDetailRowReference}
+                    uiScale={uiScale}
+                >
+                    <label style={{ alignItems: 'center', color: t.text.primary, display: 'inline-flex', fontSize: `${12 * uiScale}px`, gap: `${6 * uiScale}px` }}>
+                        <input
+                            checked={checkForUpdatesOnStartup}
+                            onChange={(event) => setCheckForUpdatesOnStartup(event.currentTarget.checked)}
+                            type="checkbox"
+                        />
+                        Check on startup
                     </label>
                 </EditableSettingRow>
             ) : undefined}

@@ -16,6 +16,7 @@ type SettingsDetailPanelProperties = {
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
     changedControlIds: ReadonlySet<string>;
+    checkForUpdatesOnStartup: boolean;
     codeEditorLargeText: boolean;
     codeEditorPlainTextComfort: boolean;
     codeEditorScreenReaderMode: CodeEditorScreenReaderMode;
@@ -43,6 +44,7 @@ type SettingsDetailPanelProperties = {
     setAudiosheetShortcutTargetMode: (mode: 'cursor' | 'playhead') => void;
     setAutosaveEnabled: (enabled: boolean) => void;
     setAutosaveIntervalMs: (intervalMs: number) => void;
+    setCheckForUpdatesOnStartup: (enabled: boolean) => void;
     setCodeEditorLargeText: (enabled: boolean) => void;
     setCodeEditorPlainTextComfort: (enabled: boolean) => void;
     setCodeEditorScreenReaderMode: (mode: CodeEditorScreenReaderMode) => void;
@@ -66,6 +68,7 @@ export function SettingsDetailPanel({
     autosaveEnabled,
     autosaveIntervalMs,
     changedControlIds,
+    checkForUpdatesOnStartup,
     codeEditorLargeText,
     codeEditorPlainTextComfort,
     codeEditorScreenReaderMode,
@@ -93,6 +96,7 @@ export function SettingsDetailPanel({
     setAudiosheetShortcutTargetMode,
     setAutosaveEnabled,
     setAutosaveIntervalMs,
+    setCheckForUpdatesOnStartup,
     setCodeEditorLargeText,
     setCodeEditorPlainTextComfort,
     setCodeEditorScreenReaderMode,
@@ -122,6 +126,7 @@ export function SettingsDetailPanel({
                     autosaveEnabled={autosaveEnabled}
                     autosaveIntervalMs={autosaveIntervalMs}
                     changedControlIds={changedControlIds}
+                    checkForUpdatesOnStartup={checkForUpdatesOnStartup}
                     dockLayoutPresets={dockLayoutPresets}
                     focusedControlId={focusedControlId}
                     isMuted={isMuted}
@@ -138,6 +143,7 @@ export function SettingsDetailPanel({
                     setAudiosheetShortcutTargetMode={setAudiosheetShortcutTargetMode}
                     setAutosaveEnabled={setAutosaveEnabled}
                     setAutosaveIntervalMs={setAutosaveIntervalMs}
+                    setCheckForUpdatesOnStartup={setCheckForUpdatesOnStartup}
                     showChangedOnly={showChangedOnly}
                     toggleMute={toggleMute}
                     toggleQuickCommandType={toggleQuickCommandType}

@@ -6,8 +6,10 @@ import {
     formatContentMigrationCommandStatus,
     getContentMigrationCommandStatusTone,
 } from '../../../services/contentMigrationCommand';
+import { confirmEditorAction } from '../../../services/editorDialogs';
 import {
     formatEditorUpdateFlowResult,
+    formatEditorUpdateInstallPrompt,
     getEditorUpdateFlowResultTone,
     runEditorUpdateCheck,
 } from '../../../services/editorUpdateClient';
@@ -197,6 +199,12 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         try {
             announceOperationStatus('Checking for editor updates...');
             const result = await runEditorUpdateCheck({
+                confirmInstall: (update) => confirmEditorAction({
+                    cancelText: 'Later',
+                    confirmText: 'Install',
+                    message: formatEditorUpdateInstallPrompt(update),
+                    title: 'Install Editor Update',
+                }),
                 onProgress: ({ downloadedBytes, totalBytes }) => {
                     if (!totalBytes) return;
                     const percent = Math.min(100, Math.round((downloadedBytes / totalBytes) * 100));

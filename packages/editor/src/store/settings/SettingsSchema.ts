@@ -249,6 +249,7 @@ const persistedSettingsSchema = z.object({
     audiosheetShortcutTargetMode: z.enum(['cursor', 'playhead']).optional(),
     autosaveEnabled: z.boolean().optional(),
     autosaveIntervalMs: z.number().finite().positive().transform(sanitizeAutosaveInterval).optional(),
+    checkForUpdatesOnStartup: z.boolean().optional(),
     codeEditorLargeText: z.boolean().optional(),
     codeEditorPlainTextComfort: z.boolean().optional(),
     codeEditorScreenReaderMode: z.enum(['auto', 'off', 'on']).optional(),
@@ -282,6 +283,7 @@ export type SettingsState = {
     audiosheetShortcutTargetMode: 'cursor' | 'playhead';
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
+    checkForUpdatesOnStartup: boolean;
     codeEditorLargeText: boolean;
     codeEditorPlainTextComfort: boolean;
     codeEditorScreenReaderMode: CodeEditorScreenReaderMode;
@@ -305,6 +307,7 @@ export const defaultSettings: SettingsState = {
     audiosheetShortcutTargetMode: 'cursor',
     autosaveEnabled: false,
     autosaveIntervalMs: 30 * 1000,
+    checkForUpdatesOnStartup: true,
     codeEditorLargeText: false,
     codeEditorPlainTextComfort: false,
     codeEditorScreenReaderMode: 'auto',

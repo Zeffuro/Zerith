@@ -18,6 +18,7 @@ import { useLiveScriptValidation } from './hooks/useLiveScriptValidation';
 import { useProjectFileWatcher } from './hooks/useProjectFileWatcher';
 import { useReferenceScanner } from './hooks/useReferenceScanner';
 import { useScriptDirtyTracking } from './hooks/useScriptDirtyTracking';
+import { useStartupEditorUpdateCheck } from './hooks/useStartupEditorUpdateCheck';
 import { useStartupProjectOpen } from './hooks/useStartupProjectOpen';
 import { useWindowStateRestore } from './hooks/useWindowStateRestore';
 import { setupConsoleInterceptor } from './services/consoleInterceptor';
@@ -56,6 +57,7 @@ function App() {
     useProjectFileWatcher();
     useReferenceScanner();
     useScriptDirtyTracking();
+    useStartupEditorUpdateCheck();
     useStartupProjectOpen();
     useWindowStateRestore();
 

@@ -63,6 +63,16 @@ export function formatEditorUpdateFlowResult(result: EditorUpdateFlowResult): st
     }
 }
 
+export function formatEditorUpdateInstallPrompt(update: Pick<EditorUpdate, 'body' | 'version'>): string {
+    const notes = update.body?.trim();
+    return [
+        `Zerith Editor ${update.version} is available.`,
+        '',
+        'Install it now? The editor will restart after installation.',
+        ...(notes ? ['', notes] : []),
+    ].join('\n');
+}
+
 export function getEditorUpdateFlowResultTone(result: EditorUpdateFlowResult): 'error' | 'info' | 'success' | 'warning' {
     if (result.status === 'up-to-date' || result.status === 'installed') return 'success';
     if (result.status === 'unsupported') return 'warning';
@@ -113,6 +123,5 @@ function confirmInstallByDefault(update: EditorUpdate): boolean {
     const confirm_ = globalThis.confirm;
     if (typeof confirm_ !== 'function') return false;
 
-    const notes = update.body ? `\n\n${update.body}` : '';
-    return confirm_(`Install Zerith Editor ${update.version} now? The editor will restart after installation.${notes}`);
+    return confirm_(formatEditorUpdateInstallPrompt(update));
 }

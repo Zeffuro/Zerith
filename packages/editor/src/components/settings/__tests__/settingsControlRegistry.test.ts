@@ -13,6 +13,7 @@ const state = {
     audiosheetShortcutTargetMode: 'cursor' as const,
     autosaveEnabled: true,
     autosaveIntervalMs: 30_000,
+    checkForUpdatesOnStartup: true,
     codeEditorLargeText: false,
     codeEditorPlainTextComfort: false,
     codeEditorScreenReaderMode: 'auto' as const,
@@ -52,6 +53,7 @@ describe('settingsControlRegistry', () => {
         expect([...getMatchedSettingsControlIds('layout a', state)]).toEqual(['dockLayoutPresets']);
         expect([...getMatchedSettingsControlIds('inspector scale', state)]).toEqual(['inspectorScale']);
         expect([...getMatchedSettingsControlIds('screen reader accessibility', state)]).toEqual(['codeEditorScreenReaderMode']);
+        expect([...getMatchedSettingsControlIds('startup update', state)]).toEqual(['checkForUpdatesOnStartup']);
     });
 
     it('returns all controls for blank query', () => {
@@ -62,6 +64,7 @@ describe('settingsControlRegistry', () => {
             'audiosheetShortcutTargetMode',
             'autosaveEnabled',
             'autosaveIntervalMs',
+            'checkForUpdatesOnStartup',
             'codeEditorLargeText',
             'codeEditorPlainTextComfort',
             'codeEditorScreenReaderMode',
@@ -87,6 +90,7 @@ describe('settingsControlRegistry', () => {
         expect(getVisibleSettingsControls('general-layout')).toEqual(['dockLayoutPresets']);
         expect(getVisibleSettingsControls('general-playback')).toEqual(['audio', 'audiosheetShortcutTargetMode']);
         expect(getVisibleSettingsControls('general-quickbuttons')).toEqual(['quickCommandTypes']);
+        expect(getVisibleSettingsControls('general-updates')).toEqual(['checkForUpdatesOnStartup']);
         expect(getVisibleSettingsControls('editor-monaco')).toEqual(['codeEditorLargeText', 'codeEditorPlainTextComfort', 'codeEditorScreenReaderMode']);
     });
 
@@ -97,6 +101,7 @@ describe('settingsControlRegistry', () => {
                 audiosheetShortcutTargetMode: 'playhead',
                 autosaveEnabled: false,
                 autosaveIntervalMs: 60_000,
+                checkForUpdatesOnStartup: false,
                 codeEditorLargeText: true,
                 codeEditorPlainTextComfort: true,
                 codeEditorScreenReaderMode: 'on',
@@ -122,6 +127,7 @@ describe('settingsControlRegistry', () => {
             'general-layout': 1,
             'general-playback': 2,
             'general-quickbuttons': 1,
+            'general-updates': 1,
         });
     });
 
@@ -132,6 +138,7 @@ describe('settingsControlRegistry', () => {
                 audiosheetShortcutTargetMode: 'playhead',
                 autosaveEnabled: false,
                 autosaveIntervalMs: 60_000,
+                checkForUpdatesOnStartup: false,
                 codeEditorLargeText: true,
                 codeEditorPlainTextComfort: true,
                 codeEditorScreenReaderMode: 'on',
@@ -154,6 +161,7 @@ describe('settingsControlRegistry', () => {
             'audiosheetShortcutTargetMode',
             'autosaveEnabled',
             'autosaveIntervalMs',
+            'checkForUpdatesOnStartup',
             'codeEditorLargeText',
             'codeEditorPlainTextComfort',
             'codeEditorScreenReaderMode',

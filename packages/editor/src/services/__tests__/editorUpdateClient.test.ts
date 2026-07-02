@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
     formatEditorUpdateFlowResult,
+    formatEditorUpdateInstallPrompt,
     getEditorUpdateFlowResultTone,
     runEditorUpdateCheck,
 } from '../editorUpdateClient';
@@ -71,5 +72,12 @@ describe('editor update result formatting', () => {
     it('formats user-facing update results', () => {
         expect(formatEditorUpdateFlowResult({ status: 'up-to-date' })).toBe('Zerith Editor is up to date.');
         expect(getEditorUpdateFlowResultTone({ status: 'unsupported' })).toBe('warning');
+    });
+
+    it('formats the install confirmation prompt with release notes when present', () => {
+        expect(formatEditorUpdateInstallPrompt({
+            body: 'Fixes updater confirmation.',
+            version: '0.1.2',
+        })).toContain('Fixes updater confirmation.');
     });
 });

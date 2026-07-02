@@ -8,6 +8,7 @@ export type SettingsControlId =
     | 'audiosheetShortcutTargetMode'
     | 'autosaveEnabled'
     | 'autosaveIntervalMs'
+    | 'checkForUpdatesOnStartup'
     | 'codeEditorLargeText'
     | 'codeEditorPlainTextComfort'
     | 'codeEditorScreenReaderMode'
@@ -26,6 +27,7 @@ export type SettingsControlSearchState = {
     audiosheetShortcutTargetMode: 'cursor' | 'playhead';
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
+    checkForUpdatesOnStartup: boolean;
     codeEditorLargeText: boolean;
     codeEditorPlainTextComfort: boolean;
     codeEditorScreenReaderMode: CodeEditorScreenReaderMode;
@@ -52,6 +54,7 @@ export type SettingsPanelId =
     | 'general-layout'
     | 'general-playback'
     | 'general-quickbuttons'
+    | 'general-updates'
     | 'general'
     | 'plugins';
 
@@ -86,6 +89,12 @@ const settingsControlRegistry: Record<SettingsControlId, SettingsControlDefiniti
         changed: (state, defaults) => state.autosaveIntervalMs !== defaults.autosaveIntervalMs,
         keywords: (state) => `autosave interval ${Math.round(state.autosaveIntervalMs / 1000)} seconds save`,
         panelIds: ['general', 'general-autosave'],
+    },
+    checkForUpdatesOnStartup: {
+        badgePanelId: 'general-updates',
+        changed: (state, defaults) => state.checkForUpdatesOnStartup !== defaults.checkForUpdatesOnStartup,
+        keywords: (state) => `startup update updates startup launch open check editor release ${state.checkForUpdatesOnStartup ? 'enabled on true automatic' : 'disabled off false manual'}`,
+        panelIds: ['general', 'general-updates'],
     },
     codeEditorLargeText: {
         badgePanelId: 'editor-monaco',

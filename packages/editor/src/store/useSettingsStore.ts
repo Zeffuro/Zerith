@@ -19,6 +19,7 @@ type SettingsStore = {
     setAudiosheetShortcutTargetMode: (mode: SettingsState['audiosheetShortcutTargetMode']) => void;
     setAutosaveEnabled: (autosaveEnabled: boolean) => void;
     setAutosaveIntervalMs: (autosaveIntervalMs: number) => void;
+    setCheckForUpdatesOnStartup: (checkForUpdatesOnStartup: boolean) => void;
     setCodeEditorLargeText: (codeEditorLargeText: boolean) => void;
     setCodeEditorPlainTextComfort: (codeEditorPlainTextComfort: boolean) => void;
     setCodeEditorScreenReaderMode: (codeEditorScreenReaderMode: SettingsState['codeEditorScreenReaderMode']) => void;
@@ -96,6 +97,7 @@ export const useSettingsStore = create<SettingsStore>()(
             setAudiosheetShortcutTargetMode: (audiosheetShortcutTargetMode) => set({ audiosheetShortcutTargetMode }),
             setAutosaveEnabled: (autosaveEnabled) => set({ autosaveEnabled }),
             setAutosaveIntervalMs: (autosaveIntervalMs) => set({ autosaveIntervalMs: sanitizeAutosaveInterval(autosaveIntervalMs) }),
+            setCheckForUpdatesOnStartup: (checkForUpdatesOnStartup) => set({ checkForUpdatesOnStartup }),
             setCodeEditorLargeText: (codeEditorLargeText) => set({ codeEditorLargeText }),
             setCodeEditorPlainTextComfort: (codeEditorPlainTextComfort) => set({ codeEditorPlainTextComfort }),
             setCodeEditorScreenReaderMode: (codeEditorScreenReaderMode) => set({ codeEditorScreenReaderMode }),
@@ -140,6 +142,7 @@ export const useSettingsStore = create<SettingsStore>()(
                 audiosheetShortcutTargetMode: state.audiosheetShortcutTargetMode,
                 autosaveEnabled: state.autosaveEnabled,
                 autosaveIntervalMs: state.autosaveIntervalMs,
+                checkForUpdatesOnStartup: state.checkForUpdatesOnStartup,
                 codeEditorLargeText: state.codeEditorLargeText,
                 codeEditorPlainTextComfort: state.codeEditorPlainTextComfort,
                 codeEditorScreenReaderMode: state.codeEditorScreenReaderMode,

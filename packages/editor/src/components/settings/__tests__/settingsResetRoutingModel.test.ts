@@ -17,6 +17,9 @@ function createResetActions(order: string[]): SettingsResetActions {
         resetAutosaveIntervalMs: vi.fn(() => {
             order.push('autosaveIntervalMs');
         }),
+        resetCheckForUpdatesOnStartup: vi.fn(() => {
+            order.push('checkForUpdatesOnStartup');
+        }),
         resetCodeEditorLargeText: vi.fn(() => {
             order.push('codeEditorLargeText');
         }),
@@ -87,6 +90,15 @@ describe('settingsResetRoutingModel', () => {
         expect(order).toEqual(['codeEditorLargeText', 'codeEditorPlainTextComfort', 'codeEditorScreenReaderMode']);
     });
 
+    it('routes updates panel reset through startup update checks', () => {
+        const order: string[] = [];
+        const actions = createResetActions(order);
+
+        runCurrentPanelReset('general-updates', getPanelSettingsControls, actions);
+
+        expect(order).toEqual(['checkForUpdatesOnStartup']);
+    });
+
     it('ignores unknown panels without throwing', () => {
         const order: string[] = [];
         const actions = createResetActions(order);
@@ -112,6 +124,7 @@ describe('settingsResetRoutingModel', () => {
             'editorScale',
             'autosaveEnabled',
             'autosaveIntervalMs',
+            'checkForUpdatesOnStartup',
             'audio',
             'audiosheetShortcutTargetMode',
             'codeEditorScreenReaderMode',

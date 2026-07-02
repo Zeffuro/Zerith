@@ -19,6 +19,7 @@ export type SettingsModalMainPaneProperties = {
     autosaveEnabled: boolean;
     autosaveIntervalMs: number;
     changedControlIds: ReadonlySet<string>;
+    checkForUpdatesOnStartup: boolean;
     codeEditorLargeText: boolean;
     codeEditorPlainTextComfort: boolean;
     codeEditorScreenReaderMode: CodeEditorScreenReaderMode;
@@ -51,6 +52,7 @@ export type SettingsModalMainPaneProperties = {
     setAudiosheetShortcutTargetMode: (mode: 'cursor' | 'playhead') => void;
     setAutosaveEnabled: (enabled: boolean) => void;
     setAutosaveIntervalMs: (intervalMs: number) => void;
+    setCheckForUpdatesOnStartup: (enabled: boolean) => void;
     setCodeEditorLargeText: (enabled: boolean) => void;
     setCodeEditorPlainTextComfort: (enabled: boolean) => void;
     setCodeEditorScreenReaderMode: (mode: CodeEditorScreenReaderMode) => void;
@@ -99,6 +101,7 @@ const panelDescriptions: Record<string, string> = {
     'general-layout': 'Manage docked panel layout presets.',
     'general-playback': 'Playback defaults for preview and debugging.',
     'general-quickbuttons': 'Configure which timeline quick buttons are shown and how they are ordered.',
+    'general-updates': 'Editor update checks and startup behavior.',
     keymap: 'Customize keyboard shortcuts by action.',
     plugins: 'Inspect registered editor plugin packages.',
 };
@@ -110,6 +113,7 @@ export function SettingsModalMainPane({
     autosaveEnabled,
     autosaveIntervalMs,
     changedControlIds,
+    checkForUpdatesOnStartup,
     codeEditorLargeText,
     codeEditorPlainTextComfort,
     codeEditorScreenReaderMode,
@@ -157,6 +161,7 @@ export function SettingsModalMainPane({
     setAudiosheetShortcutTargetMode,
     setAutosaveEnabled,
     setAutosaveIntervalMs,
+    setCheckForUpdatesOnStartup,
     setCodeEditorLargeText,
     setCodeEditorPlainTextComfort,
     setCodeEditorScreenReaderMode,
@@ -285,6 +290,7 @@ export function SettingsModalMainPane({
                     autosaveEnabled={autosaveEnabled}
                     autosaveIntervalMs={autosaveIntervalMs}
                     changedControlIds={changedControlIds}
+                    checkForUpdatesOnStartup={checkForUpdatesOnStartup}
                     codeEditorLargeText={codeEditorLargeText}
                     codeEditorPlainTextComfort={codeEditorPlainTextComfort}
                     codeEditorScreenReaderMode={codeEditorScreenReaderMode}
@@ -312,6 +318,7 @@ export function SettingsModalMainPane({
                     setAudiosheetShortcutTargetMode={setAudiosheetShortcutTargetMode}
                     setAutosaveEnabled={setAutosaveEnabled}
                     setAutosaveIntervalMs={setAutosaveIntervalMs}
+                    setCheckForUpdatesOnStartup={setCheckForUpdatesOnStartup}
                     setCodeEditorLargeText={setCodeEditorLargeText}
                     setCodeEditorPlainTextComfort={setCodeEditorPlainTextComfort}
                     setCodeEditorScreenReaderMode={setCodeEditorScreenReaderMode}

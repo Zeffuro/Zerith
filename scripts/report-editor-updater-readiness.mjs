@@ -9,8 +9,13 @@ const tauriConfig = await readJson('packages/editor/src-tauri/tauri.conf.json');
 const cargoManifest = await readText('packages/editor/src-tauri/Cargo.toml');
 const tauriLib = await readText('packages/editor/src-tauri/src/lib.rs');
 const defaultCapability = await readJson('packages/editor/src-tauri/capabilities/default.json');
+const appSource = await readText('packages/editor/src/App.tsx');
+const settingsSchema = await readText('packages/editor/src/store/settings/SettingsSchema.ts');
 const workflowNames = await readdir(path.join(root, '.github/workflows'));
 const hasEditorUpdateClient = await sourceTreeIncludes('packages/editor/src', '@tauri-apps/plugin-updater');
+const hasStartupUpdatePrecheck = appSource.includes('useStartupEditorUpdateCheck')
+    && settingsSchema.includes('checkForUpdatesOnStartup')
+    && await sourceTreeIncludes('packages/editor/src', 'runStartupEditorUpdateCheck');
 
 const preferredEndpoint = 'https://github.com/Zeffuro/Zerith/releases/latest/download/latest.json';
 const updaterConfig = tauriConfig.plugins?.updater;
@@ -29,6 +34,8 @@ const hasUpdaterPermission = permissionIds.includes('updater:default')
     || permissionIds.includes('updater:allow-check');
 const hasProcessPermission = permissionIds.includes('process:default')
     || permissionIds.includes('process:allow-restart');
+const hasDialogConfirmPermission = permissionIds.includes('dialog:allow-confirm')
+    || permissionIds.includes('dialog:allow-message');
 const createsUpdaterArtifacts = tauriConfig.bundle?.createUpdaterArtifacts === true;
 const hasPublicKey = typeof updaterConfig?.pubkey === 'string'
     && updaterConfig.pubkey.trim().length > 0
@@ -77,6 +84,15 @@ const checks = [
             : 'Process relaunch dependency, registration, or permission is missing.',
     },
     {
+        detail: 'The update confirmation prompt must be allowed by Tauri ACL so installed builds do not fail with plugin:dialog|confirm before download/install.',
+        id: 'updateConfirmationPermission',
+        label: 'Update confirmation permission',
+        status: hasDialogConfirmPermission ? 'ready' : 'blocked',
+        summary: hasDialogConfirmPermission
+            ? 'Dialog confirm permission is present for update prompts.'
+            : 'Dialog confirm permission is missing from the editor capability.',
+    },
+    {
         detail: 'Tauri bundle output must include updater artifacts so release workflows can publish signed update bundles beside installers.',
         id: 'updaterArtifacts',
         label: 'Updater artifacts',
@@ -122,6 +138,15 @@ const checks = [
         summary: hasEditorUpdateClient
             ? 'Editor source calls the updater guest API.'
             : 'No editor update check/install UI or service exists yet.',
+    },
+    {
+        detail: 'The editor should check for desktop updates when opened, while letting users disable that startup check in persisted settings.',
+        id: 'startupUpdatePrecheck',
+        label: 'Startup update precheck',
+        status: hasStartupUpdatePrecheck ? 'ready' : 'blocked',
+        summary: hasStartupUpdatePrecheck
+            ? 'Startup update precheck and persisted toggle are present.'
+            : 'Startup update precheck or persisted toggle is missing.',
     },
     {
         detail: 'Portable/manual downloads remain manual-replace artifacts by policy. The supported in-app update path is installer-managed Tauri static JSON updates.',

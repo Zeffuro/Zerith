@@ -5,6 +5,7 @@ export type SettingsResetActions = {
     resetAudiosheetShortcutTargetMode: () => void;
     resetAutosaveEnabled: () => void;
     resetAutosaveIntervalMs: () => void;
+    resetCheckForUpdatesOnStartup: () => void;
     resetCodeEditorLargeText: () => void;
     resetCodeEditorPlainTextComfort: () => void;
     resetCodeEditorScreenReaderMode: () => void;
@@ -25,6 +26,7 @@ const controlResetActionById: Record<SettingsControlId, (actions: SettingsResetA
     audiosheetShortcutTargetMode: (actions) => actions.resetAudiosheetShortcutTargetMode(),
     autosaveEnabled: (actions) => actions.resetAutosaveEnabled(),
     autosaveIntervalMs: (actions) => actions.resetAutosaveIntervalMs(),
+    checkForUpdatesOnStartup: (actions) => actions.resetCheckForUpdatesOnStartup(),
     codeEditorLargeText: (actions) => actions.resetCodeEditorLargeText(),
     codeEditorPlainTextComfort: (actions) => actions.resetCodeEditorPlainTextComfort(),
     codeEditorScreenReaderMode: (actions) => actions.resetCodeEditorScreenReaderMode(),
@@ -49,6 +51,7 @@ export function runAllSettingsReset(actions: SettingsResetActions): void {
     actions.resetEditorScale();
     actions.resetAutosaveEnabled();
     actions.resetAutosaveIntervalMs();
+    actions.resetCheckForUpdatesOnStartup();
     actions.resetAudio();
     actions.resetAudiosheetShortcutTargetMode();
     actions.resetCodeEditorScreenReaderMode();
