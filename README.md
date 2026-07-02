@@ -54,5 +54,5 @@ The player build defaults to portable relative asset paths for itch/subpath host
 ## Current Boundaries
 
 - Use `games/classic-vn-starter` for starter flows and `games/example-game` for showcase/deploy flows.
-- Browser editor parity, packaged desktop game export, plugin marketplace discovery, dual-site GitHub Pages deployment, and the full graph-canvas editor are planned but intentionally gated behind readiness checks.
+- Browser editor parity, packaged desktop game export, plugin marketplace discovery, dual-site GitHub Pages deployment, and the full graph-canvas editor are planned but not part of the current stable path.
 - Keep new public documentation compact and backed by commands, schemas, tests, or generated/checkable facts.

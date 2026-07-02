@@ -32,4 +32,4 @@ npm run tauri -- dev
 - The editor shell has desktop filesystem/opener capabilities through Tauri; browser-only behavior stays explicitly limited.
 - Packaged desktop game export should use a dedicated player shell, not the editor shell.
 - Plugin loading remains explicit and local-first; remote marketplace discovery is still deferred.
-- Keep editor docs short. Prefer tests, pure model helpers, readiness reports, and package scripts as the durable explanation of behavior.
+- Keep editor docs short. Prefer tests, pure model helpers, and package scripts as the durable explanation of behavior.

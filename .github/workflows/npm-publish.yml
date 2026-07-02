@@ -34,8 +34,8 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Check npm publication readiness
-        run: npm run report:npm-publication -- --json
+      - name: Check npm publication
+        run: node scripts/report-npm-publication.mjs --json
 
       - name: Check package version is unpublished
         shell: bash

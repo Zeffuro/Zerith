@@ -18,6 +18,8 @@ const hasStartupUpdatePrecheck = appSource.includes('useStartupEditorUpdateCheck
     && await sourceTreeIncludes('packages/editor/src', 'runStartupEditorUpdateCheck');
 const hasUpdateDiagnostics = await sourceTreeIncludes('packages/editor/src', 'createEditorUpdateDiagnosticsReport')
     && await sourceTreeIncludes('packages/editor/src', 'show-editor-update-diagnostics');
+const hasUpdatePromptChangelog = await sourceTreeIncludes('packages/editor/src', 'createEditorUpdateInstallPrompt')
+    && await sourceTreeIncludes('packages/editor/src', 'loadEditorReleaseNoteForVersion');
 
 const preferredEndpoint = 'https://github.com/Zeffuro/Zerith/releases/latest/download/latest.json';
 const updaterConfig = tauriConfig.plugins?.updater;
@@ -160,6 +162,15 @@ const checks = [
             : 'No command palette update diagnostics report is present.',
     },
     {
+        detail: 'The update confirmation prompt should enrich updater metadata with the matching GitHub editor-v* Release notes so users can see the changelog before installing.',
+        id: 'updatePromptChangelog',
+        label: 'Update prompt changelog',
+        status: hasUpdatePromptChangelog ? 'ready' : 'blocked',
+        summary: hasUpdatePromptChangelog
+            ? 'Update prompts can include matching GitHub Release notes before install.'
+            : 'Update prompts do not load matching release notes before install.',
+    },
+    {
         detail: 'Portable/manual downloads remain manual-replace artifacts by policy. The supported in-app update path is installer-managed Tauri static JSON updates.',
         id: 'portableUpdatePolicy',
         label: 'Portable update policy',
@@ -189,7 +200,7 @@ const report = {
 if (asJson) {
     console.log(JSON.stringify(report, undefined, 2));
 } else {
-    console.log(`Editor updater readiness: ${report.status} (${ready} ready / ${limited} limited / ${blocked} blocked)`);
+    console.log(`Editor updater checks: ${report.status} (${ready} ready / ${limited} limited / ${blocked} blocked)`);
     console.log(`Preferred endpoint: ${preferredEndpoint}`);
     for (const check of checks) {
         console.log(`- ${check.label}: ${check.status} - ${check.summary}`);

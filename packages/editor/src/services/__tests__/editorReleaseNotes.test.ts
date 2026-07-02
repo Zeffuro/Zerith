@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { loadEditorReleaseNotes } from '../editorReleaseNotes';
+import { loadEditorReleaseNoteForVersion, loadEditorReleaseNotes } from '../editorReleaseNotes';
 
 describe('loadEditorReleaseNotes', () => {
     it('loads editor-tagged GitHub release notes', async () => {
@@ -62,6 +62,32 @@ describe('loadEditorReleaseNotes', () => {
         await expect(loadEditorReleaseNotes({ fetch })).resolves.toEqual({
             message: 'GitHub Releases returned 403 Forbidden',
             status: 'unavailable',
+        });
+    });
+
+    it('loads one matching editor release note by version', async () => {
+        const fetch = vi.fn(() => Promise.resolve({
+            json: () => Promise.resolve([
+                {
+                    body: 'Older release.',
+                    tag_name: 'editor-v0.1.5',
+                },
+                {
+                    body: 'Updater dialog changelog.',
+                    html_url: 'https://github.com/Zeffuro/Zerith/releases/tag/editor-v0.1.6',
+                    name: 'Zerith Editor v0.1.6',
+                    tag_name: 'editor-v0.1.6',
+                },
+            ]),
+            ok: true,
+            status: 200,
+            statusText: 'OK',
+        } as Response));
+
+        await expect(loadEditorReleaseNoteForVersion('0.1.6', { fetch })).resolves.toMatchObject({
+            body: 'Updater dialog changelog.',
+            tagName: 'editor-v0.1.6',
+            version: '0.1.6',
         });
     });
 });

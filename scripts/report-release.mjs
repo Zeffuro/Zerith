@@ -14,8 +14,11 @@ const ciWorkflow = await readText('.github/workflows/ci.yml');
 const workflowNames = await readdir(path.join(root, '.github/workflows'));
 const pagesWorkflowExists = workflowNames.includes('deploy-example-game.yml');
 const pagesWorkflow = pagesWorkflowExists ? await readText('.github/workflows/deploy-example-game.yml') : '';
-const packagePublicationReportExists = await fileExists('scripts/report-package-publication-readiness.mjs');
-const npmPublicationReportExists = await fileExists('scripts/report-npm-publication-readiness.mjs');
+const editorReleaseWorkflow = workflowNames.includes('editor-release.yml')
+    ? await readText('.github/workflows/editor-release.yml')
+    : '';
+const packagePublicationReportExists = await fileExists('scripts/report-package-publication.mjs');
+const npmPublicationReportExists = await fileExists('scripts/report-npm-publication.mjs');
 const hasEditorUpdaterDependency = Boolean(editorManifest.dependencies?.['@tauri-apps/plugin-updater'])
     || cargoManifest.includes('tauri-plugin-updater');
 const hasEditorUpdaterConfig = Boolean(tauriConfig.plugins?.updater);
@@ -24,7 +27,7 @@ const createsEditorUpdaterArtifacts = tauriConfig.bundle?.createUpdaterArtifacts
 const releaseWorkflowExists = workflowNames.some((name) => /release/iu.test(name));
 const editorPackagePreviewWorkflowExists = workflowNames.includes('editor-package-preview.yml');
 const editorArtifactContractExists = await fileExists('scripts/report-editor-artifacts.mjs');
-const editorUpdaterReportExists = await fileExists('scripts/report-editor-updater-readiness.mjs');
+const editorUpdaterReportExists = await fileExists('scripts/report-editor-updater.mjs');
 const versionPolicyExists = await fileExists('scripts/report-version-policy.mjs');
 const cargoVersion = readCargoField(cargoManifest, 'version');
 const editorVersionAligned = editorManifest.version === tauriConfig.version && editorManifest.version === cargoVersion;
@@ -35,6 +38,9 @@ const hasBrowserEditorPagesDeploy = pagesWorkflow.includes('ZERITH_EDITOR_OUT_DI
     && pagesWorkflow.includes('dist/pages/editor');
 const pagesWorkflowUsesCurrentActions = pagesWorkflow.includes('actions/upload-pages-artifact@v5')
     && pagesWorkflow.includes('actions/deploy-pages@v5');
+const hasUnsignedDownloadVerification = editorReleaseWorkflow.includes('create-editor-release-checksums.mjs')
+    && editorReleaseWorkflow.includes('SHA256SUMS')
+    && editorReleaseWorkflow.includes('OS trust signing/notarization is not configured yet');
 const hasPackagePublicationPolicy = hasBrandedWorkspacePackageNames()
     && rootManifest.private === true
     && editorManifest.private === true
@@ -54,7 +60,7 @@ const requirements = [
             : 'Root source metadata is incomplete.',
     },
     {
-        detail: 'CI runs fixture policy, public-readiness, lint, Vitest, CI-safe Playwright smoke, build, export parity, and exported runtime smoke for approved fixtures.',
+        detail: 'CI runs fixture policy, public surface validation, lint, Vitest, CI-safe Playwright smoke, build, export parity, and exported runtime smoke for approved fixtures.',
         id: 'ciReleaseGate',
         label: 'CI release gate',
         status: hasCiReleaseGate(ciWorkflow) ? 'ready' : 'blocked',
@@ -96,7 +102,7 @@ const requirements = [
         status: hasPackagePublicationPolicy ? 'ready' : 'blocked',
         summary: hasPackagePublicationPolicy
             ? 'Workspace packages use Zeffuro-scoped names, and core/player have explicit npm lanes.'
-            : 'Package names or publication policy are not explicit enough for release readiness.',
+            : 'Package names or publication policy are not explicit enough for release checks.',
     },
     {
         detail: versionPolicyExists
@@ -142,7 +148,7 @@ const report = {
 if (asJson) {
     console.log(JSON.stringify(report, undefined, 2));
 } else {
-    console.log(`Release readiness: ${report.status} (${ready} ready / ${limited} limited / ${blocked} blocked)`);
+    console.log(`Release checks: ${report.status} (${ready} ready / ${limited} limited / ${blocked} blocked)`);
     for (const requirement of report.requirements) {
         console.log(`- ${requirement.label}: ${requirement.status} - ${requirement.summary}`);
     }
@@ -155,9 +161,9 @@ function countByStatus(requirements_, status) {
 function hasCiReleaseGate(workflow) {
     return [
         'npm run test:fixture-policy',
-        'npm run test:public-readiness',
-        'npm run report:package-publication -- --json',
-        'npm run report:npm-publication -- --json',
+        'npm run check:public',
+        'node scripts/report-package-publication.mjs --json',
+        'node scripts/report-npm-publication.mjs --json',
         'npm run test:npm-core',
         'npm run test:npm-player',
         'npm run lint',
@@ -210,6 +216,7 @@ function hasEditorDistributionUpdatePath() {
         && hasEditorUpdaterConfig
         && createsEditorUpdaterArtifacts
         && hasEditorUpdateClient
+        && hasUnsignedDownloadVerification
         && releaseWorkflowExists;
 }
 
@@ -230,9 +237,9 @@ function getEditorDistributionUpdateDetail() {
         return 'Editor distribution needs named installer artifacts, an optional manual zip contract, updater plugin/config/artifacts, signing keys, and hosted update metadata before users can reliably install and update releases.';
     }
 
-    const checklist = editorUpdaterReportExists ? ' and updater readiness checklist' : '';
+    const checklist = editorUpdaterReportExists ? ' and updater checks' : '';
     if (!remainingUpdaterReleaseNeeds) {
-        return `Editor distribution has a source-defined installer/portable zip artifact contract${checklist}. Remaining confidence comes from running the release workflow and testing an installed older build against a newer GitHub Release.`;
+        return `Editor distribution has a source-defined installer/portable zip artifact contract${checklist}, plus checksum disclosure for unsigned manual downloads. Remaining confidence comes from running the release workflow and testing an installed older build against a newer GitHub Release.`;
     }
 
     return `Editor distribution has a source-defined installer/portable zip artifact contract${checklist}, but still needs ${remainingUpdaterReleaseNeeds} before users can reliably install and update releases.`;

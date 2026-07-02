@@ -75,14 +75,10 @@ assertRootScript('build:game');
 assertRootScript('build:game:zip');
 assertRootScript('build');
 assertRootScript('lint');
-assertRootScript('report:editor-artifacts');
-assertRootScript('report:editor-distribution');
-assertRootScript('report:editor-published-release');
-assertRootScript('report:editor-updater');
-assertRootScript('report:package-publication');
-assertRootScript('report:release-readiness');
-assertRootScript('report:version-policy');
+assertRootScript('check');
+assertRootScript('check:public');
 assertRootScript('release:check');
+assertRootScript('release:verify');
 assertRootScript('test:fixture-policy');
 assertRootScript('test:npm-core');
 assertRootScript('test:npm-player');
@@ -117,13 +113,13 @@ for (const command of [
 }
 
 if (findings.length > 0) {
-    console.error('Public readiness check failed.');
+    console.error('Public surface check failed.');
     for (const finding of findings) {
         console.error(`- ${finding}`);
     }
     process.exitCode = 1;
 } else {
-    console.log('Public readiness check passed: README, screenshot, command, and package metadata references are current.');
+    console.log('Public surface check passed: README, screenshot, command, and package metadata references are current.');
 }
 
 async function assertFileExists(relativePath) {

@@ -19,6 +19,8 @@ const assetNames = assets
     .filter(Boolean);
 const missingAssets = getMissingAssets(assetNames);
 const missingPlatforms = getMissingLatestJsonPlatforms(latestJson);
+const missingChecksumAssets = getMissingChecksumAssets(assetNames);
+const hasReleaseChangelog = /full changelog|compare\/editor-v|changes|changelog/iu.test(release?.body ?? '');
 
 const checks = [
     {
@@ -49,6 +51,15 @@ const checks = [
             : 'Release body or latest.json notes are missing.',
     },
     {
+        detail: 'The GitHub Release body should contain a changelog signal because the updater confirmation dialog fetches matching editor-v* release notes before install.',
+        id: 'releaseChangelog',
+        label: 'Release changelog',
+        status: hasReleaseChangelog ? 'ready' : 'blocked',
+        summary: hasReleaseChangelog
+            ? 'Release body includes changelog text or a compare link.'
+            : 'Release body is present but does not look like a changelog.',
+    },
+    {
         detail: 'The release should include the installer and signed updater assets needed by the supported desktop update path.',
         id: 'releaseAssets',
         label: 'Release assets',
@@ -56,6 +67,15 @@ const checks = [
         summary: missingAssets.length === 0
             ? `${assetNames.length} release assets include the expected installer/updater set.`
             : `Missing expected assets: ${missingAssets.join(', ')}.`,
+    },
+    {
+        detail: 'Paid OS trust signing/notarization is not configured, so published installer releases should include SHA256SUMS files for manual download verification.',
+        id: 'artifactChecksums',
+        label: 'Artifact checksums',
+        status: missingChecksumAssets.length === 0 ? 'ready' : 'limited',
+        summary: missingChecksumAssets.length === 0
+            ? 'Release includes per-platform SHA256 checksum files.'
+            : `Checksum files start with the updated release workflow. Missing: ${missingChecksumAssets.join(', ')}.`,
     },
     {
         detail: 'The latest.json asset should be reachable through the configured GitHub Releases endpoint and match the local editor version.',
@@ -78,6 +98,7 @@ const checks = [
 ];
 
 const ready = countByStatus(checks, 'ready');
+const limited = countByStatus(checks, 'limited');
 const blocked = countByStatus(checks, 'blocked');
 const report = {
     blocked,
@@ -89,6 +110,7 @@ const report = {
             version: latestJson.version,
         }
         : undefined,
+    limited,
     ready,
     release: release
         ? {
@@ -99,14 +121,14 @@ const report = {
             tagName: release.tag_name,
         }
         : undefined,
-    status: blocked > 0 ? 'blocked' : 'ready',
+    status: blocked > 0 ? 'blocked' : (limited > 0 ? 'limited' : 'ready'),
     version,
 };
 
 if (asJson) {
     console.log(JSON.stringify(report, undefined, 2));
 } else {
-    console.log(`Editor published release: ${report.status} (${ready} ready / ${blocked} blocked)`);
+    console.log(`Editor published release: ${report.status} (${ready} ready / ${limited} limited / ${blocked} blocked)`);
     console.log(`Release tag: ${tagName}`);
     if (report.release?.htmlUrl) console.log(`Release URL: ${report.release.htmlUrl}`);
     for (const check of checks) {
@@ -155,6 +177,15 @@ function getMissingAssets(assetNames_) {
     ]
         .filter(([, pattern]) => !assetNames_.some((name) => pattern.test(name)))
         .map(([label]) => label);
+}
+
+function getMissingChecksumAssets(assetNames_) {
+    return [
+        'SHA256SUMS-linux-x64.txt',
+        'SHA256SUMS-windows-x64.txt',
+        'SHA256SUMS-macos-arm64.txt',
+        'SHA256SUMS-macos-x64.txt',
+    ].filter((name) => !assetNames_.includes(name));
 }
 
 function getMissingLatestJsonPlatforms(latestJson_) {

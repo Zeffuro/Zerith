@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import { confirmEditorAction } from '../services/editorDialogs';
 import { runStartupEditorUpdateCheck } from '../services/editorStartupUpdateCheck';
 import {
-    formatEditorUpdateInstallPrompt,
+    createEditorUpdateInstallPrompt,
     runEditorUpdateCheck,
 } from '../services/editorUpdateClient';
 import { isTauriRuntime } from '../services/runtime/runtimeEnvironment';
@@ -26,10 +26,10 @@ export function useStartupEditorUpdateCheck(): void {
             void runStartupEditorUpdateCheck({
                 announceOperationStatus,
                 checkForUpdatesOnStartup,
-                confirmInstall: (update) => confirmEditorAction({
+                confirmInstall: async (update) => confirmEditorAction({
                     cancelText: 'Later',
                     confirmText: 'Install',
-                    message: formatEditorUpdateInstallPrompt(update),
+                    message: await createEditorUpdateInstallPrompt(update),
                     title: 'Install Editor Update',
                 }),
                 isDesktopRuntime: isTauriRuntime,

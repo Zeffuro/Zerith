@@ -8,8 +8,8 @@ import {
 } from '../../services/contentMigrationCommand';
 import { confirmEditorAction } from '../../services/editorDialogs';
 import {
+    createEditorUpdateInstallPrompt,
     formatEditorUpdateFlowResult,
-    formatEditorUpdateInstallPrompt,
     getEditorUpdateFlowResultTone,
     runEditorUpdateCheck,
 } from '../../services/editorUpdateClient';
@@ -183,10 +183,10 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
         try {
             announceOperationStatus('Checking for editor updates...');
             const result = await runEditorUpdateCheck({
-                confirmInstall: (update) => confirmEditorAction({
+                confirmInstall: async (update) => confirmEditorAction({
                     cancelText: 'Later',
                     confirmText: 'Install',
-                    message: formatEditorUpdateInstallPrompt(update),
+                    message: await createEditorUpdateInstallPrompt(update),
                     title: 'Install Editor Update',
                 }),
                 onProgress: ({ downloadedBytes, totalBytes }) => {

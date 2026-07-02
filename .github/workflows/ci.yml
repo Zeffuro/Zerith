@@ -29,14 +29,14 @@ jobs:
       - name: Fixture policy guard
         run: npm run test:fixture-policy
 
-      - name: Public README readiness
-        run: npm run test:public-readiness
+      - name: Public surface check
+        run: npm run check:public
 
-      - name: Package publication readiness
-        run: npm run report:package-publication -- --json
+      - name: Package publication check
+        run: node scripts/report-package-publication.mjs --json
 
-      - name: Npm publication readiness
-        run: npm run report:npm-publication -- --json
+      - name: Npm publication check
+        run: node scripts/report-npm-publication.mjs --json
 
       - name: Npm package consumer smoke
         run: npm run test:npm-core

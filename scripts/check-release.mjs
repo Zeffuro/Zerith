@@ -1,13 +1,14 @@
 import { spawnSync } from 'node:child_process';
 
+const node = process.execPath;
 const checks = [
-    ['npm', ['run', 'report:version-policy', '--', '--json']],
-    ['npm', ['run', 'report:editor-updater', '--', '--json']],
-    ['npm', ['run', 'report:editor-distribution', '--', '--json']],
-    ['npm', ['run', 'report:npm-publication', '--', '--json']],
-    ['npm', ['run', 'report:package-publication', '--', '--json']],
-    ['npm', ['run', 'report:release-readiness', '--', '--json']],
-    ['npm', ['run', 'test:public-readiness']],
+    [node, ['scripts/report-version-policy.mjs', '--json']],
+    [node, ['scripts/report-editor-updater.mjs', '--json']],
+    [node, ['scripts/report-editor-distribution.mjs', '--json']],
+    [node, ['scripts/report-npm-publication.mjs', '--json']],
+    [node, ['scripts/report-package-publication.mjs', '--json']],
+    [node, ['scripts/report-release.mjs', '--json']],
+    ['npm', ['run', 'check:public']],
     ['npm', ['run', 'test:fixture-policy']],
     ['npm', ['run', 'test:npm-core']],
     ['npm', ['run', 'test:npm-player']],
@@ -20,10 +21,10 @@ for (const [command, args, options] of checks) {
     run(command, args, options);
 }
 
-console.log('Release readiness check passed.');
+console.log('Release check passed.');
 
 function run(command, args, options = {}) {
-    console.log(`> ${command} ${args.join(' ')}`);
+    console.log(`> ${formatCommandForLog(command)} ${args.join(' ')}`);
     const shellCommand = resolveCommand(command, args);
     const result = spawnSync(shellCommand.command, shellCommand.args, {
         encoding: 'utf8',
@@ -39,6 +40,10 @@ function run(command, args, options = {}) {
     if (result.status !== 0) {
         process.exit(result.status ?? 1);
     }
+}
+
+function formatCommandForLog(command) {
+    return command === process.execPath ? 'node' : command;
 }
 
 function resolveCommand(command, args) {

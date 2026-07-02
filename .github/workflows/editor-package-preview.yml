@@ -56,26 +56,26 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Public readiness
-        run: npm run test:public-readiness
+      - name: Public surface check
+        run: npm run check:public
 
       - name: Fixture policy guard
         run: npm run test:fixture-policy
 
       - name: Version policy
-        run: npm run report:version-policy -- --json
+        run: node scripts/report-version-policy.mjs --json
 
-      - name: Package publication readiness
-        run: npm run report:package-publication -- --json
+      - name: Package publication check
+        run: node scripts/report-package-publication.mjs --json
 
       - name: Editor artifact contract
-        run: npm run report:editor-artifacts -- --json
+        run: node scripts/report-editor-artifacts.mjs --json
 
-      - name: Editor updater readiness
-        run: npm run report:editor-updater -- --json
+      - name: Editor updater check
+        run: node scripts/report-editor-updater.mjs --json
 
-      - name: Editor distribution readiness
-        run: npm run report:editor-distribution -- --json
+      - name: Editor distribution check
+        run: node scripts/report-editor-distribution.mjs --json
 
       - name: Build Tauri editor packages
         uses: tauri-apps/tauri-action@v1

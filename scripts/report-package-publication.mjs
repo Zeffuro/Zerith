@@ -137,7 +137,7 @@ const report = {
 if (asJson) {
     console.log(JSON.stringify(report, undefined, 2));
 } else {
-    console.log(`Package publication readiness: ${report.status} (${ready} ready / ${limited} limited / ${blocked} blocked)`);
+    console.log(`Package publication checks: ${report.status} (${ready} ready / ${limited} limited / ${blocked} blocked)`);
     for (const check of checks) {
         console.log(`- ${check.label}: ${check.status} - ${check.summary}`);
     }

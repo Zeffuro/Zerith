@@ -56,26 +56,33 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Public readiness
-        run: npm run test:public-readiness
+      - name: Public surface check
+        run: npm run check:public
 
       - name: Fixture policy guard
         run: npm run test:fixture-policy
 
       - name: Version policy
-        run: npm run report:version-policy -- --json
+        run: node scripts/report-version-policy.mjs --json
 
-      - name: Package publication readiness
-        run: npm run report:package-publication -- --json
+      - name: Package publication check
+        run: node scripts/report-package-publication.mjs --json
 
       - name: Editor artifact contract
-        run: npm run report:editor-artifacts -- --json
+        run: node scripts/report-editor-artifacts.mjs --json
 
-      - name: Editor updater readiness
-        run: npm run report:editor-updater -- --json
+      - name: Editor updater check
+        run: node scripts/report-editor-updater.mjs --json
 
-      - name: Editor distribution readiness
-        run: npm run report:editor-distribution -- --json
+      - name: Editor distribution check
+        run: node scripts/report-editor-distribution.mjs --json
+
+      - name: Read editor version
+        id: editor-version
+        shell: bash
+        run: |
+          version="$(node -p "require('./packages/editor/package.json').version")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Create draft GitHub release
         uses: tauri-apps/tauri-action@v1
@@ -87,8 +94,17 @@ jobs:
           args: ${{ matrix.args }}
           generateReleaseNotes: true
           projectPath: packages/editor
-          releaseBody: Installer artifacts are the supported install path. Portable/manual downloads, if attached, are manual-replace downloads.
+          releaseBody: Installer artifacts are the supported install path. OS trust signing/notarization is not configured yet; verify manual downloads with SHA256SUMS-*.txt. Portable/manual downloads, if attached, are manual-replace downloads.
           releaseDraft: true
           releaseName: Zerith Editor v__VERSION__
           tagName: editor-v__VERSION__
           updaterJsonPreferNsis: true
+
+      - name: Create release checksums
+        run: node scripts/create-editor-release-checksums.mjs --out ".release-checksums/SHA256SUMS-${{ matrix.label }}.txt"
+
+      - name: Upload release checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: gh release upload "editor-v${{ steps.editor-version.outputs.version }}" ".release-checksums/SHA256SUMS-${{ matrix.label }}.txt" --clobber

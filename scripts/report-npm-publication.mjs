@@ -206,7 +206,7 @@ const report = {
 if (asJson) {
     console.log(JSON.stringify(report, undefined, 2));
 } else {
-    console.log(`Npm publication readiness: ${report.status} (${ready} ready / ${limited} limited / ${blocked} blocked)`);
+    console.log(`Npm publication checks: ${report.status} (${ready} ready / ${limited} limited / ${blocked} blocked)`);
     console.log(`Recommended first package: ${recommendedFirstPackage}`);
     for (const check of checks) {
         console.log(`- ${check.label}: ${check.status} - ${check.summary}`);

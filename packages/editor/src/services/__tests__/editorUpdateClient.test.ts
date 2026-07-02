@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+    createEditorUpdateInstallPrompt,
     formatEditorUpdateFlowResult,
     formatEditorUpdateInstallPrompt,
     getEditorUpdateFlowResultTone,
@@ -79,5 +80,54 @@ describe('editor update result formatting', () => {
             body: 'Fixes updater confirmation.',
             version: '0.1.2',
         })).toContain('Fixes updater confirmation.');
+    });
+
+    it('formats the install confirmation prompt from manifest notes when body is missing', () => {
+        expect(formatEditorUpdateInstallPrompt({
+            rawJson: {
+                notes: 'Manifest notes from latest.json.',
+            },
+            version: '0.1.2',
+        })).toContain('Manifest notes from latest.json.');
+    });
+
+    it('creates the install prompt from matching GitHub release notes first', async () => {
+        const fetch = vi.fn(() => Promise.resolve({
+            json: () => Promise.resolve([
+                {
+                    body: 'Installer note.\n\n**Full Changelog**: https://github.com/Zeffuro/Zerith/compare/editor-v0.1.5...editor-v0.1.6',
+                    tag_name: 'editor-v0.1.6',
+                },
+            ]),
+            ok: true,
+            status: 200,
+            statusText: 'OK',
+        } as Response));
+
+        const prompt = await createEditorUpdateInstallPrompt({
+            body: 'Manifest fallback.',
+            version: '0.1.6',
+        }, { fetch });
+
+        expect(prompt).toContain('Changes in this release:');
+        expect(prompt).toContain('Installer note.');
+        expect(prompt).toContain('Full Changelog: https://github.com/Zeffuro/Zerith/compare/editor-v0.1.5...editor-v0.1.6');
+        expect(prompt).not.toContain('Manifest fallback.');
+    });
+
+    it('falls back to updater manifest notes when release-note loading times out', async () => {
+        const fetch = vi.fn(() => new Promise<Response>(() => {}));
+
+        const prompt = await createEditorUpdateInstallPrompt({
+            rawJson: {
+                notes: 'Signed manifest fallback.',
+            },
+            version: '0.1.6',
+        }, {
+            fetch,
+            releaseNotesTimeoutMs: 1,
+        });
+
+        expect(prompt).toContain('Signed manifest fallback.');
     });
 });

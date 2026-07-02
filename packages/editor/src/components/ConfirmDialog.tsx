@@ -50,11 +50,38 @@ export function ConfirmDialog({ cancelText = 'Cancel', confirmText = 'Confirm', 
                 onClick={(event) => event.stopPropagation()}
                 ref={dialogReference}
                 role="dialog"
-                style={{ background: t.bg.panel, border: `1px solid ${t.border.normal}`, borderRadius: t.radius.lg, boxShadow: t.shadow.popupStrong, color: t.text.primary, padding: `${16 * uiScale}px`, width: `${380 * uiScale}px` }}
+                style={{
+                    background: t.bg.panel,
+                    border: `1px solid ${t.border.normal}`,
+                    borderRadius: t.radius.lg,
+                    boxShadow: t.shadow.popupStrong,
+                    color: t.text.primary,
+                    maxHeight: `calc(100vh - ${32 * uiScale}px)`,
+                    overflow: 'hidden',
+                    padding: `${16 * uiScale}px`,
+                    width: `min(${560 * uiScale}px, calc(100vw - ${32 * uiScale}px))`,
+                }}
                 tabIndex={-1}
             >
                 <div id={titleId} style={{ fontSize: `${14 * uiScale}px`, fontWeight: 700, marginBottom: `${8 * uiScale}px` }}>{title}</div>
-                <div id={messageId} style={{ color: t.text.normal, fontSize: `${13 * uiScale}px`, marginBottom: `${16 * uiScale}px`, opacity: .9, whiteSpace: 'pre-wrap' }}>{message}</div>
+                <div
+                    className="zerith-scrollbar"
+                    id={messageId}
+                    style={{
+                        color: t.text.normal,
+                        fontSize: `${13 * uiScale}px`,
+                        lineHeight: 1.5,
+                        marginBottom: `${16 * uiScale}px`,
+                        maxHeight: `min(52vh, ${360 * uiScale}px)`,
+                        opacity: .9,
+                        overflowWrap: 'anywhere',
+                        overflowY: 'auto',
+                        paddingRight: `${4 * uiScale}px`,
+                        whiteSpace: 'pre-wrap',
+                    }}
+                >
+                    {message}
+                </div>
                 <div style={{ display: 'flex', gap: `${8 * uiScale}px`, justifyContent: 'flex-end' }}>
                     {extraActionText && onExtraAction ? (
                         <button

@@ -30,6 +30,17 @@ export type LoadEditorReleaseNotesDeps = {
     releasesApiUrl?: string;
 };
 
+export async function loadEditorReleaseNoteForVersion(
+    version: string,
+    deps: LoadEditorReleaseNotesDeps = {},
+): Promise<EditorReleaseNote | undefined> {
+    const result = await loadEditorReleaseNotes(deps);
+    if (result.status !== 'loaded') return undefined;
+
+    const tagName = `${EDITOR_RELEASE_TAG_PREFIX}${version}`;
+    return result.notes.find((note) => note.version === version || note.tagName === tagName);
+}
+
 export async function loadEditorReleaseNotes(deps: LoadEditorReleaseNotesDeps = {}): Promise<EditorReleaseNotesLoadResult> {
     const fetch_ = deps.fetch ?? globalThis.fetch;
     if (typeof fetch_ !== 'function') {

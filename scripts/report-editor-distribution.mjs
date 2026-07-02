@@ -9,7 +9,10 @@ const tauriConfig = await readJson('packages/editor/src-tauri/tauri.conf.json');
 const cargoManifest = await readText('packages/editor/src-tauri/Cargo.toml');
 const workflowNames = await readdir(path.join(root, '.github/workflows'));
 const artifactContractExists = await fileExists('scripts/report-editor-artifacts.mjs');
-const updaterReadinessReportExists = await fileExists('scripts/report-editor-updater-readiness.mjs');
+const updaterReportExists = await fileExists('scripts/report-editor-updater.mjs');
+const editorReleaseWorkflow = workflowNames.includes('editor-release.yml')
+    ? await readText('.github/workflows/editor-release.yml')
+    : '';
 
 const cargoVersion = readCargoField(cargoManifest, 'version');
 const cargoDescription = readCargoField(cargoManifest, 'description');
@@ -23,6 +26,9 @@ const releaseWorkflowExists = workflowNames.some((name) => /release/iu.test(name
 const editorPackagePreviewWorkflowExists = workflowNames.includes('editor-package-preview.yml');
 const editorBundleTargetsAll = tauriConfig.bundle?.active === true && tauriConfig.bundle?.targets === 'all';
 const hasEditorUpdateClient = await sourceTreeIncludes('packages/editor/src', '@tauri-apps/plugin-updater');
+const hasUnsignedDownloadVerification = editorReleaseWorkflow.includes('create-editor-release-checksums.mjs')
+    && editorReleaseWorkflow.includes('SHA256SUMS')
+    && editorReleaseWorkflow.includes('OS trust signing/notarization is not configured yet');
 
 const requirements = [
     {
@@ -74,8 +80,8 @@ const requirements = [
         status: hasUpdaterDependency && updaterConfig && createsUpdaterArtifacts ? 'ready' : 'blocked',
         summary: hasUpdaterDependency && updaterConfig && createsUpdaterArtifacts
             ? 'Updater plugin, config, and artifact generation are present.'
-            : (updaterReadinessReportExists
-                ? 'Updater support is not configured yet; report:editor-updater tracks the remaining prerequisites.'
+            : (updaterReportExists
+                ? 'Updater support is not configured yet; the updater report tracks the remaining prerequisites.'
                 : 'Updater support is not configured yet.'),
     },
     {
@@ -104,6 +110,15 @@ const requirements = [
         summary: 'Portable/manual releases are supported as manual-replace artifacts; in-app updates remain installer-managed.',
     },
     {
+        detail: 'Paid OS trust signing/notarization is not configured. Release automation should disclose that and publish SHA256 checksums so manual installer downloads have an independent verification path.',
+        id: 'unsignedDownloadVerification',
+        label: 'Unsigned download verification',
+        status: hasUnsignedDownloadVerification ? 'ready' : 'blocked',
+        summary: hasUnsignedDownloadVerification
+            ? 'Release workflow discloses unsigned OS trust status and uploads SHA256 checksum assets.'
+            : 'Unsigned releases need checksum assets and an explicit release-note disclosure.',
+    },
+    {
         detail: 'A release workflow publishes signed artifacts to GitHub Releases. The manual package-preview workflow only proves bundle output and uploads workflow artifacts for inspection.',
         id: 'editorReleaseWorkflow',
         label: 'Editor release workflow',
@@ -125,7 +140,7 @@ const report = {
     blocked,
     limited,
     ready,
-    recommendation: 'Ship installer artifacts as the primary path and portable/manual downloads as explicit manual-replace fallbacks. In-app updates are wired for installer-managed desktop builds.',
+    recommendation: 'Ship installer artifacts as the primary path and portable/manual downloads as explicit manual-replace fallbacks. In-app updates are wired for installer-managed desktop builds. Until paid OS trust signing is configured, publish SHA256 checksums beside manual downloads.',
     requirements,
     status: blocked > 0 ? 'blocked' : (limited > 0 ? 'limited' : 'ready'),
 };
@@ -133,7 +148,7 @@ const report = {
 if (asJson) {
     console.log(JSON.stringify(report, undefined, 2));
 } else {
-    console.log(`Editor distribution readiness: ${report.status} (${ready} ready / ${limited} limited / ${blocked} blocked)`);
+    console.log(`Editor distribution checks: ${report.status} (${ready} ready / ${limited} limited / ${blocked} blocked)`);
     for (const requirement of report.requirements) {
         console.log(`- ${requirement.label}: ${requirement.status} - ${requirement.summary}`);
     }

@@ -1,6 +1,11 @@
 import { relaunch as tauriRelaunch } from '@tauri-apps/plugin-process';
 import { type DownloadEvent, check as tauriCheck } from '@tauri-apps/plugin-updater';
 
+import {
+    type EditorReleaseNote,
+    loadEditorReleaseNoteForVersion,
+    type LoadEditorReleaseNotesDeps,
+} from './editorReleaseNotes';
 import { isTauriRuntime } from './runtime/runtimeEnvironment';
 
 export type EditorUpdateClientDeps = {
@@ -29,6 +34,10 @@ export type EditorUpdateFlowResult =
         status: 'up-to-date';
     };
 
+export type EditorUpdateInstallPromptDeps = {
+    releaseNotesTimeoutMs?: number;
+} & LoadEditorReleaseNotesDeps;
+
 export type EditorUpdateProgress = {
     downloadedBytes: number;
     totalBytes?: number;
@@ -40,8 +49,20 @@ type EditorUpdate = {
     currentVersion: string;
     date?: string;
     downloadAndInstall: (onEvent?: (event: DownloadEvent) => void) => Promise<void>;
+    rawJson?: Record<string, unknown>;
     version: string;
 };
+
+export async function createEditorUpdateInstallPrompt(
+    update: Pick<EditorUpdate, 'body' | 'rawJson' | 'version'>,
+    deps: EditorUpdateInstallPromptDeps = {},
+): Promise<string> {
+    const releaseNote = await loadEditorReleaseNoteForVersionWithTimeout(update.version, deps);
+    return formatEditorUpdateInstallPrompt({
+        ...update,
+        body: releaseNote?.body ?? readUpdateBody(update),
+    });
+}
 
 export function formatEditorUpdateFlowResult(result: EditorUpdateFlowResult): string {
     switch (result.status) {
@@ -63,13 +84,16 @@ export function formatEditorUpdateFlowResult(result: EditorUpdateFlowResult): st
     }
 }
 
-export function formatEditorUpdateInstallPrompt(update: Pick<EditorUpdate, 'body' | 'version'>): string {
-    const notes = update.body?.trim();
+export function formatEditorUpdateInstallPrompt(update: Pick<EditorUpdate, 'body' | 'rawJson' | 'version'>): string {
+    const notes = formatEditorUpdatePromptNotes(readUpdateBody(update));
+    const notesHeading = notes ? 'Changes in this release:' : undefined;
+    const notesBlock = notesHeading && notes ? ['', notesHeading, notes] : [];
+
     return [
         `Zerith Editor ${update.version} is available.`,
         '',
         'Install it now? The editor will restart after installation.',
-        ...(notes ? ['', notes] : []),
+        ...notesBlock,
     ].join('\n');
 }
 
@@ -124,4 +148,49 @@ function confirmInstallByDefault(update: EditorUpdate): boolean {
     if (typeof confirm_ !== 'function') return false;
 
     return confirm_(formatEditorUpdateInstallPrompt(update));
+}
+
+function formatEditorUpdatePromptNotes(value: string | undefined): string | undefined {
+    const notes = value
+        ?.replaceAll('\r\n', '\n')
+        .replaceAll(/\*\*(.*?)\*\*/gu, '$1')
+        .trim();
+
+    if (!notes) return undefined;
+
+    const maxLength = 1200;
+    return notes.length > maxLength
+        ? `${notes.slice(0, maxLength).trimEnd()}\n...`
+        : notes;
+}
+
+async function loadEditorReleaseNoteForVersionWithTimeout(
+    version: string,
+    deps: EditorUpdateInstallPromptDeps,
+): Promise<EditorReleaseNote | undefined> {
+    const timeoutMs = deps.releaseNotesTimeoutMs ?? 2500;
+    if (timeoutMs <= 0) return loadEditorReleaseNoteForVersion(version, deps);
+
+    let timeoutId: ReturnType<typeof globalThis.setTimeout> | undefined;
+    const timeout = new Promise<void>((resolve) => {
+        timeoutId = globalThis.setTimeout(resolve, timeoutMs);
+    });
+
+    try {
+        return await Promise.race([
+            loadEditorReleaseNoteForVersion(version, deps),
+            timeout,
+        ]) as EditorReleaseNote | undefined;
+    } finally {
+        if (timeoutId !== undefined) globalThis.clearTimeout(timeoutId);
+    }
+}
+
+function readUpdateBody(update: Pick<EditorUpdate, 'body' | 'rawJson'>): string | undefined {
+    const rawNotes = update.rawJson?.notes;
+    const rawBody = update.rawJson?.body;
+    if (typeof update.body === 'string' && update.body.trim()) return update.body;
+    if (typeof rawNotes === 'string' && rawNotes.trim()) return rawNotes;
+    if (typeof rawBody === 'string' && rawBody.trim()) return rawBody;
+    return undefined;
 }
