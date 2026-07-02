@@ -42,6 +42,9 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
+      - name: Build core package
+        run: npm run build --workspace=@zeffuro/zerith-core
+
       - name: Build browser editor
         env:
           ZERITH_EDITOR_BASE: /${{ github.event.repository.name }}/editor/
@@ -49,8 +52,7 @@ jobs:
         run: npm run build --workspace=zerith-editor
 
       - name: Build example game
-        run: node scripts/build-game.mjs --game=games/example-game --outDir=dist/pages/example-game --base="/${{ github.event.repository.name }}/example-game/"
-        working-directory: packages/player
+        run: npm run build:game -- --game=games/example-game --outDir=dist/pages/example-game --base="/${{ github.event.repository.name }}/example-game/"
 
       - name: Exported runtime smoke - example game
         run: npm run test:runtime-smoke -- --game=games/example-game --outDir=dist/pages/example-game --base="/${{ github.event.repository.name }}/example-game/" --skipBuild --expect="Rain on the glass" --expect="No borrowed cast"

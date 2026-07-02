@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "npm run build --workspace=@zeffuro/zerith-core",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri"

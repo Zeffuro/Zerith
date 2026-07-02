@@ -31,8 +31,11 @@
   },
   "scripts": {
     "dev": "vite",
+    "prebuild": "npm run build --workspace=@zeffuro/zerith-core",
     "build": "tsc && vite build",
+    "prebuild:game": "npm run build --workspace=@zeffuro/zerith-core",
     "build:game": "node ./scripts/build-game.mjs",
+    "prebuild:game:zip": "npm run build --workspace=@zeffuro/zerith-core",
     "build:game:zip": "node ./scripts/build-game.mjs --zip",
     "export:parity-smoke": "node ./scripts/export-parity-smoke.mjs",
     "preview": "vite preview",
