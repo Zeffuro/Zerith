@@ -1,4 +1,4 @@
-import { type SpriteFrame } from 'zerith-core';
+import { type SpriteFrame } from '@zeffuro/zerith-core';
 
 import {
     frameAtPoint,

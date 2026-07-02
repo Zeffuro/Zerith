@@ -1,5 +1,5 @@
+import { generateGridFrames, type SpritesheetDescriptor } from '@zeffuro/zerith-core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { generateGridFrames, type SpritesheetDescriptor } from 'zerith-core';
 
 import { useBackdropDismissal } from '../../hooks/useBackdropDismissal';
 import { editorTheme as t } from '../../theme/editorTheme';

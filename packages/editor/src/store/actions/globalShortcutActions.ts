@@ -1,6 +1,6 @@
-import type { Command } from 'zerith-core';
+import type { Command } from '@zeffuro/zerith-core';
 
-import { deepClone } from 'zerith-core';
+import { deepClone } from '@zeffuro/zerith-core';
 
 import type { EditorNode } from '../../types/EditorNode';
 import type { ScriptPath } from '../../utils/scriptPathUtilities';

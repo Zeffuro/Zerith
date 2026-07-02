@@ -1,5 +1,5 @@
+import type { Command } from '@zeffuro/zerith-core';
 import type * as Monaco from 'monaco-editor';
-import type { Command } from 'zerith-core';
 
 import Editor, { type OnMount } from '@monaco-editor/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';

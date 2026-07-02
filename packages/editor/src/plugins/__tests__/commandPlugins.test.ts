@@ -1,5 +1,5 @@
+import { SchemaRegistry } from '@zeffuro/zerith-core/schemas';
 import { afterAll, describe, expect, it, vi } from 'vitest';
-import { SchemaRegistry } from 'zerith-core/schemas';
 import { z } from 'zod';
 
 import { inferCommandFields } from '../../utils/zodInference';

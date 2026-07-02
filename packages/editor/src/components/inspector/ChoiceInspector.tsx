@@ -1,4 +1,4 @@
-import type { ChoiceCommand, ChoiceOption } from 'zerith-core';
+import type { ChoiceCommand, ChoiceOption } from '@zeffuro/zerith-core';
 
 import { Plus, Trash2 } from 'lucide-react';
 

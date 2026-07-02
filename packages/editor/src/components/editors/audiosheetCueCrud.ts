@@ -1,4 +1,4 @@
-import { type AudiosheetDescriptor } from 'zerith-core';
+import { type AudiosheetDescriptor } from '@zeffuro/zerith-core';
 
 import { clamp } from '../../utils/math';
 import { computeCueDragUpdate } from './audiosheetEditorModel';

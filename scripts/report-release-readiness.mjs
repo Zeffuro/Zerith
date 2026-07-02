@@ -36,9 +36,9 @@ const hasBrowserEditorPagesDeploy = pagesWorkflow.includes('ZERITH_EDITOR_OUT_DI
 const hasPackagePublicationPolicy = hasBrandedWorkspacePackageNames()
     && rootManifest.private === true
     && editorManifest.private === true
-    && playerManifest.private === true
     && packagePublicationReportExists
-    && (coreManifest.private === true || (hasCoreNpmPackageLane() && npmPublicationReportExists));
+    && (coreManifest.private === true || (hasCoreNpmPackageLane() && npmPublicationReportExists))
+    && (playerManifest.private === true || (hasPlayerNpmPackageLane() && npmPublicationReportExists));
 const remainingUpdaterReleaseNeeds = getRemainingUpdaterReleaseNeeds();
 
 const requirements = [
@@ -88,17 +88,17 @@ const requirements = [
             : 'The editor has no in-app release notes or changelog surface.',
     },
     {
-        detail: 'The editor release channel is GitHub editor artifacts. Root/editor/player stay guarded from npm publication; zerith-core may publish only through the separate npm lane with built output, declarations, provenance, and a consumer smoke.',
+        detail: 'The editor release channel is GitHub editor artifacts. Root/editor stay guarded from npm publication; @zeffuro/zerith-core and @zeffuro/zerith-player may publish only through explicit npm lanes with provenance and consumer smokes.',
         id: 'packagePublicationPolicy',
         label: 'Package publication policy',
         status: hasPackagePublicationPolicy ? 'ready' : 'blocked',
         summary: hasPackagePublicationPolicy
-            ? 'Workspace packages use branded names, and zerith-core has an explicit npm lane.'
+            ? 'Workspace packages use Zeffuro-scoped names, and core/player have explicit npm lanes.'
             : 'Package names or publication policy are not explicit enough for release readiness.',
     },
     {
         detail: versionPolicyExists
-            ? 'The source version policy defines editor artifact releases from the editor app version and keeps private zerith-core/zerith-player package versions internal.'
+            ? 'The source version policy defines editor artifact releases from the editor app version and tracks package versions through the separate npm lanes.'
             : 'Package versions are still placeholder/internal values and no source policy defines how they map to tags or artifacts.',
         id: 'versionPolicy',
         label: 'Version policy',
@@ -157,6 +157,7 @@ function hasCiReleaseGate(workflow) {
         'npm run report:package-publication -- --json',
         'npm run report:npm-publication -- --json',
         'npm run test:npm-core',
+        'npm run test:npm-player',
         'npm run lint',
         'npm test',
         'npm run test:visual:ci',
@@ -178,9 +179,9 @@ function hasSourceMetadata(manifest) {
 }
 
 function hasBrandedWorkspacePackageNames() {
-    return coreManifest.name === 'zerith-core'
+    return coreManifest.name === '@zeffuro/zerith-core'
         && editorManifest.name === 'zerith-editor'
-        && playerManifest.name === 'zerith-player';
+        && playerManifest.name === '@zeffuro/zerith-player';
 }
 
 function hasCoreNpmPackageLane() {
@@ -189,6 +190,14 @@ function hasCoreNpmPackageLane() {
         && coreManifest.publishConfig?.access === 'public'
         && manifestContains(coreManifest, './dist/')
         && manifestContains(coreManifest, '.d.ts');
+}
+
+function hasPlayerNpmPackageLane() {
+    return playerManifest.private !== true
+        && playerManifest.version !== '0.0.0'
+        && playerManifest.publishConfig?.access === 'public'
+        && playerManifest.bin?.['zerith-player'] === 'scripts/build-game.mjs'
+        && playerManifest.dependencies?.['@zeffuro/zerith-core'] === `^${coreManifest.version}`;
 }
 
 function hasEditorDistributionUpdatePath() {

@@ -10,10 +10,12 @@ const editorManifest = await readJson('packages/editor/package.json');
 const playerManifest = await readJson('packages/player/package.json');
 const workflowSources = await readWorkflowSources();
 
-const recommendedFirstPackage = 'zerith-core';
+const corePackageName = '@zeffuro/zerith-core';
+const playerPackageName = '@zeffuro/zerith-player';
+const recommendedFirstPackage = corePackageName;
 const coreIsRecommendedFirstPackage = coreManifest.name === recommendedFirstPackage;
 const rootIsPrivate = rootManifest.private === true;
-const appPackagesRemainPrivate = editorManifest.private === true && playerManifest.private === true;
+const editorPackageRemainsPrivate = editorManifest.private === true;
 const coreHasPublicManifest = coreManifest.private !== true
     && coreManifest.version !== '0.0.0'
     && isNonEmptyString(coreManifest.description)
@@ -29,23 +31,50 @@ const coreHasPublishAllowlist = Array.isArray(coreManifest.files)
     && coreManifest.files.includes('LICENSE');
 const coreHasNoFileDependencies = Object.values(coreManifest.dependencies ?? {})
     .every((version) => typeof version === 'string' && !version.startsWith('file:'));
+const playerHasPublicManifest = playerManifest.private !== true
+    && playerManifest.version !== '0.0.0'
+    && isNonEmptyString(playerManifest.description)
+    && isNonEmptyString(playerManifest.license)
+    && playerManifest.repository !== undefined
+    && playerManifest.publishConfig?.access === 'public';
+const playerHasCliPackageContract = playerManifest.bin?.['zerith-player'] === 'scripts/build-game.mjs'
+    && Array.isArray(playerManifest.files)
+    && [
+        'index.html',
+        'scripts/build-game.mjs',
+        'scripts/content-compiler.mjs',
+        'src/main.ts',
+        'src/runtime/bootstrapConfig.ts',
+        'src/runtime/bootstrapPlayer.ts',
+        'src/runtime/compiledContentPrefetch.ts',
+        'src/runtime/playerAccessibility.ts',
+        'vite.config.ts',
+        'README.md',
+        'LICENSE',
+    ]
+        .every((entry) => playerManifest.files.includes(entry));
+const playerDependsOnPublishedCoreRange = playerManifest.dependencies?.[corePackageName] === `^${coreManifest.version}`;
+const playerHasNoFileDependencies = Object.values(playerManifest.dependencies ?? {})
+    .every((version) => typeof version === 'string' && !version.startsWith('file:'));
 const hasTrustedPublishingWorkflow = workflowSources.some((source) => (
     /id-token:\s*write/u.test(source)
     && /registry-url:\s*['"]?https:\/\/registry\.npmjs\.org/u.test(source)
     && /\bnpm\s+(?:stage\s+)?publish\b/u.test(source)
 ));
-const hasConsumerInstallSmoke = workflowSources.some((source) => /npm\s+install\s+.*\.tgz/u.test(source))
-    || Object.values(rootManifest.scripts ?? {}).some((script) => typeof script === 'string' && /smoke-npm-package\.mjs/u.test(script));
+const hasCoreConsumerInstallSmoke = Object.values(rootManifest.scripts ?? {})
+    .some((script) => typeof script === 'string' && script.includes(`smoke-npm-package.mjs ${corePackageName}`));
+const hasPlayerCliSmoke = Object.values(rootManifest.scripts ?? {})
+    .some((script) => typeof script === 'string' && script.includes(`smoke-npm-package.mjs ${playerPackageName}`));
 
 const checks = [
     {
-        detail: 'The first npm product should be the runtime/library surface. The desktop editor should stay on GitHub installer artifacts, and the player app should wait for a CLI/library contract.',
+        detail: 'The first npm product should be the runtime/library surface. The desktop editor should stay on GitHub installer artifacts. The player can follow once it is a CLI package and depends on a published core version.',
         id: 'initialPackageTarget',
         label: 'Initial package target',
-        status: coreIsRecommendedFirstPackage && rootIsPrivate && appPackagesRemainPrivate ? 'ready' : 'blocked',
-        summary: coreIsRecommendedFirstPackage && rootIsPrivate && appPackagesRemainPrivate
-            ? 'Use zerith-core as the first npm package; keep root, editor, and player guarded for now.'
-            : 'The first npm package target is unclear or app packages are publishable too early.',
+        status: coreIsRecommendedFirstPackage && rootIsPrivate && editorPackageRemainsPrivate ? 'ready' : 'blocked',
+        summary: coreIsRecommendedFirstPackage && rootIsPrivate && editorPackageRemainsPrivate
+            ? 'Publish @zeffuro/zerith-core first; @zeffuro/zerith-player is the follow-up CLI package lane.'
+            : 'The first npm package target is unclear or editor/root publication guards are missing.',
     },
     {
         detail: 'A public npm package needs its own non-placeholder version and package metadata before removing the private guard.',
@@ -53,8 +82,8 @@ const checks = [
         label: 'Core public manifest',
         status: coreHasPublicManifest ? 'ready' : 'blocked',
         summary: coreHasPublicManifest
-            ? 'zerith-core has public package metadata.'
-            : 'zerith-core is still private, versioned as 0.0.0, or missing package-level description/license/repository/publishConfig.',
+            ? '@zeffuro/zerith-core has public package metadata.'
+            : '@zeffuro/zerith-core is still private, versioned as 0.0.0, or missing package-level description/license/repository/publishConfig.',
     },
     {
         detail: 'Consumers should install JavaScript and declarations, not source TypeScript entrypoints that depend on the repo build setup.',
@@ -62,8 +91,8 @@ const checks = [
         label: 'Core build output',
         status: coreHasBuiltEntrypoints ? 'ready' : 'blocked',
         summary: coreHasBuiltEntrypoints
-            ? 'zerith-core entrypoints resolve to built dist files with declarations.'
-            : 'zerith-core still exports source .ts files and has no dist/declaration package contract.',
+            ? '@zeffuro/zerith-core entrypoints resolve to built dist files with declarations.'
+            : '@zeffuro/zerith-core still exports source .ts files and has no dist/declaration package contract.',
     },
     {
         detail: 'Published tarballs should be small and intentional. Tests, fixtures, editor assets, and raw development files should not leak into the package.',
@@ -71,8 +100,8 @@ const checks = [
         label: 'Core package contents',
         status: coreHasPublishAllowlist ? 'ready' : 'blocked',
         summary: coreHasPublishAllowlist
-            ? 'zerith-core has an explicit files allowlist for dist, README, and LICENSE.'
-            : 'zerith-core lacks a files allowlist; npm pack currently falls back to broad source inclusion.',
+            ? '@zeffuro/zerith-core has an explicit files allowlist for dist, README, and LICENSE.'
+            : '@zeffuro/zerith-core lacks a files allowlist; npm pack currently falls back to broad source inclusion.',
     },
     {
         detail: 'Public packages cannot depend on local workspace file paths. Internal consumers can keep file paths until the published package lane exists.',
@@ -80,8 +109,26 @@ const checks = [
         label: 'Dependency policy',
         status: coreHasNoFileDependencies ? 'ready' : 'blocked',
         summary: coreHasNoFileDependencies
-            ? 'zerith-core has no file: dependencies.'
-            : 'zerith-core has local file: dependencies that cannot publish as-is.',
+            ? '@zeffuro/zerith-core has no file: dependencies.'
+            : '@zeffuro/zerith-core has local file: dependencies that cannot publish as-is.',
+    },
+    {
+        detail: 'The player npm product is a CLI/static shell package. It should expose a bin, include only the shell/build inputs it needs, and keep the Tauri editor out of the tarball.',
+        id: 'playerCliPackage',
+        label: 'Player CLI package',
+        status: playerHasPublicManifest && playerHasCliPackageContract ? 'ready' : 'blocked',
+        summary: playerHasPublicManifest && playerHasCliPackageContract
+            ? '@zeffuro/zerith-player has public package metadata, a bin, and an explicit shell file allowlist.'
+            : '@zeffuro/zerith-player lacks package metadata, a CLI bin, or an explicit shell file allowlist.',
+    },
+    {
+        detail: '@zeffuro/zerith-player should depend on the public @zeffuro/zerith-core version range instead of a local file path, because consumers install it outside the monorepo.',
+        id: 'playerDependencyPolicy',
+        label: 'Player dependency policy',
+        status: playerHasNoFileDependencies && playerDependsOnPublishedCoreRange ? 'ready' : 'blocked',
+        summary: playerHasNoFileDependencies && playerDependsOnPublishedCoreRange
+            ? '@zeffuro/zerith-player depends on the matching public @zeffuro/zerith-core version range.'
+            : '@zeffuro/zerith-player still depends on a local file path or mismatched core range.',
     },
     {
         detail: 'Use npm trusted publishing with GitHub Actions OIDC instead of long-lived npm tokens once package metadata and dist output are ready.',
@@ -94,19 +141,35 @@ const checks = [
     },
     {
         detail: 'Before publishing, create a disposable consumer project, install the packed tarball, import the public entrypoints, and run a tiny compile/runtime check.',
-        id: 'consumerInstallSmoke',
-        label: 'Consumer install smoke',
-        status: hasConsumerInstallSmoke ? 'ready' : 'blocked',
-        summary: hasConsumerInstallSmoke
-            ? 'A packed-tarball consumer install smoke exists.'
-            : 'No packed-tarball consumer install smoke exists yet.',
+        id: 'coreConsumerInstallSmoke',
+        label: 'Core consumer install smoke',
+        status: hasCoreConsumerInstallSmoke ? 'ready' : 'blocked',
+        summary: hasCoreConsumerInstallSmoke
+            ? 'A @zeffuro/zerith-core packed-tarball consumer install smoke exists.'
+            : 'No @zeffuro/zerith-core packed-tarball consumer install smoke exists yet.',
     },
     {
-        detail: 'Registry availability is an external mutable state. Verify with npm view, then reserve/publish from the intended npm account or org.',
+        detail: 'Before publishing the player, install packed core/player tarballs together in a disposable consumer project and run the player CLI against a real fixture game.',
+        id: 'playerCliSmoke',
+        label: 'Player CLI smoke',
+        status: hasPlayerCliSmoke ? 'ready' : 'blocked',
+        summary: hasPlayerCliSmoke
+            ? 'A @zeffuro/zerith-player packed-tarball CLI smoke exists.'
+            : 'No @zeffuro/zerith-player packed-tarball CLI smoke exists yet.',
+    },
+    {
+        detail: 'Registry availability is an external mutable state. Verify with npm view before publishing a new package name or version.',
         id: 'registryNameReservation',
-        label: 'Registry name reservation',
+        label: 'Registry version check',
         status: 'limited',
-        summary: 'Verify current npm name availability immediately before the first publish.',
+        summary: 'Verify the target @zeffuro/zerith-core and @zeffuro/zerith-player versions immediately before publish.',
+    },
+    {
+        detail: '@zeffuro/zerith-player depends on @zeffuro/zerith-core by version. Publish @zeffuro/zerith-core first, then verify the exact core version is visible on npm before publishing @zeffuro/zerith-player.',
+        id: 'playerPublishSequence',
+        label: 'Player publish sequence',
+        status: 'limited',
+        summary: 'Publish @zeffuro/zerith-player only after npm view confirms the matching @zeffuro/zerith-core version.',
     },
 ];
 
@@ -125,7 +188,7 @@ const report = {
     },
     recommendedFirstPackage,
     ready,
-    recommendation: 'Publish zerith-core first after adding dist/declarations, package metadata, files allowlist, consumer install smoke, and a trusted-publishing workflow. Keep zerith-editor on GitHub Releases and keep zerith-player private until it has a CLI/library contract.',
+    recommendation: 'Publish @zeffuro/zerith-core first. Publish @zeffuro/zerith-player only after the matching @zeffuro/zerith-core version is visible on npm. Keep zerith-editor on GitHub Releases.',
     status: blocked > 0 ? 'blocked' : (limited > 0 ? 'limited' : 'ready'),
 };
 

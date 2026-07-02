@@ -1,6 +1,6 @@
-import type { AudiosheetDescriptor } from 'zerith-core/types';
+import type { AudiosheetDescriptor } from '@zeffuro/zerith-core/types';
 
-import { parseAudiosheetDescriptor } from 'zerith-core/schemas';
+import { parseAudiosheetDescriptor } from '@zeffuro/zerith-core/schemas';
 
 import { detectDescriptorType } from '../utils/assetDescriptorUtilities';
 import { fsJoin, fsReadTextFile } from './fs';

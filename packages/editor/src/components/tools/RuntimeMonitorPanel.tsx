@@ -1,5 +1,5 @@
+import type { EvidenceItem, Serializable } from '@zeffuro/zerith-core';
 import type { CSSProperties } from 'react';
-import type { EvidenceItem, Serializable } from 'zerith-core';
 
 import { Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';

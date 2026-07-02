@@ -41,6 +41,9 @@ jobs:
       - name: Npm package consumer smoke
         run: npm run test:npm-core
 
+      - name: Npm player CLI smoke
+        run: npm run test:npm-player
+
       - name: Lint
         run: npm run lint
 

@@ -1,4 +1,4 @@
-import type { Command } from 'zerith-core';
+import type { Command } from '@zeffuro/zerith-core';
 
 import { describe, expect, it, vi } from 'vitest';
 
@@ -9,7 +9,7 @@ import type { ScriptState } from '../types';
 import { createSliceHarness } from '../../../test-utils/createSliceHarness';
 import { createPathOpsSlice } from '../slices/pathOpsSlice';
 
-vi.mock('zerith-core', () => ({
+vi.mock('@zeffuro/zerith-core', () => ({
     deepClone: <Value>(value: Value): Value => structuredClone(value),
 }));
 

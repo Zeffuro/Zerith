@@ -1,4 +1,4 @@
-import type { GameManifest } from 'zerith-core';
+import type { GameManifest } from '@zeffuro/zerith-core';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

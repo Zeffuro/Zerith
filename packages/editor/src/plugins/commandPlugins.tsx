@@ -1,6 +1,6 @@
 import type { ComponentType, ReactNode } from 'react';
 
-import { SchemaRegistry } from 'zerith-core/schemas';
+import { SchemaRegistry } from '@zeffuro/zerith-core/schemas';
 
 import type {
     BranchSpec,

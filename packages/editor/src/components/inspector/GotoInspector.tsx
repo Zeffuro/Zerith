@@ -1,4 +1,4 @@
-import type { GotoCommand } from 'zerith-core';
+import type { GotoCommand } from '@zeffuro/zerith-core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';

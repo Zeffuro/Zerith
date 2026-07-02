@@ -1,4 +1,4 @@
-import { type SpriteFrame, type SpritesheetDescriptor } from 'zerith-core';
+import { type SpriteFrame, type SpritesheetDescriptor } from '@zeffuro/zerith-core';
 
 export type ManualFrameRect = Pick<SpriteFrame, 'h' | 'w' | 'x' | 'y'>;
 

@@ -1,4 +1,4 @@
-import type { ItemCommand } from 'zerith-core';
+import type { ItemCommand } from '@zeffuro/zerith-core';
 
 import { useEffect, useMemo, useState } from 'react';
 

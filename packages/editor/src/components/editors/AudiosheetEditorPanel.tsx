@@ -1,5 +1,5 @@
+import { type AudiosheetDescriptor, parseAudiosheetDescriptor } from '@zeffuro/zerith-core';
 import { type MouseEvent, type PointerEvent, useCallback, useEffect, useMemo, useRef, useState, type WheelEvent } from 'react';
-import { type AudiosheetDescriptor, parseAudiosheetDescriptor } from 'zerith-core';
 
 import type { WorkbenchTab } from '../../store/workbench/types';
 

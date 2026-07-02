@@ -1,4 +1,4 @@
-import type { Engine } from 'zerith-core';
+import type { Engine } from '@zeffuro/zerith-core';
 
 import { useEffect } from 'react';
 

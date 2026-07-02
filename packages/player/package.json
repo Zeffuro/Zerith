@@ -1,8 +1,34 @@
 {
-  "name": "zerith-player",
-  "private": true,
-  "version": "0.0.0",
+  "name": "@zeffuro/zerith-player",
+  "version": "0.1.0",
+  "description": "Static web player and export CLI for Zerith visual novel projects.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Zeffuro/Zerith.git",
+    "directory": "packages/player"
+  },
   "type": "module",
+  "bin": {
+    "zerith-player": "scripts/build-game.mjs"
+  },
+  "files": [
+    "index.html",
+    "scripts/build-game.mjs",
+    "scripts/content-compiler.mjs",
+    "src/main.ts",
+    "src/runtime/bootstrapConfig.ts",
+    "src/runtime/bootstrapPlayer.ts",
+    "src/runtime/compiledContentPrefetch.ts",
+    "src/runtime/playerAccessibility.ts",
+    "vite.config.ts",
+    "LICENSE",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -13,12 +39,12 @@
     "test:runtime-smoke": "node ./scripts/exported-runtime-smoke.mjs"
   },
   "dependencies": {
-    "zerith-core": "file:../core",
-    "fflate": "^0.8.3"
+    "fflate": "^0.8.3",
+    "vite": "^8.0.16",
+    "@zeffuro/zerith-core": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^25.9.3",
-    "typescript": "^6.0.3",
-    "vite": "^8.0.16"
+    "typescript": "^6.0.3"
   }
 }

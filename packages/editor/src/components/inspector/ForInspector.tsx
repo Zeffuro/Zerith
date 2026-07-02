@@ -1,4 +1,4 @@
-import type { ForCommand } from 'zerith-core';
+import type { ForCommand } from '@zeffuro/zerith-core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';

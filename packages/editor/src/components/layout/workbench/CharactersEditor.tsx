@@ -1,4 +1,4 @@
-import type { CharacterDefinition } from 'zerith-core';
+import type { CharacterDefinition } from '@zeffuro/zerith-core';
 
 import { Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';

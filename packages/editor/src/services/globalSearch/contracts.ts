@@ -1,4 +1,4 @@
-import type { CharacterDefinition, ItemManifestEntry, Script } from 'zerith-core';
+import type { CharacterDefinition, ItemManifestEntry, Script } from '@zeffuro/zerith-core';
 
 import type { ScriptPath } from '../../utils/scriptPathUtilities';
 

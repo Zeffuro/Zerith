@@ -1,4 +1,4 @@
-import type { BackgroundCommand } from 'zerith-core';
+import type { BackgroundCommand } from '@zeffuro/zerith-core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';

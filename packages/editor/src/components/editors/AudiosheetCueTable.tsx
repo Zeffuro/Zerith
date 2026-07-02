@@ -1,4 +1,4 @@
-import { type AudiosheetDescriptor } from 'zerith-core';
+import { type AudiosheetDescriptor } from '@zeffuro/zerith-core';
 
 import { editorTheme as t } from '../../theme/editorTheme';
 import { styles } from '../../theme/styleHelpers';

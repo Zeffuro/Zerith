@@ -1,4 +1,4 @@
-import { SchemaRegistry } from 'zerith-core/schemas';
+import { SchemaRegistry } from '@zeffuro/zerith-core/schemas';
 import { z } from 'zod';
 
 export type CommandFieldHints = {

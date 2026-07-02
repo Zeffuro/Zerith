@@ -1,4 +1,4 @@
-import type { SetCommand } from 'zerith-core';
+import type { SetCommand } from '@zeffuro/zerith-core';
 
 import { useMemo } from 'react';
 

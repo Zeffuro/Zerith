@@ -1,5 +1,5 @@
+import type { Engine, Script } from '@zeffuro/zerith-core';
 import type { RefObject } from 'react';
-import type { Engine, Script } from 'zerith-core';
 
 import { useEffect } from 'react';
 

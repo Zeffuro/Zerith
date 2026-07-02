@@ -1,4 +1,4 @@
-import { deepClone } from 'zerith-core';
+import { deepClone } from '@zeffuro/zerith-core';
 
 import type { MacroEntry, ProjectGet, ProjectMacrosSlice, ProjectSet } from '../types';
 

@@ -1,8 +1,8 @@
+import type { CharacterDefinition, Engine, EngineConfig, GameManifest, ItemManifestEntry, SceneMap, Script } from '@zeffuro/zerith-core';
 import type { RefObject } from 'react';
-import type { CharacterDefinition, Engine, EngineConfig, GameManifest, ItemManifestEntry, SceneMap, Script } from 'zerith-core';
 
+import { bootstrapEngine, EngineConfigSchema, type EvidenceItem } from '@zeffuro/zerith-core';
 import { useEffect, useRef } from 'react';
-import { bootstrapEngine, EngineConfigSchema, type EvidenceItem } from 'zerith-core';
 
 import { fsJoin, fsReadTextFile } from '../services/fs';
 import { createGamePreviewLogger } from '../services/gamePreviewLoggerBridge';

@@ -1,4 +1,4 @@
-import type { Command, GameManifest } from 'zerith-core';
+import type { Command, GameManifest } from '@zeffuro/zerith-core';
 
 import type { OpenProjectEntryOptions } from './openProjectEntry/contracts';
 

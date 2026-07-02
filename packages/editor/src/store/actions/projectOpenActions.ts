@@ -1,4 +1,4 @@
-import type { Command } from 'zerith-core';
+import type { Command } from '@zeffuro/zerith-core';
 
 import type { MacroEntry } from '../project/types';
 

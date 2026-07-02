@@ -1,4 +1,4 @@
-import { deepClone } from 'zerith-core';
+import { deepClone } from '@zeffuro/zerith-core';
 
 type Indexable = Record<string, unknown> | unknown[];
 type PathSegment = number | string;

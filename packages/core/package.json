@@ -1,5 +1,5 @@
 {
-  "name": "zerith-core",
+  "name": "@zeffuro/zerith-core",
   "version": "0.1.0",
   "description": "Runtime, schemas, and content utilities for Zerith visual novel projects.",
   "license": "MIT",

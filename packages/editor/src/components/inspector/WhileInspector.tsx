@@ -1,4 +1,4 @@
-import type { WhileCommand } from 'zerith-core';
+import type { WhileCommand } from '@zeffuro/zerith-core';
 
 import { useMemo } from 'react';
 

@@ -1,4 +1,4 @@
-import type { DialogueBacklogEntry } from 'zerith-core/types';
+import type { DialogueBacklogEntry } from '@zeffuro/zerith-core/types';
 
 import type {
     ProjectValidationLocaleReport,

@@ -1,5 +1,5 @@
+import { type EngineConfigFile, EngineConfigSchema } from '@zeffuro/zerith-core';
 import { useMemo, useState } from 'react';
-import { type EngineConfigFile, EngineConfigSchema } from 'zerith-core';
 
 import { fsWriteTextFile } from '../../../services/fs';
 import { useProjectStore } from '../../../store/storeBootstrap';

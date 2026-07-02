@@ -1,5 +1,5 @@
+import { ScriptSchema } from '@zeffuro/zerith-core/schemas';
 import { useEffect } from 'react';
-import { ScriptSchema } from 'zerith-core/schemas';
 
 import type { EditorNode } from '../types/EditorNode';
 

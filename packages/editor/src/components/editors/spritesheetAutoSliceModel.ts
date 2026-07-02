@@ -1,4 +1,4 @@
-import { suggestGridDimensions } from 'zerith-core';
+import { suggestGridDimensions } from '@zeffuro/zerith-core';
 
 export type AutoSliceGridValues = {
     columns: number;

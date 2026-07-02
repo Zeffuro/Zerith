@@ -1,6 +1,6 @@
-import type { BaseCommand, LocaleBundle, SceneMap, Script } from 'zerith-core';
+import type { BaseCommand, LocaleBundle, SceneMap, Script } from '@zeffuro/zerith-core';
 
-import { resolveLocalizedText } from 'zerith-core/utils/Localization';
+import { resolveLocalizedText } from '@zeffuro/zerith-core/utils/Localization';
 
 export const SOURCE_PREVIEW_LOCALE = '__source__';
 

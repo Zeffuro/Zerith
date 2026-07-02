@@ -18,20 +18,25 @@ const editorVersion = editorManifest.version;
 const versionAligned = editorVersion === tauriConfig.version && editorVersion === cargoVersion && editorVersion === cargoLockVersion;
 const semverPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u;
 const editorVersionIsSemver = semverPattern.test(editorVersion);
-const rootAndAppPackagesArePrivate = rootManifest.private === true
-    && editorManifest.private === true
-    && playerManifest.private === true;
+const rootAndEditorPackagesArePrivate = rootManifest.private === true
+    && editorManifest.private === true;
 const coreHasNpmPackageLane = coreManifest.private !== true
     && coreManifest.version !== '0.0.0'
     && coreManifest.publishConfig?.access === 'public'
     && manifestContains(coreManifest, './dist/')
     && manifestContains(coreManifest, '.d.ts');
-const workspacePublicationPolicyReady = rootAndAppPackagesArePrivate
-    && (coreManifest.private === true || coreHasNpmPackageLane);
-const workspacePackageNamesAreBranded = coreManifest.name === 'zerith-core'
+const playerHasNpmPackageLane = playerManifest.private !== true
+    && playerManifest.version !== '0.0.0'
+    && playerManifest.publishConfig?.access === 'public'
+    && playerManifest.bin?.['zerith-player'] === 'scripts/build-game.mjs'
+    && playerManifest.dependencies?.['@zeffuro/zerith-core'] === `^${coreManifest.version}`;
+const workspacePublicationPolicyReady = rootAndEditorPackagesArePrivate
+    && (coreManifest.private === true || coreHasNpmPackageLane)
+    && (playerManifest.private === true || playerHasNpmPackageLane);
+const workspacePackageNamesAreBranded = coreManifest.name === '@zeffuro/zerith-core'
     && editorManifest.name === 'zerith-editor'
-    && playerManifest.name === 'zerith-player';
-const internalRuntimePackagePolicyReady = playerManifest.version === '0.0.0'
+    && playerManifest.name === '@zeffuro/zerith-player';
+const internalRuntimePackagePolicyReady = (playerManifest.version === '0.0.0' || playerHasNpmPackageLane)
     && (coreManifest.version === '0.0.0' || coreHasNpmPackageLane);
 
 const policy = {
@@ -41,7 +46,7 @@ const policy = {
         [coreManifest.name]: coreManifest.version,
         [playerManifest.name]: playerManifest.version,
     },
-    packagePublication: 'branded-private-workspace-separate-npm-lane',
+    packagePublication: 'branded-editor-artifacts-plus-core-player-npm-lanes',
     releaseChannel: 'editor-artifacts',
     rootVersion: rootManifest.version ?? null,
     status: versionAligned && editorVersionIsSemver && workspacePublicationPolicyReady && workspacePackageNamesAreBranded
@@ -73,7 +78,7 @@ const checks = [
         label: 'Workspace package names',
         status: workspacePackageNamesAreBranded ? 'ready' : 'blocked',
         summary: workspacePackageNamesAreBranded
-            ? 'Workspace packages use zerith-core, zerith-player, and zerith-editor.'
+            ? 'Workspace packages use @zeffuro/zerith-core, @zeffuro/zerith-player, and zerith-editor.'
             : 'Workspace packages do not use the expected Zerith-specific names.',
     },
     {
@@ -81,7 +86,7 @@ const checks = [
         label: 'Workspace publication guard',
         status: workspacePublicationPolicyReady ? 'ready' : 'blocked',
         summary: workspacePublicationPolicyReady
-            ? 'Root, editor, and player remain private; zerith-core is private or uses the explicit npm package lane.'
+            ? 'Root and editor remain private; core/player are private or use explicit npm package lanes.'
             : 'Workspace packages are publishable without a matching release lane.',
     },
     {
@@ -89,7 +94,7 @@ const checks = [
         label: 'Internal runtime packages',
         status: internalRuntimePackagePolicyReady ? 'ready' : 'blocked',
         summary: internalRuntimePackagePolicyReady
-            ? 'zerith-player remains internal; zerith-core is either internal or attached to the npm package lane.'
+            ? 'Core and player package versions are internal placeholders or attached to explicit npm lanes.'
             : 'Runtime package versions no longer match the release policy.',
     },
 ];

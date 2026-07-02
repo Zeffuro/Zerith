@@ -1,4 +1,4 @@
-import { isSceneFileEnvelope, parseSceneFile, validateScript } from 'zerith-core/schemas';
+import { isSceneFileEnvelope, parseSceneFile, validateScript } from '@zeffuro/zerith-core/schemas';
 
 import { executeProjectOpenAction } from '../store/actions/projectOpenActions';
 import { isRecord } from '../utils/typeGuards';

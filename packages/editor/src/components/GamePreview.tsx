@@ -1,4 +1,4 @@
-import type { Script } from 'zerith-core';
+import type { Script } from '@zeffuro/zerith-core';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 

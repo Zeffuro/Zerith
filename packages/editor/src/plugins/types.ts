@@ -1,6 +1,6 @@
+import type { CommandType } from '@zeffuro/zerith-core';
 import type { ReactNode } from 'react';
 import type React from 'react';
-import type { CommandType } from 'zerith-core';
 import type { z } from 'zod';
 
 import type { EditorNode } from '../types/EditorNode';

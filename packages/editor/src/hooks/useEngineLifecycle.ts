@@ -1,5 +1,5 @@
+import type { CharacterDefinition, Engine, GameManifest, ItemManifestEntry, SceneMap, Script } from '@zeffuro/zerith-core';
 import type { RefObject } from 'react';
-import type { CharacterDefinition, Engine, GameManifest, ItemManifestEntry, SceneMap, Script } from 'zerith-core';
 
 import { useEngineBootstrap } from './useEngineBootstrap';
 import { useSceneHotReload } from './useSceneHotReload';

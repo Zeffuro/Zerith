@@ -10,9 +10,9 @@ const editorManifest = await readJson('packages/editor/package.json');
 const playerManifest = await readJson('packages/player/package.json');
 
 const expectedPackageNames = {
-    core: 'zerith-core',
+    core: '@zeffuro/zerith-core',
     editor: 'zerith-editor',
-    player: 'zerith-player',
+    player: '@zeffuro/zerith-player',
 };
 const actualPackageNames = {
     core: coreManifest.name,
@@ -24,13 +24,13 @@ const workspaceNamesAreBranded = Object.entries(expectedPackageNames)
     .every(([key, expectedName]) => actualPackageNames[key] === expectedName);
 const genericNamesRemoved = Object.values(actualPackageNames)
     .every((name) => !genericPackageNames.has(name));
-const internalDependenciesAreBranded = editorManifest.dependencies?.['zerith-core'] === 'file:../core'
-    && playerManifest.dependencies?.['zerith-core'] === 'file:../core'
+const playerUsesPublishableCoreDependency = playerManifest.dependencies?.['@zeffuro/zerith-core'] === `^${coreManifest.version}`;
+const internalDependenciesAreBranded = editorManifest.dependencies?.['@zeffuro/zerith-core'] === 'file:../core'
+    && playerUsesPublishableCoreDependency
     && !editorManifest.dependencies?.core
     && !playerManifest.dependencies?.core;
 const rootIsPrivate = rootManifest.private === true;
-const appPackagesArePrivate = editorManifest.private === true
-    && playerManifest.private === true;
+const editorPackageIsPrivate = editorManifest.private === true;
 const coreHasNpmPackageLane = coreManifest.private !== true
     && coreManifest.version !== '0.0.0'
     && coreManifest.publishConfig?.access === 'public'
@@ -38,9 +38,30 @@ const coreHasNpmPackageLane = coreManifest.private !== true
     && manifestContains(coreManifest, '.d.ts')
     && Array.isArray(coreManifest.files)
     && coreManifest.files.includes('dist');
+const playerHasNpmPackageLane = playerManifest.private !== true
+    && playerManifest.version !== '0.0.0'
+    && playerManifest.publishConfig?.access === 'public'
+    && playerManifest.bin?.['zerith-player'] === 'scripts/build-game.mjs'
+    && Array.isArray(playerManifest.files)
+    && [
+        'index.html',
+        'scripts/build-game.mjs',
+        'scripts/content-compiler.mjs',
+        'src/main.ts',
+        'src/runtime/bootstrapConfig.ts',
+        'src/runtime/bootstrapPlayer.ts',
+        'src/runtime/compiledContentPrefetch.ts',
+        'src/runtime/playerAccessibility.ts',
+        'vite.config.ts',
+        'README.md',
+        'LICENSE',
+    ]
+        .every((entry) => playerManifest.files.includes(entry))
+    && playerUsesPublishableCoreDependency;
 const workspacePublicationPolicyReady = rootIsPrivate
-    && appPackagesArePrivate
-    && (coreManifest.private === true || coreHasNpmPackageLane);
+    && editorPackageIsPrivate
+    && (coreManifest.private === true || coreHasNpmPackageLane)
+    && (playerManifest.private === true || playerHasNpmPackageLane);
 
 const checks = [
     {
@@ -49,16 +70,16 @@ const checks = [
         label: 'Workspace package names',
         status: workspaceNamesAreBranded ? 'ready' : 'blocked',
         summary: workspaceNamesAreBranded
-            ? 'Workspace packages are named zerith-core, zerith-player, and zerith-editor.'
+            ? 'Workspace packages are named @zeffuro/zerith-core, @zeffuro/zerith-player, and zerith-editor.'
             : `Workspace packages are ${formatPackageNames(actualPackageNames)}.`,
     },
     {
-        detail: 'Editor and player should depend on the branded core package name while still using the local workspace path.',
+        detail: 'Editor should depend on the local core workspace. Player should depend on the branded public core version because it is a CLI package candidate.',
         id: 'internalDependencies',
         label: 'Internal dependencies',
         status: internalDependenciesAreBranded ? 'ready' : 'blocked',
         summary: internalDependenciesAreBranded
-            ? 'Editor and player depend on zerith-core through the local workspace path.'
+            ? 'Editor uses the local core workspace; player uses the publishable @zeffuro/zerith-core version range.'
             : 'Editor/player dependencies still reference the old core package name or an unexpected path.',
     },
     {
@@ -71,12 +92,12 @@ const checks = [
             : 'The monorepo root is publishable.',
     },
     {
-        detail: 'The current user-facing release channel is GitHub editor artifacts. Npm package publishing should stay guarded until a separate package lane has dist output, declarations, tags, provenance, and CI ownership.',
+        detail: 'The current editor release channel is GitHub artifacts. Npm package publishing is allowed only through explicit core/player lanes with package metadata, provenance, and CI smoke coverage.',
         id: 'workspacePublicationGuard',
         label: 'Workspace publication guard',
         status: workspacePublicationPolicyReady ? 'ready' : 'blocked',
         summary: workspacePublicationPolicyReady
-            ? 'Root, editor, and player are guarded; zerith-core is private or on an explicit npm package lane.'
+            ? 'Root/editor remain guarded; core/player are private or on explicit npm package lanes.'
             : 'One or more packages can publish without a defined package lane.',
     },
     {
@@ -107,7 +128,7 @@ const report = {
             'package support policy',
         ],
         packageNames: expectedPackageNames,
-        packagePublication: 'guarded-separate-npm-lane',
+        packagePublication: 'guarded-core-and-player-npm-lanes',
     },
     ready,
     status: blocked > 0 ? 'blocked' : (limited > 0 ? 'limited' : 'ready'),

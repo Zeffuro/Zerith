@@ -1,4 +1,4 @@
-import type { SfxCommand } from 'zerith-core';
+import type { SfxCommand } from '@zeffuro/zerith-core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';

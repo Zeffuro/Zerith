@@ -1,6 +1,6 @@
+import { type SpriteFrame } from '@zeffuro/zerith-core';
 import { ArrowLeft, ArrowRight, Film, Pause, Play, Plus, Square, Trash2 } from 'lucide-react';
 import { type DragEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { type SpriteFrame } from 'zerith-core';
 
 import { editorTheme as t } from '../../theme/editorTheme';
 import { ConfirmDialog } from '../ConfirmDialog';

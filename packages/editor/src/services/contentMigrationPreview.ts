@@ -1,9 +1,9 @@
-import type { GameManifest } from 'zerith-core/types';
+import type { GameManifest } from '@zeffuro/zerith-core/types';
 
 import {
     CURRENT_CONTENT_SCHEMA_VERSION,
     migrateSceneFileToCurrent,
-} from 'zerith-core/schemas';
+} from '@zeffuro/zerith-core/schemas';
 
 import { isRecord } from '../utils/typeGuards';
 import { fsReadTextFile, fsWriteTextFile } from './fs';

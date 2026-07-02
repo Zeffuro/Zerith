@@ -1,4 +1,4 @@
-import type { EngineConfig, SceneMap, SceneNavigationCommandType } from 'zerith-core';
+import type { EngineConfig, SceneMap, SceneNavigationCommandType } from '@zeffuro/zerith-core';
 
 export function createPreviewSceneNavigationHandler(
     scenes: SceneMap,

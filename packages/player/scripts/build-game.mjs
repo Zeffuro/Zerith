@@ -136,8 +136,12 @@ function createZipArchive(sourceDir, zipPath) {
 async function run() {
     const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     const repoRoot = path.resolve(packageRoot, '..', '..');
+    const invocationRoot = process.cwd();
     const args = parseArgs(process.argv.slice(2));
-    const gamePath = toAbsolutePath(args.game ?? 'games/classic-vn-starter', repoRoot);
+    const defaultGameRoot = fs.existsSync(path.join(repoRoot, 'games', 'classic-vn-starter', 'game.json'))
+        ? repoRoot
+        : invocationRoot;
+    const gamePath = toAbsolutePath(args.game ?? 'games/classic-vn-starter', args.game ? invocationRoot : defaultGameRoot);
 
     if (!gamePath) {
         throw new Error('Missing --game value. Example: --game=games/classic-vn-starter');
@@ -146,10 +150,10 @@ async function run() {
     assertGamePath(gamePath);
 
     const gameName = path.basename(gamePath);
-    const outputPath = toAbsolutePath(args.outDir, repoRoot)
-        ?? path.resolve(repoRoot, 'dist', gameName);
+    const outputPath = toAbsolutePath(args.outDir, invocationRoot)
+        ?? path.resolve(invocationRoot, 'dist', gameName);
     const base = args.base ?? './';
-    const zipPath = toAbsolutePath(args.zipFile, repoRoot)
+    const zipPath = toAbsolutePath(args.zipFile, invocationRoot)
         ?? `${outputPath}.zip`;
 
     process.env.ZERITH_GAME_DIR = gamePath;

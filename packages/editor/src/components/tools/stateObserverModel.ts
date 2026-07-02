@@ -1,4 +1,4 @@
-import type { EvidenceItem, Serializable } from 'zerith-core';
+import type { EvidenceItem, Serializable } from '@zeffuro/zerith-core';
 
 export type DraftValueKind = 'boolean' | 'json' | 'null' | 'number' | 'string';
 

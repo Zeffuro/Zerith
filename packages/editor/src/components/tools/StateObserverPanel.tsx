@@ -1,4 +1,4 @@
-import type { EvidenceItem, Serializable } from 'zerith-core';
+import type { EvidenceItem, Serializable } from '@zeffuro/zerith-core';
 
 import { RefreshCcw, Save } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';

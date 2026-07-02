@@ -8,7 +8,8 @@ on:
         required: true
         type: choice
         options:
-          - zerith-core
+          - @zeffuro/zerith-core
+          - @zeffuro/zerith-player
 
 permissions:
   contents: read
@@ -16,7 +17,7 @@ permissions:
 
 jobs:
   publish:
-    if: inputs.package == 'zerith-core'
+    if: inputs.package == '@zeffuro/zerith-core' || inputs.package == '@zeffuro/zerith-player'
     runs-on: ubuntu-latest
     environment: npm
     steps:
@@ -36,8 +37,45 @@ jobs:
       - name: Check npm publication readiness
         run: npm run report:npm-publication -- --json
 
-      - name: Consumer install smoke
+      - name: Check package version is unpublished
+        shell: bash
+        run: |
+          if [ "${{ inputs.package }}" = "@zeffuro/zerith-core" ]; then
+            package_dir="packages/core"
+          else
+            package_dir="packages/player"
+          fi
+
+          package_name="$(node -p "require('./${package_dir}/package.json').name")"
+          package_version="$(node -p "require('./${package_dir}/package.json').version")"
+
+          if npm view "${package_name}@${package_version}" version >/dev/null 2>&1; then
+            echo "::error::${package_name}@${package_version} is already published. Bump that package version before publishing again."
+            exit 1
+          fi
+
+      - name: Core consumer install smoke
+        if: inputs.package == '@zeffuro/zerith-core'
         run: npm run test:npm-core
 
-      - name: Publish zerith-core
-        run: npm publish --workspace=zerith-core --provenance --access public
+      - name: Player CLI install smoke
+        if: inputs.package == '@zeffuro/zerith-player'
+        run: npm run test:npm-player
+
+      - name: Verify published core dependency
+        if: inputs.package == '@zeffuro/zerith-player'
+        shell: bash
+        run: |
+          core_name="$(node -p "require('./packages/core/package.json').name")"
+          core_version="$(node -p "require('./packages/core/package.json').version")"
+          npm view "${core_name}@${core_version}" version
+
+      - name: Publish @zeffuro/zerith-core
+        if: inputs.package == '@zeffuro/zerith-core'
+        working-directory: packages/core
+        run: npm publish --provenance --access public
+
+      - name: Publish @zeffuro/zerith-player
+        if: inputs.package == '@zeffuro/zerith-player'
+        working-directory: packages/player
+        run: npm publish --provenance --access public

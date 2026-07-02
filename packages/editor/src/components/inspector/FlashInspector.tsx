@@ -1,4 +1,4 @@
-import type { FlashCommand } from 'zerith-core';
+import type { FlashCommand } from '@zeffuro/zerith-core';
 
 import { useInspectorFieldEditor } from '../../hooks/useInspectorFieldEditor';
 import { FieldError } from './FieldError';

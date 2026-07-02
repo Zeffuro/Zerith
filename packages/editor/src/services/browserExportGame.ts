@@ -1,4 +1,3 @@
-import type { Zippable } from 'fflate';
 import type {
     CharacterDefinition,
     CompiledAssetDependencies,
@@ -9,10 +8,11 @@ import type {
     LocaleBundle,
     SceneFile,
     Script,
-} from 'zerith-core';
+} from '@zeffuro/zerith-core';
+import type { Zippable } from 'fflate';
 
+import { collectCompiledContentCacheSources, compileContentManifest, mergeAssetDependencies } from '@zeffuro/zerith-core';
 import { strToU8, zipSync } from 'fflate';
-import { collectCompiledContentCacheSources, compileContentManifest, mergeAssetDependencies } from 'zerith-core';
 
 import type { BrowserDesktopExportArtifactManifest } from './browserParityReport';
 import type { ExportCachePolicy, ExportGameOptions, ExportGameResult } from './exportGame';

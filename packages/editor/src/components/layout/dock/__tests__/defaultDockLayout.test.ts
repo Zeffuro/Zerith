@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('zerith-core', () => ({
+vi.mock('@zeffuro/zerith-core', () => ({
     deepClone: <T>(value: T): T => structuredClone(value),
 }));
 

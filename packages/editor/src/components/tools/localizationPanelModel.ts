@@ -1,6 +1,6 @@
-import type { LocaleBundle, Script } from 'zerith-core';
+import type { LocaleBundle, Script } from '@zeffuro/zerith-core';
 
-import { collectTextLocalizationReferences, resolveLocalizedText } from 'zerith-core/utils/Localization';
+import { collectTextLocalizationReferences, resolveLocalizedText } from '@zeffuro/zerith-core/utils/Localization';
 
 import type { ScriptPath } from '../../utils/scriptPathUtilities';
 

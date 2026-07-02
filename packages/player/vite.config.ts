@@ -32,6 +32,7 @@ export default defineConfig(({ command }) => {
             outDir: outDirectory,
         },
         publicDir: gameDirectory,
+        root: currentDirectory,
         server: {
             port: 5173,
         },

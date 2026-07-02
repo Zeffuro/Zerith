@@ -1,4 +1,4 @@
-import type { CharacterDefinition, Command, GameManifest, ItemManifestEntry, LocaleBundle, Script } from 'zerith-core';
+import type { CharacterDefinition, Command, GameManifest, ItemManifestEntry, LocaleBundle, Script } from '@zeffuro/zerith-core';
 
 import type { FsDirectoryEntry } from '../../services/fs';
 import type { EditorNode } from '../../types/EditorNode';

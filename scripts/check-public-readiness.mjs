@@ -29,18 +29,18 @@ assertEquals(
     'git+ssh://git@github.com/Zeffuro/Zerith.git',
     'Root package repository URL must match the configured GitHub remote.',
 );
-assertEquals(coreManifest.name, 'zerith-core', 'Core workspace package must use the branded npm package name.');
+assertEquals(coreManifest.name, '@zeffuro/zerith-core', 'Core workspace package must use the Zeffuro-scoped npm package name.');
 assertEquals(editorManifest.name, 'zerith-editor', 'Editor workspace package must use the branded npm package name.');
-assertEquals(playerManifest.name, 'zerith-player', 'Player workspace package must use the branded npm package name.');
+assertEquals(playerManifest.name, '@zeffuro/zerith-player', 'Player workspace package must use the Zeffuro-scoped npm package name.');
 assertEquals(
-    editorManifest.dependencies?.['zerith-core'],
+    editorManifest.dependencies?.['@zeffuro/zerith-core'],
     'file:../core',
-    'Editor package must depend on zerith-core through the local workspace path.',
+    'Editor package must depend on @zeffuro/zerith-core through the local workspace path.',
 );
 assertEquals(
-    playerManifest.dependencies?.['zerith-core'],
-    'file:../core',
-    'Player package must depend on zerith-core through the local workspace path.',
+    playerManifest.dependencies?.['@zeffuro/zerith-core'],
+    `^${coreManifest.version}`,
+    'Player package must depend on the matching public @zeffuro/zerith-core version range.',
 );
 for (const keyword of ['game-engine', 'interactive-fiction', 'react', 'tauri', 'typescript', 'visual-novel']) {
     if (!rootManifest.keywords?.includes(keyword)) {
@@ -82,7 +82,10 @@ assertRootScript('report:editor-updater');
 assertRootScript('report:package-publication');
 assertRootScript('report:release-readiness');
 assertRootScript('report:version-policy');
+assertRootScript('release:check');
 assertRootScript('test:fixture-policy');
+assertRootScript('test:npm-core');
+assertRootScript('test:npm-player');
 assertRootScript('version:editor');
 assertRootScript('test');
 assertEditorScript('dev');

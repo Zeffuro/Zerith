@@ -1,4 +1,4 @@
-import type { LocaleBundle, Script } from 'zerith-core';
+import type { LocaleBundle, Script } from '@zeffuro/zerith-core';
 
 import { describe, expect, it } from 'vitest';
 
