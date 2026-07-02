@@ -8,8 +8,8 @@ on:
         required: true
         type: choice
         options:
-          - @zeffuro/zerith-core
-          - @zeffuro/zerith-player
+          - "@zeffuro/zerith-core"
+          - "@zeffuro/zerith-player"
 
 permissions:
   contents: read

@@ -136,12 +136,19 @@ function createZipArchive(sourceDir, zipPath) {
 async function run() {
     const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     const repoRoot = path.resolve(packageRoot, '..', '..');
-    const invocationRoot = process.cwd();
+    const invocationRoot = process.env.INIT_CWD
+        ? path.resolve(process.env.INIT_CWD)
+        : process.cwd();
     const args = parseArgs(process.argv.slice(2));
     const defaultGameRoot = fs.existsSync(path.join(repoRoot, 'games', 'classic-vn-starter', 'game.json'))
         ? repoRoot
         : invocationRoot;
-    const gamePath = toAbsolutePath(args.game ?? 'games/classic-vn-starter', args.game ? invocationRoot : defaultGameRoot);
+    const gamePath = resolveGamePath(args.game ?? 'games/classic-vn-starter', {
+        fallbackRoot: defaultGameRoot,
+        invocationRoot,
+        preferInvocationRoot: Boolean(args.game),
+        repoRoot,
+    });
 
     if (!gamePath) {
         throw new Error('Missing --game value. Example: --game=games/classic-vn-starter');
@@ -177,6 +184,28 @@ async function run() {
         createZipArchive(outputPath, zipPath);
         process.stdout.write(`Created zip archive at ${zipPath}\n`);
     }
+}
+
+function resolveGamePath(value, { fallbackRoot, invocationRoot, preferInvocationRoot, repoRoot }) {
+    if (!value) {
+        return undefined;
+    }
+
+    if (path.isAbsolute(value)) {
+        return value;
+    }
+
+    const roots = preferInvocationRoot
+        ? [invocationRoot, repoRoot]
+        : [fallbackRoot, invocationRoot, repoRoot];
+    for (const rootPath of roots) {
+        const candidate = path.resolve(rootPath, value);
+        if (fs.existsSync(path.join(candidate, 'game.json'))) {
+            return candidate;
+        }
+    }
+
+    return path.resolve(preferInvocationRoot ? invocationRoot : fallbackRoot, value);
 }
 
 run().catch((error) => {
