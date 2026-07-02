@@ -1,4 +1,4 @@
-import { readFile, readdir } from 'node:fs/promises';
+import { access, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 
 const root = process.cwd();
@@ -56,6 +56,8 @@ const playerHasCliPackageContract = playerManifest.bin?.['zerith-player'] === 's
 const playerDependsOnPublishedCoreRange = playerManifest.dependencies?.[corePackageName] === `^${coreManifest.version}`;
 const playerHasNoFileDependencies = Object.values(playerManifest.dependencies ?? {})
     .every((version) => typeof version === 'string' && !version.startsWith('file:'));
+const hasNpmVersionBumpHelper = rootManifest.scripts?.['version:npm'] === 'node scripts/bump-npm-package-versions.mjs'
+    && await fileExists('scripts/bump-npm-package-versions.mjs');
 const hasTrustedPublishingWorkflow = workflowSources.some((source) => (
     /id-token:\s*write/u.test(source)
     && /registry-url:\s*['"]?https:\/\/registry\.npmjs\.org/u.test(source)
@@ -131,6 +133,15 @@ const checks = [
             : '@zeffuro/zerith-player still depends on a local file path or mismatched core range.',
     },
     {
+        detail: 'Core and player npm versions should move together for now, with player depending on the matching public core range, so package releases stay easy to reason about.',
+        id: 'npmVersionBumpHelper',
+        label: 'Npm version bump helper',
+        status: hasNpmVersionBumpHelper ? 'ready' : 'blocked',
+        summary: hasNpmVersionBumpHelper
+            ? 'npm run version:npm keeps @zeffuro/zerith-core, @zeffuro/zerith-player, and the player core dependency in sync.'
+            : 'No single command keeps npm package versions and the player core dependency in sync.',
+    },
+    {
         detail: 'Use npm trusted publishing with GitHub Actions OIDC instead of long-lived npm tokens once package metadata and dist output are ready.',
         id: 'trustedPublishingWorkflow',
         label: 'Trusted publishing workflow',
@@ -188,7 +199,7 @@ const report = {
     },
     recommendedFirstPackage,
     ready,
-    recommendation: 'Publish @zeffuro/zerith-core first. Publish @zeffuro/zerith-player only after the matching @zeffuro/zerith-core version is visible on npm. Keep zerith-editor on GitHub Releases.',
+    recommendation: 'Publish npm packages only when intentionally updating the public library/CLI lane. Bump with npm run version:npm, publish @zeffuro/zerith-core first, then publish @zeffuro/zerith-player after the matching core version is visible. Keep zerith-editor on GitHub Releases.',
     status: blocked > 0 ? 'blocked' : (limited > 0 ? 'limited' : 'ready'),
 };
 
@@ -258,6 +269,15 @@ async function readWorkflowSources() {
     }
 
     return sources;
+}
+
+async function fileExists(relativePath) {
+    try {
+        await access(path.join(root, relativePath));
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 async function readJson(relativePath) {

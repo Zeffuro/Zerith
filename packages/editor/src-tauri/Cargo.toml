@@ -1,6 +1,6 @@
 [package]
 name = "editor"
-version = "0.1.5"
+version = "0.1.6"
 description = "Zerith desktop authoring editor"
 authors = ["Zeffuro"]
 edition = "2021"

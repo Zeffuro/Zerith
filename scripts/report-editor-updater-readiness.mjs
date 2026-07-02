@@ -16,6 +16,8 @@ const hasEditorUpdateClient = await sourceTreeIncludes('packages/editor/src', '@
 const hasStartupUpdatePrecheck = appSource.includes('useStartupEditorUpdateCheck')
     && settingsSchema.includes('checkForUpdatesOnStartup')
     && await sourceTreeIncludes('packages/editor/src', 'runStartupEditorUpdateCheck');
+const hasUpdateDiagnostics = await sourceTreeIncludes('packages/editor/src', 'createEditorUpdateDiagnosticsReport')
+    && await sourceTreeIncludes('packages/editor/src', 'show-editor-update-diagnostics');
 
 const preferredEndpoint = 'https://github.com/Zeffuro/Zerith/releases/latest/download/latest.json';
 const updaterConfig = tauriConfig.plugins?.updater;
@@ -147,6 +149,15 @@ const checks = [
         summary: hasStartupUpdatePrecheck
             ? 'Startup update precheck and persisted toggle are present.'
             : 'Startup update precheck or persisted toggle is missing.',
+    },
+    {
+        detail: 'The editor should expose a lightweight update diagnostics report so installed-build update tests can confirm version, runtime, startup-toggle state, endpoint, and release-note source before invoking the updater.',
+        id: 'updateDiagnostics',
+        label: 'Update diagnostics',
+        status: hasUpdateDiagnostics ? 'ready' : 'blocked',
+        summary: hasUpdateDiagnostics
+            ? 'Command palette update diagnostics are present.'
+            : 'No command palette update diagnostics report is present.',
     },
     {
         detail: 'Portable/manual downloads remain manual-replace artifacts by policy. The supported in-app update path is installer-managed Tauri static JSON updates.',

@@ -37,6 +37,7 @@ export type CommandPaletteActionDeps = {
     setDockLayoutJson: (json: unknown) => void;
     setThemeKey: (key: string) => void;
     showBrowserParityReport: () => void;
+    showEditorUpdateDiagnostics: () => void;
     showGitCheckoutBranch: () => Promise<void> | void;
     showGitCommitStaged: () => Promise<void> | void;
     showGitCreateBranch: () => Promise<void> | void;
@@ -236,6 +237,14 @@ export function buildBasePaletteActions(deps: CommandPaletteActionDeps): Palette
             id: 'check-editor-updates',
             keywords: 'check install update editor updater release version',
             label: 'Check for Editor Updates...',
+        },
+        {
+            action: () => {
+                deps.showEditorUpdateDiagnostics();
+            },
+            id: 'show-editor-update-diagnostics',
+            keywords: 'update updater diagnostics release endpoint latest json startup version install',
+            label: 'Show Update Diagnostics',
         },
         {
             action: () => {

@@ -13,6 +13,7 @@ import {
     getEditorUpdateFlowResultTone,
     runEditorUpdateCheck,
 } from '../../services/editorUpdateClient';
+import { createEditorUpdateDiagnosticsReport } from '../../services/editorUpdateDiagnostics';
 import { fsOpenPath } from '../../services/fs';
 import { openLocalizationWorkbenchTab } from '../../services/localizationWorkbench';
 import { openProjectEntry } from '../../services/openProjectEntry';
@@ -79,6 +80,7 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
     const themeKey = useEditorStore((state) => state.themeKey);
     const activeDockLayoutPresetId = useSettingsStore((state) => state.activeDockLayoutPresetId);
     const recentProjects = useSettingsStore((state) => state.recentProjects);
+    const checkForUpdatesOnStartup = useSettingsStore((state) => state.checkForUpdatesOnStartup);
     const customThemes = useSettingsStore((state) => state.customThemes);
     const deleteDockLayoutPreset = useSettingsStore((state) => state.deleteDockLayoutPreset);
     const dockLayoutPresets = useSettingsStore((state) => state.dockLayoutPresets);
@@ -222,6 +224,15 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
         executeConsoleMessageAction('editor', 'info', lines.join('\n'));
     }, []);
 
+    const handleShowEditorUpdateDiagnostics = useCallback(() => {
+        const report = createEditorUpdateDiagnosticsReport({
+            checkForUpdatesOnStartup,
+            currentVersion: __ZERITH_EDITOR_VERSION__,
+            runtime: isTauriRuntime() ? 'desktop' : 'browser',
+        });
+        executeConsoleMessageAction('editor', 'info', report);
+    }, [checkForUpdatesOnStartup]);
+
     const gitActions = useCommandPaletteGitActions(projectPath);
 
     const actionDeps = {
@@ -261,6 +272,7 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
         setDockLayoutJson,
         setThemeKey,
         showBrowserParityReport: handleShowBrowserParityReport,
+        showEditorUpdateDiagnostics: handleShowEditorUpdateDiagnostics,
         showGitCheckoutBranch: gitActions.showGitCheckoutBranch,
         showGitCommitStaged: gitActions.showGitCommitStaged,
         showGitCreateBranch: gitActions.showGitCreateBranch,

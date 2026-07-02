@@ -33,6 +33,8 @@ const hasEditorReleaseNotesSurface = await sourceTreeIncludes('packages/editor/s
     && await sourceTreeIncludes('packages/editor/src', 'isReleaseNotesModalOpen');
 const hasBrowserEditorPagesDeploy = pagesWorkflow.includes('ZERITH_EDITOR_OUT_DIR')
     && pagesWorkflow.includes('dist/pages/editor');
+const pagesWorkflowUsesCurrentActions = pagesWorkflow.includes('actions/upload-pages-artifact@v5')
+    && pagesWorkflow.includes('actions/deploy-pages@v5');
 const hasPackagePublicationPolicy = hasBrandedWorkspacePackageNames()
     && rootManifest.private === true
     && editorManifest.private === true
@@ -61,13 +63,13 @@ const requirements = [
             : 'Main CI is missing one or more source/export confidence gates.',
     },
     {
-        detail: 'The deploy workflow builds both the static browser editor and first-party example-game Pages artifacts, then runs exported runtime smoke before upload.',
+        detail: 'The deploy workflow builds both the static browser editor and first-party example-game Pages artifacts, runs exported runtime smoke before upload, and uses current Node 24-compatible Pages actions.',
         id: 'pagesExampleGate',
         label: 'Pages browser sites gate',
-        status: pagesWorkflowExists && hasBrowserEditorPagesDeploy ? 'ready' : 'blocked',
-        summary: pagesWorkflowExists && hasBrowserEditorPagesDeploy
+        status: pagesWorkflowExists && hasBrowserEditorPagesDeploy && pagesWorkflowUsesCurrentActions ? 'ready' : 'blocked',
+        summary: pagesWorkflowExists && hasBrowserEditorPagesDeploy && pagesWorkflowUsesCurrentActions
             ? 'GitHub Pages can deploy both /editor and /example-game.'
-            : 'The Pages workflow does not deploy the browser editor yet.',
+            : 'The Pages workflow is missing browser editor deploy output or current Pages action versions.',
     },
     {
         detail: getEditorDistributionUpdateDetail(),

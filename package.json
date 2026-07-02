@@ -52,7 +52,8 @@
     "test:visual": "playwright test -c playwright.config.mjs",
     "test:visual:ci": "playwright test -c playwright.config.mjs --grep-invert \"captures\"",
     "test:visual:update": "playwright test -c playwright.config.mjs --update-snapshots",
-    "version:editor": "node scripts/bump-editor-version.mjs"
+    "version:editor": "node scripts/bump-editor-version.mjs",
+    "version:npm": "node scripts/bump-npm-package-versions.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

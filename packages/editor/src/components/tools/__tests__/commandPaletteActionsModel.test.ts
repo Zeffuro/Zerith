@@ -48,6 +48,7 @@ function createDeps(overrides?: Partial<CommandPaletteActionDeps>): CommandPalet
         setDockLayoutJson: vi.fn(),
         setThemeKey: vi.fn(),
         showBrowserParityReport: vi.fn(),
+        showEditorUpdateDiagnostics: vi.fn(),
         showGitCheckoutBranch: vi.fn(async () => {}),
         showGitCommitStaged: vi.fn(async () => {}),
         showGitCreateBranch: vi.fn(async () => {}),
@@ -78,12 +79,12 @@ describe('commandPaletteActionsModel', () => {
 
         const actions = buildCommandPaletteActions(deps);
 
-        expect(actions).toHaveLength(35);
+        expect(actions).toHaveLength(36);
         expect(actions[0]?.id).toBe('find-project');
-        expect(actions[31]?.id).toBe('reset-layout');
-        expect(actions[32]?.id).toBe('save-layout-preset');
-        expect(actions[33]?.id).toBe('open-recent-/alpha/game.json');
-        expect(actions[34]?.id).toBe('open-recent-/beta/game.json');
+        expect(actions[32]?.id).toBe('reset-layout');
+        expect(actions[33]?.id).toBe('save-layout-preset');
+        expect(actions[34]?.id).toBe('open-recent-/alpha/game.json');
+        expect(actions[35]?.id).toBe('open-recent-/beta/game.json');
     });
 
     it('marks manual save before save and save-all actions', async () => {
@@ -136,6 +137,7 @@ describe('commandPaletteActionsModel', () => {
         }
         expect(byId(actions, 'new-project')?.disabledReason).toBeUndefined();
         expect(byId(actions, 'show-browser-parity-report')?.disabledReason).toBeUndefined();
+        expect(byId(actions, 'show-editor-update-diagnostics')?.disabledReason).toBeUndefined();
         expect(byId(actions, 'show-git-integration-report')?.disabledReason).toBeUndefined();
         expect(byId(actions, 'open-settings')?.disabledReason).toBeUndefined();
         expect(byId(actions, 'show-release-notes')?.disabledReason).toBeUndefined();
@@ -270,6 +272,7 @@ describe('commandPaletteActionsModel', () => {
         await byId(actions, 'open-localization')?.action();
         await byId(actions, 'show-release-notes')?.action();
         await byId(actions, 'show-browser-parity-report')?.action();
+        await byId(actions, 'show-editor-update-diagnostics')?.action();
         await byId(actions, 'check-editor-updates')?.action();
         await byId(actions, 'show-git-integration-report')?.action();
         await byId(actions, 'git-create-branch')?.action();
@@ -289,6 +292,7 @@ describe('commandPaletteActionsModel', () => {
         expect(deps.openLocalizationEditor).toHaveBeenCalledTimes(1);
         expect(deps.openReleaseNotesModal).toHaveBeenCalledTimes(1);
         expect(deps.showBrowserParityReport).toHaveBeenCalledTimes(1);
+        expect(deps.showEditorUpdateDiagnostics).toHaveBeenCalledTimes(1);
         expect(deps.checkForEditorUpdates).toHaveBeenCalledTimes(1);
         expect(deps.showGitCheckoutBranch).toHaveBeenCalledTimes(1);
         expect(deps.showGitCommitStaged).toHaveBeenCalledTimes(1);

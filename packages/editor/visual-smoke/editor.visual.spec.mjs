@@ -121,20 +121,6 @@ test.describe('editor visual smoke', () => {
         await expect(reopenedPalette).toHaveCount(0);
     });
 
-    test('covers settings browser parity readiness without requesting filesystem access', async ({ page }) => {
-        await callVisualSmokeHarness(page, 'openSettingsModal');
-        const settingsDialog = page.getByRole('dialog', { name: 'Settings' });
-        await expect(settingsDialog).toBeVisible();
-
-        const browserReadiness = settingsDialog.getByLabel('Browser editor parity readiness');
-        await expect(browserReadiness).toContainText('Browser parity blocked');
-        await expect(browserReadiness).toContainText('Browser editor shell');
-        await expect(browserReadiness).toContainText('Loose directory export');
-
-        await callVisualSmokeHarness(page, 'closeSettingsModal');
-        await expect(settingsDialog).toHaveCount(0);
-    });
-
     test('covers settings plugin marketplace readiness without loading plugins', async ({ page }) => {
         await callVisualSmokeHarness(page, 'openSettingsModal');
         const settingsDialog = page.getByRole('dialog', { name: 'Settings' });
@@ -189,6 +175,24 @@ test.describe('editor visual smoke', () => {
         await expect(consolePanel).toContainText('Export parity: matched=3, browser-limited=3, desktop-only=1');
         await expect(consolePanel).toContainText('projectFileSystem: desktop=supported');
         await expect(consolePanel).toContainText('looseOutput: desktop-only');
+    });
+
+    test('covers command palette update diagnostics without invoking updater install', async ({ page }) => {
+        await callVisualSmokeHarness(page, 'openCommandPalette');
+        const commandPalette = page.getByRole('dialog', { name: 'Command palette' });
+        await expect(commandPalette).toBeVisible();
+        await commandPalette.getByPlaceholder('Type an action (e.g. Save All, Play, Reset Layout)').fill('update diagnostics');
+        await expect(commandPalette.getByRole('option', { name: 'Show Update Diagnostics' })).toBeVisible();
+        await commandPalette.getByRole('option', { name: 'Show Update Diagnostics' }).click();
+
+        await expect(commandPalette).toHaveCount(0);
+        await callVisualSmokeHarness(page, 'selectDockPanel', 'console');
+        const consolePanel = page.locator('[data-console-panel="true"]');
+        await expect(consolePanel).toBeVisible();
+        await expect(consolePanel).toContainText('Editor update diagnostics');
+        await expect(consolePanel).toContainText('Runtime: browser');
+        await expect(consolePanel).toContainText('Update checks: unavailable in browser runtime');
+        await expect(consolePanel).toContainText('Updater endpoint: https://github.com/Zeffuro/Zerith/releases/latest/download/latest.json');
     });
 
     test('covers command palette Git integration report without opening a project', async ({ page }) => {

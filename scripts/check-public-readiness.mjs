@@ -87,6 +87,7 @@ assertRootScript('test:fixture-policy');
 assertRootScript('test:npm-core');
 assertRootScript('test:npm-player');
 assertRootScript('version:editor');
+assertRootScript('version:npm');
 assertRootScript('test');
 assertEditorScript('dev');
 assertEditorScript('build');
