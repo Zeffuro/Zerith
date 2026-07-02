@@ -29,8 +29,18 @@ const internalDependenciesAreBranded = editorManifest.dependencies?.['zerith-cor
     && !editorManifest.dependencies?.core
     && !playerManifest.dependencies?.core;
 const rootIsPrivate = rootManifest.private === true;
-const workspacePackagesArePrivate = [coreManifest, editorManifest, playerManifest]
-    .every((manifest) => manifest.private === true);
+const appPackagesArePrivate = editorManifest.private === true
+    && playerManifest.private === true;
+const coreHasNpmPackageLane = coreManifest.private !== true
+    && coreManifest.version !== '0.0.0'
+    && coreManifest.publishConfig?.access === 'public'
+    && manifestContains(coreManifest, './dist/')
+    && manifestContains(coreManifest, '.d.ts')
+    && Array.isArray(coreManifest.files)
+    && coreManifest.files.includes('dist');
+const workspacePublicationPolicyReady = rootIsPrivate
+    && appPackagesArePrivate
+    && (coreManifest.private === true || coreHasNpmPackageLane);
 
 const checks = [
     {
@@ -64,10 +74,10 @@ const checks = [
         detail: 'The current user-facing release channel is GitHub editor artifacts. Npm package publishing should stay guarded until a separate package lane has dist output, declarations, tags, provenance, and CI ownership.',
         id: 'workspacePublicationGuard',
         label: 'Workspace publication guard',
-        status: workspacePackagesArePrivate ? 'ready' : 'blocked',
-        summary: workspacePackagesArePrivate
-            ? 'Workspace packages remain private until a separate npm package lane is deliberately enabled.'
-            : 'One or more workspace packages can publish without a defined npm package lane.',
+        status: workspacePublicationPolicyReady ? 'ready' : 'blocked',
+        summary: workspacePublicationPolicyReady
+            ? 'Root, editor, and player are guarded; zerith-core is private or on an explicit npm package lane.'
+            : 'One or more packages can publish without a defined package lane.',
     },
     {
         detail: 'Generic package names make accidental publication and consumer confusion more likely.',
@@ -120,6 +130,21 @@ function formatPackageNames(names) {
     return Object.entries(names)
         .map(([key, name]) => `${key}=${name}`)
         .join(', ');
+}
+
+function manifestContains(manifest, needle) {
+    return manifestValueContains(manifest.main, needle)
+        || manifestValueContains(manifest.exports, needle)
+        || manifestValueContains(manifest.types, needle);
+}
+
+function manifestValueContains(value, needle) {
+    if (typeof value === 'string') return value.includes(needle);
+    if (Array.isArray(value)) return value.some((entry) => manifestValueContains(entry, needle));
+    if (value && typeof value === 'object') {
+        return Object.values(value).some((entry) => manifestValueContains(entry, needle));
+    }
+    return false;
 }
 
 async function readJson(relativePath) {

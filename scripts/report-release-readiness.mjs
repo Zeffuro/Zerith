@@ -12,6 +12,10 @@ const tauriConfig = await readJson('packages/editor/src-tauri/tauri.conf.json');
 const cargoManifest = await readText('packages/editor/src-tauri/Cargo.toml');
 const ciWorkflow = await readText('.github/workflows/ci.yml');
 const workflowNames = await readdir(path.join(root, '.github/workflows'));
+const pagesWorkflowExists = workflowNames.includes('deploy-example-game.yml');
+const pagesWorkflow = pagesWorkflowExists ? await readText('.github/workflows/deploy-example-game.yml') : '';
+const packagePublicationReportExists = await fileExists('scripts/report-package-publication-readiness.mjs');
+const npmPublicationReportExists = await fileExists('scripts/report-npm-publication-readiness.mjs');
 const hasEditorUpdaterDependency = Boolean(editorManifest.dependencies?.['@tauri-apps/plugin-updater'])
     || cargoManifest.includes('tauri-plugin-updater');
 const hasEditorUpdaterConfig = Boolean(tauriConfig.plugins?.updater);
@@ -27,9 +31,14 @@ const editorVersionAligned = editorManifest.version === tauriConfig.version && e
 const hasEditorUpdateClient = await sourceTreeIncludes('packages/editor/src', '@tauri-apps/plugin-updater');
 const hasEditorReleaseNotesSurface = await sourceTreeIncludes('packages/editor/src', 'loadEditorReleaseNotes')
     && await sourceTreeIncludes('packages/editor/src', 'isReleaseNotesModalOpen');
+const hasBrowserEditorPagesDeploy = pagesWorkflow.includes('ZERITH_EDITOR_OUT_DIR')
+    && pagesWorkflow.includes('dist/pages/editor');
 const hasPackagePublicationPolicy = hasBrandedWorkspacePackageNames()
-    && arePackagesPrivate(rootManifest, coreManifest, editorManifest, playerManifest)
-    && await fileExists('scripts/report-package-publication-readiness.mjs');
+    && rootManifest.private === true
+    && editorManifest.private === true
+    && playerManifest.private === true
+    && packagePublicationReportExists
+    && (coreManifest.private === true || (hasCoreNpmPackageLane() && npmPublicationReportExists));
 const remainingUpdaterReleaseNeeds = getRemainingUpdaterReleaseNeeds();
 
 const requirements = [
@@ -52,13 +61,13 @@ const requirements = [
             : 'Main CI is missing one or more source/export confidence gates.',
     },
     {
-        detail: 'The deploy workflow builds the first-party example-game Pages artifact and runs exported runtime smoke before upload.',
+        detail: 'The deploy workflow builds both the static browser editor and first-party example-game Pages artifacts, then runs exported runtime smoke before upload.',
         id: 'pagesExampleGate',
-        label: 'Pages example gate',
-        status: workflowNames.includes('deploy-example-game.yml') ? 'ready' : 'blocked',
-        summary: workflowNames.includes('deploy-example-game.yml')
-            ? 'The example-game deploy path has a checked workflow.'
-            : 'The example-game deploy workflow is missing.',
+        label: 'Pages browser sites gate',
+        status: pagesWorkflowExists && hasBrowserEditorPagesDeploy ? 'ready' : 'blocked',
+        summary: pagesWorkflowExists && hasBrowserEditorPagesDeploy
+            ? 'GitHub Pages can deploy both /editor and /example-game.'
+            : 'The Pages workflow does not deploy the browser editor yet.',
     },
     {
         detail: getEditorDistributionUpdateDetail(),
@@ -79,12 +88,12 @@ const requirements = [
             : 'The editor has no in-app release notes or changelog surface.',
     },
     {
-        detail: 'The editor release channel is GitHub editor artifacts. Workspace package names are Zerith-specific and remain guarded from accidental npm publication until a separate npm package lane has built output, declarations, tags, provenance, and support policy.',
+        detail: 'The editor release channel is GitHub editor artifacts. Root/editor/player stay guarded from npm publication; zerith-core may publish only through the separate npm lane with built output, declarations, provenance, and a consumer smoke.',
         id: 'packagePublicationPolicy',
         label: 'Package publication policy',
         status: hasPackagePublicationPolicy ? 'ready' : 'blocked',
         summary: hasPackagePublicationPolicy
-            ? 'Workspace packages use branded names and publication remains explicitly guarded.'
+            ? 'Workspace packages use branded names, and zerith-core has an explicit npm lane.'
             : 'Package names or publication policy are not explicit enough for release readiness.',
     },
     {
@@ -137,10 +146,6 @@ if (asJson) {
     }
 }
 
-function arePackagesPrivate(...manifests) {
-    return manifests.every((manifest) => manifest.private === true);
-}
-
 function countByStatus(requirements_, status) {
     return requirements_.filter((requirement) => requirement.status === status).length;
 }
@@ -150,6 +155,8 @@ function hasCiReleaseGate(workflow) {
         'npm run test:fixture-policy',
         'npm run test:public-readiness',
         'npm run report:package-publication -- --json',
+        'npm run report:npm-publication -- --json',
+        'npm run test:npm-core',
         'npm run lint',
         'npm test',
         'npm run test:visual:ci',
@@ -174,6 +181,14 @@ function hasBrandedWorkspacePackageNames() {
     return coreManifest.name === 'zerith-core'
         && editorManifest.name === 'zerith-editor'
         && playerManifest.name === 'zerith-player';
+}
+
+function hasCoreNpmPackageLane() {
+    return coreManifest.private !== true
+        && coreManifest.version !== '0.0.0'
+        && coreManifest.publishConfig?.access === 'public'
+        && manifestContains(coreManifest, './dist/')
+        && manifestContains(coreManifest, '.d.ts');
 }
 
 function hasEditorDistributionUpdatePath() {
@@ -227,6 +242,21 @@ function hasVersionPolicy() {
 
 function readCargoField(text, fieldName) {
     return new RegExp(`^${fieldName}\\s*=\\s*"(?<value>[^"]+)"`, 'mu').exec(text)?.groups?.value;
+}
+
+function manifestContains(manifest, needle) {
+    return manifestValueContains(manifest.main, needle)
+        || manifestValueContains(manifest.exports, needle)
+        || manifestValueContains(manifest.types, needle);
+}
+
+function manifestValueContains(value, needle) {
+    if (typeof value === 'string') return value.includes(needle);
+    if (Array.isArray(value)) return value.some((entry) => manifestValueContains(entry, needle));
+    if (value && typeof value === 'object') {
+        return Object.values(value).some((entry) => manifestValueContains(entry, needle));
+    }
+    return false;
 }
 
 async function readJson(relativePath) {

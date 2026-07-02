@@ -35,6 +35,12 @@ jobs:
       - name: Package publication readiness
         run: npm run report:package-publication -- --json
 
+      - name: Npm publication readiness
+        run: npm run report:npm-publication -- --json
+
+      - name: Npm package consumer smoke
+        run: npm run test:npm-core
+
       - name: Lint
         run: npm run lint
 

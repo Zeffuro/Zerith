@@ -4,11 +4,15 @@ import { defineConfig } from "vite";
 import editorPackage from "./package.json" with { type: "json" };
 
 const host = process.env.TAURI_DEV_HOST;
+const editorBase = process.env.ZERITH_EDITOR_BASE;
+const editorOutDirectory = process.env.ZERITH_EDITOR_OUT_DIR;
 
 // https://vite.dev/config/
 export default defineConfig(() => ({
+  ...(editorBase ? { base: editorBase } : {}),
   build: {
     chunkSizeWarningLimit: 900,
+    ...(editorOutDirectory ? { emptyOutDir: true, outDir: editorOutDirectory } : {}),
     rollupOptions: {
       output: {
         manualChunks(id) {

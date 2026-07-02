@@ -1,4 +1,4 @@
-name: Deploy Example Game
+name: Deploy Zerith Browser Sites
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
     paths:
       - games/example-game/**
       - packages/core/**
+      - packages/editor/**
       - packages/player/**
       - package-lock.json
       - package.json
@@ -41,17 +42,45 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
+      - name: Build browser editor
+        env:
+          ZERITH_EDITOR_BASE: /${{ github.event.repository.name }}/editor/
+          ZERITH_EDITOR_OUT_DIR: ../../dist/pages/editor
+        run: npm run build --workspace=zerith-editor
+
       - name: Build example game
-        run: node scripts/build-game.mjs --game=games/example-game --outDir=dist/example-game --base="/${{ github.event.repository.name }}/"
+        run: node scripts/build-game.mjs --game=games/example-game --outDir=dist/pages/example-game --base="/${{ github.event.repository.name }}/example-game/"
         working-directory: packages/player
 
       - name: Exported runtime smoke - example game
-        run: npm run test:runtime-smoke -- --game=games/example-game --outDir=dist/example-game --base="/${{ github.event.repository.name }}/" --skipBuild --expect="Rain on the glass" --expect="No borrowed cast"
+        run: npm run test:runtime-smoke -- --game=games/example-game --outDir=dist/pages/example-game --base="/${{ github.event.repository.name }}/example-game/" --skipBuild --expect="Rain on the glass" --expect="No borrowed cast"
+
+      - name: Write Pages index
+        run: |
+          cat > dist/pages/index.html <<'HTML'
+          <!doctype html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <title>Zerith</title>
+            </head>
+            <body>
+              <main>
+                <h1>Zerith</h1>
+                <ul>
+                  <li><a href="./editor/">Browser editor</a></li>
+                  <li><a href="./example-game/">Example game</a></li>
+                </ul>
+              </main>
+            </body>
+          </html>
+          HTML
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist/example-game
+          path: dist/pages
 
   deploy:
     environment:

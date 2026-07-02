@@ -695,7 +695,7 @@ test.describe('editor visual smoke', () => {
         await expect(desktopReadiness).toContainText('Export artifact contract');
         await expect(desktopReadiness).toContainText('Scoped game permissions');
         const pagesReadiness = page.getByLabel('GitHub Pages dual-site readiness');
-        await expect(pagesReadiness).toContainText('Pages dual site blocked');
+        await expect(pagesReadiness).toContainText('Pages dual site ready');
         await expect(pagesReadiness).toContainText('Playable deploy gate');
         await expect(pagesReadiness).toContainText('Browser editor persistence');
         await expect(page.getByRole('button', { name: 'Export' })).toBeEnabled();

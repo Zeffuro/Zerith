@@ -3,18 +3,18 @@ import { describe, expect, it } from 'vitest';
 import { createGitHubPagesDualSiteReadinessReport } from '../githubPagesDualSiteReadiness';
 
 describe('githubPagesDualSiteReadiness', () => {
-    it('keeps dual-site Pages deployment blocked until browser editor and workflow requirements exist', () => {
+    it('reports the dual-site Pages deployment contract as ready', () => {
         const report = createGitHubPagesDualSiteReadinessReport();
 
-        expect(report.status).toBe('blocked');
-        expect(report.ready).toBe(2);
-        expect(report.blocked).toBe(3);
+        expect(report.status).toBe('ready');
+        expect(report.ready).toBe(5);
+        expect(report.blocked).toBe(0);
         expect(report.requirements.map((requirement) => [requirement.id, requirement.status])).toEqual([
             ['playableExampleDeploy', 'ready'],
             ['pagesBasePathSmoke', 'ready'],
-            ['browserEditorPersistence', 'blocked'],
-            ['dualArtifactWorkflow', 'blocked'],
-            ['routeIsolation', 'blocked'],
+            ['browserEditorPersistence', 'ready'],
+            ['dualArtifactWorkflow', 'ready'],
+            ['routeIsolation', 'ready'],
         ]);
     });
 

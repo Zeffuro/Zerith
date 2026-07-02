@@ -11,7 +11,7 @@ import boundaries from "eslint-plugin-boundaries";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default [
-    { ignores: ["dist", "node_modules", "src-tauri"] },
+    { ignores: ["**/dist/**", "dist", "node_modules", "src-tauri"] },
 
     js.configs.recommended,
 

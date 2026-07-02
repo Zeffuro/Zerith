@@ -1,21 +1,59 @@
 {
   "name": "zerith-core",
-  "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Runtime, schemas, and content utilities for Zerith visual novel projects.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Zeffuro/Zerith.git",
+    "directory": "packages/core"
+  },
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "exports": {
-    ".": "./src/index.ts",
-    "./handlers": "./src/handlers/index.ts",
-    "./schemas": "./src/schemas/index.ts",
-    "./types": "./src/types/index.ts",
-    "./utils/Backlog": "./src/utils/Backlog.ts",
-    "./utils/Localization": "./src/utils/Localization.ts",
-    "./utils/StoryGraph": "./src/utils/StoryGraph.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./handlers": {
+      "types": "./dist/handlers/index.d.ts",
+      "import": "./dist/handlers/index.js"
+    },
+    "./schemas": {
+      "types": "./dist/schemas/index.d.ts",
+      "import": "./dist/schemas/index.js"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/types/index.js"
+    },
+    "./utils/Backlog": {
+      "types": "./dist/utils/Backlog.d.ts",
+      "import": "./dist/utils/Backlog.js"
+    },
+    "./utils/Localization": {
+      "types": "./dist/utils/Localization.d.ts",
+      "import": "./dist/utils/Localization.js"
+    },
+    "./utils/StoryGraph": {
+      "types": "./dist/utils/StoryGraph.d.ts",
+      "import": "./dist/utils/StoryGraph.js"
+    }
   },
   "scripts": {
     "dev": "tsc --noEmit --watch",
-    "build": "tsc --noEmit"
+    "build": "vite build && tsc -p tsconfig.build.json && node ../../scripts/fix-package-declarations.mjs dist"
   },
   "dependencies": {
     "@pixi/sound": "^6.0.1",

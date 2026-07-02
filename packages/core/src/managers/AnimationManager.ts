@@ -33,7 +33,7 @@ export class AnimationManager implements IAnimationManager {
         gsap.set(target as gsap.TweenTarget, variables as gsap.TweenVars);
     }
 
-    public timeline(): GsapTimeline {
+    public timeline(): unknown {
         const timeline = gsap.timeline();
         this.timelines.add(timeline);
 

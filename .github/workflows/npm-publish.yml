@@ -1,0 +1,43 @@
+name: Npm Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package to publish
+        required: true
+        type: choice
+        options:
+          - zerith-core
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    if: inputs.package == 'zerith-core'
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          cache: npm
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Install
+        run: npm ci
+
+      - name: Check npm publication readiness
+        run: npm run report:npm-publication -- --json
+
+      - name: Consumer install smoke
+        run: npm run test:npm-core
+
+      - name: Publish zerith-core
+        run: npm publish --workspace=zerith-core --provenance --access public

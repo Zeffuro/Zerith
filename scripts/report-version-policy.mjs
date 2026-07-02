@@ -18,11 +18,21 @@ const editorVersion = editorManifest.version;
 const versionAligned = editorVersion === tauriConfig.version && editorVersion === cargoVersion && editorVersion === cargoLockVersion;
 const semverPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u;
 const editorVersionIsSemver = semverPattern.test(editorVersion);
-const workspaceIsPrivate = [rootManifest, coreManifest, editorManifest, playerManifest]
-    .every((manifest) => manifest.private === true);
+const rootAndAppPackagesArePrivate = rootManifest.private === true
+    && editorManifest.private === true
+    && playerManifest.private === true;
+const coreHasNpmPackageLane = coreManifest.private !== true
+    && coreManifest.version !== '0.0.0'
+    && coreManifest.publishConfig?.access === 'public'
+    && manifestContains(coreManifest, './dist/')
+    && manifestContains(coreManifest, '.d.ts');
+const workspacePublicationPolicyReady = rootAndAppPackagesArePrivate
+    && (coreManifest.private === true || coreHasNpmPackageLane);
 const workspacePackageNamesAreBranded = coreManifest.name === 'zerith-core'
     && editorManifest.name === 'zerith-editor'
     && playerManifest.name === 'zerith-player';
+const internalRuntimePackagePolicyReady = playerManifest.version === '0.0.0'
+    && (coreManifest.version === '0.0.0' || coreHasNpmPackageLane);
 
 const policy = {
     artifactNamePattern: `Zerith-Editor-${editorVersion}-{platform}-{kind}`,
@@ -34,7 +44,7 @@ const policy = {
     packagePublication: 'branded-private-workspace-separate-npm-lane',
     releaseChannel: 'editor-artifacts',
     rootVersion: rootManifest.version ?? null,
-    status: versionAligned && editorVersionIsSemver && workspaceIsPrivate && workspacePackageNamesAreBranded
+    status: versionAligned && editorVersionIsSemver && workspacePublicationPolicyReady && workspacePackageNamesAreBranded
         ? 'ready'
         : 'blocked',
     tagPattern: `editor-v${editorVersion}`,
@@ -69,18 +79,18 @@ const checks = [
     {
         id: 'workspacePublicationGuard',
         label: 'Workspace publication guard',
-        status: workspaceIsPrivate ? 'ready' : 'blocked',
-        summary: workspaceIsPrivate
-            ? 'Workspace packages remain private until a separate npm package lane is deliberately enabled.'
-            : 'Workspace packages are publishable, but no npm package release lane is defined.',
+        status: workspacePublicationPolicyReady ? 'ready' : 'blocked',
+        summary: workspacePublicationPolicyReady
+            ? 'Root, editor, and player remain private; zerith-core is private or uses the explicit npm package lane.'
+            : 'Workspace packages are publishable without a matching release lane.',
     },
     {
         id: 'internalRuntimePackages',
         label: 'Internal runtime packages',
-        status: coreManifest.version === '0.0.0' && playerManifest.version === '0.0.0' ? 'ready' : 'blocked',
-        summary: coreManifest.version === '0.0.0' && playerManifest.version === '0.0.0'
-            ? 'Zerith core/player package versions remain internal placeholders by artifact-release policy.'
-            : 'Zerith core/player package versions are non-placeholder values, but no npm package release lane is defined.',
+        status: internalRuntimePackagePolicyReady ? 'ready' : 'blocked',
+        summary: internalRuntimePackagePolicyReady
+            ? 'zerith-player remains internal; zerith-core is either internal or attached to the npm package lane.'
+            : 'Runtime package versions no longer match the release policy.',
     },
 ];
 
@@ -119,6 +129,21 @@ function readCargoField(text, fieldName) {
 
 function readCargoLockEditorVersion(text) {
     return /\[\[package\]\]\r?\nname = "editor"\r?\nversion = "(?<version>[^"]+)"/u.exec(text)?.groups?.version;
+}
+
+function manifestContains(manifest, needle) {
+    return manifestValueContains(manifest.main, needle)
+        || manifestValueContains(manifest.exports, needle)
+        || manifestValueContains(manifest.types, needle);
+}
+
+function manifestValueContains(value, needle) {
+    if (typeof value === 'string') return value.includes(needle);
+    if (Array.isArray(value)) return value.some((entry) => manifestValueContains(entry, needle));
+    if (value && typeof value === 'object') {
+        return Object.values(value).some((entry) => manifestValueContains(entry, needle));
+    }
+    return false;
 }
 
 async function readJson(relativePath) {
