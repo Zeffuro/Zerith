@@ -99,7 +99,7 @@ describe('projectValidationCommand', () => {
         expect(log).toHaveBeenCalledWith('editor', 'warn', expect.stringContaining('Graph missing_scene'));
     });
 
-    it('formats backlog readiness details', () => {
+    it('formats backlog status details', () => {
         const report = createReport({
             backlog: {
                 duplicateLineIds: [

@@ -12,7 +12,7 @@ export type NewProjectOptions = {
 export type NewProjectScaffoldResult = {
     initialEntryPath: string;
     manifestPath: string;
-    onboardingChecks: readonly NewProjectTemplateReadinessCheck[];
+    onboardingChecks: readonly NewProjectTemplateOnboardingCheck[];
     projectPath: string;
     templateId: NewProjectTemplateId;
 };
@@ -24,14 +24,14 @@ export type NewProjectTemplateDefinition = {
     id: NewProjectTemplateId;
     initialEntry: string;
     label: string;
-    readinessChecks: readonly NewProjectTemplateReadinessCheck[];
+    onboardingChecks: readonly NewProjectTemplateOnboardingCheck[];
     summary: string;
     tags: readonly string[];
 };
 
 export type NewProjectTemplateId = 'blank' | 'classic-vn';
 
-export type NewProjectTemplateReadinessCheck = {
+export type NewProjectTemplateOnboardingCheck = {
     description: string;
     id: string;
     label: string;
@@ -45,7 +45,7 @@ export const NEW_PROJECT_TEMPLATES: readonly NewProjectTemplateDefinition[] = [
         id: 'blank',
         initialEntry: '/scenes/intro.json',
         label: 'Blank',
-        readinessChecks: [
+        onboardingChecks: [
             {
                 description: 'Uses the current v2 scene envelope with an empty intro scene.',
                 id: 'v2-scene',
@@ -67,7 +67,7 @@ export const NEW_PROJECT_TEMPLATES: readonly NewProjectTemplateDefinition[] = [
         id: 'classic-vn',
         initialEntry: '/scenes/intro.json',
         label: 'Classic VN',
-        readinessChecks: [
+        onboardingChecks: [
             {
                 description: 'Includes stable dialogue line IDs and a matching locale bundle.',
                 id: 'line-ids',
@@ -144,7 +144,7 @@ export async function createNewProject(options: NewProjectOptions): Promise<NewP
         return {
             initialEntryPath: await resolveTemplateInitialEntryPath(projectPath, template),
             manifestPath: await fsJoin(projectPath, 'game.json'),
-            onboardingChecks: template.readinessChecks,
+            onboardingChecks: template.onboardingChecks,
             projectPath,
             templateId: template.id,
         };
@@ -159,7 +159,7 @@ export async function createNewProject(options: NewProjectOptions): Promise<NewP
     return {
         initialEntryPath: await resolveTemplateInitialEntryPath(projectPath, template),
         manifestPath: await fsJoin(projectPath, 'game.json'),
-        onboardingChecks: template.readinessChecks,
+        onboardingChecks: template.onboardingChecks,
         projectPath,
         templateId: template.id,
     };

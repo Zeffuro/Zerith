@@ -47,7 +47,7 @@ describe('createNewProject', () => {
         expect(result).toEqual({
             initialEntryPath: '/projects/case-one/scenes/intro.json',
             manifestPath: '/projects/case-one/game.json',
-            onboardingChecks: getNewProjectTemplate('blank').readinessChecks,
+            onboardingChecks: getNewProjectTemplate('blank').onboardingChecks,
             projectPath: '/projects/case-one',
             templateId: 'blank',
         });
@@ -125,7 +125,7 @@ describe('createNewProject', () => {
         expect(result).toEqual({
             initialEntryPath: '/projects/starter/scenes/intro.json',
             manifestPath: '/projects/starter/game.json',
-            onboardingChecks: getNewProjectTemplate('classic-vn').readinessChecks,
+            onboardingChecks: getNewProjectTemplate('classic-vn').onboardingChecks,
             projectPath: '/projects/starter',
             templateId: 'classic-vn',
         });
@@ -188,7 +188,7 @@ describe('createNewProject', () => {
             defaultName: 'Classic VN Starter',
             initialEntry: '/scenes/intro.json',
         });
-        expect(classic.readinessChecks.map((check) => check.id)).toEqual([
+        expect(classic.onboardingChecks.map((check) => check.id)).toEqual([
             'line-ids',
             'branching',
             'assets',

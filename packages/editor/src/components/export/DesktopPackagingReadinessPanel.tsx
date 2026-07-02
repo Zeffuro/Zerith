@@ -10,7 +10,7 @@ export function DesktopPackagingReadinessPanel({ uiScale }: DesktopPackagingRead
 
     return (
         <section
-            aria-label="Desktop packaging readiness"
+            aria-label="Desktop packaging status"
             style={{
                 borderTop: `1px solid ${t.border.subtle}`,
                 display: 'grid',

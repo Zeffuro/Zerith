@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createProjectValidationReport } from '../projectValidationReport';
 
 describe('projectValidationReport', () => {
-    it('reports graph, localization, and backlog readiness issues', async () => {
+    it('reports graph, localization, and backlog status issues', async () => {
         const files = new Map<string, string>([
             ['/project/game.json', JSON.stringify({
                 localization: {

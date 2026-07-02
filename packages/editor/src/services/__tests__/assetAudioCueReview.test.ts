@@ -77,7 +77,7 @@ describe('assetAudioCueReview', () => {
         expect(isAssetAudioCueReviewEntryExportable(missingSource)).toBe(false);
     });
 
-    it('reports cue export readiness for ready, limited, and blocked visible sheets', () => {
+    it('reports cue export status for ready, limited, and blocked visible sheets', () => {
         const ready = createAssetAudioCueReviewEntry('/assets/sfx/ui.sheet.json', {
             cues: {
                 click: { duration: 0.25, start: 0 },

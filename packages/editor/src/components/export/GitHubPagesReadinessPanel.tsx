@@ -13,7 +13,7 @@ export function GitHubPagesReadinessPanel({ uiScale }: GitHubPagesReadinessPanel
 
     return (
         <section
-            aria-label="GitHub Pages dual-site readiness"
+            aria-label="GitHub Pages dual-site status"
             style={{
                 borderTop: `1px solid ${t.border.subtle}`,
                 display: 'grid',

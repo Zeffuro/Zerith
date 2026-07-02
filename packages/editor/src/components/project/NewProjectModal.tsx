@@ -283,7 +283,7 @@ export function NewProjectModal() {
                             paddingTop: `${8 * uiScale}px`,
                         }}
                     >
-                        {selectedTemplate.readinessChecks.map((check) => (
+                        {selectedTemplate.onboardingChecks.map((check) => (
                             <div
                                 key={check.id}
                                 style={{

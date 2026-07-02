@@ -13,7 +13,7 @@ export function TimelineGraphReadinessPanel({ graph, uiScale }: TimelineGraphRea
 
     return (
         <section
-            aria-label="Timeline graph readiness"
+            aria-label="Timeline graph status"
             style={{
                 border: `1px solid ${t.border.subtle}`,
                 borderRadius: t.radius.sm,

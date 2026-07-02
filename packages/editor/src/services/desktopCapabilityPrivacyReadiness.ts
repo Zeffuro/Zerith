@@ -69,7 +69,7 @@ const DESKTOP_CAPABILITY_PRIVACY_REQUIREMENTS: readonly DesktopCapabilityPrivacy
         summary: 'Logs stay local but may include local paths or command output.',
     },
     {
-        detail: 'Desktop game export remains separated by the desktop-packaging readiness report: packaged games need their own player shell and scoped runtime permissions.',
+        detail: 'Desktop game export remains separated by the desktop packaging status report: packaged games need their own player shell and scoped runtime permissions.',
         id: 'packagedGameBoundary',
         label: 'Packaged game boundary',
         status: 'ready',

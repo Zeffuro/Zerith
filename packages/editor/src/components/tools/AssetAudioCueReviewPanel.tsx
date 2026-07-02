@@ -139,7 +139,7 @@ export function AssetAudioCueReviewPanel({
     const filterEntries = filterAssetAudioCueReviewEntries(review.entries, reviewFilter);
     const visibleEntries = searchAssetAudioCueReviewEntries(filterEntries, cueSearchQuery);
     const visibleSummary = createAssetAudioCueReviewSummary(visibleEntries);
-    const exportReadiness = createAssetAudioCueExportReadiness(visibleEntries);
+    const exportStatus = createAssetAudioCueExportReadiness(visibleEntries);
     const isExporting = exportingTarget !== undefined;
     const cueOrganizationAssetUrls = collectAssetAudioCueOrganizationAssetUrls(visibleEntries);
     const exportableVisibleCount = visibleSummary.exportableEntryCount;
@@ -222,14 +222,14 @@ export function AssetAudioCueReviewPanel({
                 style={{ ...searchInputStyle(uiScale), minHeight: `${24 * uiScale}px` }}
                 value={cueSearchQuery}
             />
-            <div aria-label="Audio cue export readiness" style={cueExportReadinessStyle(uiScale, exportReadiness.status)}>
-                <span style={cueExportReadinessPillStyle(uiScale, exportReadiness.status)}>
-                    {exportReadiness.status === 'ready' ? <CheckCircle2 size={13 * uiScale} /> : <AlertTriangle size={13 * uiScale} />}
-                    <span>Export readiness: {formatReadinessStatus(exportReadiness.status)}</span>
+            <div aria-label="Audio cue export status" style={cueExportStatusStyle(uiScale, exportStatus.status)}>
+                <span style={cueExportStatusPillStyle(uiScale, exportStatus.status)}>
+                    {exportStatus.status === 'ready' ? <CheckCircle2 size={13 * uiScale} /> : <AlertTriangle size={13 * uiScale} />}
+                    <span>Export status: {formatStatus(exportStatus.status)}</span>
                 </span>
-                <span style={{ color: t.text.muted }}>{exportReadiness.message}</span>
-                {exportReadiness.detailMessages.map((message) => (
-                    <span key={message} style={{ color: exportReadiness.status === 'ready' ? t.text.faint : t.accent.yellow }}>
+                <span style={{ color: t.text.muted }}>{exportStatus.message}</span>
+                {exportStatus.detailMessages.map((message) => (
+                    <span key={message} style={{ color: exportStatus.status === 'ready' ? t.text.faint : t.accent.yellow }}>
                         {message}
                     </span>
                 ))}
@@ -326,7 +326,7 @@ export function AssetAudioCueReviewPanel({
     );
 }
 
-function cueExportReadinessPillStyle(
+function cueExportStatusPillStyle(
     uiScale: number,
     status: 'blocked' | 'limited' | 'ready',
 ) {
@@ -347,7 +347,7 @@ function cueExportReadinessPillStyle(
     };
 }
 
-function cueExportReadinessStyle(
+function cueExportStatusStyle(
     uiScale: number,
     status: 'blocked' | 'limited' | 'ready',
 ) {
@@ -421,7 +421,12 @@ function formatCueNames(cueNames: readonly string[]): string {
     return remaining > 0 ? `${preview}, +${remaining} more` : preview;
 }
 
-function formatReadinessStatus(status: 'blocked' | 'limited' | 'ready'): string {
+function formatSeconds(value: number): string {
+    if (value <= 0) return '0.00s';
+    return `${value.toFixed(2)}s`;
+}
+
+function formatStatus(status: 'blocked' | 'limited' | 'ready'): string {
     switch (status) {
         case 'blocked': {
             return 'Blocked';
@@ -433,9 +438,4 @@ function formatReadinessStatus(status: 'blocked' | 'limited' | 'ready'): string 
             return 'Ready';
         }
     }
-}
-
-function formatSeconds(value: number): string {
-    if (value <= 0) return '0.00s';
-    return `${value.toFixed(2)}s`;
 }

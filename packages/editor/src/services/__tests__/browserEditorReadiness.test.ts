@@ -23,7 +23,7 @@ describe('browserEditorReadiness', () => {
         ]);
     });
 
-    it('blocks project filesystem readiness without browser picker support', () => {
+    it('blocks project filesystem status without browser picker support', () => {
         const report = createBrowserEditorReadinessReport({
             browserFileSystemAccess: false,
             runtime: 'browser',

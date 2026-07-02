@@ -121,18 +121,18 @@ test.describe('editor visual smoke', () => {
         await expect(reopenedPalette).toHaveCount(0);
     });
 
-    test('covers settings plugin marketplace readiness without loading plugins', async ({ page }) => {
+    test('covers settings plugin marketplace status without loading plugins', async ({ page }) => {
         await callVisualSmokeHarness(page, 'openSettingsModal');
         const settingsDialog = page.getByRole('dialog', { name: 'Settings' });
         await expect(settingsDialog).toBeVisible();
 
         await settingsDialog.getByRole('button', { name: 'Plugins' }).click();
 
-        const marketplaceReadiness = settingsDialog.getByLabel('Plugin marketplace readiness');
-        await expect(marketplaceReadiness).toContainText('Marketplace blocked');
-        await expect(marketplaceReadiness).toContainText('Manifest trust policy');
-        await expect(marketplaceReadiness).toContainText('limited');
-        await expect(marketplaceReadiness).toContainText('Package integrity');
+        const marketplaceStatus = settingsDialog.getByLabel('Plugin marketplace status');
+        await expect(marketplaceStatus).toContainText('Marketplace blocked');
+        await expect(marketplaceStatus).toContainText('Manifest trust policy');
+        await expect(marketplaceStatus).toContainText('limited');
+        await expect(marketplaceStatus).toContainText('Package integrity');
         await expect(settingsDialog.getByText('No manifest inspected.')).toBeVisible();
 
         await callVisualSmokeHarness(page, 'closeSettingsModal');
@@ -233,10 +233,10 @@ test.describe('editor visual smoke', () => {
         await page.getByRole('button', { name: 'Overview' }).click();
         await expect(page.getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-expanded', 'true');
         await expect(page.locator('[aria-label="Scene overview"]')).toBeVisible();
-        const graphReadiness = page.getByLabel('Timeline graph readiness');
-        await expect(graphReadiness).toContainText('Graph canvas blocked');
-        await expect(graphReadiness).toContainText('Timeline overview graph');
-        await expect(graphReadiness).toContainText('Full graph canvas');
+        const graphStatus = page.getByLabel('Timeline graph status');
+        await expect(graphStatus).toContainText('Graph canvas blocked');
+        await expect(graphStatus).toContainText('Timeline overview graph');
+        await expect(graphStatus).toContainText('Full graph canvas');
 
         await page.getByRole('button', { name: 'Reveal in JSON' }).click();
         await expect(page.getByText('Current: json')).toBeVisible();
@@ -278,9 +278,9 @@ test.describe('editor visual smoke', () => {
         const cueReview = page.locator('section').filter({ hasText: 'Audio cue review' });
         await expect(cueReview).toBeVisible();
         await expect(cueReview.getByRole('status').filter({ hasText: '1/1 sheet | 3 cues' })).toBeVisible();
-        const exportReadiness = cueReview.getByLabel('Audio cue export readiness');
-        await expect(exportReadiness).toContainText('Export readiness: Ready');
-        await expect(exportReadiness).toContainText('3 cue WAVs ready from 1 sheet.');
+        const exportStatus = cueReview.getByLabel('Audio cue export status');
+        await expect(exportStatus).toContainText('Export status: Ready');
+        await expect(exportStatus).toContainText('3 cue WAVs ready from 1 sheet.');
         await expect(cueReview).toContainText('/assets/sfx/voices.sheet.json');
         await expect(cueReview).toContainText('Source: /assets/sfx/voices.wav');
         await expect(cueReview.getByRole('button', { name: 'Organize Cue Assets (2)' })).toBeEnabled();
@@ -292,7 +292,7 @@ test.describe('editor visual smoke', () => {
         await expect(cueReview).toContainText('holdit');
     });
 
-    test('covers audio cue review missing-source readiness with a real project open', async ({ page }) => {
+    test('covers audio cue review missing-source status with a real project open', async ({ page }) => {
         const files = await readProjectFixture('games/example-game');
         delete files['assets/sfx/voices.wav'];
 
@@ -306,9 +306,9 @@ test.describe('editor visual smoke', () => {
 
         const cueReview = page.locator('section').filter({ hasText: 'Audio cue review' });
         await expect(cueReview).toBeVisible();
-        const exportReadiness = cueReview.getByLabel('Audio cue export readiness');
-        await expect(exportReadiness).toContainText('Export readiness: Blocked');
-        await expect(exportReadiness).toContainText('1 visible sheet missing source audio.');
+        const exportStatus = cueReview.getByLabel('Audio cue export status');
+        await expect(exportStatus).toContainText('Export status: Blocked');
+        await expect(exportStatus).toContainText('1 visible sheet missing source audio.');
         await expect(cueReview).toContainText('Source audio missing: /assets/sfx/voices.wav');
         await expect(cueReview.getByRole('button', { name: 'Export Visible' })).toBeDisabled();
         await expect(cueReview.getByRole('button', { name: 'Export', exact: true })).toBeDisabled();
@@ -694,14 +694,14 @@ test.describe('editor visual smoke', () => {
         await expect(page.getByRole('status').filter({ hasText: 'Project: /classic-vn-starter' })).toBeVisible();
         await expect(page.getByLabel(/Output Directory/u)).toHaveValue('dist/classic-vn-starter');
         await expect(page.getByLabel('Zip Output Path')).toHaveValue('dist/classic-vn-starter.zip');
-        const desktopReadiness = page.getByLabel('Desktop packaging readiness');
-        await expect(desktopReadiness).toContainText('Desktop package blocked');
-        await expect(desktopReadiness).toContainText('Export artifact contract');
-        await expect(desktopReadiness).toContainText('Scoped game permissions');
-        const pagesReadiness = page.getByLabel('GitHub Pages dual-site readiness');
-        await expect(pagesReadiness).toContainText('Pages dual site ready');
-        await expect(pagesReadiness).toContainText('Playable deploy gate');
-        await expect(pagesReadiness).toContainText('Browser editor persistence');
+        const desktopStatus = page.getByLabel('Desktop packaging status');
+        await expect(desktopStatus).toContainText('Desktop package blocked');
+        await expect(desktopStatus).toContainText('Export artifact contract');
+        await expect(desktopStatus).toContainText('Scoped game permissions');
+        const pagesStatus = page.getByLabel('GitHub Pages dual-site status');
+        await expect(pagesStatus).toContainText('Pages dual site ready');
+        await expect(pagesStatus).toContainText('Playable deploy gate');
+        await expect(pagesStatus).toContainText('Browser editor persistence');
         await expect(page.getByRole('button', { name: 'Export' })).toBeEnabled();
         await expect(page.getByRole('button', { name: 'Parity Smoke' })).toBeDisabled();
     });

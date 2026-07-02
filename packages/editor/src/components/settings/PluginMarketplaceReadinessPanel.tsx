@@ -13,7 +13,7 @@ export function PluginMarketplaceReadinessPanel({ uiScale }: PluginMarketplaceRe
 
     return (
         <section
-            aria-label="Plugin marketplace readiness"
+            aria-label="Plugin marketplace status"
             style={{
                 border: `1px solid ${t.border.subtle}`,
                 borderRadius: t.radius.md,
@@ -32,7 +32,7 @@ export function PluginMarketplaceReadinessPanel({ uiScale }: PluginMarketplaceRe
                     justifyContent: 'space-between',
                 }}
             >
-                <span>Marketplace Readiness</span>
+                <span>Marketplace Status</span>
                 <span style={statusPillStyle(uiScale, report.status)}>Marketplace {report.status}</span>
             </div>
             <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
