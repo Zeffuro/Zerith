@@ -101,7 +101,9 @@ jobs:
           updaterJsonPreferNsis: true
 
       - name: Create release checksums
-        run: node scripts/create-editor-release-checksums.mjs --out ".release-checksums/SHA256SUMS-${{ matrix.label }}.txt"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/create-editor-release-checksums.mjs --release-tag "editor-v${{ steps.editor-version.outputs.version }}" --out ".release-checksums/SHA256SUMS-${{ matrix.label }}.txt"
 
       - name: Upload release checksums
         env:

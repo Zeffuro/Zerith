@@ -4,6 +4,7 @@ import type { BrowserDesktopExportArtifactManifest } from './browserParityReport
 
 import { useProjectStore } from '../store/storeBootstrap';
 import { makeTabId, useWorkbenchStore } from '../store/useWorkbenchStore';
+import { normalizePathForComparison } from '../utils/pathComparison';
 import { createNewProject } from './createNewProject';
 import { exportGame } from './exportGame';
 import { fsJoin, fsReadTextFile } from './fs';
@@ -91,7 +92,8 @@ export async function runInstalledEditorSmoke(config: InstalledSmokeConfig): Pro
 }
 
 function assertProjectLoaded(projectPath: string): void {
-    if (useProjectStore.getState().projectPath !== projectPath || !useProjectStore.getState().manifest) {
+    const current = useProjectStore.getState();
+    if (!current.projectPath || normalizePathForComparison(current.projectPath) !== normalizePathForComparison(projectPath) || !current.manifest) {
         throw new Error('Project did not load into the editor store.');
     }
 }
