@@ -7,7 +7,7 @@ import type { SaveAudioRegionInput, SaveAudioRegionResult } from './audioRegionE
 
 import { detectDescriptorType } from '../utils/assetDescriptorUtilities';
 import { closeAudioContext, decodeAudioSource } from '../utils/audio';
-import { encodeAudioBufferRegionsToWavFiles } from '../utils/audioRegions';
+import { iterateAudioBufferRegionsToWavFiles } from '../utils/audioRegions';
 import { saveAudioRegionWavToProject } from './audioRegionExport';
 import { fsDirname, fsJoin, fsReadTextFile } from './fs';
 
@@ -78,7 +78,7 @@ export async function exportAssetAudioCuesToProject(
         };
     }
 
-    const encoded = encodeAudioBufferRegionsToWavFiles(audioBuffer, sourcePath, regions, {
+    const encoded = iterateAudioBufferRegionsToWavFiles(audioBuffer, sourcePath, regions, {
         namePreset: options.namePreset ?? 'region-name-time',
     });
     const saved: SaveAudioRegionResult[] = [];

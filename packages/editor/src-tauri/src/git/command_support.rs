@@ -40,9 +40,16 @@ pub(super) fn synthesize_untracked_file_diff(
 ) -> Result<Option<String>, String> {
     let untracked = run_git_text_output(
         project_path,
-        &["ls-files", "--others", "--exclude-standard", "--", path],
+        &[
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "-z",
+            "--",
+            &format!(":(literal){path}"),
+        ],
     )?;
-    if !untracked.lines().any(|line| line.trim() == path) {
+    if !untracked.split('\0').any(|entry| entry == path) {
         return Ok(None);
     }
 

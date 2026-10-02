@@ -1,10 +1,16 @@
-import type { FsAdapter, FsDirectoryEntry, FsFilePickerOptions, FsPickedFile, FsProjectPickerResult } from './types';
+import type { FsAdapter, FsDirectoryEntry, FsFilePickerOptions, FsImportFile, FsPickedFile, FsProjectPickerResult, FsTextWriteOptions } from './types';
 
 import { isTauriRuntime } from '../runtime/runtimeEnvironment';
 import { browserFsAdapter } from './browserFsAdapter';
 import { tauriFsAdapter } from './tauriFsAdapter';
 
-export type { FsDirectoryEntry, FsFilePickerFilter, FsFilePickerOptions, FsPickedFile, FsProjectPickerResult } from './types';
+export type { FsDirectoryEntry, FsFilePickerFilter, FsFilePickerOptions, FsImportFile, FsPickedFile, FsProjectPickerResult, FsTextWriteOptions } from './types';
+
+export async function fsCopyFileExclusive(sourcePath: string, targetPath: string): Promise<void> {
+    const adapter = getFsAdapter();
+    if (!adapter.copyFileExclusive) throw new Error('Path-based import is only available in the desktop editor.');
+    await adapter.copyFileExclusive(sourcePath, targetPath);
+}
 
 export async function fsDirname(path: string): Promise<string> {
     return getFsAdapter().dirname(path);
@@ -28,6 +34,11 @@ export async function fsPickBinaryFiles(options?: FsFilePickerOptions): Promise<
 
 export async function fsPickDirectory(title?: string): Promise<string | undefined> {
     return getFsAdapter().pickDirectory(title);
+}
+
+export async function fsPickImportFiles(options?: FsFilePickerOptions): Promise<FsImportFile[]> {
+    const adapter = getFsAdapter();
+    return adapter.pickImportFiles ? adapter.pickImportFiles(options) : adapter.pickBinaryFiles(options);
 }
 
 export async function fsPickProjectManifest(): Promise<FsProjectPickerResult | undefined> {
@@ -58,8 +69,22 @@ export async function fsWriteBinaryFile(path: string, content: Uint8Array): Prom
     await getFsAdapter().writeBinaryFile(path, content);
 }
 
-export async function fsWriteTextFile(path: string, content: string): Promise<void> {
-    await getFsAdapter().writeTextFile(path, content);
+export async function fsWriteBinaryFileExclusive(path: string, content: Uint8Array): Promise<void> {
+    const adapter = getFsAdapter();
+    if (adapter.writeBinaryFileExclusive) {
+        await adapter.writeBinaryFileExclusive(path, content);
+        return;
+    }
+    const entries = await adapter.readDirectory(await adapter.dirname(path));
+    const name = path.split(/[\\/]/u).at(-1)?.toLowerCase();
+    if (entries.some((entry) => entry.name.toLowerCase() === name)) {
+        throw Object.assign(new Error('Destination already exists.'), { code: 'alreadyExists' });
+    }
+    await adapter.writeBinaryFile(path, content);
+}
+
+export async function fsWriteTextFile(path: string, content: string, options?: FsTextWriteOptions): Promise<void> {
+    await getFsAdapter().writeTextFile(path, content, options);
 }
 
 function getFsAdapter(): FsAdapter {

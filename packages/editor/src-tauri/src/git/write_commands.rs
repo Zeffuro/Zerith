@@ -1,4 +1,5 @@
 use super::command_support::validate_project_path;
+use super::repository::ProjectRepository;
 use super::support::*;
 use super::types::*;
 
@@ -159,7 +160,9 @@ pub(crate) fn git_commit_staged(
         return Err("Commit message is required.".to_owned());
     }
 
-    let status = read_git_porcelain_status(&project_path)?;
+    let repository = ProjectRepository::resolve(&project_path)?;
+    repository.reject_staged_siblings()?;
+    let status = read_git_porcelain_status(&repository.root)?;
     if !has_staged_changes(&status) {
         return Err("Commit aborted: stage changes before committing.".to_owned());
     }
@@ -211,7 +214,11 @@ pub(crate) fn git_stage_file(
         });
     }
 
-    let stage_output = run_git_command(&project_path, &["add", "--", &path])?;
+    let repository = ProjectRepository::resolve(&project_path)?;
+    let pathspecs = repository.file_pathspecs(&path)?;
+    let mut args = vec!["add", "--"];
+    args.extend(pathspecs.iter().map(String::as_str));
+    let stage_output = run_git_command(&repository.root, &args)?;
     let stdout = String::from_utf8_lossy(&stage_output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&stage_output.stderr).to_string();
     if !stage_output.status.success() {
@@ -248,11 +255,15 @@ pub(crate) fn git_unstage_file(
         });
     }
 
-    let unstage_output = if git_has_head(&project_path)? {
-        run_git_command(&project_path, &["restore", "--staged", "--", &path])?
+    let repository = ProjectRepository::resolve(&project_path)?;
+    let pathspecs = repository.file_pathspecs(&path)?;
+    let mut args = if git_has_head(&repository.root)? {
+        vec!["restore", "--staged", "--"]
     } else {
-        run_git_command(&project_path, &["rm", "--cached", "--", &path])?
+        vec!["rm", "--cached", "--"]
     };
+    args.extend(pathspecs.iter().map(String::as_str));
+    let unstage_output = run_git_command(&repository.root, &args)?;
     let stdout = String::from_utf8_lossy(&unstage_output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&unstage_output.stderr).to_string();
     if !unstage_output.status.success() {
@@ -285,7 +296,9 @@ pub(crate) fn git_stage_all(request: GitStatusRequest) -> Result<GitStageAllResp
         });
     }
 
-    let stage_output = run_git_command(&project_path, &["add", "--all", "--", "."])?;
+    let repository = ProjectRepository::resolve(&project_path)?;
+    let scope = repository.scope_pathspec();
+    let stage_output = run_git_command(&repository.root, &["add", "--all", "--", &scope])?;
     let stdout = String::from_utf8_lossy(&stage_output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&stage_output.stderr).to_string();
     if !stage_output.status.success() {

@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 
+import { analyzeStoryGraph } from '@zeffuro/zerith-core/utils/StoryGraph';
+
 const COMPILED_CONTENT_FILE = 'zerith.content.json';
 
 export function compileGameContent(gamePath, options = {}) {
@@ -12,6 +14,16 @@ export function compileGameContent(gamePath, options = {}) {
     const macros = readManifestValue(gamePath, manifest.macros, {});
     const scenes = readScenes(gamePath, manifest.scenes ?? {});
     const locales = readLocales(gamePath, manifest.localization?.locales ?? {});
+
+    const graph = analyzeStoryGraph(Object.fromEntries(
+        Object.entries(scenes).map(([name, scene]) => [name, normalizeSceneSource(scene).commands]),
+    ), { startScene: manifest.startScene });
+    const nextScenes = new Map();
+    for (const edge of graph.sceneEdges) {
+        const targets = nextScenes.get(edge.fromScene) ?? new Set();
+        targets.add(edge.targetScene);
+        nextScenes.set(edge.fromScene, targets);
+    }
 
     const globalAssets = hydrateDescriptorSources(gamePath, mergeAssetDependencies(
         collectCharacterAssetDependencies(characters),
@@ -31,6 +43,9 @@ export function compileGameContent(gamePath, options = {}) {
             commandCount: sceneSource.commands.length,
             dependencies,
             ...(sceneSource.localeNamespace ? { localeNamespace: sceneSource.localeNamespace } : {}),
+            ...(nextScenes.has(sceneName)
+                ? { nextScenes: [...nextScenes.get(sceneName)].sort((left, right) => left.localeCompare(right)) }
+                : {}),
             ...(sceneSource.schemaVersion ? { schemaVersion: sceneSource.schemaVersion } : {}),
         };
     }
@@ -373,7 +388,13 @@ function resolveProjectFilePath(gamePath, baseDirectory, assetUrl) {
     }
 
     const normalized = assetUrl.startsWith('/') ? assetUrl.slice(1) : assetUrl;
-    return path.resolve(assetUrl.startsWith('/') ? gamePath : baseDirectory, normalized);
+    const file = path.resolve(assetUrl.startsWith('/') ? gamePath : baseDirectory, normalized);
+    const relative = path.relative(gamePath, file);
+    if (relative.split(path.sep).some((segment) => segment.toLowerCase() === '.dev_docs')) throw new Error('Private project files cannot be exported.');
+    if (relative.startsWith(`..${path.sep}`) || relative === '..' || path.isAbsolute(relative)) {
+        throw new Error(`Project reference escapes its directory: ${assetUrl}`);
+    }
+    return file;
 }
 
 function resolveSheetSource(sheetUrl, source) {

@@ -36,7 +36,7 @@ export function normalizeGitBranchSummaryResponse(response: NativeGitBranchSumma
         current: normalizeOptionalString(response.current) ?? branches.find((branch) => branch.current)?.name,
         isRepository: response.isRepository === true,
         rawBranches: typeof response.rawBranches === 'string' ? response.rawBranches : '',
-        repositoryRoot: normalizeOptionalString(response.repositoryRoot),
+        repositoryRoot: normalizeOptionalPath(response.repositoryRoot),
     };
 }
 
@@ -50,7 +50,7 @@ export function normalizeGitCheckoutBranchResponse(response: NativeGitCheckoutBr
         branchName: normalizeOptionalString(response.branchName),
         isRepository: response.isRepository === true,
         rawOutput: typeof response.rawOutput === 'string' ? response.rawOutput : '',
-        repositoryRoot: normalizeOptionalString(response.repositoryRoot),
+        repositoryRoot: normalizeOptionalPath(response.repositoryRoot),
     };
 }
 
@@ -64,7 +64,7 @@ export function normalizeGitCommitStagedResponse(response: NativeGitCommitStaged
         commitHash: normalizeOptionalString(response.commitHash),
         isRepository: response.isRepository === true,
         rawOutput: typeof response.rawOutput === 'string' ? response.rawOutput : '',
-        repositoryRoot: normalizeOptionalString(response.repositoryRoot),
+        repositoryRoot: normalizeOptionalPath(response.repositoryRoot),
     };
 }
 
@@ -78,16 +78,16 @@ export function normalizeGitCreateBranchResponse(response: NativeGitCreateBranch
         branchName: normalizeOptionalString(response.branchName),
         isRepository: response.isRepository === true,
         rawOutput: typeof response.rawOutput === 'string' ? response.rawOutput : '',
-        repositoryRoot: normalizeOptionalString(response.repositoryRoot),
+        repositoryRoot: normalizeOptionalPath(response.repositoryRoot),
     };
 }
 
 export function normalizeGitDiffFileResponse(response: NativeGitDiffFileResponse): GitDiffFileSnapshot {
     return {
         isRepository: response.isRepository === true,
-        path: normalizeOptionalString(response.path) ?? '',
+        path: normalizeOptionalPath(response.path) ?? '',
         rawDiff: typeof response.rawDiff === 'string' ? response.rawDiff : '',
-        repositoryRoot: normalizeOptionalString(response.repositoryRoot),
+        repositoryRoot: normalizeOptionalPath(response.repositoryRoot),
     };
 }
 
@@ -108,9 +108,9 @@ export function normalizeGitFileActionResponse(response: NativeGitFileActionResp
 } {
     return {
         isRepository: response.isRepository === true,
-        path: normalizeOptionalString(response.path),
+        path: normalizeOptionalPath(response.path),
         rawOutput: typeof response.rawOutput === 'string' ? response.rawOutput : '',
-        repositoryRoot: normalizeOptionalString(response.repositoryRoot),
+        repositoryRoot: normalizeOptionalPath(response.repositoryRoot),
         stagedCount: normalizeCount(response.stagedCount),
     };
 }
@@ -120,7 +120,7 @@ export function normalizeGitInitRepositoryResponse(response: NativeGitInitReposi
         initialized: response.initialized === true,
         isRepository: response.isRepository === true,
         rawOutput: typeof response.rawOutput === 'string' ? response.rawOutput : '',
-        repositoryRoot: normalizeOptionalString(response.repositoryRoot),
+        repositoryRoot: normalizeOptionalPath(response.repositoryRoot),
     };
 }
 
@@ -138,7 +138,7 @@ export function normalizeGitPushCurrentBranchResponse(response: NativeGitPushCur
         isRepository: response.isRepository === true,
         rawOutput: typeof response.rawOutput === 'string' ? response.rawOutput : '',
         remoteName: normalizeOptionalString(response.remoteName),
-        repositoryRoot: normalizeOptionalString(response.repositoryRoot),
+        repositoryRoot: normalizeOptionalPath(response.repositoryRoot),
     };
 }
 
@@ -147,7 +147,7 @@ export function normalizeGitRemoteSummaryResponse(response: NativeGitRemoteSumma
         isRepository: response.isRepository === true,
         rawRemotes: typeof response.rawRemotes === 'string' ? response.rawRemotes : '',
         remotes: normalizeGitRemoteEntries(response.remotes),
-        repositoryRoot: normalizeOptionalString(response.repositoryRoot),
+        repositoryRoot: normalizeOptionalPath(response.repositoryRoot),
     };
 }
 
@@ -160,7 +160,7 @@ export function normalizeGitStageAllResponse(response: NativeGitStageAllResponse
     return {
         isRepository: response.isRepository === true,
         rawOutput: typeof response.rawOutput === 'string' ? response.rawOutput : '',
-        repositoryRoot: normalizeOptionalString(response.repositoryRoot),
+        repositoryRoot: normalizeOptionalPath(response.repositoryRoot),
         stagedCount: normalizeCount(response.stagedCount),
     };
 }
@@ -173,7 +173,7 @@ export function normalizeGitStatusResponse(response: NativeGitStatusResponse): G
         entries: normalizeEntries(response.entries),
         isRepository: response.isRepository === true,
         rawStatus: typeof response.rawStatus === 'string' ? response.rawStatus : '',
-        repositoryRoot: normalizeOptionalString(response.repositoryRoot),
+        repositoryRoot: normalizeOptionalPath(response.repositoryRoot),
     };
 }
 
@@ -208,14 +208,16 @@ function normalizeDiffFile(entry: unknown): GitDiffFileSummary | undefined {
     if (!entry || typeof entry !== 'object') return undefined;
 
     const candidate = entry as NativeGitDiffFileSummary;
-    const path = normalizeOptionalString(candidate.path);
+    const path = normalizeOptionalPath(candidate.path);
     if (!path) return undefined;
+    const originalPath = normalizeOptionalPath(candidate.originalPath);
 
     return {
         binary: candidate.binary === true,
         deletions: normalizeCount(candidate.deletions),
         insertions: normalizeCount(candidate.insertions),
         path,
+        ...(originalPath === undefined ? {} : { originalPath }),
     };
 }
 
@@ -235,12 +237,14 @@ function normalizeEntry(entry: unknown): GitStatusEntry | undefined {
     if (!entry || typeof entry !== 'object') return undefined;
 
     const candidate = entry as NativeGitStatusEntry;
-    const path = normalizeOptionalString(candidate.path);
+    const path = normalizeOptionalPath(candidate.path);
     if (!path) return undefined;
+    const originalPath = normalizeOptionalPath(candidate.originalPath);
 
     return {
         index: normalizeStatusCode(candidate.index),
         path,
+        ...(originalPath === undefined ? {} : { originalPath }),
         workingTree: normalizeStatusCode(candidate.workingTree),
     };
 }
@@ -267,6 +271,10 @@ function normalizeGitRemoteEntry(entry: unknown): GitRemoteEntry | undefined {
         name,
         ...(pushUrl === undefined ? {} : { pushUrl }),
     };
+}
+
+function normalizeOptionalPath(value: unknown): string | undefined {
+    return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
 
 function normalizeOptionalString(value: unknown): string | undefined {

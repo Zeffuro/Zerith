@@ -44,6 +44,7 @@ export type NativeGitDiffFileSummary = {
     binary?: unknown;
     deletions?: unknown;
     insertions?: unknown;
+    originalPath?: unknown;
     path?: unknown;
 };
 
@@ -99,6 +100,7 @@ export type NativeGitStageAllResponse = {
 
 export type NativeGitStatusEntry = {
     index?: unknown;
+    originalPath?: unknown;
     path?: unknown;
     workingTree?: unknown;
 };

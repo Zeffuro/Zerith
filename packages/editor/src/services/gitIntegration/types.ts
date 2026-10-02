@@ -140,6 +140,7 @@ export type GitDiffFileSummary = {
     binary: boolean;
     deletions: number;
     insertions: number;
+    originalPath?: string;
     path: string;
 };
 
@@ -313,6 +314,7 @@ export type GitStatusDependencies = {
 
 export type GitStatusEntry = {
     index: string;
+    originalPath?: string;
     path: string;
     workingTree: string;
 };

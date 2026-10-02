@@ -61,6 +61,7 @@ export interface ProjectSessionSlice {
     files: FsDirectoryEntry[];
     isFileDirty: (filePath: string) => boolean;
     markFileDirty: (filePath: string) => void;
+    projectGeneration: number;
     projectPath: string | undefined;
     setActiveFile: (file: string, content: EditorNode[]) => void;
     setPathExpanded: (path: string, expanded: boolean) => void;

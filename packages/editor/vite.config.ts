@@ -1,4 +1,6 @@
 import react from "@vitejs/plugin-react";
+import { existsSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from "vite";
 
 import editorPackage from "./package.json" with { type: "json" };
@@ -48,7 +50,18 @@ export default defineConfig(() => ({
     __ZERITH_EDITOR_VERSION__: JSON.stringify(editorPackage.version),
   },
 
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      buildStart() {
+        const template = fileURLToPath(new URL('../player/dist/', import.meta.url));
+        if (!existsSync(`${template}/index.html`) || !existsSync(`${template}/assets`) || !readdirSync(`${template}/assets`).some((name) => name.endsWith('.js'))) {
+          throw new Error('Player export template is missing. Run npm run build --workspace=@zeffuro/zerith-player before building the editor.');
+        }
+      },
+      name: 'zerith-player-template',
+    },
+  ],
   server: {
     hmr: host
       ? {

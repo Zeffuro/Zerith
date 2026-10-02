@@ -8,7 +8,7 @@ export function applyAssetSelection(assetPath: string) {
 }
 
 export function applyMacrosFile(path: string, object: Record<string, unknown>) {
-    const keys = Object.keys(object).filter((key) => Array.isArray(object[key]));
+    const keys = Object.keys(object).filter((key) => !key.startsWith('$') && Array.isArray(object[key]));
     const entries = keys
         .map((name) => ({ commands: validateScript(object[name] as unknown[]), name }))
         .toSorted((a, b) => a.name.localeCompare(b.name));

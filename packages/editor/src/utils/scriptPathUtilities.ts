@@ -124,7 +124,7 @@ function isIndexable(value: unknown): value is Indexable {
 
 function readAtKey(value: unknown, key: number | string): unknown {
     if (!isIndexable(value)) return undefined;
-    return value[key as keyof typeof value];
+    return (value as Record<number | string, unknown>)[key];
 }
 
 function samePath(a: ScriptPath, b: ScriptPath): boolean {

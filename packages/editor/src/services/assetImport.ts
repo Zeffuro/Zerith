@@ -1,13 +1,14 @@
-import type { FsFilePickerFilter, FsFilePickerOptions, FsPickedFile } from './fs';
+import type { FsFilePickerFilter, FsFilePickerOptions, FsImportFile } from './fs';
 
 import { AUDIO_EXT, FONT_EXT, getExtension, IMG_EXT, TEXT_EXT } from '../utils/assetTypes';
 import { sanitizeFileName } from '../utils/sanitizeFileName';
 import {
+    fsCopyFileExclusive,
     fsJoin,
     fsMkdir,
-    fsPickBinaryFiles,
+    fsPickImportFiles,
     fsReadDirectory,
-    fsWriteBinaryFile,
+    fsWriteBinaryFileExclusive,
 } from './fs';
 
 export type AssetImportKind =
@@ -22,6 +23,7 @@ export type AssetImportKind =
 
 export type AssetImportOptions = {
     preferredKind?: AssetImportKind;
+    signal?: AbortSignal;
 };
 
 export type AssetImportPlanEntry = {
@@ -44,12 +46,20 @@ export type AssetImportResultEntry = {
 } & AssetImportPlanEntry;
 
 export type AssetImportServiceDependencies = {
+    copyFileExclusive?: (sourcePath: string, targetPath: string) => Promise<void>;
     join: (...parts: string[]) => Promise<string>;
     mkdir: (path: string, recursive?: boolean) => Promise<void>;
-    pickBinaryFiles: (options?: FsFilePickerOptions) => Promise<FsPickedFile[]>;
+    pickBinaryFiles: (options?: FsFilePickerOptions) => Promise<FsImportFile[]>;
     readDirectory: (path: string) => Promise<readonly { name: string }[]>;
     writeBinaryFile: (path: string, content: Uint8Array) => Promise<void>;
 };
+
+export class AssetImportError extends Error {
+    constructor(public readonly imported: AssetImportResultEntry[], public readonly failed: AssetImportPlanEntry | undefined, message: string) {
+        super(`${message} ${imported.length} asset(s) imported before stopping.`);
+        this.name = 'AssetImportError';
+    }
+}
 
 export const ASSET_IMPORT_FOLDERS: Record<AssetImportKind, string> = {
     background: 'assets/bg',
@@ -70,16 +80,17 @@ export const ASSET_IMPORT_PICKER_FILTERS: FsFilePickerFilter[] = [
 ];
 
 const defaultAssetImportDependencies: AssetImportServiceDependencies = {
+    copyFileExclusive: fsCopyFileExclusive,
     join: fsJoin,
     mkdir: fsMkdir,
-    pickBinaryFiles: fsPickBinaryFiles,
+    pickBinaryFiles: fsPickImportFiles,
     readDirectory: fsReadDirectory,
-    writeBinaryFile: fsWriteBinaryFile,
+    writeBinaryFile: fsWriteBinaryFileExclusive,
 };
 
 export async function importAssetFiles(
     projectPath: string,
-    files: readonly FsPickedFile[],
+    files: readonly FsImportFile[],
     options: AssetImportOptions = {},
     dependencies: AssetImportServiceDependencies = defaultAssetImportDependencies,
 ): Promise<AssetImportResult> {
@@ -90,12 +101,42 @@ export async function importAssetFiles(
     const existingNamesByFolder = await readExistingNamesByTargetFolder(projectPath, files, options, dependencies);
     const plan = planAssetImports(files, existingNamesByFolder, options);
     const imported: AssetImportResultEntry[] = [];
+    const reservedNames = new Map<string, Set<string>>();
+    for (const entry of plan) {
+        const names = reservedNames.get(entry.targetFolder) ?? new Set<string>();
+        names.add(entry.targetName.toLowerCase());
+        reservedNames.set(entry.targetFolder, names);
+    }
 
     for (const entry of plan) {
+        if (options.signal?.aborted) throw new AssetImportError(imported, entry, 'Import cancelled.');
         const targetDirectory = await dependencies.join(projectPath, entry.targetFolder);
-        const targetPath = await dependencies.join(targetDirectory, entry.targetName);
-        await dependencies.writeBinaryFile(targetPath, files[entry.sourceIndex]?.bytes ?? new Uint8Array());
-        imported.push({ ...entry, targetPath });
+        const file = files[entry.sourceIndex];
+        if (!file) throw new AssetImportError(imported, entry, 'The selected asset is unavailable.');
+        let candidate = entry;
+        for (let attempt = 0; ; attempt += 1) {
+            const targetPath = await dependencies.join(targetDirectory, candidate.targetName);
+            try {
+                if (file.path && dependencies.copyFileExclusive) {
+                    await dependencies.copyFileExclusive(file.path, targetPath);
+                } else if (file.bytes) {
+                    await dependencies.writeBinaryFile(targetPath, file.bytes);
+                } else {
+                    throw new Error('The selected asset has no readable source.');
+                }
+                imported.push({ ...candidate, targetPath });
+                break;
+            } catch (error) {
+                if (attempt < 32 && isAlreadyExists(error)) {
+                    const used = reservedNames.get(entry.targetFolder) ?? new Set<string>();
+                    for (const existing of await dependencies.readDirectory(targetDirectory)) used.add(existing.name.toLowerCase());
+                    const targetName = uniqueFileName(entry.sanitizedName, used);
+                    candidate = { ...entry, assetUrl: `/${entry.targetFolder}/${targetName}`, collisionResolved: true, targetName };
+                    continue;
+                }
+                throw new AssetImportError(imported, candidate, getImportErrorMessage(error));
+            }
+        }
     }
 
     return { imported };
@@ -138,7 +179,7 @@ export function inferAssetImportKind(name: string, preferredKind?: AssetImportKi
 }
 
 export function planAssetImports(
-    files: readonly Pick<FsPickedFile, 'name'>[],
+    files: readonly Pick<FsImportFile, 'name'>[],
     existingNamesByFolder: ReadonlyMap<string, Iterable<string>> = new Map(),
     options: AssetImportOptions = {},
 ): AssetImportPlanEntry[] {
@@ -172,9 +213,19 @@ function extensionsFromSet(extensions: ReadonlySet<string>): string[] {
     return [...extensions].map((extension) => extension.replace(/^\./u, ''));
 }
 
+function getImportErrorMessage(error: unknown): string {
+    if (error instanceof Error) return error.message;
+    if (typeof error === 'object' && error !== null && 'message' in error) return String(error.message);
+    return String(error);
+}
+
+function isAlreadyExists(error: unknown): boolean {
+    return typeof error === 'object' && error !== null && 'code' in error && error.code === 'alreadyExists';
+}
+
 async function readExistingNamesByTargetFolder(
     projectPath: string,
-    files: readonly FsPickedFile[],
+    files: readonly FsImportFile[],
     options: AssetImportOptions,
     dependencies: AssetImportServiceDependencies,
 ): Promise<Map<string, string[]>> {

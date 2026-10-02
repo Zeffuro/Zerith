@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
     type AudioBufferLike,
@@ -7,11 +7,27 @@ import {
     createAudioRegionFromSelection,
     encodeAudioBufferRegionsToWavFiles,
     encodeAudioBufferRegionToWav,
+    iterateAudioBufferRegionsToWavFiles,
     normalizeAudioRegion,
     projectAudioRegionsToViewport,
 } from '../audioRegions';
 
 describe('audioRegions', () => {
+    it('encodes one cue per iteration while preserving WAV bytes and collision names', () => {
+        const buffer = createAudioBufferLike({ channels: [new Float32Array([0, 0.5, 1, -1])], sampleRate: 4 });
+        const regions = [{ end: 0.5, name: 'Cue', start: 0 }, { end: 0.5, name: 'Cue', start: 0 }];
+        const options = { namePreset: 'region-name-time' as const };
+        const expected = encodeAudioBufferRegionsToWavFiles(buffer, 'sound.wav', regions, options);
+        const getChannelData = vi.spyOn(buffer, 'getChannelData');
+        const exports = iterateAudioBufferRegionsToWavFiles(buffer, 'sound.wav', regions, options);
+        expect(getChannelData).not.toHaveBeenCalled();
+        expect(exports.next().value).toEqual(expected[0]);
+        expect(getChannelData).toHaveBeenCalledTimes(1);
+        expect(exports.next().value).toEqual(expected[1]);
+        expect(getChannelData).toHaveBeenCalledTimes(2);
+        expect(exports.next().done).toBe(true);
+    });
+
     it('normalizes selected regions with ordering and duration clamps', () => {
         expect(createAudioRegionFromSelection(2, 1, 5)).toEqual({
             duration: 1,

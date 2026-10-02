@@ -1,6 +1,5 @@
 import type { BrowserDesktopExportArtifactManifest } from './browserParityReport';
 
-import { collectExportArtifactManifest } from './exportArtifactManifest';
 import { isTauriRuntime } from './runtime/runtimeEnvironment';
 
 export type ExportCachePolicy = 'hashed' | 'none';
@@ -17,8 +16,10 @@ export type ExportGameOptions = {
 
 export type ExportGameResult = {
     artifactManifest?: BrowserDesktopExportArtifactManifest;
+    outDirectory?: string;
     stderr: string;
     stdout: string;
+    zipPath?: string;
 };
 
 export type ExportProfile = 'generic-web' | 'itch-html5' | 'local-preview';
@@ -37,6 +38,7 @@ export type ExportProfileCatalogId = 'desktop-tauri' | 'github-pages-dual' | Exp
 type ExportGameRequest = {
     base?: string;
     cachePolicy?: ExportCachePolicy;
+    files: ({ bytes: number[]; path: string } | { path: string; sourcePath: string })[];
     gamePath: string;
     outDir?: string;
     zip?: boolean;
@@ -51,9 +53,12 @@ export async function exportGame(gamePath: string, options: ExportGameOptions = 
         return exportGameForBrowser(gamePath, resolvedOptions);
     }
 
+    const { prepareWebGameArtifacts } = await import('./webGameArtifacts');
+    const { artifactManifest, files, nativeFiles } = await prepareWebGameArtifacts(gamePath, resolvedOptions, { nativeProjectFiles: true });
     const request: ExportGameRequest = {
         base: resolvedOptions.base,
         cachePolicy: resolvedOptions.cachePolicy,
+        files: [...Object.entries(files).map(([path, bytes]) => ({ bytes: [...bytes], path })), ...nativeFiles],
         gamePath,
         outDir: resolvedOptions.outDir,
         zip: resolvedOptions.zip,
@@ -62,17 +67,7 @@ export async function exportGame(gamePath: string, options: ExportGameOptions = 
 
     const { invoke } = await import('@tauri-apps/api/core');
     const result = await invoke<ExportGameResult>('export_game', { request });
-    const outputPath = resolveDesktopExportOutputPath(result.stdout, resolvedOptions.outDir);
-    if (!outputPath) return result;
-
-    try {
-        return {
-            ...result,
-            artifactManifest: await collectExportArtifactManifest(outputPath),
-        };
-    } catch {
-        return result;
-    }
+    return { ...result, artifactManifest };
 }
 
 export function getExportProfileCatalog(): ExportProfileCatalogEntry[] {

@@ -9,7 +9,7 @@ import {
 import { makeTabId } from '../../store/useWorkbenchStore';
 import { basenameFromPath } from './pathHelpers';
 
-export function openMacrosTab(fullPath: string, forceView?: ForceView, jsonSelectionPath?: ScriptPath) {
+export function openMacrosTab(fullPath: string, forceView?: ForceView, jsonSelectionPath?: ScriptPath, savedTextContent?: string) {
     const preferred = getPreferredMacrosView(forceView);
     if (forceView) executeWorkbenchOpenAction({ action: 'setMacrosView', view: forceView });
 
@@ -19,11 +19,12 @@ export function openMacrosTab(fullPath: string, forceView?: ForceView, jsonSelec
         kind: 'macros',
         path: fullPath,
         preferredView: preferred,
+        ...(savedTextContent === undefined ? {} : { savedTextContent }),
         title: basenameFromPath(fullPath),
     }});
 }
 
-export function openScriptTab(fullPath: string, forceView?: ForceView, jsonSelectionPath?: ScriptPath) {
+export function openScriptTab(fullPath: string, forceView?: ForceView, jsonSelectionPath?: ScriptPath, savedTextContent?: string) {
     const preferred = getPreferredScriptView(forceView);
     if (forceView) executeWorkbenchOpenAction({ action: 'setScriptView', view: forceView });
 
@@ -33,6 +34,7 @@ export function openScriptTab(fullPath: string, forceView?: ForceView, jsonSelec
         kind: 'script',
         path: fullPath,
         preferredView: preferred,
+        ...(savedTextContent === undefined ? {} : { savedTextContent }),
         title: basenameFromPath(fullPath),
     }});
 }

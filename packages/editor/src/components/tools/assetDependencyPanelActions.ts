@@ -1,4 +1,4 @@
-import { importAssetsFromPicker } from '../../services/assetImport';
+import { AssetImportError, importAssetsFromPicker } from '../../services/assetImport';
 import {
     addAssetLibraryCollectionToAssets,
     addAssetLibraryMetadataToAssets,
@@ -128,6 +128,10 @@ export async function handleImportAssets(
     } catch (error) {
         console.error('Asset import failed:', error);
         executeConsoleMessageAction('editor', 'error', 'Asset import failed:', String(error));
+        if (error instanceof AssetImportError && error.imported.length > 0) {
+            await refreshProjectTree();
+            await refreshReferenceScannerState();
+        }
     } finally {
         setIsImportingAssets(false);
     }

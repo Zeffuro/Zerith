@@ -1,15 +1,20 @@
 import { useEffect, useRef } from 'react';
 
+import { serializeMacroEntries, serializeSceneCommands, visualTabSourceText } from '../services/visualWorkbenchContent';
 import { useProjectStore } from '../store/storeBootstrap';
 import { useScriptStore } from '../store/storeBootstrap';
+import { useWorkbenchStore } from '../store/useWorkbenchStore';
 
 export function useScriptDirtyTracking() {
     const activeFile = useProjectStore((state) => state.activeFile);
     const markFileDirty = useProjectStore((state) => state.markFileDirty);
+    const editingAllMacrosFile = useProjectStore((state) => state.editingAllMacrosFile);
+    const macroEntries = useProjectStore((state) => state.macroEntries);
+    const projectGeneration = useProjectStore((state) => state.projectGeneration);
     const rootScript = useScriptStore((state) => state.rootScript);
 
     const previousActiveFileReference = useRef<string | undefined>(undefined);
-    const signatureByFileReference = useRef<Record<string, string>>({});
+    const previousSignatureReference = useRef<string | undefined>(undefined);
 
     useEffect(() => {
         if (!activeFile) {
@@ -17,19 +22,30 @@ export function useScriptDirtyTracking() {
             return;
         }
 
-        const signature = JSON.stringify(rootScript);
-        const switchedFiles = previousActiveFileReference.current !== activeFile;
-        previousActiveFileReference.current = activeFile;
+        const session = `${projectGeneration}:${activeFile}:${editingAllMacrosFile}`;
+        const signature = JSON.stringify(editingAllMacrosFile ? macroEntries : rootScript);
+        const switchedFiles = previousActiveFileReference.current !== session;
+        previousActiveFileReference.current = session;
 
-        if (switchedFiles || signatureByFileReference.current[activeFile] === undefined) {
-            signatureByFileReference.current[activeFile] = signature;
+        if (switchedFiles || previousSignatureReference.current === undefined) {
+            previousSignatureReference.current = signature;
             return;
         }
 
-        if (signatureByFileReference.current[activeFile] !== signature) {
-            signatureByFileReference.current[activeFile] = signature;
-            markFileDirty(activeFile);
+        if (previousSignatureReference.current !== signature) {
+            previousSignatureReference.current = signature;
+            const workbench = useWorkbenchStore.getState();
+            const tab = workbench.tabs.find(entry => entry.path === activeFile && (entry.kind === 'script' || entry.kind === 'macros'));
+            if (tab) {
+                const source = visualTabSourceText(tab);
+                const text = editingAllMacrosFile
+                    ? serializeMacroEntries(macroEntries, source)
+                    : serializeSceneCommands(rootScript, source);
+                workbench.updateTabContent(tab.id, text);
+            } else {
+                markFileDirty(activeFile);
+            }
         }
-    }, [activeFile, markFileDirty, rootScript]);
+    }, [activeFile, editingAllMacrosFile, macroEntries, markFileDirty, projectGeneration, rootScript]);
 }
 

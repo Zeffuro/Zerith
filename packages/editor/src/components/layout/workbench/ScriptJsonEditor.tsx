@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { EditorNode } from '../../../types/EditorNode';
 
-import { fsWriteTextFile } from '../../../services/fs';
+import { saveWorkbenchTextFile as fsWriteTextFile } from '../../../services/saveWorkbenchFile';
 import { useProjectStore } from '../../../store/storeBootstrap';
 import { useScriptStore } from '../../../store/storeBootstrap';
 import { useSettingsStore } from '../../../store/useSettingsStore';

@@ -4,8 +4,9 @@ import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useStat
 
 import type { WorkbenchTab } from '../../store/workbench/types';
 
-import { fsDirname, fsJoin, fsWriteTextFile } from '../../services/fs';
+import { fsDirname, fsJoin } from '../../services/fs';
 import { releaseEditorAssetUrl, resolveEditorAssetUrl } from '../../services/runtime/assetUrls';
+import { saveWorkbenchTextFile as fsWriteTextFile } from '../../services/saveWorkbenchFile';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';

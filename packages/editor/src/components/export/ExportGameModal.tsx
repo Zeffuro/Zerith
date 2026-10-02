@@ -275,7 +275,7 @@ export function ExportGameModal() {
                 </label>
 
                 <label style={{ display: 'grid', fontSize: `${12 * uiScale}px`, gap: `${4 * uiScale}px` }}>
-                    Output Directory (relative to workspace root or absolute)
+                    Output Directory (new directory, relative to project parent or absolute)
                     <input
                         disabled={isExporting}
                         onChange={(event) => setOutDirectory(event.target.value)}
@@ -296,7 +296,7 @@ export function ExportGameModal() {
                 </label>
 
                 <label style={{ display: 'grid', fontSize: `${12 * uiScale}px`, gap: `${4 * uiScale}px`, opacity: zipEnabled ? 1 : 0.55 }}>
-                    Zip Output Path
+                    Zip Output Path (new file, relative to project parent or absolute)
                     <input
                         disabled={!zipEnabled || isExporting}
                         onChange={(event) => setZipFile(event.target.value)}

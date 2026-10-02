@@ -134,6 +134,6 @@ describe('assetReferenceRewrite', () => {
         expect(plan.files[0]?.content).toContain('"assetUrl": "bg/office2.png"');
 
         await applyAssetReferenceRewritePlan(plan, { writeTextFile });
-        expect(writeTextFile).toHaveBeenCalledWith('/project/scenes/intro.json', plan.files[0]?.content);
+        expect(writeTextFile).toHaveBeenCalledWith('/project/scenes/intro.json', plan.files[0]?.content, { expectedContent: plan.files[0]?.expectedContent });
     });
 });

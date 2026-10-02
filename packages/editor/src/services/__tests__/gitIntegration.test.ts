@@ -62,7 +62,7 @@ describe('gitIntegration', () => {
             branchName: ' feature/audio ',
             isRepository: true,
             rawOutput: '',
-            repositoryRoot: ' /repo ',
+            repositoryRoot: '/repo',
         };
         const invokeCalls: Array<{ arguments_?: Record<string, unknown>; command: string; }> = [];
         const invoke = <T>(command: string, arguments_?: Record<string, unknown>) => {
@@ -70,7 +70,7 @@ describe('gitIntegration', () => {
             return Promise.resolve(nativeResponse as T);
         };
 
-        const report = await createGitBranchReport(' /repo/game ', ' feature/audio ', {
+        const report = await createGitBranchReport('/repo/game', ' feature/audio ', {
             invoke,
             isTauriRuntime: () => true,
         });
@@ -128,7 +128,7 @@ describe('gitIntegration', () => {
             initialized: true,
             isRepository: true,
             rawOutput: 'Initialized empty Git repository',
-            repositoryRoot: ' /repo/game ',
+            repositoryRoot: '/repo/game',
         };
         const invokeCalls: Array<{ arguments_?: Record<string, unknown>; command: string; }> = [];
         const invoke = <T>(command: string, arguments_?: Record<string, unknown>) => {
@@ -136,7 +136,7 @@ describe('gitIntegration', () => {
             return Promise.resolve(nativeResponse as T);
         };
 
-        const report = await createGitInitRepositoryReport(' /repo/game ', {
+        const report = await createGitInitRepositoryReport('/repo/game', {
             invoke,
             isTauriRuntime: () => true,
         });
@@ -182,7 +182,7 @@ describe('gitIntegration', () => {
             branchName: ' main ',
             isRepository: true,
             rawOutput: 'Switched to branch main',
-            repositoryRoot: ' /repo ',
+            repositoryRoot: '/repo',
         };
         const invokeCalls: Array<{ arguments_?: Record<string, unknown>; command: string; }> = [];
         const invoke = <T>(command: string, arguments_?: Record<string, unknown>) => {
@@ -190,7 +190,7 @@ describe('gitIntegration', () => {
             return Promise.resolve(nativeResponse as T);
         };
 
-        const report = await createGitCheckoutBranchReport(' /repo/game ', ' main ', {
+        const report = await createGitCheckoutBranchReport('/repo/game', ' main ', {
             invoke,
             isTauriRuntime: () => true,
         });
@@ -268,7 +268,7 @@ describe('gitIntegration', () => {
             commitHash: ' abc1234 ',
             isRepository: true,
             rawOutput: '[main abc1234] Update intro',
-            repositoryRoot: ' /repo ',
+            repositoryRoot: '/repo',
         };
         const invokeCalls: Array<{ arguments_?: Record<string, unknown>; command: string; }> = [];
         const invoke = <T>(command: string, arguments_?: Record<string, unknown>) => {
@@ -276,7 +276,7 @@ describe('gitIntegration', () => {
             return Promise.resolve(nativeResponse as T);
         };
 
-        const report = await createGitCommitStagedReport(' /repo/game ', ' Update intro ', {
+        const report = await createGitCommitStagedReport('/repo/game', ' Update intro ', {
             invoke,
             isTauriRuntime: () => true,
         });
@@ -308,7 +308,7 @@ describe('gitIntegration', () => {
             return Promise.resolve(nativeResponse as T);
         };
 
-        const report = await createGitCommitStagedReport(' /repo/game ', ' Update intro ', {
+        const report = await createGitCommitStagedReport('/repo/game', ' Update intro ', {
             description: ' Adds localized intro copy. ',
         }, {
             invoke,
@@ -346,9 +346,9 @@ describe('gitIntegration', () => {
     it('invokes the desktop git file staging command and normalizes the response', async () => {
         const nativeResponse = {
             isRepository: true,
-            path: ' scripts/intro.json ',
+            path: 'scripts/intro.json',
             rawOutput: '',
-            repositoryRoot: ' /repo ',
+            repositoryRoot: '/repo',
             stagedCount: 3,
         };
         const invokeCalls: Array<{ arguments_?: Record<string, unknown>; command: string; }> = [];
@@ -357,7 +357,7 @@ describe('gitIntegration', () => {
             return Promise.resolve(nativeResponse as T);
         };
 
-        const report = await createGitStageFileReport(' /repo/game ', ' scripts/intro.json ', {
+        const report = await createGitStageFileReport('/repo/game', 'scripts/intro.json', {
             invoke,
             isTauriRuntime: () => true,
         });
@@ -381,7 +381,7 @@ describe('gitIntegration', () => {
     it('invokes the desktop git file unstaging command and normalizes the response', async () => {
         const nativeResponse = {
             isRepository: true,
-            path: ' scripts/intro.json ',
+            path: 'scripts/intro.json',
             rawOutput: '',
             stagedCount: 2,
         };
@@ -391,7 +391,7 @@ describe('gitIntegration', () => {
             return Promise.resolve(nativeResponse as T);
         };
 
-        const report = await createGitUnstageFileReport(' /repo/game ', ' scripts/intro.json ', {
+        const report = await createGitUnstageFileReport('/repo/game', 'scripts/intro.json', {
             invoke,
             isTauriRuntime: () => true,
         });
@@ -440,7 +440,7 @@ describe('gitIntegration', () => {
             ],
             isRepository: true,
             rawBranches: '*\tmain\torigin/main\n \tfeature/audio\t',
-            repositoryRoot: ' /repo ',
+            repositoryRoot: '/repo',
         };
         const invokeCalls: Array<{ arguments_?: Record<string, unknown>; command: string; }> = [];
         const invoke = <T>(command: string, arguments_?: Record<string, unknown>) => {
@@ -448,7 +448,7 @@ describe('gitIntegration', () => {
             return Promise.resolve(nativeResponse as T);
         };
 
-        const report = await createGitBranchSummaryReport(' /repo/game ', {
+        const report = await createGitBranchSummaryReport('/repo/game', {
             invoke,
             isTauriRuntime: () => true,
         });
@@ -500,7 +500,7 @@ describe('gitIntegration', () => {
             return Promise.resolve({} as T);
         };
 
-        const report = await createGitDiffFileReport('/project', ' ', {
+        const report = await createGitDiffFileReport('/project', '', {
             invoke,
             isTauriRuntime: () => true,
         });
@@ -536,9 +536,9 @@ describe('gitIntegration', () => {
     it('invokes the desktop git file diff command and normalizes the response', async () => {
         const nativeResponse = {
             isRepository: true,
-            path: ' scripts/intro.json ',
+            path: 'scripts/intro.json',
             rawDiff: 'diff --git a/scripts/intro.json b/scripts/intro.json',
-            repositoryRoot: ' /repo ',
+            repositoryRoot: '/repo',
         };
         const invokeCalls: Array<{ arguments_?: Record<string, unknown>; command: string; }> = [];
         const invoke = <T>(command: string, arguments_?: Record<string, unknown>) => {
@@ -546,7 +546,7 @@ describe('gitIntegration', () => {
             return Promise.resolve(nativeResponse as T);
         };
 
-        const report = await createGitDiffFileReport(' /repo/game ', ' scripts/intro.json ', {
+        const report = await createGitDiffFileReport('/repo/game', 'scripts/intro.json', {
             invoke,
             isTauriRuntime: () => true,
         });
@@ -570,7 +570,7 @@ describe('gitIntegration', () => {
     it('invokes the desktop git diff summary command and normalizes the response', async () => {
         const nativeResponse = {
             files: [
-                { binary: false, deletions: 2, insertions: 5, path: ' scripts/intro.json ' },
+                { binary: false, deletions: 2, insertions: 5, path: 'scripts/intro.json' },
                 { binary: true, deletions: '-', insertions: '-', path: 'assets/bg/title.png' },
                 { insertions: 1 },
             ],
@@ -583,7 +583,7 @@ describe('gitIntegration', () => {
             return Promise.resolve(nativeResponse as T);
         };
 
-        const report = await createGitDiffSummaryReport(' /repo/game ', {
+        const report = await createGitDiffSummaryReport('/repo/game', {
             invoke,
             isTauriRuntime: () => true,
         });
@@ -630,7 +630,7 @@ describe('gitIntegration', () => {
         const nativeResponse = {
             isRepository: true,
             rawOutput: 'staged',
-            repositoryRoot: ' /repo ',
+            repositoryRoot: '/repo',
             stagedCount: 2.8,
         };
         const invokeCalls: Array<{ arguments_?: Record<string, unknown>; command: string; }> = [];
@@ -639,7 +639,7 @@ describe('gitIntegration', () => {
             return Promise.resolve(nativeResponse as T);
         };
 
-        const report = await createGitStageAllReport(' /repo/game ', {
+        const report = await createGitStageAllReport('/repo/game', {
             invoke,
             isTauriRuntime: () => true,
         });
@@ -701,7 +701,7 @@ describe('gitIntegration', () => {
                 { fetchUrl: 'https://example.invalid/mirror.git', name: 'mirror' },
                 { pushUrl: 'git@example.invalid:missing-name.git' },
             ],
-            repositoryRoot: ' /repo ',
+            repositoryRoot: '/repo',
         };
         const invokeCalls: Array<{ arguments_?: Record<string, unknown>; command: string; }> = [];
         const invoke = <T>(command: string, arguments_?: Record<string, unknown>) => {
@@ -709,7 +709,7 @@ describe('gitIntegration', () => {
             return Promise.resolve(nativeResponse as T);
         };
 
-        const report = await createGitRemoteSummaryReport(' /repo/game ', {
+        const report = await createGitRemoteSummaryReport('/repo/game', {
             invoke,
             isTauriRuntime: () => true,
         });
@@ -791,7 +791,7 @@ describe('gitIntegration', () => {
             isRepository: true,
             rawOutput: 'Everything up-to-date',
             remoteName: ' origin ',
-            repositoryRoot: ' /repo ',
+            repositoryRoot: '/repo',
         };
         const invokeCalls: Array<{ arguments_?: Record<string, unknown>; command: string; }> = [];
         const invoke = <T>(command: string, arguments_?: Record<string, unknown>) => {
@@ -799,7 +799,7 @@ describe('gitIntegration', () => {
             return Promise.resolve(nativeResponse as T);
         };
 
-        const report = await createGitPushCurrentBranchReport(' /repo/game ', {
+        const report = await createGitPushCurrentBranchReport('/repo/game', {
             dryRun: true,
             remoteName: ' origin ',
         }, {
@@ -886,12 +886,12 @@ describe('gitIntegration', () => {
             branch: ' main ',
             entries: [
                 { index: 'M', path: 'scripts/intro.json', workingTree: ' ' },
-                { index: '??', path: ' notes/todo.txt ', workingTree: '?' },
+                { index: '??', path: 'notes/todo.txt', workingTree: '?' },
                 { index: 'M', workingTree: 'M' },
             ],
             isRepository: true,
             rawStatus: '## main...origin/main [ahead 2, behind 1]',
-            repositoryRoot: ' /repo ',
+            repositoryRoot: '/repo',
         };
         const invokeCalls: Array<{ arguments_?: Record<string, unknown>; command: string; }> = [];
         const invoke = <T>(command: string, arguments_?: Record<string, unknown>) => {
@@ -899,7 +899,7 @@ describe('gitIntegration', () => {
             return Promise.resolve(nativeResponse as T);
         };
 
-        const report = await createGitStatusReport(' /repo/game ', {
+        const report = await createGitStatusReport('/repo/game', {
             invoke,
             isTauriRuntime: () => true,
         });

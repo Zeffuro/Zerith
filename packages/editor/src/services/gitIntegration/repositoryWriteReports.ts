@@ -27,11 +27,11 @@ export async function createGitCommitStagedReport(
 ): Promise<GitCommitStagedReport> {
     const resolved = resolveGitCommitArguments(optionsOrDependencies, dependencies);
     const runtime = resolveGitRuntime(resolved.dependencies);
-    const trimmedProjectPath = projectPath?.trim();
+    const resolvedProjectPath = projectPath;
     const trimmedMessage = message?.trim();
     const trimmedDescription = resolved.options.description?.trim();
 
-    if (!trimmedProjectPath) {
+    if (!resolvedProjectPath) {
         return {
             reason: 'No project is currently open.',
             runtime,
@@ -58,8 +58,8 @@ export async function createGitCommitStagedReport(
     try {
         const invoke = resolved.dependencies.invoke ?? await loadTauriInvoke();
         const request = trimmedDescription
-            ? { description: trimmedDescription, message: trimmedMessage, projectPath: trimmedProjectPath }
-            : { message: trimmedMessage, projectPath: trimmedProjectPath };
+            ? { description: trimmedDescription, message: trimmedMessage, projectPath: resolvedProjectPath }
+            : { message: trimmedMessage, projectPath: resolvedProjectPath };
         const response = await invoke<NativeGitCommitStagedResponse>('git_commit_staged', {
             request,
         });
@@ -67,7 +67,7 @@ export async function createGitCommitStagedReport(
 
         if (!normalized.isRepository) {
             return {
-                reason: `Git repository: none found for ${trimmedProjectPath}`,
+                reason: `Git repository: none found for ${resolvedProjectPath}`,
                 runtime,
                 status: 'not-repository',
             };
@@ -102,9 +102,9 @@ export async function createGitInitRepositoryReport(
     dependencies: GitStatusDependencies = {},
 ): Promise<GitInitRepositoryReport> {
     const runtime = resolveGitRuntime(dependencies);
-    const trimmedProjectPath = projectPath?.trim();
+    const resolvedProjectPath = projectPath;
 
-    if (!trimmedProjectPath) {
+    if (!resolvedProjectPath) {
         return {
             reason: 'No project is currently open.',
             runtime,
@@ -123,13 +123,13 @@ export async function createGitInitRepositoryReport(
     try {
         const invoke = dependencies.invoke ?? await loadTauriInvoke();
         const response = await invoke<NativeGitInitRepositoryResponse>('git_init_repository', {
-            request: { projectPath: trimmedProjectPath },
+            request: { projectPath: resolvedProjectPath },
         });
         const normalized = normalizeGitInitRepositoryResponse(response);
 
         if (!normalized.isRepository) {
             return {
-                reason: `Git repository initialization did not return a repository for ${trimmedProjectPath}`,
+                reason: `Git repository initialization did not return a repository for ${resolvedProjectPath}`,
                 runtime,
                 status: 'error',
             };
@@ -155,10 +155,10 @@ export async function createGitPushCurrentBranchReport(
     dependencies: GitStatusDependencies = {},
 ): Promise<GitPushCurrentBranchReport> {
     const runtime = resolveGitRuntime(dependencies);
-    const trimmedProjectPath = projectPath?.trim();
+    const resolvedProjectPath = projectPath;
     const remoteName = options.remoteName?.trim();
 
-    if (!trimmedProjectPath) {
+    if (!resolvedProjectPath) {
         return {
             reason: 'No project is currently open.',
             runtime,
@@ -187,7 +187,7 @@ export async function createGitPushCurrentBranchReport(
         const response = await invoke<NativeGitPushCurrentBranchResponse>('git_push_current_branch', {
             request: {
                 dryRun: options.dryRun === true,
-                projectPath: trimmedProjectPath,
+                projectPath: resolvedProjectPath,
                 remoteName,
             },
         });
@@ -195,7 +195,7 @@ export async function createGitPushCurrentBranchReport(
 
         if (!normalized.isRepository) {
             return {
-                reason: `Git repository: none found for ${trimmedProjectPath}`,
+                reason: `Git repository: none found for ${resolvedProjectPath}`,
                 runtime,
                 status: 'not-repository',
             };

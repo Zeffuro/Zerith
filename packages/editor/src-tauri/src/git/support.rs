@@ -16,7 +16,8 @@ pub(super) fn run_git_command(
 
 pub(super) fn run_git_numstat(project_path: &Path, args: &[&str]) -> Result<String, String> {
     let output = run_git_command(project_path, args)?;
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stdout = String::from_utf8(output.stdout)
+        .map_err(|_| "Git output must be valid UTF-8.".to_owned())?;
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
     if !output.status.success() {
@@ -33,7 +34,8 @@ pub(super) fn run_git_numstat(project_path: &Path, args: &[&str]) -> Result<Stri
 
 pub(super) fn run_git_text_output(project_path: &Path, args: &[&str]) -> Result<String, String> {
     let output = run_git_command(project_path, args)?;
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stdout = String::from_utf8(output.stdout)
+        .map_err(|_| "Git output must be valid UTF-8.".to_owned())?;
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
     if !output.status.success() {
@@ -137,7 +139,8 @@ pub(super) fn validate_git_branch_name(
     branch_name: &str,
 ) -> Result<(), String> {
     let output = run_git_command(project_path, &["check-ref-format", "--branch", branch_name])?;
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stdout = String::from_utf8(output.stdout)
+        .map_err(|_| "Git output must be valid UTF-8.".to_owned())?;
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
     if output.status.success() {
@@ -162,7 +165,8 @@ pub(super) fn validate_git_remote_name(
     remote_name: &str,
 ) -> Result<(), String> {
     let output = run_git_command(project_path, &["remote", "get-url", remote_name])?;
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stdout = String::from_utf8(output.stdout)
+        .map_err(|_| "Git output must be valid UTF-8.".to_owned())?;
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
     if output.status.success() {
@@ -183,7 +187,7 @@ pub(super) fn validate_git_remote_name(
 }
 
 pub(super) fn validate_git_relative_path(path: &str) -> Result<String, String> {
-    let normalized = path.trim().replace('\\', "/");
+    let normalized = path.to_owned();
 
     if normalized.is_empty() {
         return Err("Git file path is required.".to_owned());
@@ -225,9 +229,10 @@ pub(super) fn is_git_worktree_clean(project_path: &Path) -> Result<bool, String>
 pub(super) fn read_git_porcelain_status(project_path: &Path) -> Result<String, String> {
     let output = run_git_command(
         project_path,
-        &["status", "--porcelain=v1", "--untracked-files=all"],
+        &["status", "--porcelain=v1", "-z", "--untracked-files=all"],
     )?;
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stdout = String::from_utf8(output.stdout)
+        .map_err(|_| "Git output must be valid UTF-8.".to_owned())?;
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
     if !output.status.success() {
@@ -245,9 +250,10 @@ pub(super) fn read_git_porcelain_status(project_path: &Path) -> Result<String, S
 pub(super) fn read_git_staged_project_count(project_path: &Path) -> Result<u32, String> {
     let output = run_git_command(
         project_path,
-        &["diff", "--cached", "--name-only", "--", "."],
+        &["diff", "--cached", "--name-only", "-z", "--", "."],
     )?;
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stdout = String::from_utf8(output.stdout)
+        .map_err(|_| "Git output must be valid UTF-8.".to_owned())?;
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
     if !output.status.success() {
@@ -259,17 +265,14 @@ pub(super) fn read_git_staged_project_count(project_path: &Path) -> Result<u32, 
         return Err(message.trim().to_owned());
     }
 
-    Ok(stdout
-        .lines()
-        .filter(|line| !line.trim().is_empty())
-        .count() as u32)
+    Ok(stdout.split('\0').filter(|path| !path.is_empty()).count() as u32)
 }
 
 pub(super) fn has_staged_changes(raw_status: &str) -> bool {
-    raw_status.lines().any(|line| {
-        let mut characters = line.chars();
-        matches!(characters.next(), Some(value) if value != ' ' && value != '?')
-    })
+    super::parsers::parse_git_status(raw_status)
+        .entries
+        .iter()
+        .any(|entry| entry.index != " " && entry.index != "?")
 }
 
 pub(super) fn read_git_head_short_hash(project_path: &Path) -> Option<String> {
@@ -298,11 +301,11 @@ pub(super) fn join_git_command_output(stdout: &str, stderr: &str) -> String {
 }
 
 pub(super) fn join_git_numstat_output(left: &str, right: &str) -> String {
-    [left.trim(), right.trim()]
+    [left, right]
         .into_iter()
         .filter(|value| !value.is_empty())
         .collect::<Vec<_>>()
-        .join("\n")
+        .join("")
 }
 
 pub(super) fn parse_git_branch_summary(raw_branches: &str) -> Vec<GitBranchEntry> {
@@ -361,47 +364,6 @@ pub(super) fn parse_git_branch_line(line: &str, response: &mut GitStatusResponse
     }
 }
 
-pub(super) fn parse_git_numstat_summary(raw_numstat: &str) -> Vec<GitDiffFileSummary> {
-    let mut files: Vec<GitDiffFileSummary> = Vec::new();
-
-    for line in raw_numstat.lines() {
-        let Some(entry) = parse_git_numstat_line(line) else {
-            continue;
-        };
-
-        if let Some(existing) = files.iter_mut().find(|file| file.path == entry.path) {
-            existing.binary = existing.binary || entry.binary;
-            existing.deletions += entry.deletions;
-            existing.insertions += entry.insertions;
-            continue;
-        }
-
-        files.push(entry);
-    }
-
-    files.sort_by(|left, right| left.path.cmp(&right.path));
-    files
-}
-
-pub(super) fn parse_git_numstat_line(line: &str) -> Option<GitDiffFileSummary> {
-    let mut parts = line.splitn(3, '\t');
-    let insertions = parts.next()?;
-    let deletions = parts.next()?;
-    let path = parts.next()?.trim();
-    if path.is_empty() {
-        return None;
-    }
-
-    let binary = insertions == "-" || deletions == "-";
-
-    Some(GitDiffFileSummary {
-        binary,
-        deletions: deletions.parse::<u32>().unwrap_or(0),
-        insertions: insertions.parse::<u32>().unwrap_or(0),
-        path: path.to_owned(),
-    })
-}
-
 pub(super) fn parse_git_remote_summary(raw_remotes: &str) -> Vec<GitRemoteEntry> {
     let mut remotes: Vec<GitRemoteEntry> = Vec::new();
 
@@ -450,24 +412,4 @@ pub(super) fn parse_git_remote_summary_line(line: &str) -> Option<(String, Strin
     }
 
     Some((name.to_owned(), url.to_owned(), direction))
-}
-
-pub(super) fn parse_git_status_entry(line: &str) -> Option<GitStatusEntry> {
-    if line.len() < 4 {
-        return None;
-    }
-
-    let mut characters = line.chars();
-    let index = characters.next()?.to_string();
-    let working_tree = characters.next()?.to_string();
-    let path = line.get(3..)?.trim();
-    if path.is_empty() {
-        return None;
-    }
-
-    Some(GitStatusEntry {
-        index,
-        path: path.to_owned(),
-        working_tree,
-    })
 }

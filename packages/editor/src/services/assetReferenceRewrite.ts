@@ -2,10 +2,12 @@ import type { ScriptPath } from '../utils/scriptPathUtilities';
 import type { ReferenceLocation } from './referenceScanner/types';
 
 import { isRecord } from '../utils/typeGuards';
+import { writeTextFileBatch } from './fileWriteBatch';
 import { fsReadTextFile, fsWriteTextFile } from './fs';
 import { normalizeAssetReference, toProjectAssetUrl } from './referenceScanner/assets';
 
 export type AssetReferenceBatchRewriteRequest = {
+    destinationForFile?: (filePath: string) => string;
     dirtyFiles?: ReadonlySet<string>;
     projectPath: string;
     replacements: readonly AssetReferenceReplacement[];
@@ -19,6 +21,7 @@ export type AssetReferenceReplacement = {
 
 export type AssetReferenceRewriteFile = {
     content: string;
+    expectedContent?: string;
     filePath: string;
     replacementCount: number;
 };
@@ -30,6 +33,7 @@ export type AssetReferenceRewritePlan = {
 };
 
 export type AssetReferenceRewriteRequest = {
+    destinationForFile?: (filePath: string) => string;
     dirtyFiles?: ReadonlySet<string>;
     newAssetUrl: string;
     oldAssetUrl: string;
@@ -39,7 +43,7 @@ export type AssetReferenceRewriteRequest = {
 
 export type AssetReferenceRewriteServiceDependencies = {
     readTextFile: (path: string) => Promise<string>;
-    writeTextFile: (path: string, content: string) => Promise<void>;
+    writeTextFile: typeof fsWriteTextFile;
 };
 
 type FormatAssetReferenceRequest = {
@@ -51,10 +55,12 @@ type NormalizeAssetReferenceForFileRequest = {
 } & Pick<AssetReferenceRewriteRequest, 'projectPath'>;
 
 type RewriteAssetReferenceJsonRequest = {
+    destinationFilePath?: string;
     filePath: string;
 } & Pick<AssetReferenceRewriteRequest, 'newAssetUrl' | 'oldAssetUrl' | 'projectPath' | 'references'>;
 
 type RewriteAssetStringRequest = {
+    destinationFilePath?: string;
     filePath: string;
 } & Pick<AssetReferenceRewriteRequest, 'newAssetUrl' | 'oldAssetUrl' | 'projectPath'>;
 
@@ -65,11 +71,9 @@ const defaultAssetReferenceRewriteDependencies: AssetReferenceRewriteServiceDepe
 
 export async function applyAssetReferenceRewritePlan(
     plan: Pick<AssetReferenceRewritePlan, 'files'>,
-    dependencies: Pick<AssetReferenceRewriteServiceDependencies, 'writeTextFile'> = defaultAssetReferenceRewriteDependencies,
+    dependencies: Partial<Pick<AssetReferenceRewriteServiceDependencies, 'readTextFile'>> & Pick<AssetReferenceRewriteServiceDependencies, 'writeTextFile'> = defaultAssetReferenceRewriteDependencies,
 ): Promise<void> {
-    for (const file of plan.files) {
-        await dependencies.writeTextFile(file.filePath, file.content);
-    }
+    await writeTextFileBatch(plan.files, dependencies);
 }
 
 export function formatAssetReferenceReplacement(
@@ -120,6 +124,7 @@ export async function prepareAssetReferenceBatchRewritePlan(
 
         for (const replacement of replacements) {
             replacementCount += rewriteAssetReferencesInJson(parsed, {
+                destinationFilePath: request.destinationForFile?.(filePath),
                 filePath,
                 newAssetUrl: replacement.newAssetUrl,
                 oldAssetUrl: replacement.oldAssetUrl,
@@ -131,7 +136,8 @@ export async function prepareAssetReferenceBatchRewritePlan(
         if (replacementCount > 0) {
             files.push({
                 content: `${JSON.stringify(parsed, undefined, 4)}\n`,
-                filePath,
+                expectedContent: text,
+                filePath: request.destinationForFile?.(filePath) ?? filePath,
                 replacementCount,
             });
         }
@@ -160,6 +166,7 @@ export async function prepareAssetReferenceRewritePlan(
         const text = await dependencies.readTextFile(filePath);
         const parsed = JSON.parse(text) as unknown;
         const replacementCount = rewriteAssetReferencesInJson(parsed, {
+            destinationFilePath: request.destinationForFile?.(filePath),
             filePath,
             newAssetUrl: request.newAssetUrl,
             oldAssetUrl: request.oldAssetUrl,
@@ -170,7 +177,8 @@ export async function prepareAssetReferenceRewritePlan(
         if (replacementCount > 0) {
             files.push({
                 content: `${JSON.stringify(parsed, undefined, 4)}\n`,
-                filePath,
+                expectedContent: text,
+                filePath: request.destinationForFile?.(filePath) ?? filePath,
                 replacementCount,
             });
         }
@@ -373,7 +381,7 @@ function rewriteAssetString(
 ): string {
     const normalized = normalizeAssetReferenceForFile(value, request);
     return normalized === request.oldAssetUrl
-        ? formatAssetReferenceReplacement(value, request)
+        ? formatAssetReferenceReplacement(value, { ...request, filePath: request.destinationFilePath ?? request.filePath })
         : value;
 }
 

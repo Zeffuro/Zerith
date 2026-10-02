@@ -32,6 +32,7 @@ function createViewPrefsState() {
         setLastManifestView: () => {},
         setLastScriptView: () => {},
         setLastSpritesheetView: () => {},
+        setTabSavedContent: () => {},
         tabs: [],
         updateTabContent: () => {},
     });

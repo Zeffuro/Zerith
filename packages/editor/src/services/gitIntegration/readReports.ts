@@ -28,9 +28,9 @@ export async function createGitBranchSummaryReport(
     dependencies: GitStatusDependencies = {},
 ): Promise<GitBranchSummaryReport> {
     const runtime = resolveGitRuntime(dependencies);
-    const trimmedProjectPath = projectPath?.trim();
+    const resolvedProjectPath = projectPath;
 
-    if (!trimmedProjectPath) {
+    if (!resolvedProjectPath) {
         return {
             reason: 'No project is currently open.',
             runtime,
@@ -49,7 +49,7 @@ export async function createGitBranchSummaryReport(
     try {
         const invoke = dependencies.invoke ?? await loadTauriInvoke();
         const response = await invoke<NativeGitBranchSummaryResponse>('git_branch_summary', {
-            request: { projectPath: trimmedProjectPath },
+            request: { projectPath: resolvedProjectPath },
         });
 
         return {
@@ -72,10 +72,10 @@ export async function createGitDiffFileReport(
     dependencies: GitStatusDependencies = {},
 ): Promise<GitDiffFileReport> {
     const runtime = resolveGitRuntime(dependencies);
-    const trimmedProjectPath = projectPath?.trim();
-    const trimmedPath = path?.trim();
+    const resolvedProjectPath = projectPath;
+    const filePath = path;
 
-    if (!trimmedProjectPath) {
+    if (!resolvedProjectPath) {
         return {
             reason: 'No project is currently open.',
             runtime,
@@ -83,7 +83,7 @@ export async function createGitDiffFileReport(
         };
     }
 
-    if (!trimmedPath) {
+    if (!filePath) {
         return {
             reason: 'Git file path is required.',
             runtime,
@@ -102,13 +102,13 @@ export async function createGitDiffFileReport(
     try {
         const invoke = dependencies.invoke ?? await loadTauriInvoke();
         const response = await invoke<NativeGitDiffFileResponse>('git_diff_file', {
-            request: { path: trimmedPath, projectPath: trimmedProjectPath },
+            request: { path: filePath, projectPath: resolvedProjectPath },
         });
         const normalized = normalizeGitDiffFileResponse(response);
 
         return {
             ...normalized,
-            path: normalized.path || trimmedPath,
+            path: normalized.path || filePath,
             runtime,
             status: 'ready',
         };
@@ -126,9 +126,9 @@ export async function createGitDiffSummaryReport(
     dependencies: GitStatusDependencies = {},
 ): Promise<GitDiffSummaryReport> {
     const runtime = resolveGitRuntime(dependencies);
-    const trimmedProjectPath = projectPath?.trim();
+    const resolvedProjectPath = projectPath;
 
-    if (!trimmedProjectPath) {
+    if (!resolvedProjectPath) {
         return {
             reason: 'No project is currently open.',
             runtime,
@@ -147,7 +147,7 @@ export async function createGitDiffSummaryReport(
     try {
         const invoke = dependencies.invoke ?? await loadTauriInvoke();
         const response = await invoke<NativeGitDiffSummaryResponse>('git_diff_summary', {
-            request: { projectPath: trimmedProjectPath },
+            request: { projectPath: resolvedProjectPath },
         });
 
         return {
@@ -169,9 +169,9 @@ export async function createGitRemoteSummaryReport(
     dependencies: GitStatusDependencies = {},
 ): Promise<GitRemoteSummaryReport> {
     const runtime = resolveGitRuntime(dependencies);
-    const trimmedProjectPath = projectPath?.trim();
+    const resolvedProjectPath = projectPath;
 
-    if (!trimmedProjectPath) {
+    if (!resolvedProjectPath) {
         return {
             reason: 'No project is currently open.',
             runtime,
@@ -190,7 +190,7 @@ export async function createGitRemoteSummaryReport(
     try {
         const invoke = dependencies.invoke ?? await loadTauriInvoke();
         const response = await invoke<NativeGitRemoteSummaryResponse>('git_remote_summary', {
-            request: { projectPath: trimmedProjectPath },
+            request: { projectPath: resolvedProjectPath },
         });
 
         return {
@@ -212,9 +212,9 @@ export async function createGitStatusReport(
     dependencies: GitStatusDependencies = {},
 ): Promise<GitStatusReport> {
     const runtime = resolveGitRuntime(dependencies);
-    const trimmedProjectPath = projectPath?.trim();
+    const resolvedProjectPath = projectPath;
 
-    if (!trimmedProjectPath) {
+    if (!resolvedProjectPath) {
         return {
             reason: 'No project is currently open.',
             runtime,
@@ -233,7 +233,7 @@ export async function createGitStatusReport(
     try {
         const invoke = dependencies.invoke ?? await loadTauriInvoke();
         const response = await invoke<NativeGitStatusResponse>('git_status', {
-            request: { projectPath: trimmedProjectPath },
+            request: { projectPath: resolvedProjectPath },
         });
 
         return {

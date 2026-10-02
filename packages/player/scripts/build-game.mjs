@@ -108,6 +108,7 @@ function collectZipEntries(rootDir, currentDir, entries) {
     const dirEntries = fs.readdirSync(currentDir, { withFileTypes: true });
 
     for (const entry of dirEntries) {
+        if (['.dev_docs', '.git', 'node_modules'].includes(entry.name.toLowerCase())) continue;
         const fullPath = path.join(currentDir, entry.name);
 
         if (entry.isDirectory()) {

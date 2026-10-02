@@ -1,12 +1,12 @@
-import {
-    type CharacterDefinition,
-    type Command,
-    type GameManifest,
-    type ItemManifestEntry,
-    type LocaleBundle,
-    parseLocaleBundle,
-    parseSceneFile,
+import type {
+    CharacterDefinition,
+    Command,
+    GameManifest,
+    ItemManifestEntry,
+    LocaleBundle,
 } from '@zeffuro/zerith-core';
+
+import { parseLocaleBundle, parseSceneFile, validateScript } from '@zeffuro/zerith-core/schemas';
 
 import type { ProjectGet, ProjectManifestSlice, ProjectSet } from '../types';
 
@@ -25,11 +25,13 @@ type SceneResolution = {
 };
 
 export function createProjectManifestSlice(set: ProjectSet, get: ProjectGet): ProjectManifestSlice {
+    let loadSequence = 0;
     return {
         characters: {},
         items: {},
         loadManifest: async () => {
-            const { projectPath } = get();
+            const { projectGeneration, projectPath } = get();
+            const sequence = ++loadSequence;
             if (!projectPath) return;
 
             try {
@@ -49,7 +51,7 @@ export function createProjectManifestSlice(set: ProjectSet, get: ProjectGet): Pr
                         ? resolveManifestValueFromDisk<Record<string, ItemManifestEntry>>(manifest.items, projectPath)
                         : Promise.resolve<Record<string, ItemManifestEntry>>({}),
                     manifest.macros
-                        ? resolveManifestValueFromDisk<Record<string, Command[]>>(manifest.macros, projectPath)
+                        ? resolveMacrosDisk(manifest.macros, projectPath)
                         : Promise.resolve<Record<string, Command[]>>({}),
                     manifest.scenes && isRecord(manifest.scenes)
                         ? resolveScenesDisk(manifest.scenes, projectPath)
@@ -57,16 +59,21 @@ export function createProjectManifestSlice(set: ProjectSet, get: ProjectGet): Pr
                     resolveLocalesDisk(manifest.localization?.locales ?? {}, projectPath),
                 ]);
 
+                if (get().projectPath !== projectPath || get().projectGeneration !== projectGeneration || sequence !== loadSequence) return;
+                const current = get();
+                const dirtyPaths = new Set([...current.dirtyFiles].map((path) => normalizeFilePath(path)));
+                const isDirty = (path: string | undefined) => path !== undefined && dirtyPaths.has(normalizeFilePath(path));
+                const isDirtyManifestValue = (value: unknown) => typeof value === 'string' && isDirty(resolveProjectFilePath(projectPath, value));
                 set({
-                    characters,
-                    items,
-                    localePaths: localeResolution.localePaths,
-                    locales: localeResolution.locales,
-                    macros,
-                    manifest,
-                    sceneNamespaces: sceneResolution.sceneNamespaces,
-                    scenePaths: sceneResolution.scenePaths,
-                    scenes: sceneResolution.scenes,
+                    characters: isDirtyManifestValue(manifest.characters) ? current.characters : characters,
+                    items: isDirtyManifestValue(manifest.items) ? current.items : items,
+                    localePaths: preserveDirtyFileValues(localeResolution.localePaths, current.localePaths, current.localePaths, isDirty),
+                    locales: preserveDirtyFileValues(localeResolution.locales, current.locales, current.localePaths, isDirty),
+                    macros: isDirtyManifestValue(manifest.macros) ? current.macros : macros,
+                    manifest: isDirty(`${projectPath}/game.json`) ? current.manifest : manifest,
+                    sceneNamespaces: preserveDirtyFileValues(sceneResolution.sceneNamespaces, current.sceneNamespaces, current.scenePaths, isDirty),
+                    scenePaths: preserveDirtyFileValues(sceneResolution.scenePaths, current.scenePaths, current.scenePaths, isDirty),
+                    scenes: preserveDirtyFileValues(sceneResolution.scenes, current.scenes, current.scenePaths, isDirty),
                 });
             } catch (error) {
                 console.error('Failed to load manifest:', error);
@@ -86,9 +93,26 @@ function isExternalPath(path: string): boolean {
     return /^(?:[a-z]+:)?\/\//iu.test(path) || path.startsWith('data:');
 }
 
-
 function joinVirtualPath(directoryPath: string, name: string): string {
     return `${directoryPath.replaceAll(/\/+$/gu, '')}/${name}`;
+}
+
+function normalizeFilePath(path: string): string {
+    return path.replaceAll('\\', '/').toLowerCase();
+}
+
+
+function preserveDirtyFileValues<T>(
+    loaded: Record<string, T>,
+    previous: Record<string, T>,
+    previousPaths: Record<string, string | undefined>,
+    isDirty: (path: string | undefined) => boolean,
+): Record<string, T> {
+    const values = { ...loaded };
+    for (const [name, path] of Object.entries(previousPaths)) {
+        if (isDirty(path) && Object.hasOwn(previous, name)) values[name] = previous[name];
+    }
+    return values;
 }
 
 async function resolveLocalesDisk(
@@ -120,6 +144,17 @@ async function resolveLocalesDisk(
     }));
 
     return { localePaths, locales };
+}
+
+async function resolveMacrosDisk(value: unknown, projectPath: string): Promise<Record<string, Command[]>> {
+    const candidate = await resolveManifestValueFromDisk<unknown>(value, projectPath);
+    if (!isRecord(candidate)) throw new TypeError('Macros must be an object of command arrays.');
+    return Object.fromEntries(Object.entries(candidate)
+        .filter(([name]) => !name.startsWith('$'))
+        .map(([name, commands]) => {
+            if (!Array.isArray(commands)) throw new TypeError(`Macro '${name}' must be a command array.`);
+            return [name, validateScript(commands)];
+        }));
 }
 
 async function resolveManifestValueFromDisk<T>(value: string | T, projectPath: string): Promise<T> {
@@ -175,5 +210,3 @@ async function resolveScenesDisk(
 
     return { sceneNamespaces, scenePaths, scenes: resolvedScenes };
 }
-
-

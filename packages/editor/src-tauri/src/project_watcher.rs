@@ -1,26 +1,36 @@
-use notify::event::ModifyKind;
-use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+mod delivery;
+
+use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use serde::Serialize;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{self, Sender};
+use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
-use std::time::Duration;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State, WebviewWindow};
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ProjectFileWatcherPayload {
     path: String,
+    generation: u64,
 }
 
 #[derive(Default)]
 pub(crate) struct ProjectFileWatcherState {
-    watcher: Mutex<Option<ProjectFileWatcher>>,
+    sessions: Mutex<HashMap<String, WatcherSession>>,
+}
+
+#[derive(Default)]
+struct WatcherSession {
+    latest_generation: u64,
+    close_listener_registered: bool,
+    watcher: Option<ProjectFileWatcher>,
 }
 
 struct ProjectFileWatcher {
-    project_path: PathBuf,
+    generation: u64,
     stop_tx: Sender<()>,
     worker_handle: Option<JoinHandle<()>>,
     _watcher: RecommendedWatcher,
@@ -38,205 +48,169 @@ impl ProjectFileWatcher {
 #[tauri::command]
 pub(crate) fn start_project_file_watcher(
     app_handle: AppHandle,
+    window: WebviewWindow,
     state: State<'_, ProjectFileWatcherState>,
     project_path: String,
+    generation: u64,
 ) -> Result<(), String> {
-    let requested_path = PathBuf::from(project_path);
-    if !requested_path.exists() {
-        return Err(format!(
-            "Project path does not exist: {}",
-            requested_path.display()
-        ));
-    }
-
-    if !requested_path.is_dir() {
-        return Err(format!(
-            "Project path is not a directory: {}",
-            requested_path.display()
-        ));
-    }
-
-    let normalized_project_path = requested_path
+    let normalized_project_path = PathBuf::from(project_path)
         .canonicalize()
         .map_err(|error| format!("Failed to resolve project path: {error}"))?;
-
-    let mut watcher_guard = state
-        .watcher
+    if !normalized_project_path.is_dir() {
+        return Err("Project path is not a directory.".to_owned());
+    }
+    let mut sessions = state
+        .sessions
         .lock()
         .map_err(|error| format!("Project watcher lock poisoned: {error}"))?;
-
-    if let Some(existing_watcher) = watcher_guard.as_ref() {
-        if paths_match(&existing_watcher.project_path, &normalized_project_path) {
-            return Ok(());
-        }
+    let window_label = window.label().to_owned();
+    let session = sessions.entry(window_label.clone()).or_default();
+    if !session.close_listener_registered {
+        let close_app = app_handle.clone();
+        let close_label = window_label.clone();
+        window.on_window_event(move |event| {
+            if matches!(event, tauri::WindowEvent::Destroyed) {
+                let state = close_app.state::<ProjectFileWatcherState>();
+                if let Ok(mut sessions) = state.sessions.lock() {
+                    if let Some(mut session) = sessions.remove(&close_label) {
+                        if let Some(watcher) = session.watcher.take() {
+                            watcher.stop();
+                        }
+                    }
+                };
+            }
+        });
+        session.close_listener_registered = true;
+    }
+    if !session.accept_start(generation) {
+        return Ok(());
     }
 
-    if let Some(existing_watcher) = watcher_guard.take() {
-        existing_watcher.stop();
-    }
-
-    let (event_tx, event_rx) = mpsc::channel::<notify::Result<Event>>();
+    let (event_tx, event_rx) = mpsc::sync_channel::<()>(delivery::CHANNEL_CAPACITY);
+    let overflow = Arc::new(AtomicBool::new(false));
+    let overflow_for_callback = Arc::clone(&overflow);
+    let callback_path = normalized_project_path.clone();
     let mut watcher = RecommendedWatcher::new(
-        move |event| {
-            let _ = event_tx.send(event);
+        move |event: notify::Result<notify::Event>| match event {
+            Ok(event)
+                if event.need_rescan()
+                    || (!matches!(event.kind, EventKind::Access(_))
+                        && event
+                            .paths
+                            .iter()
+                            .any(|path| path.starts_with(&callback_path))) =>
+            {
+                if event_tx.try_send(()).is_err() {
+                    overflow_for_callback.store(true, Ordering::Release);
+                }
+            }
+            Err(error) => {
+                eprintln!("Project watcher error: {error}");
+                overflow_for_callback.store(true, Ordering::Release);
+            }
+            _ => {}
         },
         notify::Config::default(),
     )
     .map_err(|error| format!("Failed to create file watcher: {error}"))?;
-
     watcher
         .watch(&normalized_project_path, RecursiveMode::Recursive)
-        .map_err(|error| {
-            format!(
-                "Failed to watch project path '{}': {error}",
-                normalized_project_path.display()
-            )
-        })?;
+        .map_err(|error| format!("Failed to watch project: {error}"))?;
 
+    if let Some(existing) = session.watcher.take() {
+        existing.stop();
+    }
     let (stop_tx, stop_rx) = mpsc::channel::<()>();
-    let app_handle_for_thread = app_handle.clone();
-    let project_path_for_thread = normalized_project_path.clone();
     let worker_handle = std::thread::spawn(move || {
-        process_project_file_events(
-            app_handle_for_thread,
-            project_path_for_thread,
-            event_rx,
-            stop_rx,
-        )
+        delivery::process_events(event_rx, stop_rx, overflow, || {
+            emit_project_invalidation(
+                &app_handle,
+                &window_label,
+                &normalized_project_path,
+                generation,
+            );
+        });
     });
-
-    *watcher_guard = Some(ProjectFileWatcher {
-        project_path: normalized_project_path,
+    session.watcher = Some(ProjectFileWatcher {
+        generation,
         stop_tx,
         worker_handle: Some(worker_handle),
         _watcher: watcher,
     });
-
     Ok(())
 }
 
 #[tauri::command]
 pub(crate) fn stop_project_file_watcher(
+    window: WebviewWindow,
     state: State<'_, ProjectFileWatcherState>,
+    generation: u64,
 ) -> Result<(), String> {
-    let mut watcher_guard = state
-        .watcher
+    let mut sessions = state
+        .sessions
         .lock()
         .map_err(|error| format!("Project watcher lock poisoned: {error}"))?;
-
-    if let Some(existing_watcher) = watcher_guard.take() {
-        existing_watcher.stop();
+    let session = sessions.entry(window.label().to_owned()).or_default();
+    let active_generation = session.watcher.as_ref().map(|watcher| watcher.generation);
+    if session.accept_stop(generation, active_generation) {
+        if let Some(existing) = session.watcher.take() {
+            existing.stop();
+        }
     }
-
     Ok(())
 }
 
-fn emit_project_file_event(
+impl WatcherSession {
+    fn accept_start(&mut self, generation: u64) -> bool {
+        if generation <= self.latest_generation {
+            return false;
+        }
+        self.latest_generation = generation;
+        true
+    }
+
+    fn accept_stop(&mut self, generation: u64, active_generation: Option<u64>) -> bool {
+        self.latest_generation = self.latest_generation.max(generation);
+        active_generation == Some(generation)
+    }
+}
+
+fn emit_project_invalidation(
     app_handle: &AppHandle,
-    event_name: &str,
+    window_label: &str,
     project_path: &Path,
-    path: &Path,
+    generation: u64,
 ) {
-    if !path.starts_with(project_path) {
-        return;
-    }
-
     let payload = ProjectFileWatcherPayload {
-        path: path.to_string_lossy().to_string(),
+        path: project_path.to_string_lossy().to_string(),
+        generation,
     };
-
-    if let Err(error) = app_handle.emit(event_name, payload) {
-        eprintln!("Failed to emit '{event_name}' event: {error}");
+    if let Err(error) = app_handle.emit_to(window_label, "project:file-changed", payload) {
+        eprintln!("Failed to emit project invalidation: {error}");
     }
 }
 
-fn flush_project_file_events(app_handle: &AppHandle, project_path: &Path, events: &mut Vec<Event>) {
-    for event in events.drain(..) {
-        match event.kind {
-            EventKind::Create(_) => {
-                for path in &event.paths {
-                    emit_project_file_event(app_handle, "project:file-added", project_path, path);
-                }
-            }
-            EventKind::Remove(_) => {
-                for path in &event.paths {
-                    emit_project_file_event(app_handle, "project:file-removed", project_path, path);
-                }
-            }
-            EventKind::Modify(ModifyKind::Name(_)) => {
-                if event.paths.len() >= 2 {
-                    if let Some(old_path) = event.paths.first() {
-                        emit_project_file_event(
-                            app_handle,
-                            "project:file-removed",
-                            project_path,
-                            old_path,
-                        );
-                    }
+#[cfg(test)]
+mod tests {
+    use super::WatcherSession;
 
-                    if let Some(new_path) = event.paths.get(1) {
-                        emit_project_file_event(
-                            app_handle,
-                            "project:file-added",
-                            project_path,
-                            new_path,
-                        );
-                    }
-                } else {
-                    for path in &event.paths {
-                        emit_project_file_event(
-                            app_handle,
-                            "project:file-changed",
-                            project_path,
-                            path,
-                        );
-                    }
-                }
-            }
-            EventKind::Modify(_) | EventKind::Any | EventKind::Other => {
-                for path in &event.paths {
-                    emit_project_file_event(app_handle, "project:file-changed", project_path, path);
-                }
-            }
-            EventKind::Access(_) => {}
-        }
-    }
-}
-
-fn process_project_file_events(
-    app_handle: AppHandle,
-    project_path: PathBuf,
-    event_rx: Receiver<notify::Result<Event>>,
-    stop_rx: Receiver<()>,
-) {
-    let mut buffered_events: Vec<Event> = Vec::new();
-
-    loop {
-        if stop_rx.try_recv().is_ok() {
-            break;
-        }
-
-        match event_rx.recv_timeout(Duration::from_millis(200)) {
-            Ok(Ok(event)) => buffered_events.push(event),
-            Ok(Err(error)) => eprintln!("Project watcher error: {error}"),
-            Err(RecvTimeoutError::Timeout) => {
-                if buffered_events.is_empty() {
-                    continue;
-                }
-
-                flush_project_file_events(&app_handle, &project_path, &mut buffered_events);
-            }
-            Err(RecvTimeoutError::Disconnected) => break,
-        }
+    #[test]
+    fn stale_start_cannot_replace_a_newer_session() {
+        let mut session = WatcherSession::default();
+        assert!(session.accept_start(10));
+        assert!(session.accept_start(12));
+        assert!(!session.accept_start(11));
+        assert!(!session.accept_start(12));
+        assert!(!session.accept_stop(10, Some(12)));
+        assert!(session.accept_stop(12, Some(12)));
+        assert!(!session.accept_start(12));
     }
 
-    if !buffered_events.is_empty() {
-        flush_project_file_events(&app_handle, &project_path, &mut buffered_events);
+    #[test]
+    fn cleanup_before_start_cancels_that_pending_generation() {
+        let mut session = WatcherSession::default();
+        assert!(!session.accept_stop(10, None));
+        assert!(!session.accept_start(10));
+        assert!(session.accept_start(11));
     }
-}
-
-fn paths_match(left: &Path, right: &Path) -> bool {
-    let left_value = left.to_string_lossy();
-    let right_value = right.to_string_lossy();
-    left_value.eq_ignore_ascii_case(&right_value)
 }

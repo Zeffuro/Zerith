@@ -1,10 +1,11 @@
-import type { Command } from '@zeffuro/zerith-core';
-
 import type { ProjectGet, ProjectIoSlice, ProjectScriptBridge } from '../types';
 
-import { fsReadDirectory, fsReadTextFile, fsWriteTextFile } from '../../../services/fs';
+import { fsReadDirectory, fsReadTextFile } from '../../../services/fs';
 import { saveAllFiles } from '../../../services/saveAllFiles';
+import { saveWorkbenchTextFile as fsWriteTextFile } from '../../../services/saveWorkbenchFile';
+import { serializeMacroEntries, serializeSceneCommands, visualTabSourceText } from '../../../services/visualWorkbenchContent';
 import { isRecord } from '../../../utils/typeGuards';
+import { useWorkbenchStore } from '../../useWorkbenchStore';
 
 export function createProjectIoSlice(get: ProjectGet, scriptBridge: ProjectScriptBridge): ProjectIoSlice {
     return {
@@ -30,17 +31,22 @@ export function createProjectIoSlice(get: ProjectGet, scriptBridge: ProjectScrip
         },
 
         saveActiveFileFromCurrentScript: async () => {
-            const { activeFile, activeMacroName, editingAllMacrosFile, macroEntries } = get();
+            const { activeFile, activeMacroName, editingAllMacrosFile, macroEntries, projectGeneration } = get();
             if (!activeFile) return;
 
             const rootScript = scriptBridge.getRootScript();
+            const workbench = useWorkbenchStore.getState();
+            const tab = workbench.tabs.find(entry => entry.path === activeFile);
+            const sourceText = visualTabSourceText(tab);
 
             try {
                 if (editingAllMacrosFile) {
-                    const out: Record<string, Command[]> = {};
-                    for (const m of macroEntries) out[m.name] = Array.isArray(m.commands) ? m.commands : [];
-                    await fsWriteTextFile(activeFile, JSON.stringify(out, undefined, 4));
-                    get().clearFileDirty(activeFile);
+                    const content = serializeMacroEntries(macroEntries, sourceText);
+                    await fsWriteTextFile(activeFile, content);
+                    if (get().projectGeneration === projectGeneration && get().macroEntries === macroEntries) {
+                        if (tab) useWorkbenchStore.getState().updateTabContent(tab.id, content, { markDirty: false });
+                        get().clearFileDirty(activeFile);
+                    }
                     return;
                 }
 
@@ -53,10 +59,14 @@ export function createProjectIoSlice(get: ProjectGet, scriptBridge: ProjectScrip
                     parsed[activeMacroName] = rootScript;
                     await fsWriteTextFile(activeFile, JSON.stringify(parsed, undefined, 4));
                 } else {
-                    await fsWriteTextFile(activeFile, JSON.stringify(rootScript, undefined, 4));
+                    const content = serializeSceneCommands(rootScript, sourceText ?? await fsReadTextFile(activeFile));
+                    await fsWriteTextFile(activeFile, content);
+                    if (tab && get().projectGeneration === projectGeneration && scriptBridge.getRootScript() === rootScript) {
+                        useWorkbenchStore.getState().updateTabContent(tab.id, content, { markDirty: false });
+                    }
                 }
 
-                get().clearFileDirty(activeFile);
+                if (get().projectGeneration === projectGeneration && scriptBridge.getRootScript() === rootScript) get().clearFileDirty(activeFile);
             } catch (error) {
                 console.error('Failed to save active file:', error);
             }

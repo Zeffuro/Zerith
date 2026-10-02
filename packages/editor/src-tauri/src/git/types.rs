@@ -118,6 +118,7 @@ pub(crate) struct GitPushCurrentBranchResponse {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct GitStatusEntry {
+    pub(super) original_path: Option<String>,
     pub(super) index: String,
     pub(super) path: String,
     pub(super) working_tree: String,
@@ -183,6 +184,7 @@ pub(crate) struct GitCommitStagedResponse {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct GitDiffFileSummary {
+    pub(super) original_path: Option<String>,
     pub(super) binary: bool,
     pub(super) deletions: u32,
     pub(super) insertions: u32,

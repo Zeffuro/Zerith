@@ -20,6 +20,7 @@ type HandleJsonRouteOptions = {
     isMacrosObject: (value: unknown) => boolean;
     jsonSelectionPath?: ScriptPath;
     route: JsonRoute;
+    savedTextContent?: string;
 };
 
 export function handleJsonRoute(options: HandleJsonRouteOptions): void {
@@ -31,6 +32,7 @@ export function handleJsonRoute(options: HandleJsonRouteOptions): void {
         isMacrosObject,
         jsonSelectionPath,
         route,
+        savedTextContent,
     } = options;
 
     if (route.kind === 'resource') {
@@ -47,6 +49,7 @@ export function handleJsonRoute(options: HandleJsonRouteOptions): void {
             kind: route.resourceKind,
             path: fullPath,
             preferredView,
+            ...(savedTextContent === undefined ? {} : { savedTextContent }),
             textContent: contents,
             title: route.resourceKind === 'manifest'
                 ? 'Project Settings'
@@ -62,7 +65,7 @@ export function handleJsonRoute(options: HandleJsonRouteOptions): void {
             throw new TypeError('Scene scripts must be JSON arrays or scene objects with a commands array.');
         }
         applyScriptFile(fullPath, data);
-        openScriptTab(fullPath, forceView, jsonSelectionPath);
+        openScriptTab(fullPath, forceView, jsonSelectionPath, savedTextContent ?? contents);
         return;
     }
 
@@ -71,7 +74,7 @@ export function handleJsonRoute(options: HandleJsonRouteOptions): void {
             throw new TypeError('Macros file must be a JSON object of command arrays.');
         }
         applyMacrosFile(fullPath, data as Record<string, unknown>);
-        openMacrosTab(fullPath, forceView, jsonSelectionPath);
+        openMacrosTab(fullPath, forceView, jsonSelectionPath, savedTextContent ?? contents);
         return;
     }
 
@@ -85,6 +88,7 @@ export function handleJsonRoute(options: HandleJsonRouteOptions): void {
         kind: route.tabKind,
         path: fullPath,
         preferredView,
+        ...(savedTextContent === undefined ? {} : { savedTextContent }),
         textContent: contents,
         title: route.tabKind === 'manifest' ? 'Project Settings' : basenameFromPath(fullPath),
     }});

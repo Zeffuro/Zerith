@@ -5,25 +5,24 @@ description = "Zerith desktop authoring editor"
 authors = ["Zeffuro"]
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [lib]
-# The `_lib` suffix may seem redundant but it is necessary
-# to make the lib name unique and wouldn't conflict with the bin name.
-# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+# Avoid the Windows library/binary name collision.
 name = "editor_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.6.2", features = [] }
+tauri-build = { version = "2.7.1", features = [] }
 
 [dependencies]
-tauri = { version = "2.11.2", features = ["protocol-asset"] }
-tauri-plugin-opener = "2.5.4"
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.150"
-tauri-plugin-dialog = "2.7.1"
-tauri-plugin-fs = "2.5.1"
+tauri = { version = "2.12.1", features = ["protocol-asset"] }
+tauri-plugin-opener = "2.7.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sha2 = "0.10.9"
+tauri-plugin-dialog = "2.8.1"
+tauri-plugin-fs = "2.6.0"
 notify = "8.2.0"
-tauri-plugin-updater = "2.10.1"
-tauri-plugin-process = "2.3.1"
+tauri-plugin-updater = "2.13.1"
+tauri-plugin-process = "2.4.0"
+tempfile = "3.27.0"
+zip = { version = "8.6.0", default-features = false, features = ["deflate"] }

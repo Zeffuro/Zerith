@@ -187,6 +187,7 @@ describe('openProjectEntry jsonHandlers', () => {
                 kind: 'macros',
                 path: '/project/data/macros.json',
                 preferredView: 'timeline',
+                savedTextContent: '{"greet":[]}',
                 title: 'macros.json',
             },
         });

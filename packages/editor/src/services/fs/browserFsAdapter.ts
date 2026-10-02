@@ -141,7 +141,18 @@ export function createBrowserFsAdapter(browserGlobal: BrowserFsGlobal = globalTh
             const file = await getWritableFile(path, roots);
             await writeFile(file, content);
         },
-        writeTextFile: async (path, content) => {
+        writeTextFile: async (path, content, options) => {
+            if (options?.createOnly) {
+                const { entryName, parent } = await resolveParentDirectory(path, roots);
+                for await (const [name] of parent.entries()) {
+                    if (name.toLowerCase() === entryName.toLowerCase()) {
+                        throw Object.assign(new Error('Destination already exists.'), { code: 'alreadyExists' });
+                    }
+                }
+            }
+            if (options?.expectedContent !== undefined && await adapter.readTextFile(path) !== options.expectedContent) {
+                throw new Error('File changed on disk. Reopen it before saving.');
+            }
             const file = await getWritableFile(path, roots);
             await writeFile(file, content);
         },

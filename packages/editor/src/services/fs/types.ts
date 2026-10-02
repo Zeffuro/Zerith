@@ -1,10 +1,12 @@
 export type FsAdapter = {
+    copyFileExclusive?: (sourcePath: string, targetPath: string) => Promise<void>;
     dirname: (path: string) => Promise<string>;
     join: (...parts: string[]) => Promise<string>;
     mkdir: (path: string, recursive?: boolean) => Promise<void>;
     openPath: (path: string) => Promise<void>;
     pickBinaryFiles: (options?: FsFilePickerOptions) => Promise<FsPickedFile[]>;
     pickDirectory: (title?: string) => Promise<string | undefined>;
+    pickImportFiles?: (options?: FsFilePickerOptions) => Promise<FsImportFile[]>;
     pickProjectManifest: () => Promise<FsProjectPickerResult | undefined>;
     readBinaryFile: (path: string) => Promise<Uint8Array>;
     readDirectory: (path: string) => Promise<FsDirectoryEntry[]>;
@@ -12,7 +14,8 @@ export type FsAdapter = {
     remove: (path: string, recursive?: boolean) => Promise<void>;
     rename: (oldPath: string, newPath: string) => Promise<void>;
     writeBinaryFile: (path: string, content: Uint8Array) => Promise<void>;
-    writeTextFile: (path: string, content: string) => Promise<void>;
+    writeBinaryFileExclusive?: (path: string, content: Uint8Array) => Promise<void>;
+    writeTextFile: (path: string, content: string, options?: FsTextWriteOptions) => Promise<void>;
 };
 
 export type FsDirectoryEntry = {
@@ -33,6 +36,12 @@ export type FsFilePickerOptions = {
     title?: string;
 };
 
+export type FsImportFile = {
+    bytes?: Uint8Array;
+    name: string;
+    path?: string;
+};
+
 export type FsPickedFile = {
     bytes: Uint8Array;
     name: string;
@@ -42,4 +51,9 @@ export type FsPickedFile = {
 export type FsProjectPickerResult = {
     manifestPath: string;
     projectPath: string;
+};
+
+export type FsTextWriteOptions = {
+    createOnly?: boolean;
+    expectedContent?: string;
 };

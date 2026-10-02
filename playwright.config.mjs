@@ -10,6 +10,8 @@ export default defineConfig({
     outputDir: 'test-results/playwright',
     use: {
         baseURL: 'http://127.0.0.1:1422',
+        // Keep UI checks independent of physical audio devices.
+        launchOptions: { args: ['--disable-audio-output'] },
     },
     projects: [
         {

@@ -55,6 +55,7 @@ export function createProjectSessionSlice(
                 if (!filePath || state.dirtyFiles.has(filePath)) return {};
                 return { dirtyFiles: new Set([...state.dirtyFiles, filePath]) };
             }),
+        projectGeneration: 0,
         projectPath: undefined,
 
         setActiveFile: (file: string, content: EditorNode[]) => {
@@ -93,6 +94,7 @@ export function createProjectSessionSlice(
                 macroEntries: [],
                 macros: {},
                 manifest: undefined,
+                projectGeneration: get().projectGeneration + 1,
                 projectPath: path,
                 sceneNamespaces: {},
                 scenePaths: {},

@@ -14,9 +14,9 @@ export async function createGitStageAllReport(
     dependencies: GitStatusDependencies = {},
 ): Promise<GitStageAllReport> {
     const runtime = resolveGitRuntime(dependencies);
-    const trimmedProjectPath = projectPath?.trim();
+    const resolvedProjectPath = projectPath;
 
-    if (!trimmedProjectPath) {
+    if (!resolvedProjectPath) {
         return {
             reason: 'No project is currently open.',
             runtime,
@@ -35,13 +35,13 @@ export async function createGitStageAllReport(
     try {
         const invoke = dependencies.invoke ?? await loadTauriInvoke();
         const response = await invoke<NativeGitStageAllResponse>('git_stage_all', {
-            request: { projectPath: trimmedProjectPath },
+            request: { projectPath: resolvedProjectPath },
         });
         const normalized = normalizeGitStageAllResponse(response);
 
         if (!normalized.isRepository) {
             return {
-                reason: `Git repository: none found for ${trimmedProjectPath}`,
+                reason: `Git repository: none found for ${resolvedProjectPath}`,
                 runtime,
                 status: 'not-repository',
             };
@@ -69,10 +69,10 @@ export async function createGitStageFileReport(
     dependencies: GitStatusDependencies = {},
 ): Promise<GitStageFileReport> {
     const runtime = resolveGitRuntime(dependencies);
-    const trimmedProjectPath = projectPath?.trim();
-    const trimmedPath = path?.trim();
+    const resolvedProjectPath = projectPath;
+    const filePath = path;
 
-    if (!trimmedProjectPath) {
+    if (!resolvedProjectPath) {
         return {
             reason: 'No project is currently open.',
             runtime,
@@ -80,7 +80,7 @@ export async function createGitStageFileReport(
         };
     }
 
-    if (!trimmedPath) {
+    if (!filePath) {
         return {
             reason: 'Git file path is required.',
             runtime,
@@ -99,20 +99,20 @@ export async function createGitStageFileReport(
     try {
         const invoke = dependencies.invoke ?? await loadTauriInvoke();
         const response = await invoke<NativeGitFileActionResponse>('git_stage_file', {
-            request: { path: trimmedPath, projectPath: trimmedProjectPath },
+            request: { path: filePath, projectPath: resolvedProjectPath },
         });
         const normalized = normalizeGitFileActionResponse(response);
 
         if (!normalized.isRepository) {
             return {
-                reason: `Git repository: none found for ${trimmedProjectPath}`,
+                reason: `Git repository: none found for ${resolvedProjectPath}`,
                 runtime,
                 status: 'not-repository',
             };
         }
 
         return {
-            path: normalized.path || trimmedPath,
+            path: normalized.path || filePath,
             rawOutput: normalized.rawOutput,
             ...(normalized.repositoryRoot === undefined ? {} : { repositoryRoot: normalized.repositoryRoot }),
             runtime,
@@ -134,10 +134,10 @@ export async function createGitUnstageFileReport(
     dependencies: GitStatusDependencies = {},
 ): Promise<GitUnstageFileReport> {
     const runtime = resolveGitRuntime(dependencies);
-    const trimmedProjectPath = projectPath?.trim();
-    const trimmedPath = path?.trim();
+    const resolvedProjectPath = projectPath;
+    const filePath = path;
 
-    if (!trimmedProjectPath) {
+    if (!resolvedProjectPath) {
         return {
             reason: 'No project is currently open.',
             runtime,
@@ -145,7 +145,7 @@ export async function createGitUnstageFileReport(
         };
     }
 
-    if (!trimmedPath) {
+    if (!filePath) {
         return {
             reason: 'Git file path is required.',
             runtime,
@@ -164,20 +164,20 @@ export async function createGitUnstageFileReport(
     try {
         const invoke = dependencies.invoke ?? await loadTauriInvoke();
         const response = await invoke<NativeGitFileActionResponse>('git_unstage_file', {
-            request: { path: trimmedPath, projectPath: trimmedProjectPath },
+            request: { path: filePath, projectPath: resolvedProjectPath },
         });
         const normalized = normalizeGitFileActionResponse(response);
 
         if (!normalized.isRepository) {
             return {
-                reason: `Git repository: none found for ${trimmedProjectPath}`,
+                reason: `Git repository: none found for ${resolvedProjectPath}`,
                 runtime,
                 status: 'not-repository',
             };
         }
 
         return {
-            path: normalized.path || trimmedPath,
+            path: normalized.path || filePath,
             rawOutput: normalized.rawOutput,
             ...(normalized.repositoryRoot === undefined ? {} : { repositoryRoot: normalized.repositoryRoot }),
             runtime,

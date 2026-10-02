@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 
-import { fsWriteTextFile } from '../../../services/fs';
+import { saveWorkbenchTextFile as fsWriteTextFile } from '../../../services/saveWorkbenchFile';
 import { useProjectStore } from '../../../store/storeBootstrap';
 import { useReferenceStore } from '../../../store/useReferenceStore';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';

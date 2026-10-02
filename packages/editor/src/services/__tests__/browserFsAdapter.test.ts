@@ -69,47 +69,6 @@ describe('browserFsAdapter', () => {
     });
 });
 
-class MemoryFileHandle implements BrowserFileHandle {
-    public readonly kind = 'file' as const;
-    private bytes: Uint8Array;
-
-    constructor(
-        public readonly name: string,
-        content: string | Uint8Array,
-    ) {
-        this.bytes = typeof content === 'string' ? new TextEncoder().encode(content) : content;
-    }
-
-    public createWritable(): Promise<BrowserWritableFileStream> {
-        return Promise.resolve({
-            close: () => Promise.resolve(),
-            write: async (data) => {
-                if (typeof data === 'string') {
-                    this.bytes = new TextEncoder().encode(data);
-                    return;
-                }
-
-                if (data instanceof Blob) {
-                    this.bytes = new Uint8Array(await data.arrayBuffer());
-                    return;
-                }
-
-                if (data instanceof ArrayBuffer) {
-                    this.bytes = new Uint8Array(data);
-                    return;
-                }
-
-                this.bytes = new Uint8Array(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength));
-            },
-        });
-    }
-
-    public getFile(): Promise<File> {
-        const bytes = new Uint8Array(this.bytes);
-        return Promise.resolve(new File([bytes.buffer], this.name));
-    }
-}
-
 class MemoryDirectoryHandle implements BrowserDirectoryHandle {
     public readonly directories = new Map<string, MemoryDirectoryHandle>();
     public readonly files = new Map<string, MemoryFileHandle>();
@@ -151,6 +110,47 @@ class MemoryDirectoryHandle implements BrowserDirectoryHandle {
         this.files.delete(name);
         this.directories.delete(name);
         return Promise.resolve();
+    }
+}
+
+class MemoryFileHandle implements BrowserFileHandle {
+    public readonly kind = 'file' as const;
+    private bytes: Uint8Array;
+
+    constructor(
+        public readonly name: string,
+        content: string | Uint8Array,
+    ) {
+        this.bytes = typeof content === 'string' ? new TextEncoder().encode(content) : content;
+    }
+
+    public createWritable(): Promise<BrowserWritableFileStream> {
+        return Promise.resolve({
+            close: () => Promise.resolve(),
+            write: async (data) => {
+                if (typeof data === 'string') {
+                    this.bytes = new TextEncoder().encode(data);
+                    return;
+                }
+
+                if (data instanceof Blob) {
+                    this.bytes = new Uint8Array(await data.arrayBuffer());
+                    return;
+                }
+
+                if (data instanceof ArrayBuffer) {
+                    this.bytes = new Uint8Array(data);
+                    return;
+                }
+
+                this.bytes = new Uint8Array(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength));
+            },
+        });
+    }
+
+    public getFile(): Promise<File> {
+        const bytes = new Uint8Array(this.bytes);
+        return Promise.resolve(new File([bytes.buffer], this.name));
     }
 }
 

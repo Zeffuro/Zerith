@@ -2,10 +2,11 @@ import type { ScriptPath } from '../utils/scriptPathUtilities';
 
 import { DOCK_PANELS, type DockPanelId } from '../components/layout/dock/dockPanelIds';
 import { registerEditorPlugin } from '../plugins/commandPlugins';
+import { fsReadTextFile } from '../services/fs';
 import { type BrowserDirectoryHandle, type BrowserEntryHandle, type BrowserFileHandle, browserFsAdapter, type BrowserWritableFileStream } from '../services/fs/browserFsAdapter';
 import { openLocalizationWorkbenchTab } from '../services/localizationWorkbench';
 import { openProjectEntry } from '../services/openProjectEntry';
-import { useProjectStore } from '../store/storeBootstrap';
+import { useProjectStore, useScriptStore } from '../store/storeBootstrap';
 import { useEditorStore } from '../store/useEditorStore';
 import { useWorkbenchStore } from '../store/useWorkbenchStore';
 
@@ -17,12 +18,16 @@ export type EditorVisualSmokeHarness = {
     closeSettingsModal: () => void;
     openCommandPalette: () => void;
     openExportGameModal: () => void;
+    openFixtureEntry: (entryPath: string, selectedPath?: ScriptPath) => Promise<void>;
     openLocalizationWorkbench: () => void;
     openNewProjectModal: () => void;
     openProjectFixture: (fixture: VisualSmokeProjectFixture) => Promise<void>;
     openSettingsModal: () => void;
     playPreviewFrom: (index: number) => void;
+    readEditingState: () => { dirtyFiles: string[]; macroEntries: unknown[]; script: unknown[]; tabs: unknown[] };
+    readFixtureFile: (entryPath: string) => Promise<string>;
     registerVisualSmokePlugin: () => void;
+    reopenFixtureProject: () => Promise<void>;
     resetEditorChrome: () => void;
     selectDockPanel: (panelId: DockPanelId) => void;
     stopPreview: () => void;
@@ -122,6 +127,15 @@ export function installEditorVisualSmokeHarness(): () => void {
         openExportGameModal: () => {
             useEditorStore.getState().openExportGameModal();
         },
+        openFixtureEntry: async (entryPath, selectedPath) => {
+            const fullPath = `${useProjectStore.getState().projectPath}/${entryPath}`;
+            await openProjectEntry(fullPath, basename(entryPath), { forceView: 'timeline' });
+            if (selectedPath) {
+                useScriptStore.getState().setSelectedNodePath(selectedPath);
+                useEditorStore.getState().setSelectedNodePaths([selectedPath]);
+                useEditorStore.getState().setSelectionAnchorPath(selectedPath);
+            }
+        },
         openLocalizationWorkbench: () => {
             openLocalizationWorkbenchTab();
         },
@@ -138,6 +152,7 @@ export function installEditorVisualSmokeHarness(): () => void {
             await openProjectEntry(fullEntryPath, basename(entryPath), { forceView: 'timeline' });
 
             if (fixture.selectedPath) {
+                useScriptStore.getState().setSelectedNodePath(fixture.selectedPath);
                 const editor = useEditorStore.getState();
                 editor.setSelectedNodePaths([fixture.selectedPath]);
                 editor.setSelectionAnchorPath(fixture.selectedPath);
@@ -149,6 +164,13 @@ export function installEditorVisualSmokeHarness(): () => void {
         playPreviewFrom: (index) => {
             useEditorStore.getState().triggerPlayFrom(index);
         },
+        readEditingState: () => ({
+            dirtyFiles: [...useProjectStore.getState().dirtyFiles],
+            macroEntries: useProjectStore.getState().macroEntries,
+            script: useScriptStore.getState().rootScript,
+            tabs: useWorkbenchStore.getState().tabs,
+        }),
+        readFixtureFile: (entryPath) => fsReadTextFile(`${useProjectStore.getState().projectPath}/${entryPath}`),
         registerVisualSmokePlugin: () => {
             registerEditorPlugin({
                 commands: [{
@@ -163,6 +185,11 @@ export function installEditorVisualSmokeHarness(): () => void {
                     version: '1.0.0',
                 },
             }, { source: 'visual-smoke-memory' });
+        },
+        reopenFixtureProject: async () => {
+            const projectPath = useProjectStore.getState().projectPath;
+            useWorkbenchStore.getState().clearTabs();
+            await useProjectStore.getState().openProjectFromManifest(`${projectPath}/game.json`);
         },
         resetEditorChrome: () => {
             const store = useEditorStore.getState();

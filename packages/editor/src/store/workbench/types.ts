@@ -42,6 +42,7 @@ export type WorkbenchTab = {
     path: string;
 
     preferredView?: ScriptViewMode;
+    savedTextContent?: string;
     textContent?: string;
     title: string;
 };
@@ -56,6 +57,7 @@ export interface WorkbenchTabsSlice {
     openOrFocusTab: (tab: WorkbenchTab) => void;
     renameTabPath: (nextPath: string, oldPath: string) => void;
     setActiveTab: (tabId: string | undefined) => void;
+    setTabSavedContent: (tabId: string, content: string) => void;
     tabs: WorkbenchTab[];
     updateTabContent: (
         tabId: string,

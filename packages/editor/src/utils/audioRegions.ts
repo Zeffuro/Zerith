@@ -111,18 +111,7 @@ export function encodeAudioBufferRegionsToWavFiles(
     regions: readonly AudioRegion[],
     options: AudioRegionBatchWavExportOptions = {},
 ): AudioRegionBatchWavExport[] {
-    const plan = createAudioRegionBatchExportPlan(sourcePath, regions, {
-        audioDuration: audioBuffer.duration,
-        existingFileNames: options.existingFileNames,
-        namePreset: options.namePreset,
-    });
-
-    return plan.map((entry) => ({
-        ...entry,
-        wavBytes: encodeAudioBufferRegionToWav(audioBuffer, entry.region, {
-            bitDepth: options.bitDepth,
-        }),
-    }));
+    return [...iterateAudioBufferRegionsToWavFiles(audioBuffer, sourcePath, regions, options)];
 }
 
 export function encodeAudioBufferRegionToWav(
@@ -166,6 +155,28 @@ export function encodeAudioBufferRegionToWav(
     }
 
     return output;
+}
+
+export function* iterateAudioBufferRegionsToWavFiles(
+    audioBuffer: AudioBufferLike,
+    sourcePath: string,
+    regions: readonly AudioRegion[],
+    options: AudioRegionBatchWavExportOptions = {},
+): Generator<AudioRegionBatchWavExport> {
+    const plan = createAudioRegionBatchExportPlan(sourcePath, regions, {
+        audioDuration: audioBuffer.duration,
+        existingFileNames: options.existingFileNames,
+        namePreset: options.namePreset,
+    });
+
+    for (const entry of plan) {
+        yield {
+            ...entry,
+            wavBytes: encodeAudioBufferRegionToWav(audioBuffer, entry.region, {
+                bitDepth: options.bitDepth,
+            }),
+        };
+    }
 }
 
 export function normalizeAudioRegion(

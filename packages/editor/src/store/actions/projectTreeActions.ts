@@ -4,11 +4,15 @@ import { fsReadDirectory } from '../../services/fs';
 import { useProjectStore } from '../storeBootstrap';
 
 export async function executeExternalProjectTreeRefreshAction(path: string): Promise<void> {
-    const currentPath = getCurrentProjectPath();
-    if (!currentPath || currentPath !== path) return;
+    const project = useProjectStore.getState();
+    if (project.projectPath !== path) return;
+    const generation = project.projectGeneration;
 
     const entries = await fsReadDirectory(path);
-    executeProjectTreeRefreshAction(path, entries);
+    const current = useProjectStore.getState();
+    if (current.projectPath !== path || current.projectGeneration !== generation) return;
+    sortEntries(entries);
+    current.setProjectFiles(entries);
 }
 
 export function executeProjectTreeRefreshAction(path: string, entries: FsDirectoryEntry[]): void {

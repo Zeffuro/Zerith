@@ -48,6 +48,7 @@ function createTabsState() {
         setLastManifestView: () => {},
         setLastScriptView: () => {},
         setLastSpritesheetView: () => {},
+        setTabSavedContent: () => {},
         tabs: [],
         updateTabContent: () => {},
     });

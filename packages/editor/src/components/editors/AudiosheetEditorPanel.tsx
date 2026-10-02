@@ -6,14 +6,14 @@ import type { WorkbenchTab } from '../../store/workbench/types';
 import { saveAudioRegionWavToProject } from '../../services/audioRegionExport';
 import { type AudiosheetShortcutAction, audiosheetShortcutEventName } from '../../services/audiosheetShortcuts';
 import { refreshProjectTree } from '../../services/explorerFileActions';
-import { fsWriteTextFile } from '../../services/fs';
 import { refreshReferenceScannerState } from '../../services/referenceScanner';
+import { saveWorkbenchTextFile as fsWriteTextFile } from '../../services/saveWorkbenchFile';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { computeAudioPeaks } from '../../utils/audio';
-import { type AudioRegionBatchNamePreset, encodeAudioBufferRegionsToWavFiles, projectAudioRegionsToViewport } from '../../utils/audioRegions';
+import { type AudioRegionBatchNamePreset, iterateAudioBufferRegionsToWavFiles, projectAudioRegionsToViewport } from '../../utils/audioRegions';
 import { clamp } from '../../utils/math';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { createCueOperations } from './audiosheetCueCrud';
@@ -193,10 +193,10 @@ export function AudiosheetEditorPanel({ tab }: AudiosheetEditorPanelProperties) 
         setBatchExportMessage(undefined);
         try {
             const sourcePath = audioPath ?? descriptorSource ?? tab.path;
-            const exports = encodeAudioBufferRegionsToWavFiles(audioBuffer, sourcePath, cueMarkers, {
+            const exports = iterateAudioBufferRegionsToWavFiles(audioBuffer, sourcePath, cueMarkers, {
                 namePreset: batchExportNamePreset,
             });
-
+            let savedCount = 0;
             for (const cueExport of exports) {
                 await saveAudioRegionWavToProject(projectPath, {
                     namePreset: batchExportNamePreset,
@@ -209,11 +209,12 @@ export function AudiosheetEditorPanel({ tab }: AudiosheetEditorPanelProperties) 
                     targetFolder: batchExportTargetFolder,
                     wavBytes: cueExport.wavBytes,
                 });
+                savedCount += 1;
             }
 
             await refreshProjectTree();
             await refreshReferenceScannerState();
-            setBatchExportMessage(`Saved ${exports.length} cue WAV${exports.length === 1 ? '' : 's'} to ${batchExportTargetFolder.trim() || 'assets/audio-regions'}.`);
+            setBatchExportMessage(`Saved ${savedCount} cue WAV${savedCount === 1 ? '' : 's'} to ${batchExportTargetFolder.trim() || 'assets/audio-regions'}.`);
         } catch (error) {
             setBatchExportMessage(error instanceof Error ? error.message : 'Failed to save cue WAV exports.');
         } finally {

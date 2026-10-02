@@ -303,6 +303,7 @@ describe('openProjectEntry', () => {
                 kind: 'macros',
                 path: '/project/assets/sprites/hero.atlas.json',
                 preferredView: 'timeline',
+                savedTextContent: descriptor,
                 title: 'hero.atlas.json',
             },
         });
@@ -471,6 +472,7 @@ describe('openProjectEntry', () => {
                 kind: 'manifest',
                 path: '/project/game.json',
                 preferredView: 'json',
+                savedTextContent: '',
                 textContent: '{}\n',
                 title: 'Project Settings',
             },
@@ -494,6 +496,7 @@ describe('openProjectEntry', () => {
                 kind: 'script',
                 path: '/project/scenes/new-file.json',
                 preferredView: 'timeline',
+                savedTextContent: '',
                 title: 'new-file.json',
             },
         });
@@ -526,6 +529,7 @@ describe('openProjectEntry', () => {
                 kind: 'script',
                 path: '/project/scripts/intro.json',
                 preferredView: 'timeline',
+                savedTextContent: JSON.stringify(sceneScript),
                 title: 'intro.json',
             },
         });
@@ -578,6 +582,7 @@ describe('openProjectEntry', () => {
                 kind: 'macros',
                 path: '/project/scripts/macros_local.json',
                 preferredView: 'timeline',
+                savedTextContent: '{"greet":[{"type":"wait"}]}',
                 title: 'macros_local.json',
             },
         });

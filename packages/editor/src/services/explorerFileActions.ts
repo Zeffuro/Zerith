@@ -4,6 +4,7 @@ import { useProjectStore } from '../store/storeBootstrap';
 import { useReferenceStore } from '../store/useReferenceStore';
 import { useWorkbenchStore } from '../store/useWorkbenchStore';
 import { sanitizeFileName } from '../utils/sanitizeFileName';
+import { isRecord } from '../utils/typeGuards';
 import {
     loadAssetLibraryMetadata,
     moveAssetLibraryMetadataScope,
@@ -15,8 +16,8 @@ import {
     type AssetReferenceRewriteFile,
     type AssetReferenceRewritePlan,
     prepareAssetReferenceBatchRewritePlan,
-    prepareAssetReferenceRewritePlan,
 } from './assetReferenceRewrite';
+import { FileWriteBatchError } from './fileWriteBatch';
 import {
     fsDirname,
     fsJoin,
@@ -31,12 +32,15 @@ import {
     fsWriteTextFile,
 } from './fs';
 import { getDefaultContentForNewFile } from './newFileTemplates';
+import { applyMacrosFile, applyScriptFile } from './projectOpeners';
 import { refreshReferenceScannerState } from './referenceScanner';
 import { toProjectAssetUrl } from './referenceScanner/assets';
 
 type ProjectAssetPathChange = {
     newAssetUrl: string;
+    newPath: string;
     oldAssetUrl: string;
+    oldPath: string;
     projectPath: string;
 };
 
@@ -179,6 +183,8 @@ export async function duplicatePath(path: string) {
 }
 
 export async function moveAssetDirectoryPathToDirectory(oldPath: string, targetDirectoryPath: string) {
+    const { projectGeneration, projectPath } = useProjectStore.getState();
+    const owner = { projectGeneration, projectPath };
     try {
         const name = basename(oldPath);
         if (!name) {
@@ -218,28 +224,7 @@ export async function moveAssetDirectoryPathToDirectory(oldPath: string, targetD
             return;
         }
 
-        await fsRename(oldPath, newPath);
-        await applyAssetLibraryMetadataMove(assetPathChange);
-        remapWorkbenchTabsForRename(oldPath, newPath);
-        useProjectStore.setState((state) => ({
-            activeFile: state.activeFile ? replacePathPrefix(state.activeFile, oldPath, newPath) : state.activeFile,
-            expandedPaths: remapExpandedPathsForRename(state.expandedPaths, oldPath, newPath),
-        }));
-
-        if (assetRewritePlan && assetRewritePlan.replacementCount > 0) {
-            await applyAssetReferenceRewritePlan(assetRewritePlan);
-            syncRewrittenWorkbenchTabs(assetRewritePlan.files);
-            await useProjectStore.getState().loadManifest();
-            executeConsoleMessageAction(
-                'editor',
-                'info',
-                `Updated ${assetRewritePlan.replacementCount} asset reference${assetRewritePlan.replacementCount === 1 ? '' : 's'} after folder move.`,
-            );
-        }
-
-        await refreshProjectTree();
-        await refreshReferenceScannerState();
-        return newPath;
+        return await applyPathChange(oldPath, newPath, assetRewritePlan, assetPathChange, owner);
     } catch (error) {
         console.error('Move failed:', error);
         executeConsoleMessageAction('editor', 'error', 'Move failed:', String(error));
@@ -263,6 +248,8 @@ export async function moveAssetDirectoryPathWithPicker(oldPath: string) {
 }
 
 export async function moveAssetPathToDirectory(oldPath: string, targetDirectoryPath: string) {
+    const { projectGeneration, projectPath } = useProjectStore.getState();
+    const owner = { projectGeneration, projectPath };
     try {
         const name = basename(oldPath);
         if (!name) {
@@ -286,7 +273,7 @@ export async function moveAssetPathToDirectory(oldPath: string, targetDirectoryP
             return;
         }
 
-        const assetRewritePlan = await prepareAssetPathReferenceRewrite(assetPathChange);
+        const assetRewritePlan = await prepareAssetDirectoryReferenceRewrite(assetPathChange);
         if (assetRewritePlan?.blockedDirtyFiles.length) {
             executeConsoleMessageAction(
                 'editor',
@@ -297,28 +284,7 @@ export async function moveAssetPathToDirectory(oldPath: string, targetDirectoryP
             return;
         }
 
-        await fsRename(oldPath, newPath);
-        await applyAssetLibraryMetadataMove(assetPathChange);
-        remapWorkbenchTabsForRename(oldPath, newPath);
-        useProjectStore.setState((state) => ({
-            activeFile: state.activeFile ? replacePathPrefix(state.activeFile, oldPath, newPath) : state.activeFile,
-            expandedPaths: remapExpandedPathsForRename(state.expandedPaths, oldPath, newPath),
-        }));
-
-        if (assetRewritePlan && assetRewritePlan.replacementCount > 0) {
-            await applyAssetReferenceRewritePlan(assetRewritePlan);
-            syncRewrittenWorkbenchTabs(assetRewritePlan.files);
-            await useProjectStore.getState().loadManifest();
-            executeConsoleMessageAction(
-                'editor',
-                'info',
-                `Updated ${assetRewritePlan.replacementCount} asset reference${assetRewritePlan.replacementCount === 1 ? '' : 's'} after move.`,
-            );
-        }
-
-        await refreshProjectTree();
-        await refreshReferenceScannerState();
-        return newPath;
+        return await applyPathChange(oldPath, newPath, assetRewritePlan, assetPathChange, owner);
     } catch (error) {
         console.error('Move failed:', error);
         executeConsoleMessageAction('editor', 'error', 'Move failed:', String(error));
@@ -342,14 +308,19 @@ export async function moveAssetPathWithPicker(oldPath: string) {
 }
 
 export async function refreshProjectTree() {
+    const { projectGeneration } = useProjectStore.getState();
     const projectPath = getCurrentProjectPath();
     if (!projectPath) return;
 
     const entries = await fsReadDirectory(projectPath);
+    const current = useProjectStore.getState();
+    if (current.projectPath !== projectPath || current.projectGeneration !== projectGeneration) return;
     executeProjectTreeRefreshAction(projectPath, entries);
 }
 
 export async function renamePath(oldPath: string, nextName: string) {
+    const { projectGeneration, projectPath } = useProjectStore.getState();
+    const owner = { projectGeneration, projectPath };
     try {
         const parent = await fsDirname(oldPath);
         const sanitizedName = sanitizeFileName(nextName);
@@ -371,7 +342,7 @@ export async function renamePath(oldPath: string, nextName: string) {
 
         const newPath = await fsJoin(parent, sanitizedName);
         const assetPathChange = resolveProjectAssetPathChange(oldPath, newPath);
-        const assetRewritePlan = await prepareAssetPathReferenceRewrite(assetPathChange);
+        const assetRewritePlan = await prepareAssetDirectoryReferenceRewrite(assetPathChange);
         if (assetRewritePlan?.blockedDirtyFiles.length) {
             executeConsoleMessageAction(
                 'editor',
@@ -382,32 +353,7 @@ export async function renamePath(oldPath: string, nextName: string) {
             return;
         }
 
-        await fsRename(oldPath, newPath);
-        useWorkbenchStore.getState().renameTabPath(newPath, oldPath);
-        useProjectStore.setState((state) => {
-            const remappedExpandedPaths = remapExpandedPathsForRename(state.expandedPaths, oldPath, newPath);
-
-            return {
-                activeFile: state.activeFile === oldPath ? newPath : state.activeFile,
-                expandedPaths: remappedExpandedPaths,
-            };
-        });
-
-        if (assetRewritePlan && assetRewritePlan.replacementCount > 0) {
-            await applyAssetReferenceRewritePlan(assetRewritePlan);
-            syncRewrittenWorkbenchTabs(assetRewritePlan.files);
-            await useProjectStore.getState().loadManifest();
-            executeConsoleMessageAction(
-                'editor',
-                'info',
-                `Updated ${assetRewritePlan.replacementCount} asset reference${assetRewritePlan.replacementCount === 1 ? '' : 's'} after rename.`,
-            );
-        }
-
-        await refreshProjectTree();
-        if (assetPathChange) {
-            await refreshReferenceScannerState();
-        }
+        await applyPathChange(oldPath, newPath, assetRewritePlan, assetPathChange, owner);
     } catch (error) {
         console.error('Rename failed:', error);
         executeConsoleMessageAction('editor', 'error', 'Rename failed:', String(error));
@@ -443,6 +389,66 @@ async function applyAssetLibraryMetadataMove(assetPathChange: ProjectAssetPathCh
     }
 }
 
+async function applyPathChange(
+    oldPath: string,
+    newPath: string,
+    plan: AssetReferenceRewritePlan | undefined,
+    assetPathChange: ProjectAssetPathChange | undefined,
+    owner: Pick<ReturnType<typeof useProjectStore.getState>, 'projectGeneration' | 'projectPath'>,
+): Promise<string | undefined> {
+    const ownsProject = () => {
+        const current = useProjectStore.getState();
+        return current.projectPath === owner.projectPath && current.projectGeneration === owner.projectGeneration;
+    };
+    if (!ownsProject()) return;
+    const dirtyFiles = useProjectStore.getState().dirtyFiles;
+    if (plan?.files.some((file) => [...dirtyFiles].some((path) => normalizePath(path) === normalizePath(replacePathPrefix(file.filePath, newPath, oldPath))))) {
+        throw new Error('Save referenced files before updating asset references.');
+    }
+    await fsRename(oldPath, newPath);
+    if (ownsProject()) {
+        remapWorkbenchTabsForRename(oldPath, newPath);
+        useProjectStore.setState((state) => ({
+            activeFile: state.activeFile ? replacePathPrefix(state.activeFile, oldPath, newPath) : state.activeFile,
+            dirtyFiles: new Set([...state.dirtyFiles].map((path) => replacePathPrefix(path, oldPath, newPath))),
+            expandedPaths: remapExpandedPathsForRename(state.expandedPaths, oldPath, newPath),
+        }));
+    }
+
+    let failed = false;
+    try {
+        if (assetPathChange) await applyAssetLibraryMetadataMove(assetPathChange);
+        if (plan?.files.length) {
+            try {
+                await applyAssetReferenceRewritePlan(plan);
+                if (ownsProject()) syncRewrittenWorkbenchTabs(plan.files);
+            } catch (error) {
+                if (error instanceof FileWriteBatchError && ownsProject()) {
+                    const committed = new Set(error.result.committed);
+                    syncRewrittenWorkbenchTabs(plan.files.filter((file) => committed.has(file.filePath)));
+                }
+                throw error;
+            }
+            executeConsoleMessageAction('editor', 'info', `Updated ${plan.replacementCount} asset reference${plan.replacementCount === 1 ? '' : 's'} after move or rename.`);
+        }
+    } catch (error) {
+        failed = true;
+        executeConsoleMessageAction('editor', 'error', `Path moved to ${newPath}, but reference updates are incomplete:`, String(error));
+    } finally {
+        const refreshes = [refreshProjectTree, () => useProjectStore.getState().loadManifest(), refreshReferenceScannerState];
+        for (const refresh of refreshes) {
+            if (!ownsProject()) break;
+            try {
+                await refresh();
+            } catch (error) {
+                failed = true;
+                executeConsoleMessageAction('editor', 'error', `Path moved to ${newPath}, but project refresh failed:`, String(error));
+            }
+        }
+    }
+    return failed ? undefined : newPath;
+}
+
 function basename(path: string) {
     return path.split(/[\\/]/).pop() || path;
 }
@@ -456,14 +462,14 @@ function getAssetDirectoryReferenceReplacements(
     const replacements: AssetReferenceReplacement[] = [];
 
     for (const [oldAssetUrl, references] of Object.entries(referencesByAssetUrl)) {
-        if (!oldAssetUrl.startsWith(`${oldDirectoryUrl}/`) || references.length === 0) {
-            continue;
-        }
+        const movedAsset = oldAssetUrl === oldDirectoryUrl || oldAssetUrl.startsWith(`${oldDirectoryUrl}/`);
+        const affectedReferences = movedAsset ? references : references.filter((reference) => replacePathPrefix(reference.filePath, assetPathChange.oldPath, assetPathChange.newPath) !== reference.filePath);
+        if (affectedReferences.length === 0) continue;
 
         replacements.push({
-            newAssetUrl: `${newDirectoryUrl}${oldAssetUrl.slice(oldDirectoryUrl.length)}`,
+            newAssetUrl: movedAsset ? `${newDirectoryUrl}${oldAssetUrl.slice(oldDirectoryUrl.length)}` : oldAssetUrl,
             oldAssetUrl,
-            references,
+            references: affectedReferences,
         });
     }
 
@@ -525,8 +531,9 @@ function normalizePath(path: string): string {
 }
 
 async function prepareAssetDirectoryReferenceRewrite(
-    assetPathChange: ProjectAssetPathChange,
+    assetPathChange: ProjectAssetPathChange | undefined,
 ): Promise<AssetReferenceRewritePlan | undefined> {
+    if (!assetPathChange) return;
     const replacements = getAssetDirectoryReferenceReplacements(assetPathChange);
     if (replacements.length === 0) {
         return;
@@ -534,31 +541,10 @@ async function prepareAssetDirectoryReferenceRewrite(
 
     const projectState = useProjectStore.getState();
     return prepareAssetReferenceBatchRewritePlan({
+        destinationForFile: (filePath) => replacePathPrefix(filePath, assetPathChange.oldPath, assetPathChange.newPath),
         dirtyFiles: projectState.dirtyFiles,
         projectPath: assetPathChange.projectPath,
         replacements,
-    });
-}
-
-async function prepareAssetPathReferenceRewrite(
-    assetPathChange: ProjectAssetPathChange | undefined,
-): Promise<AssetReferenceRewritePlan | undefined> {
-    if (!assetPathChange) {
-        return;
-    }
-
-    const references = useReferenceStore.getState().result.assetFiles[assetPathChange.oldAssetUrl] ?? [];
-    if (references.length === 0) {
-        return;
-    }
-
-    const projectState = useProjectStore.getState();
-    return prepareAssetReferenceRewritePlan({
-        dirtyFiles: projectState.dirtyFiles,
-        newAssetUrl: assetPathChange.newAssetUrl,
-        oldAssetUrl: assetPathChange.oldAssetUrl,
-        projectPath: assetPathChange.projectPath,
-        references,
     });
 }
 
@@ -605,7 +591,9 @@ function resolveProjectAssetPathChange(oldPath: string, newPath: string): Projec
 
     return {
         newAssetUrl,
+        newPath,
         oldAssetUrl,
+        oldPath,
         projectPath,
     };
 }
@@ -614,9 +602,19 @@ function syncRewrittenWorkbenchTabs(files: readonly AssetReferenceRewriteFile[])
     const workbench = useWorkbenchStore.getState();
     for (const file of files) {
         const tab = workbench.tabs.find((candidate) => normalizePath(candidate.path) === normalizePath(file.filePath));
-        if (tab?.textContent === undefined) continue;
+        if (!tab) continue;
 
-        useWorkbenchStore.getState().updateTabContent(tab.id, file.content, { markDirty: false });
+        const dirtyFiles = useProjectStore.getState().dirtyFiles;
+        if (tab.dirty || [...dirtyFiles].some((path) => normalizePath(path) === normalizePath(file.filePath))) {
+            useWorkbenchStore.getState().setTabSavedContent(tab.id, file.content);
+        } else {
+            useWorkbenchStore.getState().updateTabContent(tab.id, file.content, { markDirty: false });
+            const activeFile = useProjectStore.getState().activeFile;
+            if (!activeFile || normalizePath(activeFile) !== normalizePath(file.filePath)) continue;
+            const parsed: unknown = JSON.parse(file.content);
+            if (tab.kind === 'script') applyScriptFile(file.filePath, parsed);
+            if (tab.kind === 'macros' && isRecord(parsed)) applyMacrosFile(file.filePath, parsed);
+        }
     }
 }
 

@@ -2,6 +2,8 @@ import type { GameManifest } from '@zeffuro/zerith-core';
 
 import { vi } from 'vitest';
 
+import type { WorkbenchTab } from '../store/workbench/types';
+
 type OpenProjectState = {
     manifest: GameManifest | undefined;
     projectPath: string | undefined;
@@ -35,6 +37,7 @@ const hoistedMocks = vi.hoisted(() => {
         )),
         makeTabId: vi.fn((kind: string, path: string) => `${kind}:${path}`),
         state,
+        tabs: [] as WorkbenchTab[],
     };
 });
 
@@ -62,6 +65,7 @@ export function resetOpenProjectEntryMocks(): void {
 
     hoistedMocks.state.manifest = undefined;
     hoistedMocks.state.projectPath = '/project';
+    hoistedMocks.tabs = [];
 
     hoistedMocks.getCurrentProjectPath.mockImplementation(() => hoistedMocks.state.projectPath);
     hoistedMocks.getPreferredCharactersView.mockImplementation((fallback?: 'json' | 'timeline') => fallback ?? 'json');
@@ -117,6 +121,7 @@ vi.mock('../store/storeBootstrap', () => ({
 
 vi.mock('../store/useWorkbenchStore', () => ({
     makeTabId: hoistedMocks.makeTabId,
+    useWorkbenchStore: { getState: () => ({ tabs: hoistedMocks.tabs }) },
 }));
 
 vi.mock('../services/fs', () => ({

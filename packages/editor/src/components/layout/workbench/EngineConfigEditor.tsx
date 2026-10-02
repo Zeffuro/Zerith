@@ -1,7 +1,7 @@
 import { type EngineConfigFile, EngineConfigSchema } from '@zeffuro/zerith-core';
 import { useMemo, useState } from 'react';
 
-import { fsWriteTextFile } from '../../../services/fs';
+import { saveWorkbenchTextFile as fsWriteTextFile } from '../../../services/saveWorkbenchFile';
 import { useProjectStore } from '../../../store/storeBootstrap';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';

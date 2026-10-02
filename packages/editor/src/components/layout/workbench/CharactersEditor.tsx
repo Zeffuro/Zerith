@@ -3,7 +3,7 @@ import type { CharacterDefinition } from '@zeffuro/zerith-core';
 import { Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-import { fsWriteTextFile } from '../../../services/fs';
+import { saveWorkbenchTextFile as fsWriteTextFile } from '../../../services/saveWorkbenchFile';
 import { useProjectStore } from '../../../store/storeBootstrap';
 import { useWorkbenchStore } from '../../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../../theme/editorTheme';

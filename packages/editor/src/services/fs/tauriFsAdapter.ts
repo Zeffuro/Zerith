@@ -1,5 +1,7 @@
 import type { DirEntry } from '@tauri-apps/plugin-fs';
 
+import { invoke } from '@tauri-apps/api/core';
+
 import type { FsAdapter, FsDirectoryEntry, FsFilePickerFilter } from './types';
 
 let pathApiPromise: Promise<typeof import('@tauri-apps/api/path')> | undefined;
@@ -8,6 +10,7 @@ let fsApiPromise: Promise<typeof import('@tauri-apps/plugin-fs')> | undefined;
 let openerApiPromise: Promise<typeof import('@tauri-apps/plugin-opener')> | undefined;
 
 export const tauriFsAdapter: FsAdapter = {
+    copyFileExclusive: (sourcePath, targetPath) => invoke('copy_asset_file_exclusive', { sourcePath, targetPath }),
     dirname: async (path) => {
         const pathApi = await getPathApi();
         return pathApi.dirname(path);
@@ -54,6 +57,17 @@ export const tauriFsAdapter: FsAdapter = {
 
         return typeof selectedDirectory === 'string' ? selectedDirectory : undefined;
     },
+    pickImportFiles: async (options = {}) => {
+        const dialogApi = await getDialogApi();
+        const selected = await dialogApi.open({
+            directory: false,
+            filters: normalizePickerFilters(options.filters),
+            multiple: options.multiple ?? true,
+            title: options.title ?? 'Import assets',
+        }) as null | string | string[];
+        const paths = Array.isArray(selected) ? selected : (typeof selected === 'string' ? [selected] : []);
+        return paths.map((path) => ({ name: basenameFromPath(path), path }));
+    },
     pickProjectManifest: async () => {
         const dialogApi = await getDialogApi();
         const selectedFile = await dialogApi.open({
@@ -93,14 +107,9 @@ export const tauriFsAdapter: FsAdapter = {
         const fsApi = await getFsApi();
         await fsApi.rename(oldPath, newPath);
     },
-    writeBinaryFile: async (path, content) => {
-        const fsApi = await getFsApi();
-        await fsApi.writeFile(path, content);
-    },
-    writeTextFile: async (path, content) => {
-        const fsApi = await getFsApi();
-        await fsApi.writeTextFile(path, content);
-    },
+    writeBinaryFile: (path, content) => invoke('write_binary_file_atomic', { content: [...content], createOnly: false, path }),
+    writeBinaryFileExclusive: (path, content) => invoke('write_binary_file_atomic', { content: [...content], createOnly: true, path }),
+    writeTextFile: (path, content, options) => invoke('write_text_file_atomic', { request: { content, path, ...options } }),
 };
 
 function basenameFromPath(path: string): string {

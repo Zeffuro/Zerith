@@ -59,11 +59,13 @@ export function createWorkbenchTabsSlice(set: WorkbenchSet, get: WorkbenchGet): 
             }),
         openOrFocusTab: (tab) =>
             set((state) => {
+                const loadedTab = { ...tab, savedTextContent: tab.savedTextContent ?? tab.textContent };
                 const existing = state.tabs.find((t: WorkbenchTab) => t.id === tab.id);
                 if (existing) {
-                    const merged = { ...existing, ...tab };
+                    const merged = { ...existing, ...loadedTab };
                     if (existing.dirty && existing.textContent !== undefined) {
                         merged.dirty = true;
+                        merged.savedTextContent = existing.savedTextContent;
                         merged.textContent = existing.textContent;
                     }
 
@@ -72,7 +74,7 @@ export function createWorkbenchTabsSlice(set: WorkbenchSet, get: WorkbenchGet): 
                         tabs: state.tabs.map((candidate) => (candidate.id === tab.id ? merged : candidate)),
                     };
                 }
-                return { activeTabId: tab.id, tabs: [...state.tabs, tab] };
+                return { activeTabId: tab.id, tabs: [...state.tabs, loadedTab] };
             }),
 
         renameTabPath: (nextPath, oldPath) =>
@@ -100,6 +102,9 @@ export function createWorkbenchTabsSlice(set: WorkbenchSet, get: WorkbenchGet): 
             }),
 
         setActiveTab: (tabId) => set({ activeTabId: tabId }),
+        setTabSavedContent: (tabId, content) => set((state) => ({
+            tabs: state.tabs.map((tab) => tab.id === tabId ? { ...tab, savedTextContent: content } : tab),
+        })),
 
         tabs: [],
 
@@ -118,7 +123,7 @@ export function createWorkbenchTabsSlice(set: WorkbenchSet, get: WorkbenchGet): 
                 return {
                     tabs: state.tabs.map((tab) => (
                         tab.id === tabId
-                            ? { ...tab, dirty: markDirty, textContent }
+                            ? { ...tab, dirty: markDirty, savedTextContent: markDirty ? (tab.savedTextContent ?? tab.textContent) : textContent, textContent }
                             : tab
                     )),
                 };

@@ -1,7 +1,7 @@
 import type { ProjectGet, SaveAllResult } from '../store/project/types';
 
 import { useWorkbenchStore } from '../store/useWorkbenchStore';
-import { fsWriteTextFile } from './fs';
+import { saveWorkbenchTextFile } from './saveWorkbenchFile';
 
 export async function saveAllFiles(getProjectState: ProjectGet): Promise<SaveAllResult> {
     const state = getProjectState();
@@ -36,7 +36,7 @@ export async function saveAllFiles(getProjectState: ProjectGet): Promise<SaveAll
         }
 
         try {
-            await fsWriteTextFile(filePath, tab.textContent);
+            await saveWorkbenchTextFile(filePath, tab.textContent);
             useWorkbenchStore.getState().updateTabContent(tab.id, tab.textContent, { markDirty: false });
             getProjectState().clearFileDirty(filePath);
             result.saved.push(filePath);
