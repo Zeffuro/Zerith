@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ProjectSet, ProjectState } from '../../store/project/types';
 
@@ -10,6 +10,41 @@ import { localizeSceneMapForPreview } from '../localizationPreview';
 
 describe('manifest loading ownership', () => {
     beforeEach(() => vi.clearAllMocks());
+    afterEach(() => vi.unstubAllGlobals());
+
+    it.each([false, true])('does not retain clean models for case-distinct dirty files (native POSIX: %s)', native => {
+        if (native) vi.stubGlobal('__TAURI_INTERNALS__', {});
+        const manifest = {
+            characters: '/data/Characters.json', items: '/data/Items.json',
+            localization: { locales: { fr: '/locales/FR.json' } }, macros: '/data/Macros.json',
+            scenes: { intro: '/scenes/Intro.json' }, title: 'Committed',
+        };
+        const loadedCharacters = { hero: { displayName: 'Committed' } };
+        const loadedItems = { key: { name: 'Committed key' } };
+        const loadedScript = [{ text: 'Committed scene', type: 'dialogue' }];
+        const loadedMacros = { greet: [{ text: 'Committed macro', type: 'dialogue' }] };
+        const loadedLocale = { locale: 'fr', namespaces: { intro: { line: 'Bonjour' } } };
+        const sources: Record<string, unknown> = {
+            '/A/data/Characters.json': loadedCharacters, '/A/data/Items.json': loadedItems,
+            '/A/data/Macros.json': loadedMacros, '/A/game.json': manifest,
+            '/A/locales/FR.json': loadedLocale, '/A/scenes/Intro.json': loadedScript,
+        };
+        const state = {
+            characters: {}, dirtyFiles: new Set(['/A/data/characters.json', '/A/data/items.json', '/A/data/macros.json', '/A/Game.json', '/A/locales/fr.json', '/A/scenes/intro.json']),
+            items: {}, localePaths: { fr: '/A/locales/FR.json' }, locales: {}, macros: {}, manifest: { title: 'Stale' },
+            projectGeneration: 1, projectPath: '/A', sceneNamespaces: { intro: 'Stale' }, scenePaths: { intro: '/A/scenes/Intro.json' }, scenes: { intro: [] },
+        } as unknown as ProjectState;
+        const set = vi.fn<ProjectSet>();
+        const slice = createProjectManifestSlice(set, () => state);
+        mocks.readTextFile.mockImplementation(path => Promise.resolve(JSON.stringify(sources[path])));
+        return slice.loadManifest().then(opened => {
+            expect(opened).toBe(true);
+            expect(set).toHaveBeenCalledWith(expect.objectContaining({
+                characters: loadedCharacters, items: loadedItems, locales: { fr: loadedLocale }, macros: loadedMacros,
+                manifest, sceneNamespaces: { intro: undefined }, scenes: { intro: loadedScript },
+            }));
+        });
+    });
 
     it('does not install a manifest from an older project session after reopening its path', async () => {
         const state = { dirtyFiles: new Set<string>(), localePaths: {}, locales: {}, projectGeneration: 1, projectPath: '/A', sceneNamespaces: {}, scenePaths: {}, scenes: {} };

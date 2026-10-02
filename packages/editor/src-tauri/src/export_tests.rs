@@ -12,7 +12,6 @@ struct Fixture {
 impl Fixture {
     fn new() -> Self {
         let id = NEXT_TEST.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!("zerith-export-{}-{id}", std::process::id()));
         let temp = fs::canonicalize(std::env::temp_dir()).unwrap();
         let root = temp.join(format!("zerith-export-{}-{id}", std::process::id()));
         fs::create_dir(&root).unwrap();

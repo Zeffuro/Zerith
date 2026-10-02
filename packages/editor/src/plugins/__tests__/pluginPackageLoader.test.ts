@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { InstalledEditorPluginPackageDiscoveryDependencies } from '../pluginPackageLoader';
 import type { EditorPluginContribution, RegisteredEditorPlugin } from '../types';
@@ -10,6 +10,10 @@ import {
 } from '../pluginPackageLoader';
 
 describe('pluginPackageLoader', () => {
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
     it('discovers installed source-record packages and loads contributions through the registration pipeline', async () => {
         const contribution: EditorPluginContribution = {
             commands: [{ label: 'Signal', type: 'plugin.signal' }],
@@ -58,7 +62,7 @@ describe('pluginPackageLoader', () => {
             registered: [registered],
             rejected: [],
         });
-        expect(dependencies.loadModule).toHaveBeenCalledWith('/plugins/plugin-signal/dist/index.js');
+        expect(dependencies.loadModule).toHaveBeenCalledWith('/plugins/plugin-signal/dist/index.js', new Uint8Array([1, 2, 3]));
         expect(dependencies.readBinaryFile).toHaveBeenCalledWith('/plugins/plugin-signal/dist/index.js');
         expect(registerPlugin).toHaveBeenCalledWith(contribution, {
             source: `/plugins/plugin-signal/${EDITOR_PLUGIN_SOURCE_RECORD_FILE_NAME}`,
@@ -162,6 +166,89 @@ describe('pluginPackageLoader', () => {
         ]);
         expect(dependencies.loadModule).not.toHaveBeenCalled();
     });
+
+    it('rejects entry changes after discovery before executing a candidate', async () => {
+        const entryPath = '/plugins/review.plugin/dist/index.js';
+        const binaryFiles: Record<string, Uint8Array> = { [entryPath]: new Uint8Array([1, 2, 3]) };
+        const dependencies = createLoadableDependencies(binaryFiles);
+        const discovery = await discoverInstalledEditorPluginPackages('/plugins', { dependencies });
+
+        expect(discovery.candidates).toHaveLength(1);
+        binaryFiles[entryPath] = new Uint8Array([3, 2, 1]);
+
+        await expect(discovery.candidates[0]?.load()).rejects.toThrow('package integrity hash mismatch: dist/index.js');
+        expect(dependencies.loadModule).not.toHaveBeenCalled();
+    });
+
+    it('transports the entry snapshot verified at load time', async () => {
+        const entryPath = '/plugins/review.plugin/dist/index.js';
+        const binaryFiles: Record<string, Uint8Array> = { [entryPath]: new Uint8Array([1, 2, 3]) };
+        const dependencies = createLoadableDependencies(binaryFiles);
+        const discovery = await discoverInstalledEditorPluginPackages('/plugins', { dependencies });
+
+        vi.mocked(dependencies.readBinaryFile).mockClear().mockImplementation((filePath: string) => {
+            const bytes = binaryFiles[filePath];
+            binaryFiles[entryPath] = new Uint8Array([3, 2, 1]);
+            return Promise.resolve(bytes);
+        });
+
+        await discovery.candidates[0]?.load();
+
+        expect(dependencies.readBinaryFile).toHaveBeenCalledTimes(1);
+        expect(dependencies.loadModule).toHaveBeenCalledWith(entryPath, new Uint8Array([1, 2, 3]));
+        expect(binaryFiles[entryPath]).toEqual(new Uint8Array([3, 2, 1]));
+    });
+
+    it('reads entry bytes for legacy installed records without integrity metadata', async () => {
+        const entryPath = '/plugins/review.plugin/dist/index.js';
+        const dependencies = createLoadableDependencies({ [entryPath]: new Uint8Array([1, 2, 3]) }, false);
+        const discovery = await discoverInstalledEditorPluginPackages('/plugins', { dependencies });
+
+        await discovery.candidates[0]?.load();
+
+        expect(dependencies.loadModule).toHaveBeenCalledWith(entryPath, new Uint8Array([1, 2, 3]));
+    });
+
+    it.each([
+        { native: true, root: 'F:/Plugins', verified: true },
+        { native: true, root: '//SERVER/Share/Plugins', verified: true },
+        { native: true, root: '/plugins', verified: false },
+        { native: false, root: '/plugins', verified: false },
+        { native: false, root: 'F:/Plugins', verified: false },
+        { native: false, root: '//SERVER/Share/Plugins', verified: false },
+    ])('selects verified entry snapshots using filesystem case rules (%j)', async ({ native, root, verified }) => {
+        if (native) vi.stubGlobal('__TAURI_INTERNALS__', {});
+        const targetPath = `${root}/review.plugin`;
+        const entryPath = `${targetPath}/dist/index.js`;
+        const record = createRecord({
+            id: 'review.plugin',
+            integritySha256: '039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81',
+            targetPath,
+        });
+        const integrityFile = record.packageIntegrity?.files[0];
+        if (integrityFile) integrityFile.path = 'dist/./Index.js';
+        const dependencies = createDependencies({
+            binaryFiles: { [`${targetPath}/dist/./Index.js`]: new Uint8Array([1, 2, 3]) },
+            directories: { [root]: [{ isDirectory: true, isFile: false, isSymlink: false, name: 'review.plugin' }] },
+            files: { [`${targetPath}/${EDITOR_PLUGIN_SOURCE_RECORD_FILE_NAME}`]: JSON.stringify(record) },
+            modules: { [entryPath]: { default: { manifest: record.manifest } } },
+        });
+        dependencies.join = vi.fn((...parts: string[]) => Promise.resolve(parts.join('/')));
+        const discovery = await discoverInstalledEditorPluginPackages(root, { dependencies });
+
+        if (verified) {
+            expect(discovery.rejected).toEqual([]);
+            expect(discovery.candidates).toHaveLength(1);
+            vi.mocked(dependencies.readBinaryFile).mockClear();
+            await discovery.candidates[0]?.load();
+            expect(dependencies.readBinaryFile).toHaveBeenCalledExactlyOnceWith(`${targetPath}/dist/./Index.js`);
+            expect(dependencies.loadModule).toHaveBeenCalledWith(entryPath, new Uint8Array([1, 2, 3]));
+        } else {
+            expect(discovery.candidates).toEqual([]);
+            expect(discovery.rejected[0]?.reason).toBe('package integrity does not cover plugin entry: dist/index.js');
+            expect(dependencies.loadModule).not.toHaveBeenCalled();
+        }
+    });
 });
 
 function createDependencies(input: {
@@ -192,6 +279,21 @@ function createDependencies(input: {
                 : Promise.resolve(text);
         }),
     };
+}
+
+function createLoadableDependencies(binaryFiles: Record<string, Uint8Array>, withIntegrity = true): InstalledEditorPluginPackageDiscoveryDependencies {
+    const record = createRecord({
+        id: 'review.plugin',
+        ...(withIntegrity ? { integritySha256: '039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81' } : {}),
+        targetPath: '/plugins/review.plugin',
+    });
+
+    return createDependencies({
+        binaryFiles,
+        directories: { '/plugins': [{ isDirectory: true, isFile: false, isSymlink: false, name: 'review.plugin' }] },
+        files: { [`/plugins/review.plugin/${EDITOR_PLUGIN_SOURCE_RECORD_FILE_NAME}`]: JSON.stringify(record) },
+        modules: { '/plugins/review.plugin/dist/index.js': { default: { manifest: record.manifest } } },
+    });
 }
 
 function createRecord(input: {

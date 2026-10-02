@@ -11,12 +11,13 @@ import type { EditorPluginContribution } from './types';
 import { fsJoin, fsReadBinaryFile, fsReadDirectory, fsReadTextFile } from '../services/fs';
 import { loadDiscoveredEditorPlugins } from './pluginDiscovery';
 import { inspectEditorPluginSourceRecordText } from './pluginManifestInspection';
-import { verifyEditorPluginPackageIntegrity } from './pluginPackageIntegrity';
+import { loadEditorPluginModule } from './pluginModuleLoader';
+import { normalizePluginPackagePath, verifyEditorPluginPackageIntegrity } from './pluginPackageIntegrity';
 import { createInstalledEditorPluginLoadTrustPolicy } from './pluginTrustPolicy';
 
 export type InstalledEditorPluginPackageDiscoveryDependencies = {
     join: (...parts: string[]) => Promise<string>;
-    loadModule: (entryPath: string) => Promise<unknown>;
+    loadModule: (entryPath: string, bytes: Uint8Array) => Promise<unknown>;
     readBinaryFile: (path: string) => Promise<Uint8Array>;
     readDirectory: (path: string) => Promise<FsDirectoryEntry[]>;
     readTextFile: (path: string) => Promise<string>;
@@ -35,7 +36,7 @@ export const EDITOR_PLUGIN_SOURCE_RECORD_FILE_NAME = 'zerith.editorPluginSource.
 
 const DEFAULT_INSTALLED_EDITOR_PLUGIN_PACKAGE_DISCOVERY_DEPENDENCIES: InstalledEditorPluginPackageDiscoveryDependencies = {
     join: fsJoin,
-    loadModule: defaultLoadEditorPluginModule,
+    loadModule: loadEditorPluginModule,
     readBinaryFile: fsReadBinaryFile,
     readDirectory: fsReadDirectory,
     readTextFile: fsReadTextFile,
@@ -100,10 +101,10 @@ export async function discoverInstalledEditorPluginPackages(
         }
 
         candidates.push({
-            load: async () => normalizeEditorPluginModule(
-                await dependencies.loadModule(entryPath.value),
-                entryPath.value,
-            ),
+            load: async () => {
+                const bytes = await readVerifiedPluginEntry(inspection.record, entryPath.value, dependencies);
+                return normalizeEditorPluginModule(await dependencies.loadModule(entryPath.value, bytes), entryPath.value);
+            },
             manifest: inspection.record.manifest,
             source: recordPath,
         });
@@ -130,10 +131,6 @@ export async function loadInstalledEditorPluginPackages(
         rejected: [...discovery.rejected, ...loadResult.rejected]
             .toSorted((left, right) => left.source.localeCompare(right.source)),
     };
-}
-
-async function defaultLoadEditorPluginModule(entryPath: string): Promise<unknown> {
-    return import(/* @vite-ignore */ entryPath);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -164,6 +161,26 @@ function readCandidateManifestId(candidate: EditorPluginDiscoveryCandidate): str
 function readEditorPluginContribution(value: unknown): EditorPluginContribution | undefined {
     if (!isRecord(value) || !isRecord(value.manifest)) return;
     return value as EditorPluginContribution;
+}
+
+async function readVerifiedPluginEntry(
+    record: EditorPluginSourceRecord,
+    entryPath: string,
+    dependencies: InstalledEditorPluginPackageDiscoveryDependencies,
+): Promise<Uint8Array> {
+    let entryBytes: Uint8Array | undefined;
+    const integrity = await verifyEditorPluginPackageIntegrity(record, {
+        ...dependencies,
+        readBinaryFile: async path => {
+            const bytes = await dependencies.readBinaryFile(path);
+            if (normalizePluginPackagePath(path) === normalizePluginPackagePath(entryPath)) entryBytes = bytes;
+            return bytes;
+        },
+    });
+    if (integrity.status === 'rejected') throw new Error(integrity.reason);
+    if (integrity.status === 'skipped') return dependencies.readBinaryFile(entryPath);
+    if (!entryBytes) throw new Error(`Package integrity does not cover plugin entry: ${record.manifest.entry}`);
+    return entryBytes;
 }
 
 async function resolveInstalledEditorPluginEntryPath(

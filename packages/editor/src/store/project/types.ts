@@ -2,13 +2,14 @@ import type { CharacterDefinition, Command, GameManifest, ItemManifestEntry, Loc
 
 import type { FsDirectoryEntry } from '../../services/fs';
 import type { EditorNode } from '../../types/EditorNode';
+import type { PreparedProject } from './projectPreparation';
 
 export type MacroEntry = { commands: Command[]; name: string; };
 
 export type ProjectGet = () => ProjectState;
 
 export interface ProjectIoSlice {
-    openProjectFromManifest: (manifestPath: string) => Promise<void>;
+    openProjectFromManifest: (manifestPath: string, prepared?: PreparedProject) => Promise<boolean>;
     saveActiveFileFromCurrentScript: () => Promise<void>;
     saveAllDirtyFiles: () => Promise<SaveAllResult>;
 }
@@ -31,10 +32,12 @@ export interface ProjectMacrosSlice {
     updateMacroCommands: (index: number, commands: Command[]) => void;
 }
 
+export type ProjectManifestData = { manifest: GameManifest } & Omit<ProjectManifestSlice, 'loadManifest' | 'manifest'>;
+
 export interface ProjectManifestSlice {
     characters: Record<string, CharacterDefinition>;
     items: Record<string, ItemManifestEntry>;
-    loadManifest: () => Promise<void>;
+    loadManifest: () => Promise<boolean>;
     localePaths: Record<string, string | undefined>;
     locales: Record<string, LocaleBundle>;
     macros: Record<string, Script>;
@@ -65,7 +68,7 @@ export interface ProjectSessionSlice {
     projectPath: string | undefined;
     setActiveFile: (file: string, content: EditorNode[]) => void;
     setPathExpanded: (path: string, expanded: boolean) => void;
-    setProject: (path: string | undefined, files: FsDirectoryEntry[]) => void;
+    setProject: (path: string | undefined, files: FsDirectoryEntry[], manifestData?: ProjectManifestData) => void;
     setProjectFiles: (files: FsDirectoryEntry[]) => void;
     treeRevision: number;
 }

@@ -2,6 +2,7 @@ import type { ComponentType, ReactNode } from 'react';
 
 import { SchemaRegistry } from '@zeffuro/zerith-core/schemas';
 
+import type { RegisterEditorPluginFunction } from './pluginDiscovery';
 import type {
     BranchSpec,
     CommandPlugin,
@@ -24,11 +25,20 @@ import {
     getRegisteredNonMacroEditorCommandTypes,
     isRegisteredEditorCommandType,
     registerEditorCommandType,
+    unregisterEditorCommandType,
 } from './commandTypes';
+import { notifyPluginRegistryChanged } from './pluginRegistryEvents';
 import { CURRENT_EDITOR_PLUGIN_API_VERSION } from './types';
 
 export type EditorPluginRegistrationOptions = {
+    reservation?: symbol;
     source?: string;
+};
+
+type CommandOwner = {
+    accepting: boolean;
+    commands: Map<string, CommandPluginContribution['schema']>;
+    id: string;
 };
 
 type CommandPluginMetadata = {
@@ -44,6 +54,7 @@ type CommandPluginMetadata = {
 type RegisteredEditorPluginInternal = {
     cleanup?: () => void;
     deactivate?: () => void;
+    owner: CommandOwner;
 } & RegisteredEditorPlugin;
 
 type UnknownCommandPlugin = {
@@ -58,6 +69,9 @@ type UnknownCommandPlugin = {
 const registeredEditorPlugins = new Map<string, RegisteredEditorPluginInternal>();
 const registeredPluginMetadata = new Map<string, CommandPluginMetadata>();
 const pluginCache = new Map<string, CommandPlugin>();
+const commandOwners = new Map<string, CommandOwner>();
+const pendingLoads = new Map<string, symbol>();
+const transitioningPlugins = new Set<string>();
 
 export function deactivateEditorPlugin(pluginId: string): boolean {
     const id = normalizePluginId(pluginId);
@@ -66,13 +80,19 @@ export function deactivateEditorPlugin(pluginId: string): boolean {
         return false;
     }
 
-    plugin.cleanup?.();
-    plugin.deactivate?.();
+    transitioningPlugins.add(id);
+    releaseOwnedCommands(plugin.owner);
     registeredEditorPlugins.set(id, {
         ...plugin,
         active: false,
         cleanup: undefined,
     });
+    try {
+        runTeardownHooks(plugin.cleanup, plugin.deactivate);
+    } finally {
+        transitioningPlugins.delete(id);
+        notifyPluginRegistryChanged();
+    }
     return true;
 }
 
@@ -85,7 +105,79 @@ export function getRegisteredEditorPlugins(): RegisteredEditorPlugin[] {
 export function registerCommandPlugin(
     contribution: CommandPluginContribution,
 ): CommandPlugin<NonMacroEditorCommandType> {
+    return registerOwnedCommand(contribution);
+}
+
+export function registerEditorPlugin(
+    contribution: EditorPluginContribution,
+    options: EditorPluginRegistrationOptions = {},
+): RegisteredEditorPlugin {
+    const manifest = normalizePluginManifest(contribution.manifest);
+    assertEditorPluginCompatibility(manifest);
+    assertPluginAvailable(manifest.id, options.reservation);
+    transitioningPlugins.add(manifest.id);
+    const owner: CommandOwner = { accepting: true, commands: new Map(), id: manifest.id };
+    let activationStarted = false;
+    try {
+        for (const command of contribution.commands ?? []) registerOwnedCommand(command, owner);
+        const scopedApi: PluginAPI = {
+            ...pluginApi,
+            registerCommandPlugin: command => registerOwnedCommand(command, owner),
+            registerPlugin: plugin => {
+                assertOwnerAccepting(owner);
+                return registerEditorPlugin(plugin);
+            },
+        };
+        activationStarted = true;
+        const activationResult = contribution.activate?.(scopedApi);
+        if (activationResult !== undefined && typeof activationResult !== 'function') {
+            void Promise.resolve(activationResult).catch(() => {});
+            throw new TypeError(`Editor plugin '${manifest.id}' activation must be synchronous.`);
+        }
+        const snapshot: RegisteredEditorPluginInternal = {
+            active: true,
+            capabilities: resolvePluginCapabilities(contribution, [...owner.commands.keys()]),
+            cleanup: typeof activationResult === 'function' ? activationResult : undefined,
+            commandTypes: [...owner.commands.keys()],
+            deactivate: contribution.deactivate,
+            manifest,
+            owner,
+            ...(options.source === undefined ? {} : { source: options.source }),
+        };
+        registeredEditorPlugins.set(manifest.id, snapshot);
+        return toPublicPluginSnapshot(snapshot);
+    } catch (error) {
+        releaseOwnedCommands(owner);
+        if (activationStarted) {
+            try { runTeardownHooks(contribution.deactivate); }
+            catch (teardownError) {
+                throw new AggregateError([error, teardownError], `${String(error)}; ${String(teardownError)}`, { cause: teardownError });
+            }
+        }
+        throw error;
+    } finally {
+        transitioningPlugins.delete(manifest.id);
+        notifyPluginRegistryChanged();
+    }
+}
+
+function registerOwnedCommand(
+    contribution: CommandPluginContribution,
+    owner?: CommandOwner,
+): CommandPlugin<NonMacroEditorCommandType> {
+    const normalized = contribution.type.trim();
+    const existingOwner = commandOwners.get(normalized);
+    if (owner) assertOwnerAccepting(owner);
+    if ((existingOwner && existingOwner !== owner)
+        || (owner && existingOwner !== owner && isRegisteredEditorCommandType(normalized))) {
+        throw new TypeError(`Command type '${normalized}' is already registered.`);
+    }
     const type = registerEditorCommandType(contribution.type);
+
+    if (owner) {
+        commandOwners.set(type, owner);
+        owner.commands.set(type, contribution.schema ?? owner.commands.get(type));
+    }
 
     if (contribution.schema) {
         SchemaRegistry.register(type, contribution.schema);
@@ -97,39 +189,25 @@ export function registerCommandPlugin(
         ...extractPluginMetadata(contribution),
     });
     pluginCache.delete(type);
-
+    if (!owner || registeredEditorPlugins.get(owner.id)?.active) notifyPluginRegistryChanged();
     return ensurePlugin(type);
 }
 
-export function registerEditorPlugin(
-    contribution: EditorPluginContribution,
-    options: EditorPluginRegistrationOptions = {},
-): RegisteredEditorPlugin {
-    const manifest = normalizePluginManifest(contribution.manifest);
-    assertEditorPluginCompatibility(manifest);
-    if (registeredEditorPlugins.has(manifest.id)) {
-        throw new TypeError(`Editor plugin '${manifest.id}' is already registered.`);
-    }
-
-    const commandTypes = contribution.commands?.map((commandContribution) => (
-        registerCommandPlugin(commandContribution).type
-    )) ?? [];
-    const capabilities = resolvePluginCapabilities(contribution, commandTypes);
-    const activationResult = contribution.activate?.(pluginApi);
-    const cleanup = typeof activationResult === 'function' ? activationResult : undefined;
-    const snapshot: RegisteredEditorPluginInternal = {
-        active: true,
-        capabilities,
-        cleanup,
-        commandTypes,
-        deactivate: contribution.deactivate,
-        manifest,
-        ...(options.source === undefined ? {} : { source: options.source }),
+registerEditorPlugin.prepare = (pluginId: string): ReturnType<NonNullable<RegisterEditorPluginFunction['prepare']>> => {
+    const id = normalizePluginId(pluginId);
+    assertPluginAvailable(id);
+    const reservation = Symbol(id);
+    pendingLoads.set(id, reservation);
+    return {
+        register: (contribution, options) => {
+            if (normalizePluginId(contribution.manifest.id) !== id || pendingLoads.get(id) !== reservation) {
+                throw new TypeError(`Editor plugin '${id}' load reservation is no longer valid.`);
+            }
+            return registerEditorPlugin(contribution, { ...options, reservation });
+        },
+        release: () => { if (pendingLoads.get(id) === reservation) pendingLoads.delete(id); },
     };
-
-    registeredEditorPlugins.set(manifest.id, snapshot);
-    return toPublicPluginSnapshot(snapshot);
-}
+};
 
 function assertEditorPluginCompatibility(manifest: EditorPluginManifest): void {
     if (
@@ -140,6 +218,17 @@ function assertEditorPluginCompatibility(manifest: EditorPluginManifest): void {
             `Editor plugin '${manifest.id}' targets plugin API v${manifest.pluginApiVersion}, `
             + `but this editor supports v${CURRENT_EDITOR_PLUGIN_API_VERSION}.`
         );
+    }
+}
+
+function assertOwnerAccepting(owner: CommandOwner): void {
+    if (!owner.accepting) throw new TypeError(`Editor plugin '${owner.id}' is inactive.`);
+}
+
+function assertPluginAvailable(id: string, reservation?: symbol): void {
+    if (registeredEditorPlugins.get(id)?.active || transitioningPlugins.has(id)
+        || (pendingLoads.has(id) && pendingLoads.get(id) !== reservation)) {
+        throw new TypeError(`Editor plugin '${id}' is already active or changing state.`);
     }
 }
 
@@ -223,6 +312,18 @@ function normalizePluginManifest(manifest: EditorPluginContribution['manifest'])
     };
 }
 
+function releaseOwnedCommands(owner: CommandOwner): void {
+    owner.accepting = false;
+    for (const [type, schema] of owner.commands) {
+        if (commandOwners.get(type) !== owner) continue;
+        commandOwners.delete(type);
+        registeredPluginMetadata.delete(type);
+        pluginCache.delete(type);
+        unregisterEditorCommandType(type);
+        if (schema && SchemaRegistry.get(type) === schema) delete SchemaRegistry.getRegistry()[type];
+    }
+}
+
 function resolvePluginCapabilities(
     contribution: EditorPluginContribution,
     commandTypes: string[],
@@ -236,11 +337,31 @@ function resolvePluginCapabilities(
     return [...capabilities].toSorted((left, right) => left.localeCompare(right));
 }
 
+function runTeardownHooks(...hooks: (((() => void) | undefined))[]): void {
+    const errors: unknown[] = [];
+    for (const hook of hooks) {
+        try {
+            const result: unknown = hook?.();
+            if (result && typeof (result as PromiseLike<unknown>).then === 'function') {
+                void Promise.resolve(result).catch(() => {});
+                throw new TypeError('Editor plugin cleanup and deactivation must be synchronous.');
+            }
+        } catch (error) { errors.push(error); }
+    }
+    if (errors.length > 0) {
+        throw new AggregateError(errors, errors.map(error => error instanceof Error ? error.message : String(error)).join('; '));
+    }
+}
+
 function toPublicPluginSnapshot(plugin: RegisteredEditorPluginInternal): RegisteredEditorPlugin {
+    const commandTypes = [...plugin.owner.commands.keys()];
+    const capabilities = new Set(plugin.capabilities);
+    if (commandTypes.length > 0) capabilities.add('commands');
+    if (plugin.active && commandTypes.some(type => registeredPluginMetadata.get(type)?.Inspector)) capabilities.add('inspectors');
     return {
         active: plugin.active,
-        capabilities: [...plugin.capabilities],
-        commandTypes: [...plugin.commandTypes],
+        capabilities: [...capabilities].toSorted(),
+        commandTypes,
         manifest: { ...plugin.manifest },
         ...(plugin.source === undefined ? {} : { source: plugin.source }),
     };
@@ -269,9 +390,7 @@ export const pluginApi: PluginAPI = {
     registerCommandPlugin(contribution) {
         return registerCommandPlugin(contribution);
     },
-    registerPlugin(contribution) {
-        return registerEditorPlugin(contribution);
-    },
+    registerPlugin: registerEditorPlugin,
 };
 
 export function createDefaultCommand<TType extends EditorCommandType>(type: TType): EditorNodeByType<TType>;

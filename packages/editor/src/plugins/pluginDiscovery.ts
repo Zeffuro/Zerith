@@ -29,10 +29,15 @@ export type EditorPluginLoadResult = {
     rejected: RejectedEditorPlugin[];
 };
 
-export type RegisterEditorPluginFunction = (
+export type RegisterEditorPluginFunction = ((
     contribution: EditorPluginContribution,
     options?: { source?: string },
-) => RegisteredEditorPlugin;
+) => RegisteredEditorPlugin) & {
+    prepare?: (id: string) => {
+        register: RegisterEditorPluginFunction;
+        release: () => void;
+    };
+};
 
 export type RejectedEditorPlugin = {
     manifestId?: string;
@@ -105,7 +110,9 @@ export async function loadDiscoveredEditorPlugins(
     const rejected: RejectedEditorPlugin[] = [...discovery.rejected];
 
     for (const plugin of discovery.discovered) {
+        let prepared: ReturnType<NonNullable<RegisterEditorPluginFunction['prepare']>> | undefined;
         try {
+            prepared = registerPlugin.prepare?.(plugin.manifest.id);
             const contribution = await plugin.load();
             const manifestCheck = parseEditorPluginManifest(contribution.manifest);
             if (!manifestCheck.ok) {
@@ -127,13 +134,15 @@ export async function loadDiscoveredEditorPlugins(
                 continue;
             }
 
-            registered.push(registerPlugin(contribution, { source: plugin.source }));
+            registered.push((prepared?.register ?? registerPlugin)(contribution, { source: plugin.source }));
         } catch (error) {
             rejected.push({
                 manifestId: plugin.manifest.id,
                 reason: error instanceof Error ? error.message : String(error),
                 source: plugin.source,
             });
+        } finally {
+            prepared?.release();
         }
     }
 

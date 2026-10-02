@@ -5,6 +5,7 @@ const root = process.cwd();
 const asJson = process.argv.includes('--json');
 
 const rootManifest = await readJson('package.json');
+const npmLock = await readJson('package-lock.json');
 const coreManifest = await readJson('packages/core/package.json');
 const editorManifest = await readJson('packages/editor/package.json');
 const playerManifest = await readJson('packages/player/package.json');
@@ -15,7 +16,8 @@ const cargoLock = await readText('packages/editor/src-tauri/Cargo.lock');
 const cargoVersion = readCargoField(cargoManifest, 'version');
 const cargoLockVersion = readCargoLockEditorVersion(cargoLock);
 const editorVersion = editorManifest.version;
-const versionAligned = editorVersion === tauriConfig.version && editorVersion === cargoVersion && editorVersion === cargoLockVersion;
+const versionAligned = editorVersion === tauriConfig.version && editorVersion === cargoVersion
+    && editorVersion === cargoLockVersion && editorVersion === npmLock.packages?.['packages/editor']?.version;
 const semverPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u;
 const editorVersionIsSemver = semverPattern.test(editorVersion);
 const rootAndEditorPackagesArePrivate = rootManifest.private === true
@@ -70,8 +72,8 @@ const checks = [
         label: 'Editor version alignment',
         status: versionAligned ? 'ready' : 'blocked',
         summary: versionAligned
-            ? 'Editor package, Tauri config, Cargo manifest, and Cargo lock versions match.'
-            : 'Editor package, Tauri config, Cargo manifest, and Cargo lock versions do not match.',
+            ? 'Editor package, npm lock, Tauri config, Cargo manifest, and Cargo lock versions match.'
+            : 'Editor package, npm lock, Tauri config, Cargo manifest, and Cargo lock versions do not match.',
     },
     {
         id: 'workspacePackageNames',
@@ -123,6 +125,8 @@ if (asJson) {
         console.log(`- ${check.label}: ${check.status} - ${check.summary}`);
     }
 }
+
+if (report.blocked > 0) process.exitCode = 1;
 
 function countByStatus(checks_, status) {
     return checks_.filter((check) => check.status === status).length;

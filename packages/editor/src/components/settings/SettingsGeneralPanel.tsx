@@ -3,6 +3,7 @@ import { type CSSProperties, type ReactNode } from 'react';
 import type { NonMacroEditorCommandType } from '../../plugins/types';
 import type { DockLayoutPreset } from '../../store/settings/SettingsSchema';
 
+import { usePluginRegistry } from '../../hooks/usePluginRegistry';
 import { getAllPlugins } from '../../plugins/commandPlugins';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { getVisibleSettingsControls, type SettingsControlId } from './settingsControlRegistry';
@@ -66,6 +67,7 @@ export function SettingsGeneralPanel({
     toggleQuickCommandType,
     uiScale,
 }: SettingsGeneralPanelProperties) {
+    usePluginRegistry();
     const visibleControlIds = new Set(getVisibleSettingsControls(panelId));
     const quickCommandPlugins = getAllPlugins();
     const autosaveIntervalSeconds = Math.max(5, Math.round(autosaveIntervalMs / 1000));

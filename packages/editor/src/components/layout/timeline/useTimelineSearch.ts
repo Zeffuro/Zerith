@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { PluginNode } from '../../../plugins/types';
 import type { ScriptPath } from '../../../utils/scriptPathUtilities';
 
+import { usePluginRegistry } from '../../../hooks/usePluginRegistry';
 import { getPlugin } from '../../../plugins/commandPlugins';
 import { useScriptStore } from '../../../store/storeBootstrap';
 import { useEditorStore } from '../../../store/useEditorStore';
@@ -14,6 +15,7 @@ type TimelinePluginView = {
 };
 
 export function useTimelineSearch(rootNodes: PluginNode[], typeFilter: string) {
+    const pluginRevision = usePluginRegistry();
     const [query, setQuery] = useState('');
     const [activeMatchIndex, setActiveMatchIndex] = useState(0);
 
@@ -28,7 +30,9 @@ export function useTimelineSearch(rootNodes: PluginNode[], typeFilter: string) {
                     const passQuery = nodeOrDescendantMatches(node, query);
                     return passType && passQuery;
                 }),
-        [rootNodes, query, typeFilter]
+        // Command branch metadata can change without edits to the nodes.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [rootNodes, query, typeFilter, pluginRevision]
     );
 
     const matchPaths = useMemo(() => {

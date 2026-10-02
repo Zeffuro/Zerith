@@ -5,6 +5,7 @@ import type { PluginNode } from '../../../plugins/types';
 import type { ScriptPath } from '../../../utils/scriptPathUtilities';
 import type { DropIndicator } from './types';
 
+import { usePluginRegistry } from '../../../hooks/usePluginRegistry';
 import { getPlugin } from '../../../plugins/commandPlugins';
 import { editorTheme as t } from '../../../theme/editorTheme';
 import { formatSceneComposerPath } from './sceneComposerPathModel';
@@ -120,6 +121,7 @@ function TimelineNodeInner({
                                  uiScale,
                                  validationMessage,
                              }: Properties) {
+    usePluginRegistry();
     const plugin = getPlugin(node.type) as unknown as TimelinePluginView;
     const branches: TimelineBranch[] = plugin.getBranches?.(node) ?? [];
     const hasBranches = branches.length > 0;

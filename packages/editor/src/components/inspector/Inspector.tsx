@@ -1,5 +1,6 @@
 import type { PluginNode } from '../../plugins/types';
 
+import { usePluginRegistry } from '../../hooks/usePluginRegistry';
 import { getPlugin } from '../../plugins/commandPlugins';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useScriptStore } from '../../store/storeBootstrap';
@@ -12,6 +13,7 @@ import { isRecord } from '../../utils/typeGuards';
 import { SchemaFallbackInspector } from './SchemaFallbackInspector';
 
 export function Inspector() {
+    usePluginRegistry();
     const globalUiScale = useSettingsStore((state) => state.uiScale);
     const inspectorScale = useSettingsStore((state) => state.inspectorScale);
     const uiScale = resolveComponentScale(globalUiScale, inspectorScale);

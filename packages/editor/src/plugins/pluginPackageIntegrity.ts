@@ -1,6 +1,7 @@
 import type { EditorPluginPackageIntegrityFile, EditorPluginSourceRecord } from './pluginManifestInspection';
 
 import { fsJoin, fsReadBinaryFile } from '../services/fs';
+import { normalizePathForComparison } from '../utils/pathComparison';
 
 export type EditorPluginPackageIntegrityVerificationDependencies = {
     join: (...parts: string[]) => Promise<string>;
@@ -46,6 +47,10 @@ export async function createSha256HexDigest(bytes: Uint8Array): Promise<string> 
         .join('');
 }
 
+export function normalizePluginPackagePath(path: string): string {
+    return normalizePathForComparison(path).split('/').filter((segment) => segment !== '.' && segment !== '').join('/');
+}
+
 export async function verifyEditorPluginPackageIntegrity(
     record: EditorPluginSourceRecord,
     dependencies: Partial<EditorPluginPackageIntegrityVerificationDependencies> = {},
@@ -60,6 +65,17 @@ export async function verifyEditorPluginPackageIntegrity(
     if (!record.install.targetPath) {
         return {
             reason: 'source record install.targetPath is required before verifying package integrity',
+            status: 'rejected',
+        };
+    }
+
+    const entry = record.manifest.entry;
+    if (entry && !record.packageIntegrity.files.some((file) => (
+        normalizePluginPackagePath(`${record.install.targetPath}/${file.path}`)
+            === normalizePluginPackagePath(`${record.install.targetPath}/${entry}`)
+    ))) {
+        return {
+            reason: `package integrity does not cover plugin entry: ${entry}`,
             status: 'rejected',
         };
     }

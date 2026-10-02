@@ -43,3 +43,9 @@ export function registerEditorCommandType(type: string): NonMacroEditorCommandTy
     registeredEditorCommandTypes.add(normalizedType);
     return normalizedType;
 }
+
+export function unregisterEditorCommandType(type: string): void {
+    if (!(BuiltInCommandTypes as readonly string[]).includes(type)) {
+        registeredEditorCommandTypes.delete(type);
+    }
+}

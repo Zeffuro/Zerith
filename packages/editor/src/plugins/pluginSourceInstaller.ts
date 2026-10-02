@@ -133,6 +133,11 @@ async function copyPluginPackageDirectory(
         const targetPath = await dependencies.join(targetDirectory, entry.name);
         const relativePath = joinPackageRelativePath(relativeDirectory, entry.name);
 
+        if (!relativeDirectory && entry.name.toLowerCase() === SOURCE_RECORD_FILE_NAME.toLowerCase()) {
+            skippedEntries.push(sourcePath);
+            continue;
+        }
+
         if (entry.isSymlink) {
             skippedEntries.push(sourcePath);
             continue;

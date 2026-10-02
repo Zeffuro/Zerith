@@ -1,5 +1,6 @@
 import { type KeyboardEventHandler, useCallback, useEffect, useRef, useState } from 'react';
 
+import { useRecentProjects } from '../../hooks/useRecentProjects';
 import { createBrowserParityReport } from '../../services/browserParityReport';
 import {
     executeContentMigrationCommand,
@@ -79,7 +80,7 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
     const setThemeKey = useEditorStore((state) => state.setThemeKey);
     const themeKey = useEditorStore((state) => state.themeKey);
     const activeDockLayoutPresetId = useSettingsStore((state) => state.activeDockLayoutPresetId);
-    const recentProjects = useSettingsStore((state) => state.recentProjects);
+    const { addRecentProject, openRecentProject, recentProjects } = useRecentProjects();
     const checkForUpdatesOnStartup = useSettingsStore((state) => state.checkForUpdatesOnStartup);
     const customThemes = useSettingsStore((state) => state.customThemes);
     const deleteDockLayoutPreset = useSettingsStore((state) => state.deleteDockLayoutPreset);
@@ -87,7 +88,6 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
     const saveDockLayoutPreset = useSettingsStore((state) => state.saveDockLayoutPreset);
     const setActiveDockLayoutPresetId = useSettingsStore((state) => state.setActiveDockLayoutPresetId);
     const resetDockLayout = useEditorStore((state) => state.resetDockLayout);
-    const addRecentProject = useEditorStore((state) => state.addRecentProject);
     const triggerPause = useEditorStore((state) => state.triggerPause);
     const triggerPlay = useEditorStore((state) => state.triggerPlay);
     const triggerResume = useEditorStore((state) => state.triggerResume);
@@ -258,11 +258,11 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
         openLocalizationEditor: handleOpenLocalizationEditor,
         openNewProjectModal,
         openProjectFolder: handleOpenProjectFolder,
-        openProjectInCurrentWindow: executeOpenProjectInCurrentWindow,
+        openProjectInCurrentWindow: openRecentProject,
         openReleaseNotesModal,
         openSettingsModal,
         projectPath,
-        recentProjects: isTauriRuntime() ? recentProjects : [],
+        recentProjects,
         resetDockLayout,
         saveActiveFileFromCurrentScript,
         saveAllDirtyFiles,

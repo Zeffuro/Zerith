@@ -5,6 +5,7 @@ import { MouseEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useStat
 import type { NonMacroEditorCommandType, PluginNode } from '../../../plugins/types';
 import type { ScriptPath } from '../../../utils/scriptPathUtilities';
 
+import { usePluginRegistry } from '../../../hooks/usePluginRegistry';
 import { createDefaultCommand, getAllPlugins, getPlugin } from '../../../plugins/commandPlugins';
 import { hasLikelyIssue } from '../../../plugins/likelyIssues';
 import { openProjectEntry } from '../../../services/openProjectEntry';
@@ -49,6 +50,7 @@ type TimelineBranch = {
 
 
 export function Timeline() {
+    usePluginRegistry();
     const globalUiScale = useEditorStore((state) => state.uiScale);
     const timelineScale = useSettingsStore((state) => state.timelineScale);
     const uiScale = resolveComponentScale(globalUiScale, timelineScale);
@@ -107,7 +109,7 @@ export function Timeline() {
         () => allPlugins.map((p) => ({ icon: p.icon(14 * uiScale), label: p.label, type: p.type })),
         [allPlugins, uiScale]
     );
-    const quickTypes = useMemo(() => [...quickCommandTypes], [quickCommandTypes]);
+    const quickTypes = quickCommandTypes.filter(type => allPlugins.some(plugin => plugin.type === type));
 
     const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
     const [typeFilter, setTypeFilter] = useState('all');

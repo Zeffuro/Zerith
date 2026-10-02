@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { EditorPluginLoadResult } from '../../plugins/pluginDiscovery';
 import type { EditorPluginManifestInspection, EditorPluginSourceRecordInspection } from '../../plugins/pluginManifestInspection';
 
+import { usePluginRegistry } from '../../hooks/usePluginRegistry';
 import { deactivateEditorPlugin, getAllPlugins, getRegisteredEditorPlugins, registerEditorPlugin } from '../../plugins/commandPlugins';
 import {
     createEditorPluginInstallPlan,
@@ -29,18 +30,19 @@ type SettingsPluginPanelProperties = {
 };
 
 export function SettingsPluginPanel({ uiScale }: SettingsPluginPanelProperties) {
+    usePluginRegistry();
+    const [lifecycleError, setLifecycleError] = useState<string>();
     const [installedPackageLoadResult, setInstalledPackageLoadResult] = useState<EditorPluginLoadResult>();
     const [installedPackageLoadRoot, setInstalledPackageLoadRoot] = useState<string>();
     const [inspection, setInspection] = useState<EditorPluginManifestInspection>();
     const [isLoadingInstalledPackages, setIsLoadingInstalledPackages] = useState(false);
     const [isInstallingSourceRecord, setIsInstallingSourceRecord] = useState(false);
-    const [, bumpPluginRegistryRevision] = useState(0);
     const [sourceRecordInstallMessage, setSourceRecordInstallMessage] = useState<string>();
     const [sourceRecordInspection, setSourceRecordInspection] = useState<EditorPluginSourceRecordInspection>();
     const [sourceRecordMessage, setSourceRecordMessage] = useState<string>();
     const registeredPlugins = getRegisteredEditorPlugins();
     const commandPlugins = getAllPlugins();
-    const contributedCommandTypes = new Set(registeredPlugins.flatMap((plugin) => plugin.commandTypes));
+    const contributedCommandTypes = new Set(registeredPlugins.filter(plugin => plugin.active).flatMap((plugin) => plugin.commandTypes));
     const builtInCommandCount = commandPlugins.filter((plugin) => !contributedCommandTypes.has(plugin.type)).length;
     const installPlan = inspection ? createEditorPluginInstallPlan(inspection) : undefined;
     const manifestTrustPolicy = inspection ? createEditorPluginManifestTrustPolicy(inspection) : undefined;
@@ -139,7 +141,6 @@ export function SettingsPluginPanel({ uiScale }: SettingsPluginPanelProperties) 
                 setInstalledPackageLoadRoot(installRoot);
                 const result = await loadInstalledEditorPluginPackages(installRoot, registerEditorPlugin);
                 setInstalledPackageLoadResult(result);
-                bumpPluginRegistryRevision((current) => current + 1);
             } catch (error) {
                 setInstalledPackageLoadRoot(installRoot);
                 setInstalledPackageLoadResult({
@@ -156,8 +157,11 @@ export function SettingsPluginPanel({ uiScale }: SettingsPluginPanelProperties) 
     };
 
     const handleDeactivatePlugin = (pluginId: string) => {
-        if (deactivateEditorPlugin(pluginId)) {
-            bumpPluginRegistryRevision((current) => current + 1);
+        setLifecycleError(undefined);
+        try {
+            deactivateEditorPlugin(pluginId);
+        } catch (error) {
+            setLifecycleError(`Plugin deactivated with cleanup errors: ${error instanceof Error ? error.message : String(error)}`);
         }
     };
 
@@ -331,6 +335,10 @@ export function SettingsPluginPanel({ uiScale }: SettingsPluginPanelProperties) 
                     </button>
                 </div>
 
+                <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
+                    Use a bundled JavaScript entry with no package-relative imports. Loading runs plugin code in the editor.
+                </div>
+
                 {installedPackageLoadSummary ? (
                     <article aria-live="polite" role="status" style={pluginRowStyle(uiScale)}>
                         <div style={{ alignItems: 'center', display: 'flex', gap: `${8 * uiScale}px`, justifyContent: 'space-between' }}>
@@ -379,6 +387,9 @@ export function SettingsPluginPanel({ uiScale }: SettingsPluginPanelProperties) 
                     <span>Plugin Packages</span>
                     <span style={countStyle(uiScale)}>{registeredPlugins.length}</span>
                 </div>
+
+                <div style={metadataStyle(uiScale)}>To reactivate an inactive package, load its install folder again.</div>
+                {lifecycleError ? <div role="alert" style={{ color: t.accent.red }}>{lifecycleError}</div> : undefined}
 
                 {registeredPlugins.length === 0 ? (
                     <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>

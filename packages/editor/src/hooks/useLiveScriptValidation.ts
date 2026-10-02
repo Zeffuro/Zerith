@@ -6,8 +6,10 @@ import type { EditorNode } from '../types/EditorNode';
 import { executeValidationResultAction } from '../store/actions/validationActions';
 import { useProjectStore } from '../store/storeBootstrap';
 import { zodIssuesToMap } from '../utils/validation';
+import { usePluginRegistry } from './usePluginRegistry';
 
 export function useLiveScriptValidation(rootScript: EditorNode[]) {
+    const pluginRevision = usePluginRegistry();
     const editingAllMacrosFile = useProjectStore((s) => s.editingAllMacrosFile);
     const macroEntries = useProjectStore((s) => s.macroEntries);
 
@@ -31,7 +33,7 @@ export function useLiveScriptValidation(rootScript: EditorNode[]) {
         }, 180);
 
         return () => clearTimeout(t);
-    }, [editingAllMacrosFile, macroEntries]);
+    }, [editingAllMacrosFile, macroEntries, pluginRevision]);
 
     useEffect(() => {
         if (editingAllMacrosFile) return;
@@ -42,5 +44,5 @@ export function useLiveScriptValidation(rootScript: EditorNode[]) {
         }, 180);
 
         return () => clearTimeout(t);
-    }, [editingAllMacrosFile, rootScript]);
+    }, [editingAllMacrosFile, rootScript, pluginRevision]);
 }

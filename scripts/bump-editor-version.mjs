@@ -11,11 +11,13 @@ if (!requested) {
 }
 
 const editorPackagePath = 'packages/editor/package.json';
+const npmLockPath = 'package-lock.json';
 const tauriConfigPath = 'packages/editor/src-tauri/tauri.conf.json';
 const cargoManifestPath = 'packages/editor/src-tauri/Cargo.toml';
 const cargoLockPath = 'packages/editor/src-tauri/Cargo.lock';
 
 const editorPackage = await readJson(editorPackagePath);
+const npmLock = await readJson(npmLockPath);
 const tauriConfig = await readJson(tauriConfigPath);
 const cargoManifest = await readText(cargoManifestPath);
 const cargoLock = await readText(cargoLockPath);
@@ -24,6 +26,10 @@ const currentVersion = editorPackage.version;
 const nextVersion = resolveNextVersion(currentVersion, requested);
 
 editorPackage.version = nextVersion;
+if (!npmLock.packages?.['packages/editor']) {
+    throw new Error(`Could not find packages/editor in ${npmLockPath}.`);
+}
+npmLock.packages['packages/editor'].version = nextVersion;
 tauriConfig.version = nextVersion;
 
 const nextCargoManifest = replaceCargoPackageVersion(cargoManifest, nextVersion, cargoManifestPath);
@@ -31,6 +37,7 @@ const nextCargoLock = replaceCargoPackageVersion(cargoLock, nextVersion, cargoLo
 
 const writes = [
     [editorPackagePath, `${JSON.stringify(editorPackage, undefined, 2)}\n`],
+    [npmLockPath, `${JSON.stringify(npmLock, undefined, 2)}\n`],
     [tauriConfigPath, `${JSON.stringify(tauriConfig, undefined, 2)}\n`],
     [cargoManifestPath, nextCargoManifest],
     [cargoLockPath, nextCargoLock],

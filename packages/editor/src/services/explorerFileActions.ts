@@ -405,7 +405,18 @@ async function applyPathChange(
     if (plan?.files.some((file) => [...dirtyFiles].some((path) => normalizePath(path) === normalizePath(replacePathPrefix(file.filePath, newPath, oldPath))))) {
         throw new Error('Save referenced files before updating asset references.');
     }
-    await fsRename(oldPath, newPath);
+    try {
+        await fsRename(oldPath, newPath);
+    } catch (error) {
+        if (ownsProject()) {
+            try {
+                await refreshProjectTree();
+            } catch (refreshError) {
+                executeConsoleMessageAction('editor', 'error', 'Project refresh failed after an incomplete move:', String(refreshError));
+            }
+        }
+        throw error;
+    }
     if (ownsProject()) {
         remapWorkbenchTabsForRename(oldPath, newPath);
         useProjectStore.setState((state) => ({

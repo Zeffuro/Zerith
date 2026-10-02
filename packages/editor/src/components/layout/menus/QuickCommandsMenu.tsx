@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import type { NonMacroEditorCommandType } from '../../../plugins/types';
 
 import { useDismissiblePopup } from '../../../hooks/useDismissiblePopup';
+import { usePluginRegistry } from '../../../hooks/usePluginRegistry';
 import { getAllPlugins } from '../../../plugins/commandPlugins';
 import { editorTheme as t } from '../../../theme/editorTheme';
 
@@ -22,6 +23,7 @@ export function QuickCommandsMenu({
     toggleQuickCommandType: (type: NonMacroEditorCommandType) => void;
     uiScale: number;
 }) {
+    usePluginRegistry();
     const allPlugins = getAllPlugins();
     const rootReference = useRef<HTMLDivElement>(null);
 

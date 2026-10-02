@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { EditorPluginSourceRecord } from '../pluginManifestInspection';
 import type { EditorPluginPackageInstallDependencies } from '../pluginSourceInstaller';
 
+import { verifyEditorPluginPackageIntegrity } from '../pluginPackageIntegrity';
 import { installEditorPluginSourceRecord } from '../pluginSourceInstaller';
 
 describe('pluginSourceInstaller', () => {
@@ -78,6 +79,39 @@ describe('pluginSourceInstaller', () => {
         })).rejects.toThrow('missing packageRoot');
     });
 
+    it.each(['zerith.editorPluginSource.json', 'ZERITH.EDITORPLUGINSOURCE.JSON'])('reserves root %s while retaining nested source records', async (rootRecordName) => {
+        const nestedRecordPath = 'dist/zerith.editorPluginSource.json';
+        const dependencies = createDependencies({
+            directories: {
+                '/source': [
+                    { isDirectory: false, isFile: true, isSymlink: false, name: rootRecordName },
+                    { isDirectory: true, isFile: false, isSymlink: false, name: 'dist' },
+                ],
+                '/source/dist': [
+                    { isDirectory: false, isFile: true, isSymlink: false, name: 'index.js' },
+                    { isDirectory: false, isFile: true, isSymlink: false, name: 'zerith.editorPluginSource.json' },
+                ],
+            },
+            files: {
+                '/source/dist/index.js': new Uint8Array([1, 2, 3]),
+                [`/source/${nestedRecordPath}`]: new Uint8Array([7, 8]),
+                [`/source/${rootRecordName}`]: new TextEncoder().encode('{"original":"source record"}'),
+            },
+        });
+
+        const result = await installEditorPluginSourceRecord(createRecord(), { dependencies, installRoot: '/install' });
+        const recordText = vi.mocked(dependencies.writeTextFile).mock.calls[0]?.[1] ?? '{}';
+        const installedRecord = JSON.parse(recordText) as EditorPluginSourceRecord;
+
+        expect(result.skippedEntries).toEqual([`/source/${rootRecordName}`]);
+        expect(result.copiedFiles).toEqual([
+            '/install/example-plugin/dist/index.js',
+            `/install/example-plugin/${nestedRecordPath}`,
+        ]);
+        expect(installedRecord.packageIntegrity?.files.map((file) => file.path)).toEqual(['dist/index.js', nestedRecordPath]);
+        expect(await verifyEditorPluginPackageIntegrity(installedRecord, dependencies)).toEqual({ checkedFiles: 2, status: 'verified' });
+    });
+
     it('rejects install targets inside the source package', async () => {
         await expect(installEditorPluginSourceRecord({
             ...createRecord(),
@@ -124,8 +158,14 @@ function createDependencies(input: {
             if (!entries) return Promise.reject(new Error(`missing directory: ${path}`));
             return Promise.resolve(entries);
         }),
-        writeBinaryFile: vi.fn(() => Promise.resolve()),
-        writeTextFile: vi.fn(() => Promise.resolve()),
+        writeBinaryFile: vi.fn((path: string, bytes: Uint8Array) => {
+            files[path] = bytes;
+            return Promise.resolve();
+        }),
+        writeTextFile: vi.fn((path: string, text: string) => {
+            files[path] = new TextEncoder().encode(text);
+            return Promise.resolve();
+        }),
     };
 }
 

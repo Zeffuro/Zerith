@@ -376,6 +376,38 @@ describe('explorerFileActions moveAssetPathToDirectory', () => {
         expect(mocks.consoleMessage).toHaveBeenCalledWith('editor', 'error', 'Path moved to /project/assets/sprites/office.png, but project refresh failed:', expect.stringContaining('directory unreadable'));
     });
 
+    it('refreshes partial browser copies without remapping dirty source tabs', async () => {
+        mocks.referenceResult.assetFiles = {};
+        const sourcePath = '/project/assets/bg/notes.txt';
+        mocks.workbenchTabs.push({ dirty: true, id: 'notes', kind: 'text', path: sourcePath, textContent: 'unsaved edit', title: 'notes' });
+        mocks.projectState.dirtyFiles.add(sourcePath);
+        mocks.projectState.activeFile = sourcePath;
+        mocks.fsRename.mockRejectedValueOnce(new Error('Source remains; partial destination remains at /project/assets/sprites/bg.'));
+
+        await moveAssetDirectoryPathToDirectory('/project/assets/bg', '/project/assets/sprites');
+
+        expect(mocks.executeProjectTreeRefreshAction).toHaveBeenCalledTimes(1);
+        expect(mocks.renameTabPath).not.toHaveBeenCalled();
+        expect(mocks.workbenchTabs[0]).toMatchObject({ dirty: true, path: sourcePath, textContent: 'unsaved edit' });
+        expect(mocks.projectState.dirtyFiles.has(sourcePath)).toBe(true);
+        expect(mocks.projectState.activeFile).toBe(sourcePath);
+        expect(mocks.updateTabContent).not.toHaveBeenCalled();
+    });
+
+    it('does not refresh another project after an old project copy fails', async () => {
+        mocks.referenceResult.assetFiles = {};
+        mocks.fsRename.mockImplementationOnce(() => {
+            mocks.projectState.projectPath = '/other-project';
+            mocks.projectState.projectGeneration += 1;
+            return Promise.reject(new Error('Copy failed'));
+        });
+
+        await moveAssetDirectoryPathToDirectory('/project/assets/bg', '/project/assets/sprites');
+
+        expect(mocks.executeProjectTreeRefreshAction).not.toHaveBeenCalled();
+        expect(mocks.renameTabPath).not.toHaveBeenCalled();
+    });
+
     it('does not refresh a newly selected project after completing the old project disk move', async () => {
         mocks.fsWriteTextFile.mockImplementationOnce(() => {
             mocks.projectState.projectPath = '/other-project';

@@ -8,7 +8,7 @@ export type CreateMissingCallMacroDependencies = {
     mkdir?: (path: string, recursive?: boolean) => Promise<void>;
     openProjectEntry?: (path: string, entryName: string, options?: OpenProjectEntryOptions) => Promise<void>;
     readTextFile?: (path: string) => Promise<string>;
-    reloadManifest?: () => Promise<void>;
+    reloadManifest?: () => Promise<boolean | void>;
     writeTextFile?: (path: string, content: string) => Promise<void>;
 };
 

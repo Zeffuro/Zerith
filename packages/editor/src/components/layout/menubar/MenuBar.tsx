@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useDismissiblePopup } from '../../../hooks/useDismissiblePopup';
+import { useRecentProjects } from '../../../hooks/useRecentProjects';
 import {
     executeContentMigrationCommand,
     formatContentMigrationCommandStatus,
@@ -38,11 +39,9 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
     const [openMenu, setOpenMenu] = useState<MenuKey | undefined>();
 
     const {
-        addRecentProject,
         announceOperationStatus,
         captureDockLayoutJson,
         clearAllBreakpoints,
-        clearRecentProjects,
         isPlaybackPaused,
         markManualSave,
         openCommandPalette,
@@ -65,13 +64,12 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         triggerStop,
         uiScale: currentScale,
     } = useEditorStore();
-    const recentProjects = useSettingsStore((state) => state.recentProjects);
+    const { addRecentProject, clearRecentProjects, openRecentProject, recentProjects, supportsRecentProjects } = useRecentProjects();
     const activeDockLayoutPresetId = useSettingsStore((state) => state.activeDockLayoutPresetId);
     const deleteDockLayoutPreset = useSettingsStore((state) => state.deleteDockLayoutPreset);
     const dockLayoutPresets = useSettingsStore((state) => state.dockLayoutPresets);
     const saveDockLayoutPreset = useSettingsStore((state) => state.saveDockLayoutPreset);
     const setActiveDockLayoutPresetId = useSettingsStore((state) => state.setActiveDockLayoutPresetId);
-    const supportsRecentProjects = isTauriRuntime();
 
     const {
         activeFile,
@@ -116,14 +114,14 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
 
     const handleOpenRecentProject = useCallback(async (manifestPath: string) => {
         try {
-            const opened = await executeOpenProjectInCurrentWindow(manifestPath);
+            const opened = await openRecentProject(manifestPath);
             if (opened.status === 'cancelled') return;
             if (supportsRecentProjects) addRecentProject(manifestPath);
             if (opened.status === 'opened-current') await handleOpenInitialProjectEntry();
         } catch (error) {
             console.error('Failed to open recent project:', error);
         }
-    }, [addRecentProject, handleOpenInitialProjectEntry, supportsRecentProjects]);
+    }, [addRecentProject, handleOpenInitialProjectEntry, openRecentProject, supportsRecentProjects]);
 
     const handleSave = useCallback(async () => {
         if (!activeFile) return;
@@ -254,7 +252,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         const openRecentItems: MenuItem[] = safeRecentProjects.length === 0
             ? [{ disabled: true, label: 'No recent projects' }]
             : safeRecentProjects.map((project) => ({
-                label: `${project.name} - ${project.path}`,
+                label: isTauriRuntime() ? `${project.name} - ${project.path}` : project.name,
                 onClick: () => { void handleOpenRecentProject(project.path); },
             }));
 

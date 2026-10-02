@@ -1,14 +1,20 @@
 import type { FsAdapter, FsDirectoryEntry, FsFilePickerFilter } from './types';
 
+import { moveBrowserEntry, writeBrowserFile as writeFile } from './browserDirectoryTransfer';
+import { createBrowserProjectHandleStorage } from './browserProjectHandleStorage';
+import { createBrowserProjectRegistry, validateBrowserProject } from './browserProjectRegistry';
 import { basename, dirname, join, normalizeVirtualPath, pathSegments } from './pathUtilities';
 
 export type BrowserDirectoryHandle = {
     entries: () => AsyncIterable<[string, BrowserEntryHandle]>;
     getDirectoryHandle: (name: string, options?: { create?: boolean }) => Promise<BrowserDirectoryHandle>;
     getFileHandle: (name: string, options?: { create?: boolean }) => Promise<BrowserFileHandle>;
+    isSameEntry?: (other: BrowserDirectoryHandle) => Promise<boolean>;
     kind: 'directory';
     name: string;
     removeEntry: (name: string, options?: { recursive?: boolean }) => Promise<void>;
+    requestPermission?: (options: { mode: 'readwrite' }) => Promise<PermissionState>;
+    resolve?: (possibleDescendant: BrowserEntryHandle) => Promise<null | string[]>;
 };
 
 export type BrowserEntryHandle = BrowserDirectoryHandle | BrowserFileHandle;
@@ -24,6 +30,8 @@ export type BrowserFsAdapter = {
     clearMountedDirectories: () => void;
     isSupported: () => boolean;
     mountDirectory: (handle: BrowserDirectoryHandle) => string;
+    prepareProject: (manifestPath: string) => Promise<void>;
+    recentProjects: ReturnType<typeof createBrowserProjectRegistry>;
 } & FsAdapter;
 
 export type BrowserFsGlobal = {
@@ -42,12 +50,26 @@ export type BrowserOpenFilePickerType = {
 };
 
 export type BrowserWritableFileStream = {
+    abort?: () => Promise<void>;
     close: () => Promise<void>;
     write: (data: ArrayBuffer | Blob | string | Uint8Array) => Promise<void>;
 };
 
 export function createBrowserFsAdapter(browserGlobal: BrowserFsGlobal = globalThis): BrowserFsAdapter {
     const roots = new Map<string, BrowserDirectoryHandle>();
+    const recentProjects = createBrowserProjectRegistry(createBrowserProjectHandleStorage(browserGlobal.indexedDB), {
+        get: path => roots.get(path.slice(1)),
+        mount: (handle, path) => {
+            const existing = roots.get(path.slice(1));
+            if (existing && existing !== handle) {
+                throw new Error('This folder path is already in use. Reopen the project folder.');
+            }
+            roots.set(path.slice(1), handle);
+        },
+        mounted: function* () {
+            for (const [name, handle] of roots) yield [`/${name}`, handle] as [string, BrowserDirectoryHandle];
+        },
+    });
 
     const adapter: BrowserFsAdapter = {
         clearMountedDirectories: () => {
@@ -81,17 +103,21 @@ export function createBrowserFsAdapter(browserGlobal: BrowserFsGlobal = globalTh
         },
         pickDirectory: async () => {
             const directory = await pickDirectory(browserGlobal, adapter);
-            return directory ? mountDirectory(directory, roots) : undefined;
+            return directory ? recentProjects.mountPicked(directory) : undefined;
         },
         pickProjectManifest: async () => {
             const directory = await pickDirectory(browserGlobal, adapter);
             if (!directory) return;
-            const projectPath = mountDirectory(directory, roots);
+            const projectPath = await recentProjects.mountPicked(directory);
             await directory.getFileHandle('game.json');
             return {
                 manifestPath: join(projectPath, 'game.json'),
                 projectPath,
             };
+        },
+        prepareProject: async (manifestPath) => {
+            if (basename(manifestPath) !== 'game.json') throw new Error('Select a project game.json.');
+            await validateBrowserProject(await resolveDirectory(dirname(manifestPath), roots));
         },
         readBinaryFile: async (path) => {
             const fileHandle = await resolveFile(path, roots);
@@ -118,24 +144,20 @@ export function createBrowserFsAdapter(browserGlobal: BrowserFsGlobal = globalTh
             const file = await fileHandle.getFile();
             return file.text();
         },
+        recentProjects,
         remove: async (path, recursive = true) => {
             const { entryName, parent } = await resolveParentDirectory(path, roots);
             await parent.removeEntry(entryName, { recursive });
         },
         rename: async (oldPath, newPath) => {
-            const entry = await resolveEntry(oldPath, roots);
-            const { entryName, parent } = await resolveParentDirectory(newPath, roots);
-
-            if (entry.kind === 'directory') {
-                const target = await parent.getDirectoryHandle(entryName, { create: true });
-                await copyDirectory(entry, target);
-            } else {
-                const target = await parent.getFileHandle(entryName, { create: true });
-                await writeFile(target, await entry.getFile());
+            const sourcePath = `/${pathSegments(oldPath).join('/')}`;
+            const destinationPath = `/${pathSegments(newPath).join('/')}`;
+            if ([...pathSegments(sourcePath), ...pathSegments(destinationPath)].some(segment => segment === '.' || segment === '..')) {
+                throw new Error('Move paths cannot contain traversal segments.');
             }
-
-            const oldParent = await resolveParentDirectory(oldPath, roots);
-            await oldParent.parent.removeEntry(oldParent.entryName, { recursive: true });
+            const source = await resolveParentDirectory(sourcePath, roots);
+            const destination = await resolveParentDirectory(destinationPath, roots);
+            await moveBrowserEntry(source, destination, sourcePath, destinationPath);
         },
         writeBinaryFile: async (path, content) => {
             const file = await getWritableFile(path, roots);
@@ -162,20 +184,6 @@ export function createBrowserFsAdapter(browserGlobal: BrowserFsGlobal = globalTh
 }
 
 export const browserFsAdapter = createBrowserFsAdapter();
-
-async function copyDirectory(source: BrowserDirectoryHandle, target: BrowserDirectoryHandle): Promise<void> {
-    for await (const [name, handle] of source.entries()) {
-        if (handle.kind === 'directory') {
-            const targetDirectory = await target.getDirectoryHandle(name, { create: true });
-            await copyDirectory(handle, targetDirectory);
-            continue;
-        }
-
-        const targetFile = await target.getFileHandle(name, { create: true });
-        const sourceFile = await handle.getFile();
-        await writeFile(targetFile, sourceFile);
-    }
-}
 
 function getMountedRoot(rootName: string | undefined, roots: Map<string, BrowserDirectoryHandle>): BrowserDirectoryHandle {
     if (!rootName) {
@@ -279,15 +287,6 @@ async function resolveDirectory(
     return current;
 }
 
-async function resolveEntry(path: string, roots: Map<string, BrowserDirectoryHandle>): Promise<BrowserEntryHandle> {
-    const { entryName, parent } = await resolveParentDirectory(path, roots);
-    try {
-        return await parent.getFileHandle(entryName);
-    } catch {
-        return parent.getDirectoryHandle(entryName);
-    }
-}
-
 async function resolveFile(path: string, roots: Map<string, BrowserDirectoryHandle>): Promise<BrowserFileHandle> {
     const { entryName, parent } = await resolveParentDirectory(path, roots);
     return parent.getFileHandle(entryName);
@@ -319,12 +318,6 @@ function toBrowserPickerTypes(filters: FsFilePickerFilter[] | undefined): Browse
         },
         description: filter.name,
     }));
-}
-
-async function writeFile(file: BrowserFileHandle, content: ArrayBuffer | Blob | string | Uint8Array): Promise<void> {
-    const writable = await file.createWritable();
-    await writable.write(content);
-    await writable.close();
 }
 
 const AUDIO_PICKER_EXTENSIONS = new Set(['m4a', 'mp3', 'ogg', 'wav']);

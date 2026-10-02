@@ -1,32 +1,28 @@
 import type { ProjectGet, ProjectIoSlice, ProjectScriptBridge } from '../types';
 
-import { fsReadDirectory, fsReadTextFile } from '../../../services/fs';
+import { fsReadTextFile } from '../../../services/fs';
 import { saveAllFiles } from '../../../services/saveAllFiles';
 import { saveWorkbenchTextFile as fsWriteTextFile } from '../../../services/saveWorkbenchFile';
 import { serializeMacroEntries, serializeSceneCommands, visualTabSourceText } from '../../../services/visualWorkbenchContent';
 import { isRecord } from '../../../utils/typeGuards';
 import { useWorkbenchStore } from '../../useWorkbenchStore';
+import { prepareProjectOpen } from '../projectPreparation';
 
 export function createProjectIoSlice(get: ProjectGet, scriptBridge: ProjectScriptBridge): ProjectIoSlice {
+    let openSequence = 0;
     return {
-        openProjectFromManifest: async (manifestPath: string) => {
-            const separator = manifestPath.includes('\\') ? '\\' : '/';
-            const pathParts = manifestPath.split(separator);
-            pathParts.pop();
-            const projectRoot = pathParts.join(separator);
-
+        openProjectFromManifest: async (manifestPath, prepared) => {
+            const { projectGeneration, projectPath } = get();
+            const sequence = ++openSequence;
             try {
-                const entries = await fsReadDirectory(projectRoot);
-                const sortedEntries = entries.toSorted((a, b) => {
-                    if (a.isDirectory && !b.isDirectory) return -1;
-                    if (!a.isDirectory && b.isDirectory) return 1;
-                    return a.name.localeCompare(b.name);
-                });
-
-                get().setProject(projectRoot, sortedEntries);
-                await get().loadManifest();
+                const loaded = prepared ?? await prepareProjectOpen(manifestPath);
+                if (loaded.manifestPath !== manifestPath) throw new Error('Prepared project does not match the selected manifest.');
+                if (get().projectGeneration !== projectGeneration || get().projectPath !== projectPath || sequence !== openSequence) return false;
+                get().setProject(loaded.projectRoot, loaded.files, loaded.manifestData);
+                return get().projectPath === loaded.projectRoot && get().projectGeneration === projectGeneration + 1;
             } catch (error) {
                 console.error('Failed to open project:', error);
+                return false;
             }
         },
 

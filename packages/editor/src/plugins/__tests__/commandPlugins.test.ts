@@ -136,7 +136,7 @@ describe('commandPlugins', () => {
             },
             source,
         });
-        expect(activate).toHaveBeenCalledWith(pluginApi);
+        expect(activate).toHaveBeenCalledWith(expect.objectContaining({ getPlugin: pluginApi.getPlugin }));
         expect(pluginApi.createDefaultCommand(type)).toEqual({ type });
         expect(pluginApi.getRegisteredPlugins().find((entry) => entry.manifest.id === 'vitest.manifest.signal')?.source).toBe(source);
 

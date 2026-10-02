@@ -78,7 +78,7 @@ export function createProjectSessionSlice(
             }),
 
 
-        setProject: (path: string | undefined, files: FsDirectoryEntry[]) => {
+        setProject: (path, files, manifestData) => {
             scriptBridge.setScript([]);
             set({
                 activeFile: undefined,
@@ -100,6 +100,7 @@ export function createProjectSessionSlice(
                 scenePaths: {},
                 scenes: {},
                 treeRevision: 0,
+                ...manifestData,
             });
         },
 
