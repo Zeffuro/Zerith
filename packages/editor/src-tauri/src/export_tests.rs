@@ -13,6 +13,8 @@ impl Fixture {
     fn new() -> Self {
         let id = NEXT_TEST.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!("zerith-export-{}-{id}", std::process::id()));
+        let temp = fs::canonicalize(std::env::temp_dir()).unwrap();
+        let root = temp.join(format!("zerith-export-{}-{id}", std::process::id()));
         fs::create_dir(&root).unwrap();
         let game = root.join("ゲーム source with spaces");
         fs::create_dir(&game).unwrap();
@@ -39,7 +41,8 @@ impl Fixture {
 
 impl Drop for Fixture {
     fn drop(&mut self) {
-        assert!(self.root.parent() == Some(std::env::temp_dir().as_path()));
+        let temp = fs::canonicalize(std::env::temp_dir()).unwrap();
+        assert!(self.root.parent() == Some(temp.as_path()));
         let _ = fs::remove_dir_all(&self.root);
     }
 }
