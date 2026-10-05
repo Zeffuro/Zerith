@@ -12,8 +12,10 @@ import {
 import { routeJsonEntry } from './jsonRouting';
 
 export async function openJsonEntry(fullPath: string, options?: OpenProjectEntryOptions): Promise<void> {
-    const { manifest, projectPath } = useProjectStore.getState();
+    const { manifest, projectGeneration, projectPath } = useProjectStore.getState();
     const rawContents = await fsReadTextFile(fullPath);
+    const current = useProjectStore.getState();
+    if (current.projectPath !== projectPath || current.projectGeneration !== projectGeneration) return;
     const existingTab = useWorkbenchStore.getState().tabs.find(tab => tab.path === fullPath);
     const kindFromManifest = resolveJsonKindFromManifest(fullPath, manifest, projectPath);
     const contents = normalizeBlankJsonContents(existingTab?.dirty ? existingTab.textContent ?? rawContents : rawContents, kindFromManifest);

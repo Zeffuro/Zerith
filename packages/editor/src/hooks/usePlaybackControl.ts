@@ -3,6 +3,10 @@ import type { RefObject } from 'react';
 
 import { useEffect } from 'react';
 
+import { useProjectStore } from '../store/storeBootstrap';
+import { useEngineBridgeStore } from '../store/useEngineBridgeStore';
+import { usePlaytestStore } from '../store/usePlaytestStore';
+
 type WritableReference<T> = { current: T };
 
 export async function startPreviewPlayback(
@@ -17,6 +21,7 @@ export async function startPreviewPlayback(
 
     engine.flow.stop();
     engine.clear();
+    useEngineBridgeStore.getState().setPreviewSourceFile(engine, useProjectStore.getState().activeFile);
     const sceneManager = engine.scenes;
     sceneManager.addScene('preview', script);
     await sceneManager.jumpToScene('preview', startIndex);
@@ -52,6 +57,7 @@ export function usePlaybackControl({
     stopTrigger: number;
 }) {
     useEffect(() => {
+        if (usePlaytestStore.getState().request) return;
         if (engineReference.current && playTrigger > 0) {
             const requestId = ++playbackRequestIdRef.current;
             void startPreviewPlayback(
@@ -66,6 +72,7 @@ export function usePlaybackControl({
     }, [containerReference, engineReference, playbackRequestIdRef, playFromIndex, playTrigger, scriptRef]);
 
     useEffect(() => {
+        if (usePlaytestStore.getState().request) return;
         if (engineReference.current && stopTrigger > 0) {
             playbackRequestIdRef.current++;
             stopPreviewPlayback(engineReference.current, scriptRef.current);

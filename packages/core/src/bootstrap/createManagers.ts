@@ -109,6 +109,7 @@ export function createManagers(options: CreateManagersOptions): CreateManagersRe
         captureThumbnailDataUrl: () => display.captureThumbnailDataUrl(),
         getContentSchemaVersion: () => contentSchemaVersion,
         getCurrentSceneName: () => sceneManager.currentSceneName,
+        getFlowContinuation: () => flow.captureSaveContinuation(),
         getHistorySnapshot: () => history.serialize(),
         getLastSavePoint: () => flow.lastSavePoint,
         getStateSnapshot: () => state.state,

@@ -52,8 +52,8 @@ describe('createNewProject', () => {
             templateId: 'blank',
         });
 
-        expect(serviceMocks.fsMkdir).toHaveBeenNthCalledWith(1, '/projects/case-one', true);
-        expect(serviceMocks.fsMkdir).toHaveBeenNthCalledWith(2, '/projects/case-one/scenes', true);
+        expect(serviceMocks.fsReserveProjectDestination).toHaveBeenCalledWith('/projects/case-one', undefined);
+        expect(serviceMocks.fsMkdir).toHaveBeenNthCalledWith(1, '/projects/case-one/scenes', true);
 
         expect(serviceMocks.fsWriteTextFile).toHaveBeenCalledTimes(3);
 
@@ -95,7 +95,7 @@ describe('createNewProject', () => {
             schemaVersion: 2,
             theme: {
                 boxColor: 51,
-                fontFamily: 'Comic',
+                fontFamily: 'Arial',
                 fontSize: 24,
             },
         });
@@ -205,5 +205,32 @@ describe('createNewProject', () => {
             .rejects
             .toThrow('Unknown project template: unknown');
     });
+    it.each(['blank', 'classic-vn'])('rejects occupied destination before writing %s', async templateId => {
+        serviceMocks.fsReserveProjectDestination.mockRejectedValueOnce(new Error('Destination must be empty'));
+        await expect(createNewProject({ author: '', directory: '/projects/occupied', name: 'Test', templateId })).rejects.toThrow('must be empty');
+        expect(serviceMocks.fsMkdir).not.toHaveBeenCalled();
+        expect(serviceMocks.fsWriteTextFile).not.toHaveBeenCalled();
+    });
+
+    it.each(['blank', 'classic-vn'])('uses exclusive writes and reports retained partial %s output', async templateId => {
+        serviceMocks.fsWriteTextFile.mockRejectedValueOnce(new Error('Write denied'));
+        await expect(createNewProject({ author: '', directory: '/projects/partial', name: 'Test', templateId })).rejects.toThrow('Partial project output remains at /projects/partial');
+        expect(serviceMocks.fsWriteTextFile).toHaveBeenCalledWith(expect.any(String), expect.any(String), { createOnly: true });
+        expect(serviceMocks.fsFinishProjectDestination).not.toHaveBeenCalled();
+    });
+
+    it('does not reserve a stale request', async () => {
+        await expect(createNewProject({ author: '', directory: '/projects/stale', isCurrent: () => false, name: 'Test' })).rejects.toThrow('changed');
+        expect(serviceMocks.fsReserveProjectDestination).not.toHaveBeenCalled();
+    });
+
+    it('stops after an in-flight write when generation changes', async () => {
+        let current = true;
+        serviceMocks.fsWriteTextFile.mockImplementationOnce(() => { current = false; return Promise.resolve(); });
+        await expect(createNewProject({ author: '', directory: '/projects/stale', isCurrent: () => current, name: 'Test' })).rejects.toThrow('Partial project output');
+        expect(serviceMocks.fsWriteTextFile).toHaveBeenCalledTimes(1);
+        expect(serviceMocks.fsFinishProjectDestination).not.toHaveBeenCalled();
+    });
+
 });
 

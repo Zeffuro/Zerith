@@ -1,5 +1,6 @@
 import { FolderOpen, Languages, MonitorDot, Pause, Play, Save, SkipForward, Square, Volume2, VolumeX, ZoomIn, ZoomOut } from 'lucide-react';
 
+import { usePlaytestRunning } from '../../hooks/usePlaytestRunning';
 import { fsPickProjectManifest } from '../../services/fs';
 import { SOURCE_PREVIEW_LOCALE } from '../../services/localizationPreview';
 import { openProjectEntry } from '../../services/openProjectEntry';
@@ -13,6 +14,7 @@ import { openInitialProjectEntry as openInitialProjectEntryModel } from '../tool
 import { ThemeMenu } from './menus/ThemeMenu';
 
 export function Toolbar() {
+    const isPlaytestRunning = usePlaytestRunning();
     const { activeFile, locales, manifest, saveActiveFileFromCurrentScript } = useProjectStore();
     const isMuted = useSettingsStore((state) => state.isMuted);
     const setIsMuted = useSettingsStore((state) => state.setIsMuted);
@@ -68,7 +70,7 @@ export function Toolbar() {
 
     const pad = `${6 * uiScale}px`;
     const iconSize = 16 * uiScale;
-    const isRunning = playTrigger > stopTrigger;
+    const isRunning = playTrigger > stopTrigger || isPlaytestRunning;
     const toggleMute = () => setIsMuted(!isMuted);
     const localeIds = Object.keys(locales).toSorted((left, right) => left.localeCompare(right));
     const manifestDefaultLocale = manifest?.localization?.defaultLocale;

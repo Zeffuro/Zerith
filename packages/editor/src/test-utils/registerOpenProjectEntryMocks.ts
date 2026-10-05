@@ -6,12 +6,14 @@ import type { WorkbenchTab } from '../store/workbench/types';
 
 type OpenProjectState = {
     manifest: GameManifest | undefined;
+    projectGeneration: number;
     projectPath: string | undefined;
 };
 
 const hoistedMocks = vi.hoisted(() => {
     const state: OpenProjectState = {
         manifest: undefined,
+        projectGeneration: 1,
         projectPath: '/project',
     };
 
@@ -64,6 +66,7 @@ export function resetOpenProjectEntryMocks(): void {
     hoistedMocks.makeTabId.mockReset();
 
     hoistedMocks.state.manifest = undefined;
+    hoistedMocks.state.projectGeneration = 1;
     hoistedMocks.state.projectPath = '/project';
     hoistedMocks.tabs = [];
 
@@ -86,6 +89,7 @@ export function resetOpenProjectEntryMocks(): void {
 }
 
 export function setOpenProjectEntryState(next: Partial<OpenProjectState>): void {
+    if (next.projectGeneration !== undefined) hoistedMocks.state.projectGeneration = next.projectGeneration;
     if (Object.hasOwn(next, 'manifest')) {
         hoistedMocks.state.manifest = next.manifest;
     }

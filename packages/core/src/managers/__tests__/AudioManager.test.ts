@@ -14,7 +14,10 @@ import { AudioManager } from '../AudioManager';
 type SoundMock = {
     add: ReturnType<typeof vi.fn>;
     exists: ReturnType<typeof vi.fn>;
+    find: ReturnType<typeof vi.fn>;
     play: ReturnType<typeof vi.fn>;
+    remove: ReturnType<typeof vi.fn>;
+    removeAll: ReturnType<typeof vi.fn>;
     stop: ReturnType<typeof vi.fn>;
 };
 
@@ -24,7 +27,17 @@ describe('AudioManager.playSfx', () => {
     beforeEach(() => {
         soundMock.add.mockClear();
         soundMock.exists.mockReset();
-        soundMock.exists.mockReturnValue(false);
+        const aliases = new Map<string, { isLoaded: boolean }>();
+        soundMock.exists.mockImplementation((url: string) => aliases.has(url));
+        soundMock.find.mockImplementation((url: string) => aliases.get(url));
+        soundMock.remove.mockImplementation((url: string) => aliases.delete(url));
+        soundMock.removeAll.mockImplementation(() => aliases.clear());
+        soundMock.add.mockImplementation((url: string, options: { loaded?: (error?: Error) => void }) => {
+            const loadedSound = { isLoaded: true };
+            aliases.set(url, loadedSound);
+            options.loaded?.();
+            return loadedSound;
+        });
         soundMock.play.mockClear();
         soundMock.stop.mockClear();
     });
@@ -115,5 +128,73 @@ describe('AudioManager.playSfx', () => {
         await manager.playCue('assets/bgm/new.sheet.json', 'intro', { channel: 'bgm' });
 
         expect(soundMock.stop).toHaveBeenCalledWith('assets/bgm/old.mp3');
+    });
+
+    it('deduplicates loading aliases, rejects every waiter on failure and retries cleanly', async () => {
+        const manager = new AudioManager();
+        let finish!: (error?: Error) => void;
+        const aliases = new Map<string, { isLoaded: boolean }>();
+        soundMock.exists.mockImplementation((url: string) => aliases.has(url));
+        soundMock.find.mockImplementation((url: string) => aliases.get(url));
+        soundMock.remove.mockImplementation((url: string) => aliases.delete(url));
+        soundMock.add.mockImplementation((url: string, options: { loaded: (error?: Error) => void }) => {
+            const pendingSound = { isLoaded: false };
+            aliases.set(url, pendingSound);
+            finish = error => {
+                pendingSound.isLoaded = !error;
+                options.loaded(error);
+            };
+            return pendingSound;
+        });
+        const first = manager.preloadAudio('pending.wav');
+        const second = manager.preloadAudio('pending.wav');
+        expect(second).toBe(first);
+        expect(manager.audioExists('pending.wav')).toBe(false);
+        const failures = Promise.all([expect(first).rejects.toThrow('Load failed'), expect(second).rejects.toThrow('Load failed')]);
+        finish(new Error('Load failed'));
+        await failures;
+        expect(aliases.has('pending.wav')).toBe(false);
+        const retry = manager.preloadAudio('pending.wav');
+        finish();
+        await retry;
+        expect(manager.audioExists('pending.wav')).toBe(true);
+        expect(soundMock.add).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not remove a replacement alias when an older load fails', async () => {
+        const manager = new AudioManager();
+        let finish!: (error?: Error) => void;
+        let alias = { isLoaded: false };
+        soundMock.exists.mockReturnValue(true);
+        soundMock.find.mockImplementation(() => alias);
+        soundMock.add.mockImplementation((_url: string, options: { loaded: (error?: Error) => void }) => {
+            finish = options.loaded;
+            return alias;
+        });
+        const pending = manager.preloadAudio('replaced.wav');
+        soundMock.remove.mockClear();
+        alias = { isLoaded: true };
+        const failure = expect(pending).rejects.toThrow('Old load failed');
+        finish(new Error('Old load failed'));
+        await failure;
+        expect(soundMock.remove).not.toHaveBeenCalled();
+        expect(manager.audioExists('replaced.wav')).toBe(true);
+    });
+
+    it('rejects destroyed pending sheets and cannot publish them after late completion', async () => {
+        const manager = new AudioManager();
+        let finish!: () => void;
+        soundMock.add.mockImplementation((_url: string, options: { loaded: () => void }) => {
+            finish = options.loaded;
+            return { isLoaded: false };
+        });
+        const pending = manager.loadAudiosheet('sheet.json', { cues: { cue: { start: 0 } }, source: 'pending.wav' });
+        const failure = expect(pending).rejects.toThrow('destroyed');
+        manager.destroy();
+        await failure;
+        finish();
+        await expect(manager.playCue('sheet.json', 'cue')).rejects.toThrow('not loaded');
+        expect(manager.audioExists('pending.wav')).toBe(false);
+        expect(soundMock.play).not.toHaveBeenCalled();
     });
 });

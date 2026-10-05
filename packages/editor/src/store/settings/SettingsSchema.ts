@@ -262,6 +262,7 @@ const persistedSettingsSchema = z.object({
     keymapOverrides: keymapOverridesSchema,
     quickCommandTypes: quickCommandTypesSchema,
     recentProjects: recentProjectsSchema,
+    recoveryEnabled: z.boolean().optional(),
     themeKey: z.string().trim().min(1).optional(),
     timelineScale: z.number().finite().positive().optional(),
     uiScale: z.number().finite().positive().optional(),
@@ -296,6 +297,7 @@ export type SettingsState = {
     keymapOverrides: KeymapOverrides;
     quickCommandTypes: NonMacroEditorCommandType[];
     recentProjects: RecentProject[];
+    recoveryEnabled: boolean;
     themeKey: string;
     timelineScale: number | undefined;
     uiScale: number;
@@ -320,6 +322,7 @@ export const defaultSettings: SettingsState = {
     keymapOverrides: {},
     quickCommandTypes: DEFAULT_QUICK_COMMAND_TYPES,
     recentProjects: [],
+    recoveryEnabled: true,
     themeKey: 'classic',
     timelineScale: undefined,
     uiScale: 1,

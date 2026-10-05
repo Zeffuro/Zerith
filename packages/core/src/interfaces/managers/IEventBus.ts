@@ -3,12 +3,15 @@ import type { Serializable } from '../../types';
 import type { IBaseManager } from './IBaseManager';
 
 export interface EngineEventMap {
+    'choice:selected': [index: number, label: string];
+    'choice:shown': [count: number];
     'flow:command': [sceneName: string, index: number];
     'flow:paused': [sceneName: string, index: number];
     'flow:resumed': [sceneName: string, index: number];
     'flow:scene_entered': [sceneName: string, index: number];
     'flow:stepped': [sceneName: string, index: number];
     'input:back': [];
+    'input:choose': [index: number];
     'input:confirm': [];
     'input:load': [slot: number];
     'input:navigate': [NavigationDirection];

@@ -7,11 +7,13 @@ export const DOCK_PANELS = {
     globalSearch: 'global_search',
     inspector: 'inspector',
     localization: 'localization',
+    playtests: 'playtests',
     preview: 'preview',
     projectValidation: 'project_validation',
     referenceTracker: 'reference_tracker',
     runtimeMonitor: 'runtime_monitor',
     stateObserver: 'state_observer',
+    storyMap: 'story_map',
     toolbar: 'toolbar',
 } as const;
 

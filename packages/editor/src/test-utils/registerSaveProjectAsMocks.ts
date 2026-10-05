@@ -8,12 +8,14 @@ type MockDirectoryEntry = {
 };
 
 const saveProjectAsMocks = vi.hoisted(() => ({
+    fsFinishProjectDestination: vi.fn(() => Promise.resolve()),
     fsJoin: vi.fn((...parts: string[]) => Promise.resolve(parts.join('/'))),
     fsMkdir: vi.fn(() => Promise.resolve()),
     fsReadBinaryFile: vi.fn<(_path: string) => Promise<Uint8Array>>(() => Promise.resolve(new Uint8Array())),
     fsReadDirectory: vi.fn<(_path: string) => Promise<MockDirectoryEntry[]>>(
         () => Promise.resolve([]),
     ),
+    fsReserveProjectDestination: vi.fn((path: string) => Promise.resolve(path)),
     fsWriteBinaryFile: vi.fn(() => Promise.resolve()),
     openDialog: vi.fn<(_options?: unknown) => Promise<string | undefined>>(() => Promise.resolve(undefined)),
 }));
@@ -23,6 +25,8 @@ export function getSaveProjectAsMocks() {
 }
 
 export function resetSaveProjectAsMocks(): void {
+    saveProjectAsMocks.fsReserveProjectDestination.mockReset().mockImplementation((path: string) => Promise.resolve(path));
+    saveProjectAsMocks.fsFinishProjectDestination.mockReset().mockResolvedValue();
     saveProjectAsMocks.fsJoin.mockClear();
     saveProjectAsMocks.fsMkdir.mockClear();
     saveProjectAsMocks.fsReadBinaryFile.mockClear();
@@ -37,11 +41,13 @@ export function resetSaveProjectAsMocks(): void {
 }
 
 vi.mock('../services/fs', () => ({
+    fsFinishProjectDestination: saveProjectAsMocks.fsFinishProjectDestination,
     fsJoin: saveProjectAsMocks.fsJoin,
     fsMkdir: saveProjectAsMocks.fsMkdir,
     fsPickDirectory: saveProjectAsMocks.openDialog,
     fsReadBinaryFile: saveProjectAsMocks.fsReadBinaryFile,
     fsReadDirectory: saveProjectAsMocks.fsReadDirectory,
-    fsWriteBinaryFile: saveProjectAsMocks.fsWriteBinaryFile,
+    fsReserveProjectDestination: saveProjectAsMocks.fsReserveProjectDestination,
+    fsWriteBinaryFileExclusive: saveProjectAsMocks.fsWriteBinaryFile,
 }));
 

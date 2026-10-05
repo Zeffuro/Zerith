@@ -17,13 +17,11 @@
     "scripts/build-game.mjs",
     "scripts/content-compiler.mjs",
     "src/main.ts",
-    "src/runtime/bootstrapConfig.ts",
-    "src/runtime/bootstrapPlayer.ts",
-    "src/runtime/compiledContentPrefetch.ts",
-    "src/runtime/playerAccessibility.ts",
     "vite.config.ts",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "src/runtime/*.ts",
+    "src/runtime/*.css"
   ],
   "publishConfig": {
     "access": "public",

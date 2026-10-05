@@ -8,6 +8,7 @@ export interface GameManifest {
     author?: string;
     characters?: Record<string, CharacterDefinition> | string;
     description?: string;
+    id?: string;
     items?: Record<string, ItemManifestEntry> | string;
     license?: string;
     localization?: LocalizationConfig;

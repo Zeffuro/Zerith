@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getSaveProjectAsMocks, resetSaveProjectAsMocks } from '../../test-utils/registerSaveProjectAsMocks';
 import { saveProjectAs } from '../saveProjectAs';
@@ -40,7 +40,7 @@ describe('saveProjectAs', () => {
             projectPath: '/project/copy',
         });
 
-        expect(serviceMocks.fsMkdir).toHaveBeenCalledWith('/project/copy', true);
+        expect(serviceMocks.fsReserveProjectDestination).toHaveBeenCalledWith('/project/copy', '/project/source');
         expect(serviceMocks.fsMkdir).toHaveBeenCalledWith('/project/copy/assets', true);
         expect(serviceMocks.fsWriteBinaryFile).toHaveBeenCalledWith(
             '/project/copy/game.json',
@@ -52,20 +52,50 @@ describe('saveProjectAs', () => {
         );
     });
 
-    it('throws when the selected target directory is the same as the source', async () => {
-        serviceMocks.openDialog.mockResolvedValueOnce('/project/source');
-
-        await expect(saveProjectAs('/project/source'))
-            .rejects
-            .toThrow('Save Project As target must be different from the current project folder.');
+    it.each(['/project/source', '/project/source/backup', '/project'])('does not write when reservation rejects %s', async target => {
+        serviceMocks.openDialog.mockResolvedValueOnce(target);
+        serviceMocks.fsReadDirectory.mockResolvedValueOnce([{ isDirectory: false, isFile: true, isSymlink: false, name: 'game.json' }]);
+        serviceMocks.fsReserveProjectDestination.mockRejectedValueOnce(new Error('Unsafe destination'));
+        await expect(saveProjectAs('/project/source')).rejects.toThrow('Unsafe destination');
+        expect(serviceMocks.fsWriteBinaryFile).not.toHaveBeenCalled();
+        expect(serviceMocks.fsMkdir).not.toHaveBeenCalled();
     });
 
-    it('throws when the selected target directory is nested inside the source directory', async () => {
-        serviceMocks.openDialog.mockResolvedValueOnce('/project/source/backup');
+    it('does not save after picker cancellation', async () => {
+        const beforeCopy = vi.fn();
+        await saveProjectAs('/project/source', { beforeCopy });
+        expect(beforeCopy).not.toHaveBeenCalled();
+        expect(serviceMocks.fsReserveProjectDestination).not.toHaveBeenCalled();
+    });
 
-        await expect(saveProjectAs('/project/source'))
-            .rejects
-            .toThrow('Save Project As target cannot be nested within the current project folder.');
+    it('stops before reservation after failed source save', async () => {
+        serviceMocks.openDialog.mockResolvedValueOnce('/project/copy');
+        await expect(saveProjectAs('/project/source', { beforeCopy: () => Promise.reject(new Error('Save failed')) })).rejects.toThrow('Save failed');
+        expect(serviceMocks.fsReserveProjectDestination).not.toHaveBeenCalled();
+        expect(serviceMocks.fsReadDirectory).not.toHaveBeenCalled();
+    });
+
+    it('rejects a stale picker response before saving or writing', async () => {
+        let current = true;
+        const beforeCopy = vi.fn();
+        serviceMocks.openDialog.mockImplementationOnce(() => { current = false; return Promise.resolve('/project/copy'); });
+        await expect(saveProjectAs('/project/source', { beforeCopy, isCurrent: () => current })).rejects.toThrow('changed');
+        expect(beforeCopy).not.toHaveBeenCalled();
+        expect(serviceMocks.fsReserveProjectDestination).not.toHaveBeenCalled();
+    });
+
+    it('rejects source links before reserving output', async () => {
+        serviceMocks.openDialog.mockResolvedValueOnce('/project/copy');
+        serviceMocks.fsReadDirectory.mockResolvedValueOnce([{ isDirectory: true, isFile: false, isSymlink: true, name: 'alias' }]);
+        await expect(saveProjectAs('/project/source')).rejects.toThrow('source entry');
+        expect(serviceMocks.fsReserveProjectDestination).not.toHaveBeenCalled();
+    });
+
+    it('reports partial output without finishing reservation after an I/O failure', async () => {
+        serviceMocks.openDialog.mockResolvedValueOnce('/project/copy');
+        serviceMocks.fsReadDirectory.mockResolvedValueOnce([{ isDirectory: false, isFile: true, isSymlink: false, name: 'game.json' }]);
+        serviceMocks.fsReadBinaryFile.mockRejectedValueOnce(new Error('Read denied'));
+        await expect(saveProjectAs('/project/source')).rejects.toThrow('Partial project output remains at /project/copy');
+        expect(serviceMocks.fsFinishProjectDestination).not.toHaveBeenCalled();
     });
 });
-

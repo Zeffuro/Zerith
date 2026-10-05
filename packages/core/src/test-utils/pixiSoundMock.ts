@@ -9,16 +9,21 @@ type SoundAddOptions = {
 };
 
 export function createPixiSoundMock() {
+    const aliases = new Map<string, { isLoaded: boolean }>();
     return {
-        add: vi.fn((_url: string, options: SoundAddOptions) => {
+        add: vi.fn((url: string, options: SoundAddOptions) => {
+            const loadedSound = { isLoaded: true };
+            aliases.set(url, loadedSound);
             options.loaded?.();
+            return loadedSound;
         }),
-        exists: vi.fn(() => false),
-        find: vi.fn(),
+        exists: vi.fn((url: string) => aliases.has(url)),
+        find: vi.fn((url: string) => aliases.get(url)),
         init: vi.fn(),
         pause: vi.fn(),
         play: vi.fn(() => Promise.resolve()),
-        removeAll: vi.fn(),
+        remove: vi.fn((url: string) => aliases.delete(url)),
+        removeAll: vi.fn(() => aliases.clear()),
         resume: vi.fn(),
         stop: vi.fn(),
         stopAll: vi.fn(),

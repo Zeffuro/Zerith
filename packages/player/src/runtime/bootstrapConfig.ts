@@ -12,6 +12,7 @@ export function mergeEngineConfigs(...configs: (EngineConfig | undefined)[]): En
         const input = merged.input;
         const notifications = merged.notifications;
         const overlay = merged.overlay;
+        const player = merged.player;
         const preview = merged.preview;
         const startScreen = merged.startScreen;
         const text = merged.text;
@@ -24,6 +25,7 @@ export function mergeEngineConfigs(...configs: (EngineConfig | undefined)[]): En
         merged.input = { ...input, ...config.input };
         merged.notifications = { ...notifications, ...config.notifications };
         merged.overlay = { ...overlay, ...config.overlay };
+        merged.player = { ...player, ...config.player };
         merged.preview = { ...preview, ...config.preview };
         merged.startScreen = { ...startScreen, ...config.startScreen };
         merged.text = { ...text, ...config.text };

@@ -1,0 +1,44 @@
+.zerith-playtests > label,
+.zerith-playtests details > label {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.zerith-playtests input:not([type="checkbox"]),
+.zerith-playtests textarea,
+.zerith-playtests select {
+    background: var(--editor-bg-input);
+    border: 1px solid var(--editor-border-input);
+    border-radius: var(--editor-radius-md);
+    box-sizing: border-box;
+    color: var(--editor-text-primary);
+    font: inherit;
+    min-height: 28px;
+    min-width: 0;
+    padding: 6px;
+    width: 100%;
+}
+
+.zerith-playtests textarea {
+    font-family: monospace;
+    resize: vertical;
+}
+
+.zerith-playtests fieldset {
+    border: 1px solid var(--editor-border-normal);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+}
+
+.zerith-playtests fieldset label {
+    align-items: center;
+    display: flex;
+    gap: 4px;
+}
+
+.zerith-playtests summary {
+    cursor: pointer;
+}

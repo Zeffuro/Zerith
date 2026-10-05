@@ -1,7 +1,9 @@
+mod desktop_export;
 mod export;
 mod git;
 mod installed_smoke;
 mod native_fs;
+mod project_destination;
 mod project_watcher;
 
 use project_watcher::ProjectFileWatcherState;
@@ -32,10 +34,13 @@ pub fn run() {
             installed_smoke::installed_smoke_config,
             installed_smoke::installed_smoke_complete,
             export::export_game,
+            desktop_export::export_desktop_game,
             export::hash_export_sources,
             native_fs::write_text_file_atomic,
             native_fs::write_binary_file_atomic,
             native_fs::copy_asset_file_exclusive,
+            project_destination::reserve_project_destination,
+            project_destination::finish_project_destination,
             git::commands::git_branch_summary,
             git::commands::git_checkout_branch,
             git::commands::git_commit_staged,

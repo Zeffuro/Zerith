@@ -13,10 +13,10 @@ use zip::write::SimpleFileOptions;
 pub(crate) struct ExportGameRequest {
     base: Option<String>,
     files: Vec<ExportArtifactFile>,
-    game_path: String,
-    out_dir: Option<String>,
-    zip: Option<bool>,
-    zip_file: Option<String>,
+    pub(crate) game_path: String,
+    pub(crate) out_dir: Option<String>,
+    pub(crate) zip: Option<bool>,
+    pub(crate) zip_file: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -53,7 +53,7 @@ pub(crate) async fn hash_export_sources(
         .map_err(|error| format!("Export hashing task failed: {error}"))?
 }
 
-fn write_export(request: ExportGameRequest) -> Result<ExportGameResponse, String> {
+pub(crate) fn write_export(request: ExportGameRequest) -> Result<ExportGameResponse, String> {
     validate_artifacts(&request.files)?;
     let game = Path::new(&request.game_path);
     if !game.is_absolute() {
@@ -246,7 +246,11 @@ fn validate_relative_path(path: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn destination_path(parent: &Path, value: Option<&str>, default: &Path) -> Result<PathBuf, String> {
+pub(crate) fn destination_path(
+    parent: &Path,
+    value: Option<&str>,
+    default: &Path,
+) -> Result<PathBuf, String> {
     let path = value
         .filter(|value| !value.trim().is_empty())
         .map_or(default, Path::new);
@@ -273,7 +277,7 @@ fn destination_path(parent: &Path, value: Option<&str>, default: &Path) -> Resul
     Ok(normalized)
 }
 
-fn ensure_destination(path: &Path, game: &Path) -> Result<(), String> {
+pub(crate) fn ensure_destination(path: &Path, game: &Path) -> Result<(), String> {
     let mut missing = Vec::new();
     let mut ancestor = path;
     loop {

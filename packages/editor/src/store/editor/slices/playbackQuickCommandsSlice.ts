@@ -2,6 +2,7 @@ import type { NonMacroEditorCommandType } from '../../../plugins/types';
 import type { EditorSet, PlaybackQuickCommandsSlice } from '../types';
 
 import { DEFAULT_QUICK_COMMAND_TYPES } from '../../settings/SettingsSchema';
+import { usePlaytestStore } from '../../usePlaytestStore';
 import { useSettingsStore } from '../../useSettingsStore';
 
 export function createPlaybackQuickCommandsSlice(set: EditorSet): PlaybackQuickCommandsSlice {
@@ -82,21 +83,25 @@ export function createPlaybackQuickCommandsSlice(set: EditorSet): PlaybackQuickC
                 pauseTrigger: state.pauseTrigger + 1,
             })),
 
-        triggerPlay: () =>
+        triggerPlay: () => {
+            usePlaytestStore.getState().reset();
             set((state) => ({
                 activeExecutionPath: undefined,
                 isPlaybackPaused: false,
                 playFromIndex: undefined,
                 playTrigger: state.playTrigger + 1,
-            })),
+            }));
+        },
 
-        triggerPlayFrom: (index) =>
+        triggerPlayFrom: (index) => {
+            usePlaytestStore.getState().reset();
             set((state) => ({
                 activeExecutionPath: undefined,
                 isPlaybackPaused: false,
                 playFromIndex: index,
                 playTrigger: state.playTrigger + 1,
-            })),
+            }));
+        },
 
         triggerResume: () =>
             set((state) => ({
@@ -108,12 +113,14 @@ export function createPlaybackQuickCommandsSlice(set: EditorSet): PlaybackQuickC
                 stepTrigger: state.stepTrigger + 1,
             })),
 
-        triggerStop: () =>
+        triggerStop: () => {
+            usePlaytestStore.getState().reset();
             set((state) => ({
                 activeExecutionPath: undefined,
                 isPlaybackPaused: false,
                 stopTrigger: state.stopTrigger + 1,
-            })),
+            }));
+        },
     };
 }
 

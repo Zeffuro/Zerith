@@ -60,7 +60,13 @@ test.describe('editor visual smoke', () => {
         await expect(page.getByRole('dialog', { name: 'Export Game' })).toBeVisible();
         await expect(page.getByRole('status')).toContainText('Open a project first to export.');
         await settleEditor(page);
+        const exportBounds = await page.getByRole('dialog', { name: 'Export Game' }).boundingBox();
+        expect(exportBounds.x).toBeGreaterThanOrEqual(0);
+        expect(exportBounds.x + exportBounds.width).toBeLessThanOrEqual(page.viewportSize().width);
+        expect(await page.getByRole('dialog', { name: 'Export Game' }).evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
         await expect(page).toHaveScreenshot('export-modal-empty-project.png', screenshotOptions);
+        await page.getByRole('dialog', { name: 'Export Game' }).getByRole('button', { name: 'Close', exact: true }).scrollIntoViewIfNeeded();
+        await expect(page.getByRole('dialog', { name: 'Export Game' }).getByRole('button', { name: 'Close', exact: true })).toBeInViewport();
 
         await callVisualSmokeHarness(page, 'closeExportGameModal');
         await callVisualSmokeHarness(
@@ -448,8 +454,7 @@ test.describe('editor visual smoke', () => {
 
         await expect(commandPalette).toHaveCount(0);
         await expect(page.getByRole('dialog', { name: 'Export Game' })).toBeVisible();
-        await expect(page.getByRole('status').filter({ hasText: 'Project: /classic-vn-starter' })).toBeVisible();
-        await expect(page.getByLabel(/Output Directory/u)).toHaveValue('dist/classic-vn-starter');
+        await expect(page.getByLabel('Download file name')).toHaveValue('classic-vn-starter.zip');
         await expect(page.getByRole('button', { name: 'Export' })).toBeEnabled();
     });
 
@@ -691,19 +696,12 @@ test.describe('editor visual smoke', () => {
 
         await callVisualSmokeHarness(page, 'openExportGameModal');
         await expect(page.getByRole('dialog', { name: 'Export Game' })).toBeVisible();
-        await expect(page.getByRole('status').filter({ hasText: 'Project: /classic-vn-starter' })).toBeVisible();
-        await expect(page.getByLabel(/Output Directory/u)).toHaveValue('dist/classic-vn-starter');
-        await expect(page.getByLabel('Zip Output Path')).toHaveValue('dist/classic-vn-starter.zip');
-        const desktopStatus = page.getByLabel('Desktop packaging status');
-        await expect(desktopStatus).toContainText('Desktop package blocked');
-        await expect(desktopStatus).toContainText('Export artifact contract');
-        await expect(desktopStatus).toContainText('Scoped game permissions');
-        const pagesStatus = page.getByLabel('GitHub Pages dual-site status');
-        await expect(pagesStatus).toContainText('Pages dual site ready');
-        await expect(pagesStatus).toContainText('Playable deploy gate');
-        await expect(pagesStatus).toContainText('Browser editor persistence');
+        await expect(page.getByLabel('Download file name')).toHaveValue('classic-vn-starter.zip');
+        await expect(page.getByLabel(/Output folder/u)).toHaveCount(0);
+        await expect(page.getByLabel('Desktop packaging status')).toHaveCount(0);
+        await expect(page.getByLabel('GitHub Pages dual-site status')).toHaveCount(0);
         await expect(page.getByRole('button', { name: 'Export' })).toBeEnabled();
-        await expect(page.getByRole('button', { name: 'Parity Smoke' })).toBeDisabled();
+        await expect(page.getByRole('button', { name: 'Parity Smoke' })).toHaveCount(0);
     });
 
     test('covers global search source jumps with a real project open', async ({ page }) => {

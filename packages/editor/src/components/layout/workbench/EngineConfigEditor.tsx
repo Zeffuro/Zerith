@@ -8,10 +8,12 @@ import { editorTheme as t } from '../../../theme/editorTheme';
 import { AssetPickerField } from '../../inspector/fields/AssetPickerField';
 import { ColorPickerField } from '../../inspector/fields/ColorPickerField';
 import { Field, isRecord, sharedStyles } from './EditorSharedUI';
+import { PlayerConfigFields } from './PlayerConfigFields';
 
 type ActiveTab = ReturnType<typeof useWorkbenchStore.getState>['tabs'][number] | undefined;
 
 type ParsedConfigTab = {
+    canEdit: boolean;
     config: EngineConfigFile;
     error?: string;
 };
@@ -56,7 +58,7 @@ export function EngineConfigEditor({ uiScale }: { uiScale: number }) {
         : '__custom__';
 
     const updateConfig = (updater: (current: EngineConfigFile) => EngineConfigFile) => {
-        if (!tabId || !activeTab || activeTab.kind !== 'engineConfig') return;
+        if (!tabId || !activeTab || activeTab.kind !== 'engineConfig' || !parsedTab.canEdit) return;
         const nextConfig = updater(parsedTab.config);
         const nextText = JSON.stringify(nextConfig, undefined, 2);
         updateTabContent(tabId, nextText);
@@ -119,7 +121,7 @@ export function EngineConfigEditor({ uiScale }: { uiScale: number }) {
     };
 
     const apply = async () => {
-        if (!activeTab || activeTab.kind !== 'engineConfig') return;
+        if (!activeTab || activeTab.kind !== 'engineConfig' || parsedTab.error) return;
         try {
             const nextText = activeTab.textContent ?? '{}';
             await fsWriteTextFile(activeTab.path, nextText);
@@ -137,8 +139,8 @@ export function EngineConfigEditor({ uiScale }: { uiScale: number }) {
 
     return (
         <div style={{ display: 'grid', gap: `${10 * uiScale}px`, gridTemplateRows: '1fr auto', height: '100%', padding: `${10 * uiScale}px` }}>
-            <div style={{ display: 'grid', gap: `${10 * uiScale}px`, gridTemplateColumns: '1fr 1fr', minHeight: 0 }}>
-                <div style={sharedStyles.panel(uiScale)}>
+            <div inert={!parsedTab.canEdit} style={{ alignContent: 'start', display: 'grid', gap: `${10 * uiScale}px`, gridTemplateColumns: '1fr 1fr', minHeight: 0, overflow: 'auto' }}>
+                <div style={{ ...sharedStyles.panel(uiScale), overflow: 'visible' }}>
                     <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px`, marginBottom: `${8 * uiScale}px` }}>Display</div>
                     <div style={{ display: 'grid', gap: `${10 * uiScale}px` }}>
                         <Field label="Width">
@@ -166,7 +168,7 @@ export function EngineConfigEditor({ uiScale }: { uiScale: number }) {
                     </div>
                 </div>
 
-                <div style={sharedStyles.panel(uiScale)}>
+                <div style={{ ...sharedStyles.panel(uiScale), overflow: 'visible' }}>
                     <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px`, marginBottom: `${8 * uiScale}px` }}>Theme Overrides</div>
                     <div style={{ display: 'grid', gap: `${10 * uiScale}px` }}>
                         <Field label="Font Family">
@@ -247,10 +249,11 @@ export function EngineConfigEditor({ uiScale }: { uiScale: number }) {
                         </Field>
                     </div>
                 </div>
+                <PlayerConfigFields config={parsedTab.config} onUpdate={updateConfig} uiScale={uiScale} />
             </div>
 
             <div style={{ alignItems: 'center', display: 'flex', gap: `${8 * uiScale}px` }}>
-                <button onClick={() => { void apply(); }} style={sharedStyles.primaryButton(uiScale)}>
+                <button disabled={Boolean(parsedTab.error)} onClick={() => { void apply(); }} style={sharedStyles.primaryButton(uiScale)}>
                     Apply
                 </button>
                 <span style={{ color: runtimeError || parsedTab.error ? t.accent.red : t.text.muted, fontSize: `${12 * uiScale}px` }}>
@@ -263,26 +266,28 @@ export function EngineConfigEditor({ uiScale }: { uiScale: number }) {
 
 function parseActiveTab(activeTab: ActiveTab): ParsedConfigTab {
     if (!activeTab || activeTab.kind !== 'engineConfig') {
-        return { config: {}, error: 'Open `engine.config.json` to use the engine config editor.' };
+        return { canEdit: false, config: {}, error: 'Open `engine.config.json` to use the engine config editor.' };
     }
 
     try {
         const parsed: unknown = JSON.parse(activeTab.textContent ?? '{}');
         if (!isRecord(parsed)) {
-            return { config: {}, error: 'Engine config root must be a JSON object.' };
+            return { canEdit: false, config: {}, error: 'Engine config root must be a JSON object.' };
         }
 
         const validation = EngineConfigSchema.safeParse(parsed);
         if (!validation.success) {
             return {
+                canEdit: true,
                 config: parsed,
                 error: validation.error.issues[0]?.message ?? 'Invalid engine config.',
             };
         }
 
-        return { config: validation.data };
+        return { canEdit: true, config: parsed };
     } catch (caughtError: unknown) {
         return {
+            canEdit: false,
             config: {},
             error: caughtError instanceof Error ? caughtError.message : 'Invalid engine config JSON',
         };

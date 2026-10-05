@@ -1,8 +1,11 @@
 import type { FsAdapter, FsDirectoryEntry, FsFilePickerOptions, FsImportFile, FsPickedFile, FsProjectPickerResult, FsTextWriteOptions } from './types';
 
+import { canonicalPathForComparison } from '../../utils/pathComparison';
 import { isTauriRuntime } from '../runtime/runtimeEnvironment';
 import { browserFsAdapter } from './browserFsAdapter';
 import { tauriFsAdapter } from './tauriFsAdapter';
+
+const textWrites = new Map<string, Promise<void>>();
 
 export type { FsDirectoryEntry, FsFilePickerFilter, FsFilePickerOptions, FsImportFile, FsPickedFile, FsProjectPickerResult, FsTextWriteOptions } from './types';
 
@@ -14,6 +17,12 @@ export async function fsCopyFileExclusive(sourcePath: string, targetPath: string
 
 export async function fsDirname(path: string): Promise<string> {
     return getFsAdapter().dirname(path);
+}
+
+export async function fsFinishProjectDestination(path: string): Promise<void> {
+    const adapter = getFsAdapter();
+    if (!adapter.finishProjectDestination) throw new Error('Safe project creation is unavailable.');
+    await adapter.finishProjectDestination(path);
 }
 
 export async function fsJoin(...parts: string[]): Promise<string> {
@@ -65,6 +74,12 @@ export async function fsRename(oldPath: string, newPath: string): Promise<void> 
     await getFsAdapter().rename(oldPath, newPath);
 }
 
+export async function fsReserveProjectDestination(path: string, sourcePath?: string): Promise<string> {
+    const adapter = getFsAdapter();
+    if (!adapter.reserveProjectDestination) throw new Error('Safe project creation is unavailable.');
+    return adapter.reserveProjectDestination(path, sourcePath);
+}
+
 export async function fsWriteBinaryFile(path: string, content: Uint8Array): Promise<void> {
     await getFsAdapter().writeBinaryFile(path, content);
 }
@@ -83,8 +98,17 @@ export async function fsWriteBinaryFileExclusive(path: string, content: Uint8Arr
     await adapter.writeBinaryFile(path, content);
 }
 
-export async function fsWriteTextFile(path: string, content: string, options?: FsTextWriteOptions): Promise<void> {
-    await getFsAdapter().writeTextFile(path, content, options);
+export async function fsWriteTextFile(path: string, content: string, options?: FsTextWriteOptions, isCurrent?: () => boolean): Promise<void> {
+    const key = canonicalPathForComparison(path);
+    const adapter = getFsAdapter();
+    const previous = textWrites.get(key);
+    const writing = (previous ?? Promise.resolve()).catch(() => {}).then(async () => {
+        if (isCurrent && !isCurrent()) throw new Error('Project changed while saving. The current project was kept.');
+        await adapter.writeTextFile(path, content, options);
+    });
+    textWrites.set(key, writing);
+    try { await writing; }
+    finally { if (textWrites.get(key) === writing) textWrites.delete(key); }
 }
 
 function getFsAdapter(): FsAdapter {

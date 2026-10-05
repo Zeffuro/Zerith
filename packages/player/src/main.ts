@@ -1,4 +1,6 @@
 import { bootstrapPlayer } from './runtime/bootstrapPlayer.ts';
+import { desktopEngineConfig, resolveDesktopPlayer } from './runtime/desktopPlayer.ts';
+import { resolvePlayerBaseUrl } from './runtime/playerBaseUrl.ts';
 
 async function main() {
     const canvas = document.querySelector('#game-canvas');
@@ -7,12 +9,14 @@ async function main() {
         throw new TypeError('Expected #game-canvas element to be a canvas.');
     }
 
-    const baseUrl = new URL(import.meta.env.BASE_URL, globalThis.location.href).toString();
-    const manifestUrl = new URL('game.json', globalThis.location.href).toString();
+    const baseUrl = resolvePlayerBaseUrl();
+    const manifestUrl = new URL('game.json', baseUrl).toString();
 
+    const desktop = resolveDesktopPlayer(globalThis);
     await bootstrapPlayer({
         baseUrl,
         canvas,
+        config: desktop ? desktopEngineConfig(desktop.metadata, localStorage) : undefined,
         manifestUrl,
     });
 }

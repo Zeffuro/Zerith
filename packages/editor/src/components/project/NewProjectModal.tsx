@@ -4,7 +4,6 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { useBackdropDismissal } from '../../hooks/useBackdropDismissal';
 import { useDialogFocusTrap } from '../../hooks/useDialogFocusTrap';
 import {
-    createNewProject,
     getNewProjectTemplateDefaultName,
     NEW_PROJECT_TEMPLATES,
     type NewProjectTemplateId,
@@ -12,7 +11,7 @@ import {
 import { fsPickDirectory } from '../../services/fs';
 import { basenameFromPath, openProjectEntry } from '../../services/openProjectEntry';
 import { isTauriRuntime } from '../../services/runtime/runtimeEnvironment';
-import { executeOpenProjectInCurrentWindow } from '../../store/actions/projectOpenActions';
+import { createAndOpenNewProject } from '../../store/actions/projectDestinationActions';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
 import { editorTheme as t } from '../../theme/editorTheme';
@@ -24,6 +23,8 @@ export function NewProjectModal() {
     const closeNewProjectModal = useEditorStore((state) => state.closeNewProjectModal);
     const isOpen = useEditorStore((state) => state.isNewProjectModalOpen);
     const uiScale = useEditorStore((state) => state.uiScale);
+    const modalGeneration = useEditorStore(state => state.newProjectModalGeneration);
+    const browseSequence = useRef(0);
     const dialogReference = useRef<HTMLDivElement | null>(null);
     const descriptionId = useId();
     const statusId = useId();
@@ -37,6 +38,7 @@ export function NewProjectModal() {
     const [templateId, setTemplateId] = useState<NewProjectTemplateId>('blank');
 
     useEffect(() => {
+        browseSequence.current += 1;
         if (!isOpen) {
             return;
         }
@@ -47,7 +49,7 @@ export function NewProjectModal() {
         setName(getNewProjectTemplateDefaultName('blank'));
         setStatusMessage(undefined);
         setTemplateId('blank');
-    }, [isOpen]);
+    }, [isOpen, modalGeneration]);
 
     useEffect(() => {
         if (!isOpen) {
@@ -94,10 +96,12 @@ export function NewProjectModal() {
     const handleBrowseDirectory = async () => {
         if (isCreating) return;
 
+        const generation = useEditorStore.getState().newProjectModalGeneration;
+        const sequence = ++browseSequence.current;
         try {
             const selectedDirectory = await fsPickDirectory('Select a project directory');
 
-            if (!selectedDirectory) {
+            if (!selectedDirectory || generation !== useEditorStore.getState().newProjectModalGeneration || sequence !== browseSequence.current) {
                 return;
             }
 
@@ -105,7 +109,7 @@ export function NewProjectModal() {
             setStatusMessage(undefined);
         } catch (error) {
             console.error('Failed to open directory picker:', error);
-            setStatusMessage(`Failed to open directory picker: ${error instanceof Error ? error.message : String(error)}`);
+            if (generation === useEditorStore.getState().newProjectModalGeneration && sequence === browseSequence.current) setStatusMessage(`Failed to open directory picker: ${error instanceof Error ? error.message : String(error)}`);
         }
     };
 
@@ -114,31 +118,31 @@ export function NewProjectModal() {
             return;
         }
 
+        const generation = useEditorStore.getState().newProjectModalGeneration;
+        browseSequence.current += 1;
+        const isCurrent = () => generation === useEditorStore.getState().newProjectModalGeneration && useEditorStore.getState().isNewProjectModalOpen;
         setIsCreating(true);
         setStatusMessage('Creating project...');
 
         try {
-            const result = await createNewProject({
+            const result = await createAndOpenNewProject({
                 author,
                 directory,
+                isCurrent,
                 name,
                 templateId,
             });
 
-            const opened = await executeOpenProjectInCurrentWindow(result.manifestPath, { allowNewWindow: false });
-            if (opened.status !== 'opened-current') {
-                setStatusMessage('Project created, but opening it was cancelled.');
-                return;
-            }
+            if (!result || !useEditorStore.getState().isNewProjectModalOpen || generation !== useEditorStore.getState().newProjectModalGeneration) return;
 
             if (isTauriRuntime()) addRecentProject(result.manifestPath);
             await openInitialNewProjectEntry(result.initialEntryPath);
-            closeNewProjectModal();
+            if (isCurrent()) closeNewProjectModal();
         } catch (error) {
             console.error('Failed to create project:', error);
-            setStatusMessage(`Failed to create project: ${error instanceof Error ? error.message : String(error)}`);
+            if (isCurrent()) setStatusMessage(`Failed to create project: ${error instanceof Error ? error.message : String(error)}`);
         } finally {
-            setIsCreating(false);
+            if (generation === useEditorStore.getState().newProjectModalGeneration) setIsCreating(false);
         }
     };
 
@@ -312,7 +316,7 @@ export function NewProjectModal() {
                         <input
                             disabled={isCreating}
                             onChange={(event) => setDirectory(event.target.value)}
-                            placeholder="Select project directory"
+                            placeholder="Select a new or empty project folder"
                             style={styles.input(uiScale)}
                             value={directory}
                         />
@@ -341,7 +345,7 @@ export function NewProjectModal() {
                     role="status"
                     style={{ color: t.text.muted, fontSize: `${12 * uiScale}px`, minHeight: `${16 * uiScale}px` }}
                 >
-                    {statusMessage ?? `${selectedTemplate.label} opens ${selectedTemplate.initialEntry} after creation.`}
+                    {statusMessage ?? `Choose a new or empty folder. ${selectedTemplate.label} opens ${selectedTemplate.initialEntry} after creation.`}
                 </div>
 
                 <div style={{ display: 'flex', gap: `${8 * uiScale}px`, justifyContent: 'flex-end' }}>

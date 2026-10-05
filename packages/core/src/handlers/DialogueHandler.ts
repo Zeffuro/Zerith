@@ -55,12 +55,17 @@ interface TalkingSpriteSnapshot {
 }
 
 export class DialogueHandler implements CommandHandler<DialogueCommand> {
-    public autoNext = false;
     public type = 'dialogue' as const;
+    public get autoNext(): boolean {
+        return this.autoAdvanceReady && this.autoAdvanceDelay !== undefined;
+    }
     private activeAbortController: AbortController | undefined;
     private readonly assets: IAssetManager;
     private readonly audio: IAudioManager;
     private autoAdvanceDelay: number | undefined;
+    private autoAdvanceReady = false;
+    private autoAdvanceRevision = 0;
+    private completedDialogue = false;
     private readonly config: DialogueConfig;
     private readonly events: IEventBus;
     private readonly flow: IFlowManager;
@@ -105,6 +110,8 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
 
     execute = async (command: DialogueCommand) => {
         this.activeAbortController?.abort();
+        this.autoAdvanceReady = false;
+        this.completedDialogue = false;
         const abortController = new AbortController();
         this.activeAbortController = abortController;
         const { signal } = abortController;
@@ -127,7 +134,7 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
 
         const displayName = charData?.displayName || (speaker || 'Narrator');
 
-        this.history.push(displayName, resolvedText);
+        if (!this.flow.isRestoringPresentation) this.history.push(displayName, resolvedText);
 
         this.renderer.setSpeaker(displayName, charData?.nameColor || '#7A6EF6');
 
@@ -194,22 +201,21 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
                     .filter((t): t is { type: 'text'; val: string } => t.type === 'text')
                     .map(t => t.val)
                     .join(''));
-                return;
+            } else {
+                await this.typewriter.run({
+                    blipUrl: playableBlipUrl,
+                    consumeSkip: () => this.flow.consumeSkip(),
+                    createPromptBlinker: () => this.renderer.createPromptBlinker(),
+                    getMessageText: () => this.renderer.getMessageText(),
+                    initialSpeed: this.config.typewriterSpeed!,
+                    playVoice: (url) => this.audio.playVoice(url),
+                    reducedMotion: this.config.reducedMotion,
+                    setMessageText: (text) => this.renderer.setMessageText(text),
+                    signal,
+                    tokens,
+                    waitForPromptInput: (abortSignal) => this.waitForPromptInput(this.events, abortSignal),
+                });
             }
-
-            await this.typewriter.run({
-                blipUrl: playableBlipUrl,
-                consumeSkip: () => this.flow.consumeSkip(),
-                createPromptBlinker: () => this.renderer.createPromptBlinker(),
-                getMessageText: () => this.renderer.getMessageText(),
-                initialSpeed: this.config.typewriterSpeed!,
-                playVoice: (url) => this.audio.playVoice(url),
-                reducedMotion: this.config.reducedMotion,
-                setMessageText: (text) => this.renderer.setMessageText(text),
-                signal,
-                tokens,
-                waitForPromptInput: (abortSignal) => this.waitForPromptInput(this.events, abortSignal),
-            });
         } finally {
             if (talkingSpriteSnapshot?.animation && !signal.aborted) {
                 await this.restoreTalkingSprite(talkingSpriteSnapshot);
@@ -217,11 +223,14 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         }
 
         if (!signal.aborted && this.autoAdvanceDelay !== undefined) {
+            const revision = this.autoAdvanceRevision;
             await waitForAbortableDelay(this.autoAdvanceDelay, signal);
-            if (!signal.aborted) {
-                void this.flow.playNext();
+            if (this.activeAbortController === abortController) {
+                this.autoAdvanceReady = !signal.aborted && revision === this.autoAdvanceRevision
+                    && this.autoAdvanceDelay !== undefined;
             }
         }
+        if (!signal.aborted && this.activeAbortController === abortController) this.completedDialogue = true;
     };
 
 
@@ -252,12 +261,24 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
     public reset = () => {
         this.activeAbortController?.abort();
         this.activeAbortController = undefined;
+        this.autoAdvanceReady = false;
+        this.completedDialogue = false;
         this.renderer.reset();
     };
 
 
     public setAutoAdvanceDelay(delay: number | undefined) {
+        const changed = delay !== this.autoAdvanceDelay;
+        if (changed) {
+            this.autoAdvanceRevision++;
+            this.autoAdvanceReady = false;
+        }
         this.autoAdvanceDelay = delay;
+        if (changed && delay !== undefined && this.completedDialogue && this.activeAbortController) {
+            void this.advanceCompletedDialogue(this.activeAbortController, this.autoAdvanceRevision).catch((error: unknown) => {
+                this.logger.warn(`Dialogue auto-advance failed: ${String(error)}`);
+            });
+        }
     }
 
     public setCaptionsEnabled(captions: boolean) {
@@ -272,8 +293,23 @@ export class DialogueHandler implements CommandHandler<DialogueCommand> {
         this.config.selfVoicing = selfVoicing;
     }
 
+    public setTextSize(size: number): void {
+        if (!Number.isFinite(size)) return;
+        this.renderer.setTextSize(Math.max(10, Math.min(96, size)));
+    }
+
     public setTypewriterSpeed(speedMs: number) {
         this.config.typewriterSpeed = normalizeTypewriterSpeed(speedMs);
+    }
+
+    private async advanceCompletedDialogue(controller: AbortController, revision: number): Promise<void> {
+        const delay = this.autoAdvanceDelay;
+        if (delay === undefined) return;
+        await waitForAbortableDelay(delay, controller.signal);
+        if (controller.signal.aborted || this.activeAbortController !== controller
+            || this.autoAdvanceRevision !== revision || this.autoAdvanceDelay === undefined) return;
+        this.autoAdvanceReady = true;
+        await this.flow.requestAutomaticContinuation?.(this);
     }
 
     private announceDialogueLine(command: DialogueCommand, displayName: string, resolvedText: string): void {

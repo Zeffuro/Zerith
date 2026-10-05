@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 
+import { scriptMatchesSavedBaseline } from '../services/scriptSavedBaseline';
 import { serializeMacroEntries, serializeSceneCommands, visualTabSourceText } from '../services/visualWorkbenchContent';
 import { useProjectStore } from '../store/storeBootstrap';
 import { useScriptStore } from '../store/storeBootstrap';
@@ -37,6 +38,7 @@ export function useScriptDirtyTracking() {
             const workbench = useWorkbenchStore.getState();
             const tab = workbench.tabs.find(entry => entry.path === activeFile && (entry.kind === 'script' || entry.kind === 'macros'));
             if (tab) {
+                if (!tab.dirty && scriptMatchesSavedBaseline(tab.savedTextContent, rootScript, macroEntries, editingAllMacrosFile, useProjectStore.getState().activeMacroName)) return;
                 const source = visualTabSourceText(tab);
                 const text = editingAllMacrosFile
                     ? serializeMacroEntries(macroEntries, source)

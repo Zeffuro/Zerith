@@ -27,8 +27,9 @@ export function createProjectIoSlice(get: ProjectGet, scriptBridge: ProjectScrip
         },
 
         saveActiveFileFromCurrentScript: async () => {
-            const { activeFile, activeMacroName, editingAllMacrosFile, macroEntries, projectGeneration } = get();
+            const { activeFile, activeMacroName, editingAllMacrosFile, macroEntries, projectGeneration, projectPath } = get();
             if (!activeFile) return;
+            const isCurrent = () => get().projectGeneration === projectGeneration && get().projectPath === projectPath;
 
             const rootScript = scriptBridge.getRootScript();
             const workbench = useWorkbenchStore.getState();
@@ -38,8 +39,8 @@ export function createProjectIoSlice(get: ProjectGet, scriptBridge: ProjectScrip
             try {
                 if (editingAllMacrosFile) {
                     const content = serializeMacroEntries(macroEntries, sourceText);
-                    await fsWriteTextFile(activeFile, content);
-                    if (get().projectGeneration === projectGeneration && get().macroEntries === macroEntries) {
+                    await fsWriteTextFile(activeFile, content, isCurrent);
+                    if (isCurrent() && get().macroEntries === macroEntries) {
                         if (tab) useWorkbenchStore.getState().updateTabContent(tab.id, content, { markDirty: false });
                         get().clearFileDirty(activeFile);
                     }
@@ -53,16 +54,16 @@ export function createProjectIoSlice(get: ProjectGet, scriptBridge: ProjectScrip
                         throw new TypeError('Macro file must be a JSON object');
                     }
                     parsed[activeMacroName] = rootScript;
-                    await fsWriteTextFile(activeFile, JSON.stringify(parsed, undefined, 4));
+                    await fsWriteTextFile(activeFile, JSON.stringify(parsed, undefined, 4), isCurrent);
                 } else {
                     const content = serializeSceneCommands(rootScript, sourceText ?? await fsReadTextFile(activeFile));
-                    await fsWriteTextFile(activeFile, content);
-                    if (tab && get().projectGeneration === projectGeneration && scriptBridge.getRootScript() === rootScript) {
+                    await fsWriteTextFile(activeFile, content, isCurrent);
+                    if (tab && isCurrent() && scriptBridge.getRootScript() === rootScript) {
                         useWorkbenchStore.getState().updateTabContent(tab.id, content, { markDirty: false });
                     }
                 }
 
-                if (get().projectGeneration === projectGeneration && scriptBridge.getRootScript() === rootScript) get().clearFileDirty(activeFile);
+                if (isCurrent() && scriptBridge.getRootScript() === rootScript) get().clearFileDirty(activeFile);
             } catch (error) {
                 console.error('Failed to save active file:', error);
             }

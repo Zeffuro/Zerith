@@ -1,8 +1,8 @@
 import type { IJsonModel } from 'flexlayout-react';
 import type { ReactNode } from 'react';
 
-import { Actions, Layout, Model, TabNode } from 'flexlayout-react';
-import { Component, lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { Actions, DockLocation, Layout, Model, TabNode } from 'flexlayout-react';
+import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import 'flexlayout-react/style/dark.css';
 
 import { useDismissiblePopup } from '../../hooks/useDismissiblePopup';
@@ -17,10 +17,12 @@ import { ConsolePanel } from '../tools/ConsolePanel';
 import { GitPanel } from '../tools/GitPanel';
 import { GlobalSearchContent, GlobalSearchPanel } from '../tools/GlobalSearchPanel';
 import { LocalizationPanel } from '../tools/LocalizationPanel';
+import { PlaytestPanel } from '../tools/PlaytestPanel';
 import { ProjectValidationPanel } from '../tools/ProjectValidationPanel';
 import { ReferenceTrackerPanel } from '../tools/ReferenceTrackerPanel';
 import { RuntimeMonitorPanel } from '../tools/RuntimeMonitorPanel';
 import { StateObserverPanel } from '../tools/StateObserverPanel';
+import { StoryMapPanel } from '../tools/StoryMapPanel';
 import { createDefaultDockLayout, normalizeDockLayoutJsonForFlexLayout } from './dock/defaultDockLayout';
 import { DOCK_PANELS } from './dock/dockPanelIds';
 import { EditorSurface } from './EditorSurface';
@@ -87,6 +89,8 @@ export function DockLayoutHost() {
     const [globalSearchPopupPosition, setGlobalSearchPopupPosition] = useState<PopupPosition>();
     const [model, setModel] = useState<Model>(initialModelState.model);
     const [layoutRecoveryKey, setLayoutRecoveryKey] = useState(0);
+    const [previewToolsHost, setPreviewToolsHost] = useState<HTMLDivElement>();
+    const previewToolsReference = useCallback((node: HTMLDivElement | null) => setPreviewToolsHost(node ?? undefined), []);
     const lastJsonReference = useRef<string>(initialModelState.jsonSig);
     const globalSearchPopupReference = useRef<HTMLDivElement>(null);
     const saveTimerReference = useRef<ReturnType<typeof globalThis.setTimeout> | undefined>(undefined);
@@ -224,8 +228,15 @@ export function DockLayoutHost() {
         const onDockSelect = (event: Event) => {
             const detail = (event as CustomEvent<unknown>).detail;
             if (typeof detail !== 'string') return;
-            const tabNode = model.getNodeById(detail) as TabNode | undefined;
+            let tabNode = model.getNodeById(detail) as TabNode | undefined;
+            if (!tabNode && (detail === DOCK_PANELS.playtests || detail === DOCK_PANELS.storyMap)) {
+                const parent = model.getNodeById(DOCK_PANELS.editor)?.getParent();
+                if (parent) model.doAction(Actions.addNode({ component: detail, id: detail, name: detail === DOCK_PANELS.playtests ? 'Playtests' : 'Story map', type: 'tab' }, parent.getId(), DockLocation.CENTER, -1));
+                tabNode = model.getNodeById(detail) as TabNode | undefined;
+            }
             if (!tabNode) return;
+            const maximized = model.getMaximizedTabset();
+            if (maximized && maximized !== tabNode.getParent()) model.doAction(Actions.maximizeToggle(maximized.getId()));
             model.doAction(Actions.selectTab(detail));
         };
 
@@ -261,10 +272,13 @@ export function DockLayoutHost() {
             case DOCK_PANELS.localization: {
                 return <LocalizationPanel />;
             }
+            case DOCK_PANELS.playtests: {
+                return <PlaytestPanel />;
+            }
             case DOCK_PANELS.preview: {
                 return (
                     <Suspense fallback={<div style={{ opacity: 0.7, padding: 12 }}>Loading preview...</div>}>
-                        <GamePreview script={rootScript} />
+                        <GamePreview script={rootScript} toolsHost={previewToolsHost} />
                     </Suspense>
                 );
             }
@@ -279,6 +293,9 @@ export function DockLayoutHost() {
             }
             case DOCK_PANELS.stateObserver: {
                 return <StateObserverPanel />;
+            }
+            case DOCK_PANELS.storyMap: {
+                return <StoryMapPanel />;
             }
             default: {
                 return <div style={{ color: '#fca5a5', padding: 10 }}>Unknown panel: {String(comp)}</div>;
@@ -303,7 +320,11 @@ export function DockLayoutHost() {
                 <WorkbenchTabs />
                 <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
                     <LayoutErrorBoundary key={layoutRecoveryKey} onRecover={recoverLayout}>
-                        <Layout factory={factory} model={model} onModelChange={onModelChange} />
+                        <Layout factory={factory} model={model} onModelChange={onModelChange} onRenderTabSet={(node, values) => {
+                            if (node.getSelectedNode()?.getId() === DOCK_PANELS.preview) {
+                                values.buttons.push(<div className="zerith-preview-header-tools" key="preview-tools" ref={previewToolsReference} />);
+                            }
+                        }} />
                     </LayoutErrorBoundary>
 
                     {isGlobalSearchPopupOpen && (

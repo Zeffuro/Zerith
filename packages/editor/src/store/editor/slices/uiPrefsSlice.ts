@@ -40,7 +40,7 @@ export function createUiPrefsSlice(set: EditorSet): UiPrefsSlice {
         closeCommandPalette: () => set({ isCommandPaletteOpen: false }),
         closeExportGameModal: () => set({ isExportGameModalOpen: false }),
         closeGlobalSearchPopup: () => set({ isGlobalSearchPopupOpen: false }),
-        closeNewProjectModal: () => set({ isNewProjectModalOpen: false }),
+        closeNewProjectModal: () => set(state => ({ isNewProjectModalOpen: false, newProjectModalGeneration: state.newProjectModalGeneration + 1 })),
         closeReleaseNotesModal: () => set({ isReleaseNotesModalOpen: false }),
         closeSettingsModal: () => set({ isSettingsModalOpen: false }),
         globalSearchLaunchMode: 'find',
@@ -54,13 +54,14 @@ export function createUiPrefsSlice(set: EditorSet): UiPrefsSlice {
         isSettingsModalOpen: false,
         lastManualSaveAt: 0,
         markManualSave: () => set({ lastManualSaveAt: Date.now() }),
+        newProjectModalGeneration: 0,
         openCommandPalette: () => set({ isCommandPaletteOpen: true }),
         openExportGameModal: () => set({ isExportGameModalOpen: true }),
         openGlobalSearchPopup: (globalSearchLaunchMode = 'find') =>
             set((state) => state.isSettingsModalOpen ? {} : { globalSearchLaunchMode, isGlobalSearchPopupOpen: true }),
         openGlobalSearchReplacePopup: () =>
             set((state) => state.isSettingsModalOpen ? {} : { globalSearchLaunchMode: 'replace', isGlobalSearchPopupOpen: true }),
-        openNewProjectModal: () => set({ isNewProjectModalOpen: true }),
+        openNewProjectModal: () => set(state => ({ isNewProjectModalOpen: true, newProjectModalGeneration: state.newProjectModalGeneration + 1 })),
         openReleaseNotesModal: () => set({ isReleaseNotesModalOpen: true }),
         openSettingsModal: () => set({ isGlobalSearchPopupOpen: false, isSettingsModalOpen: true }),
         previewLocale: undefined,
@@ -98,7 +99,7 @@ export function createUiPrefsSlice(set: EditorSet): UiPrefsSlice {
             getSettingsSnapshot().setIsMuted(nextIsMuted);
             return { isMuted: nextIsMuted };
         }),
-        toggleNewProjectModal: () => set((state) => ({ isNewProjectModalOpen: !state.isNewProjectModalOpen })),
+        toggleNewProjectModal: () => set((state) => ({ isNewProjectModalOpen: !state.isNewProjectModalOpen, newProjectModalGeneration: state.newProjectModalGeneration + 1 })),
         toggleReleaseNotesModal: () => set((state) => ({ isReleaseNotesModalOpen: !state.isReleaseNotesModalOpen })),
         toggleSettingsModal: () => set((state) => ({ isSettingsModalOpen: !state.isSettingsModalOpen })),
         uiScale,

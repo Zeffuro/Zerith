@@ -21,7 +21,7 @@ import { createBrowserDesktopExportArtifactManifest } from './browserParityRepor
 import { fsReadBinaryFile, fsReadDirectory, fsReadTextFile } from './fs';
 
 const PLAYER_TEMPLATE_FILES = import.meta.glob<string>(
-    '../../../player/dist/{index.html,assets/*.js}',
+    '../../../player/dist/{index.html,assets/*.js,assets/*.css}',
     {
         eager: true,
         import: 'default',
@@ -403,11 +403,17 @@ function resolveSheetSource(sheetUrl: string, source: string): string {
 }
 
 function rewritePlayerIndex(contents: string, base: string): string {
-    if (!/^(?:\.\/|\/(?!\/)|https?:\/\/)/iu.test(base) || /[\s<>"'`]/u.test(base)) {
-        throw new Error('Export base must be ./, an absolute host path, or an http(s) URL without whitespace.');
+    if (!/^(?:\.\/|\/(?!\/)|https?:\/\/)/iu.test(base) || /[\s<>"'`\\?#]/u.test(base)
+        || [...base].some(character => character.codePointAt(0)! < 32)) {
+        throw new Error('Export base must be ./, a host path, or an http(s) directory URL without whitespace, query, or fragment.');
+    }
+    try { new URL(base, 'https://export.invalid/'); } catch {
+        throw new Error('Export base must be a valid path or http(s) URL.');
     }
     const prefix = base.endsWith('/') ? base : `${base}/`;
-    return contents.replaceAll('./assets/', `${prefix}zerith-player/`);
+    const htmlPrefix = prefix.replaceAll('&', '&amp;');
+    return contents.replace('<head>', `<head>\n  <meta name="zerith-base-url" content="${htmlPrefix}" />`)
+        .replaceAll('./assets/', `${htmlPrefix}zerith-player/`);
 }
 
 async function sha256Hex(bytes: Uint8Array): Promise<string> {

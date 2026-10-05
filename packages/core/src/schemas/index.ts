@@ -260,6 +260,7 @@ export const SpriteCommandSchema = z.object({
     xRatio: z.number().optional(),
     y: z.number().optional(),
     yRatio: z.number().optional(),
+    zIndex: z.number().finite().optional(),
 });
 
 /* Flash */

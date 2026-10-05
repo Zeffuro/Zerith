@@ -170,9 +170,13 @@ export class SaveLoadPanel implements MenuPanel {
 
             const activateSlot = () => {
                 if (this.mode === 'save') {
-                    void this.saves.save(slotNumber);
-                    this.notifications.show(`Saved to Slot ${slotNumber}`);
-                    this.closeOverlay();
+                    try {
+                        this.saves.save(slotNumber);
+                        this.notifications.show(`Saved to Slot ${slotNumber}`);
+                        this.closeOverlay();
+                    } catch (error) {
+                        this.notifications.show(error instanceof Error ? error.message : 'Failed to save');
+                    }
                 } else {
                     if (!meta) { this.notifications.show('Slot is empty'); return; }
                     void this.saves.load(slotNumber).then(async (saveState) => {
@@ -183,6 +187,8 @@ export class SaveLoadPanel implements MenuPanel {
                         await this.applySaveState(saveState);
                         this.notifications.show(`Loaded Slot ${slotNumber}`);
                         this.closeOverlay();
+                    }).catch((error: unknown) => {
+                        this.notifications.show(error instanceof Error ? error.message : 'Failed to load save');
                     });
                 }
             };

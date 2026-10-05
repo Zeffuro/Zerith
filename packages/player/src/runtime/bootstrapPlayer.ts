@@ -15,7 +15,14 @@ import {
     createRuntimeContentPrefetcher,
     loadCompiledContentManifest,
 } from './compiledContentPrefetch';
+import { createPlayerDisplayControls } from './desktopDisplayControls';
+import { resolveDesktopPlayer } from './desktopPlayer';
 import { configurePlayerAccessibilityShell } from './playerAccessibility';
+import { resolvePlayerBaseUrl } from './playerBaseUrl';
+import { createDefaultPlayerPreferences, createPlayerPreferenceConfig, readPlayerPreferences } from './playerPreferences';
+import { createDefaultPlayerShell, type PlayerShell, type PlayerShellContext } from './playerShell';
+import { normalizePlayerShellConfig } from './playerShellConfig';
+import { createPlayerStorage } from './playerStorage';
 
 const defaultConfig: EngineConfig = {
     audio: {
@@ -36,7 +43,7 @@ const defaultConfig: EngineConfig = {
         borderWidth: 4,
         boxAlpha: 0.9,
         boxColor: 0x00_00_33,
-        fontFamily: 'Courier New',
+        fontFamily: 'Arial',
         fontSize: 24,
         hoverColor: 0x33_33_99,
     },
@@ -52,11 +59,12 @@ export interface PlayerBootstrapOptions {
     manifestUrl?: string;
     prefetchCompiledAssets?: boolean;
     preloadAssets?: boolean;
+    shell?: ((context: PlayerShellContext) => PlayerShell) | false;
 }
 
 export async function bootstrapPlayer(options: PlayerBootstrapOptions): Promise<Engine> {
     const {
-        baseUrl = new URL(import.meta.env.BASE_URL, globalThis.location.href).toString(),
+        baseUrl = resolvePlayerBaseUrl(),
         canvas,
         compiledContentUrl = 'zerith.content.json',
         config,
@@ -74,8 +82,14 @@ export async function bootstrapPlayer(options: PlayerBootstrapOptions): Promise<
     const loadedConfig = configUrl === false
         ? undefined
         : await loadEngineConfig(resolveRuntimeUrl(configUrl, baseUrl));
-    const effectiveConfig = mergeEngineConfigs(defaultConfig, loadedConfig, config);
-    const accessibilityShell = configurePlayerAccessibilityShell(canvas, effectiveConfig);
+    const authoredConfig = mergeEngineConfigs(defaultConfig, loadedConfig, config);
+    const shellConfig = normalizePlayerShellConfig(authoredConfig.player, manifest.title);
+    const useShell = options.shell !== false && shellConfig.enabled;
+    const defaults = createDefaultPlayerPreferences(authoredConfig);
+    authoredConfig.storage = createPlayerStorage(manifest, authoredConfig.storage);
+    const savedPreferences = readPlayerPreferences(useShell && shellConfig.rememberSettings ? authoredConfig.storage : undefined, defaults);
+    const effectiveConfig = useShell ? createPlayerPreferenceConfig(authoredConfig, savedPreferences.preferences) : authoredConfig;
+    await loadPlayerFont(effectiveConfig, baseUrl);
 
     const resolvedCharacters = typeof manifest.characters === 'string'
         ? resolveRuntimeUrl(manifest.characters, baseUrl)
@@ -105,7 +119,9 @@ export async function bootstrapPlayer(options: PlayerBootstrapOptions): Promise<
         validatedScenes[name] = parseSceneFile(sceneFile, { sceneName: name }).commands;
     }
 
-    const engine = await bootstrapEngine({
+    const accessibilityShell = configurePlayerAccessibilityShell(canvas, effectiveConfig, { alwaysCreateLiveRegion: useShell, label: manifest.title });
+    let engine: Engine;
+    try { engine = await bootstrapEngine({
         assetResolver: (url) => resolveRuntimeUrl(url, baseUrl),
         canvas,
         characters,
@@ -118,7 +134,7 @@ export async function bootstrapPlayer(options: PlayerBootstrapOptions): Promise<
         manifest,
         preloadAssets,
         scenes: validatedScenes,
-    });
+    }); } catch (error) { accessibilityShell.dispose(); throw error; }
 
     const startScene = manifest.startScene ?? 'intro';
     const prefetcher = prefetchCompiledAssets && compiledContent
@@ -135,15 +151,29 @@ export async function bootstrapPlayer(options: PlayerBootstrapOptions): Promise<
     prefetcher?.prefetchGlobalAndScene(startScene);
     engine.events.on('scene:loaded', onSceneLoaded);
     const destroyEngine = engine.destroy.bind(engine);
+    const display = typeof document === 'undefined' ? undefined : createPlayerDisplayControls(resolveDesktopPlayer(globalThis));
+    let shell: PlayerShell | undefined;
     engine.destroy = () => {
+        shell?.dispose();
+        display?.dispose();
         engine.events.off('scene:loaded', onSceneLoaded);
         prefetcher?.dispose();
         accessibilityShell.dispose();
         destroyEngine();
     };
 
-    await engine.startScreen.show(startScene);
-    engine.start();
+    try {
+        if (useShell && display) {
+            shell = (options.shell || createDefaultPlayerShell)({
+                baseUrl, canvas, config: shellConfig, defaults, display, engine,
+                preferences: savedPreferences.preferences, startScene, warning: savedPreferences.warning,
+            });
+            await shell.start();
+        } else {
+            await engine.startScreen.show(startScene);
+            engine.start();
+        }
+    } catch (error) { engine.destroy(); throw error; }
 
     return engine;
 }
@@ -175,6 +205,16 @@ export async function loadManifest(manifestUrl: string): Promise<GameManifest> {
     }
 
     return response.json() as Promise<GameManifest>;
+}
+
+async function loadPlayerFont(config: EngineConfig, baseUrl: string): Promise<void> {
+    const family = config.theme?.fontFamily;
+    const asset = config.preview?.fontAssetUrl;
+    if (!family || !asset || typeof FontFace === 'undefined') return;
+    try {
+        const font = new FontFace(family, `url(${JSON.stringify(resolveRuntimeUrl(asset, baseUrl))})`);
+        document.fonts.add(await font.load());
+    } catch { console.warn('[player] The game font could not be loaded. Using a fallback font.'); }
 }
 
 function resolveRuntimeUrl(assetPath: string, baseUrl: string): string {

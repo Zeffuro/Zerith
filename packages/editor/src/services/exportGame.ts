@@ -1,3 +1,4 @@
+import type { BrowserFolderExportTarget } from './browserFolderExport';
 import type { BrowserDesktopExportArtifactManifest } from './browserParityReport';
 
 import { isTauriRuntime } from './runtime/runtimeEnvironment';
@@ -6,6 +7,7 @@ export type ExportCachePolicy = 'hashed' | 'none';
 
 export type ExportGameOptions = {
     base?: string;
+    browserFolder?: BrowserFolderExportTarget;
     cachePolicy?: ExportCachePolicy;
     download?: boolean;
     outDir?: string;
@@ -16,13 +18,14 @@ export type ExportGameOptions = {
 
 export type ExportGameResult = {
     artifactManifest?: BrowserDesktopExportArtifactManifest;
+    executablePath?: string;
     outDirectory?: string;
     stderr: string;
     stdout: string;
     zipPath?: string;
 };
 
-export type ExportProfile = 'generic-web' | 'itch-html5' | 'local-preview';
+export type ExportProfile = 'desktop-tauri' | 'generic-web' | 'itch-html5' | 'local-preview';
 
 export type ExportProfileCatalogEntry = {
     description: string;
@@ -49,6 +52,9 @@ export async function exportGame(gamePath: string, options: ExportGameOptions = 
     const resolvedOptions = resolveExportGameOptions(options);
 
     if (!isTauriRuntime()) {
+        if (resolvedOptions.profile === 'desktop-tauri') {
+            throw new Error('Desktop game packaging is available in the desktop editor. Use the desktop package command from a source checkout.');
+        }
         const { exportGameForBrowser } = await import('./browserExportGame');
         return exportGameForBrowser(gamePath, resolvedOptions);
     }
@@ -66,7 +72,8 @@ export async function exportGame(gamePath: string, options: ExportGameOptions = 
     };
 
     const { invoke } = await import('@tauri-apps/api/core');
-    const result = await invoke<ExportGameResult>('export_game', { request });
+    const command = resolvedOptions.profile === 'desktop-tauri' ? 'export_desktop_game' : 'export_game';
+    const result = await invoke<ExportGameResult>(command, { request });
     return { ...result, artifactManifest };
 }
 
@@ -95,12 +102,13 @@ export function resolveExportGameOptions(options: ExportGameOptions = {}): Expor
         ...preset,
         ...options,
         profile,
+        ...(profile === 'desktop-tauri' ? { base: './', zip: false, zipFile: undefined } : {}),
     };
 }
 
 const EXPORT_PROFILE_CATALOG: ExportProfileCatalogEntry[] = [
     {
-        description: 'Playable zip with relative paths and hashed compiled-content cache entries.',
+        description: 'A playable ZIP archive ready to upload to itch.io.',
         id: 'itch-html5',
         label: 'Itch.io HTML5',
         selectable: true,
@@ -108,7 +116,7 @@ const EXPORT_PROFILE_CATALOG: ExportProfileCatalogEntry[] = [
         target: 'web',
     },
     {
-        description: 'Loose web build for a generic static host.',
+        description: 'Game files ready to upload to a web host.',
         id: 'generic-web',
         label: 'Generic web host',
         selectable: true,
@@ -116,7 +124,7 @@ const EXPORT_PROFILE_CATALOG: ExportProfileCatalogEntry[] = [
         target: 'web',
     },
     {
-        description: 'Loose uncached web build for local smoke testing.',
+        description: 'Game files for testing on a local web server.',
         id: 'local-preview',
         label: 'Local preview',
         selectable: true,
@@ -124,11 +132,11 @@ const EXPORT_PROFILE_CATALOG: ExportProfileCatalogEntry[] = [
         target: 'web',
     },
     {
-        description: 'Planned packaged desktop game target; current desktop editor exports still produce web/player builds.',
+        description: 'A standalone game that runs without the editor.',
         id: 'desktop-tauri',
         label: 'Desktop app package',
-        selectable: false,
-        status: 'planned',
+        selectable: true,
+        status: 'supported',
         target: 'desktop',
     },
     {
@@ -142,6 +150,11 @@ const EXPORT_PROFILE_CATALOG: ExportProfileCatalogEntry[] = [
 ];
 
 const EXPORT_PROFILE_PRESETS: Record<ExportProfile, ExportGameOptions> = {
+    'desktop-tauri': {
+        base: './',
+        cachePolicy: 'hashed',
+        zip: false,
+    },
     'generic-web': {
         base: './',
         cachePolicy: 'hashed',

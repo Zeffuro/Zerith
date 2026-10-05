@@ -9,7 +9,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { exportGameForBrowser } from '../browserExportGame';
 import { exportGame } from '../exportGame';
+import { browserFsAdapter } from '../fs/browserFsAdapter';
 import { prepareWebGameArtifacts } from '../webGameArtifacts';
+import { MemoryDirectoryHandle } from './browserFsAdapter.test-utilities';
 
 const native = vi.hoisted(() => ({ binaryReads: [] as string[], desktop: false, invoke: vi.fn() }));
 vi.mock('@zeffuro/zerith-core', async () => import('../../../../core/src/utils/ContentCompiler'));
@@ -60,6 +62,27 @@ afterEach(async () => {
 
 describe('shared installed and browser web exports', () => {
     for (const fixture of fixtures) {
+        it(`writes complete ${fixture} browser folder artifacts without a download`, async () => {
+            const game = fixturePath(fixture);
+            const source = new MemoryDirectoryHandle('source');
+            const parent = new MemoryDirectoryHandle('exports');
+            vi.spyOn(browserFsAdapter, 'getDirectoryHandle').mockResolvedValue(source);
+            const result = await exportGame(game, { browserFolder: { folderName: 'playable', parent }, download: false });
+            const files: Record<string, Uint8Array> = {};
+            async function collect(directory: MemoryDirectoryHandle, prefix = ''): Promise<void> {
+                for (const [name, file] of directory.files) {
+                    const contents = await file.getFile();
+                    files[`${prefix}${name}`] = new Uint8Array(await contents.arrayBuffer());
+                }
+                for (const [name, child] of directory.directories) await collect(child, `${prefix}${name}/`);
+            }
+            await collect(parent.directories.get('playable')!);
+            const prepared = await prepareWebGameArtifacts(game);
+            expect(fileHashes(files)).toEqual(fileHashes(prepared.files));
+            expect(result.outDirectory).toBe('exports/playable');
+            expect(result.artifactManifest).toEqual(prepared.artifactManifest);
+            await expect(exportGame(game, { browserFolder: { folderName: 'playable', parent } })).rejects.toThrow('exists');
+        });
         it(`embeds all runtime chunks and complete ${fixture} content with CLI compiler parity`, async () => {
             const game = fixturePath(fixture);
             const prepared = await prepareWebGameArtifacts(game);
@@ -124,8 +147,22 @@ describe('shared installed and browser web exports', () => {
     it('honors host base paths and disables the compiled cache', async () => {
         const result = await prepareWebGameArtifacts(fixturePath('classic-vn-starter'), { base: '/games/my-game/', cachePolicy: 'none' });
         expect(decode(result.files['index.html'])).toContain('/games/my-game/zerith-player/');
+        expect(decode(result.files['index.html'])).toContain('<meta name="zerith-base-url" content="/games/my-game/" />');
         expect(JSON.parse(decode(result.files['zerith.content.json']))).not.toHaveProperty('cache');
         await expect(prepareWebGameArtifacts(fixturePath('classic-vn-starter'), { base: 'javascript:alert(1)' })).rejects.toThrow('Export base');
+    });
+
+    it('escapes base URL attribute values without changing project files', async () => {
+        const game = fixturePath('classic-vn-starter');
+        const result = await prepareWebGameArtifacts(game, { base: '/games/a&b' });
+        const index = decode(result.files['index.html']);
+        expect(index).toContain('content="/games/a&amp;b/"');
+        expect(index).toContain('/games/a&amp;b/zerith-player/');
+        expect(hashBytes(result.files['game.json'])).toBe(hashBytes(new Uint8Array(await readFile(path.join(game, 'game.json')))));
+    });
+
+    it.each(['//other.test/game', String.raw`/games/\other`, '/games/?query=1', '/games/#fragment', 'https://', '/games/\u0000bad'])('rejects ambiguous or malformed export base %s', async base => {
+        await expect(prepareWebGameArtifacts(fixturePath('classic-vn-starter'), { base })).rejects.toThrow('Export base');
     });
 
     it('omits private directories from browser, native references, and CLI public files', async () => {

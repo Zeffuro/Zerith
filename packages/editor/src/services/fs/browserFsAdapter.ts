@@ -1,6 +1,7 @@
 import type { FsAdapter, FsDirectoryEntry, FsFilePickerFilter } from './types';
 
 import { moveBrowserEntry, writeBrowserFile as writeFile } from './browserDirectoryTransfer';
+import { createBrowserProjectDestination } from './browserProjectDestination';
 import { createBrowserProjectHandleStorage } from './browserProjectHandleStorage';
 import { createBrowserProjectRegistry, validateBrowserProject } from './browserProjectRegistry';
 import { basename, dirname, join, normalizeVirtualPath, pathSegments } from './pathUtilities';
@@ -28,10 +29,13 @@ export type BrowserFileHandle = {
 
 export type BrowserFsAdapter = {
     clearMountedDirectories: () => void;
+    finishProjectDestination: (path: string) => Promise<void>;
+    getDirectoryHandle: (path: string) => Promise<BrowserDirectoryHandle>;
     isSupported: () => boolean;
     mountDirectory: (handle: BrowserDirectoryHandle) => string;
     prepareProject: (manifestPath: string) => Promise<void>;
     recentProjects: ReturnType<typeof createBrowserProjectRegistry>;
+    reserveProjectDestination: (path: string, sourcePath?: string) => Promise<string>;
 } & FsAdapter;
 
 export type BrowserFsGlobal = {
@@ -57,6 +61,7 @@ export type BrowserWritableFileStream = {
 
 export function createBrowserFsAdapter(browserGlobal: BrowserFsGlobal = globalThis): BrowserFsAdapter {
     const roots = new Map<string, BrowserDirectoryHandle>();
+    const destinations = createBrowserProjectDestination(roots);
     const recentProjects = createBrowserProjectRegistry(createBrowserProjectHandleStorage(browserGlobal.indexedDB), {
         get: path => roots.get(path.slice(1)),
         mount: (handle, path) => {
@@ -76,6 +81,8 @@ export function createBrowserFsAdapter(browserGlobal: BrowserFsGlobal = globalTh
             roots.clear();
         },
         dirname: (path) => Promise.resolve(dirname(path)),
+        finishProjectDestination: destinations.finish,
+        getDirectoryHandle: path => resolveDirectory(path, roots),
         isSupported: () => typeof browserGlobal.showDirectoryPicker === 'function',
         join: (...parts) => Promise.resolve(join(...parts)),
         mkdir: async (path, recursive = true) => {
@@ -159,18 +166,16 @@ export function createBrowserFsAdapter(browserGlobal: BrowserFsGlobal = globalTh
             const destination = await resolveParentDirectory(destinationPath, roots);
             await moveBrowserEntry(source, destination, sourcePath, destinationPath);
         },
+        reserveProjectDestination: destinations.reserve,
         writeBinaryFile: async (path, content) => {
             const file = await getWritableFile(path, roots);
             await writeFile(file, content);
         },
+        writeBinaryFileExclusive: destinations.writeExclusive,
         writeTextFile: async (path, content, options) => {
             if (options?.createOnly) {
-                const { entryName, parent } = await resolveParentDirectory(path, roots);
-                for await (const [name] of parent.entries()) {
-                    if (name.toLowerCase() === entryName.toLowerCase()) {
-                        throw Object.assign(new Error('Destination already exists.'), { code: 'alreadyExists' });
-                    }
-                }
+                await destinations.writeExclusive(path, content);
+                return;
             }
             if (options?.expectedContent !== undefined && await adapter.readTextFile(path) !== options.expectedContent) {
                 throw new Error('File changed on disk. Reopen it before saving.');

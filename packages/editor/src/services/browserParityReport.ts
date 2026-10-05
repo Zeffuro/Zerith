@@ -120,7 +120,7 @@ const PARITY_CAPABILITIES: readonly Omit<BrowserParityCapability, 'browser'>[] =
     {
         desktop: 'supported',
         id: 'exportGame',
-        note: 'Desktop export can write to chosen output paths. Browser export produces a playable zip download from the mounted project and player shell.',
+        note: 'Desktop export writes to chosen output paths. Browser export downloads a playable ZIP or writes a new folder under a user-selected parent.',
     },
 ];
 
@@ -140,7 +140,7 @@ const EXPORT_PARITY_FEATURES: readonly BrowserExportParityFeature[] = [
         status: 'matched',
     },
     {
-        browser: 'Adds zerith.content.json to the zip from the mounted project.',
+        browser: 'Adds zerith.content.json to the export from the mounted project.',
         desktop: 'Writes zerith.content.json after the Vite build.',
         id: 'compiledContent',
         note: 'Both export paths include the compiled content manifest.',
@@ -154,25 +154,25 @@ const EXPORT_PARITY_FEATURES: readonly BrowserExportParityFeature[] = [
         status: 'matched',
     },
     {
-        browser: 'Records the requested base URL in the export log while emitting a zip download.',
+        browser: 'Applies the requested base to runtime links and player content loading through export metadata.',
         desktop: 'Passes the requested base URL into the Vite build.',
         id: 'baseUrl',
-        note: 'Desktop applies base URL at build time; browser export is constrained by the prebuilt player shell.',
-        status: 'browser-limited',
+        note: 'Both exports resolve runtime and project content from the configured base URL.',
+        status: 'matched',
     },
     {
-        browser: 'Always downloads a zip archive, even when zip is disabled.',
+        browser: 'Downloads a ZIP archive or saves files to a user-selected folder.',
         desktop: 'Can emit a loose web build and optionally create a zip archive.',
         id: 'zipArchive',
-        note: 'Browser export cannot write a loose directory tree without a later browser filesystem output policy.',
+        note: 'Folder export requires directory picker support and a new destination outside the source project.',
         status: 'browser-limited',
     },
     {
-        browser: 'Cannot write arbitrary output directories or zip paths.',
+        browser: 'Writes a new subfolder under a user-selected parent, with directory picker support.',
         desktop: 'Supports explicit outDir and zipFile destinations.',
         id: 'looseOutput',
-        note: 'Desktop remains the only path with direct filesystem output destinations.',
-        status: 'desktop-only',
+        note: 'Desktop accepts filesystem paths. Browser output uses user-granted handles and preserves existing exports.',
+        status: 'browser-limited',
     },
 ];
 

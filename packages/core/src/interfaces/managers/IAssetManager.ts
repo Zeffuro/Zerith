@@ -6,7 +6,7 @@ export interface IAssetManager extends IBaseManager {
     extractAssetUrls(script: Script): { audio: Set<string>; textures: Set<string> };
     load<T = unknown>(url: string): Promise<T>;
     preloadCharacterAssets(characters: Record<string, CharacterDefinition>): Promise<void>;
-    preloadSceneAssets(script: Script): Promise<void>;
+    preloadSceneAssets(script: Script, options?: { strict?: boolean }): Promise<void>;
     resolve(url: string): Promise<string>;
     setResolver(resolver: AssetResolver): void;
 }

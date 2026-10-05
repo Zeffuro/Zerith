@@ -1,17 +1,8 @@
-import { chromium, expect, test as baseTest } from '@playwright/test';
-import { mkdtemp } from 'node:fs/promises';
-import path from 'node:path';
+import { expect, test as baseTest } from '@playwright/test';
+import { persistentContextFixture } from './testProfiles.mjs';
 
 const test = baseTest.extend({
-    context: async ({ baseURL }, use, testInfo) => {
-        const profile = await mkdtemp(path.join(process.cwd(), 'temp', 'project-feedback-'));
-        const context = await chromium.launchPersistentContext(profile, {
-            args: ['--disable-audio-output'], baseURL, colorScheme: 'dark', headless: true,
-            hasTouch: testInfo.project.use.hasTouch, isMobile: testInfo.project.use.isMobile,
-            reducedMotion: 'reduce', viewport: testInfo.project.use.viewport,
-        });
-        try { await use(context); } finally { await context.close(); }
-    },
+    context: [persistentContextFixture('project-feedback-'), { timeout: 45_000 }],
 });
 const failures = new WeakMap();
 

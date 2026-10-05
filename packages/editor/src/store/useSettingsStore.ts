@@ -32,6 +32,7 @@ type SettingsStore = {
     setKeymapOverrides: (keymapOverrides: SettingsState['keymapOverrides']) => void;
     setQuickCommandTypes: (quickCommandTypes: SettingsState['quickCommandTypes']) => void;
     setRecentProjects: (recentProjects: SettingsState['recentProjects']) => void;
+    setRecoveryEnabled: (enabled: boolean) => void;
     setThemeKey: (themeKey: string) => void;
     setTimelineScale: (timelineScale: number | undefined) => void;
     setUiScale: (uiScale: number) => void;
@@ -110,6 +111,7 @@ export const useSettingsStore = create<SettingsStore>()(
             setKeymapOverrides: (keymapOverrides) => set({ keymapOverrides }),
             setQuickCommandTypes: (quickCommandTypes) => set({ quickCommandTypes: [...quickCommandTypes] }),
             setRecentProjects: (recentProjects) => set({ recentProjects }),
+            setRecoveryEnabled: (recoveryEnabled) => set({ recoveryEnabled }),
             setThemeKey: (themeKey) => set({ themeKey }),
             setTimelineScale: (timelineScale) => set({ timelineScale }),
             setUiScale: (uiScale) => set({ uiScale }),
@@ -155,6 +157,7 @@ export const useSettingsStore = create<SettingsStore>()(
                 keymapOverrides: state.keymapOverrides,
                 quickCommandTypes: state.quickCommandTypes,
                 recentProjects: state.recentProjects,
+                recoveryEnabled: state.recoveryEnabled,
                 themeKey: state.themeKey,
                 timelineScale: state.timelineScale,
                 uiScale: state.uiScale,

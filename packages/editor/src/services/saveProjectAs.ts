@@ -1,98 +1,69 @@
-import { fsJoin, fsMkdir, fsPickDirectory, fsReadBinaryFile, fsReadDirectory, fsWriteBinaryFile } from './fs';
+import { fsJoin, fsMkdir, fsPickDirectory, fsReadBinaryFile, fsReadDirectory, fsWriteBinaryFileExclusive } from './fs';
+import { assertProjectDestinationCurrent, type ProjectDestinationOptions, withProjectDestination } from './projectDestination';
 
-const MANIFEST_FILE_NAME = 'game.json';
+export type SaveProjectAsOptions = ProjectDestinationOptions & {
+    beforeCopy?: () => Promise<void>;
+};
 
 export type SaveProjectAsResult = {
     manifestPath: string;
     projectPath: string;
 };
 
-type SaveProjectAsDependencies = {
-    fsJoin: (...parts: string[]) => Promise<string>;
-    fsMkdir: (path: string, recursive?: boolean) => Promise<void>;
-    fsReadBinaryFile: (path: string) => Promise<Uint8Array>;
-    fsReadDirectory: typeof fsReadDirectory;
-    fsWriteBinaryFile: (path: string, content: Uint8Array) => Promise<void>;
-    pickTargetDirectory: () => Promise<string | undefined>;
-};
-
-const defaultDependencies: SaveProjectAsDependencies = {
-    fsJoin,
-    fsMkdir,
-    fsReadBinaryFile,
-    fsReadDirectory,
-    fsWriteBinaryFile,
-    pickTargetDirectory: () => fsPickDirectory('Save Project As...'),
-};
-
 export async function saveProjectAs(
     currentProjectPath: string,
-    dependencies: SaveProjectAsDependencies = defaultDependencies,
+    options: SaveProjectAsOptions = {},
 ): Promise<SaveProjectAsResult | undefined> {
     const sourcePath = currentProjectPath.trim();
-    if (!sourcePath) {
-        throw new Error('Current project path is required.');
+    if (!sourcePath) throw new Error('Current project path is required.');
+    assertProjectDestinationCurrent(options);
+    const targetPath = await fsPickDirectory('Save Project As — select an empty folder');
+    if (!targetPath?.trim()) return;
+    assertProjectDestinationCurrent(options);
+    await options.beforeCopy?.();
+    assertProjectDestinationCurrent(options);
+    const entries = await collectProjectEntries(sourcePath, options);
+    if (!entries.some(entry => entry.relativePath === 'game.json' && !entry.isDirectory)) {
+        throw new Error('The source project has no game.json.');
     }
 
-    const selectedDirectory = await dependencies.pickTargetDirectory();
-    if (!selectedDirectory) {
-        return;
-    }
-
-    const targetPath = selectedDirectory.trim();
-    if (!targetPath) {
-        return;
-    }
-
-    if (pathsEqual(sourcePath, targetPath)) {
-        throw new Error('Save Project As target must be different from the current project folder.');
-    }
-
-    if (pathsOverlap(sourcePath, targetPath)) {
-        throw new Error('Save Project As target cannot be nested within the current project folder.');
-    }
-
-    await copyDirectoryRecursive(sourcePath, targetPath, dependencies);
-
-    return {
-        manifestPath: await dependencies.fsJoin(targetPath, MANIFEST_FILE_NAME),
-        projectPath: targetPath,
-    };
-}
-
-async function copyDirectoryRecursive(
-    sourcePath: string,
-    targetPath: string,
-    dependencies: SaveProjectAsDependencies,
-): Promise<void> {
-    await dependencies.fsMkdir(targetPath, true);
-
-    const entries = await dependencies.fsReadDirectory(sourcePath);
-    for (const entry of entries) {
-        const sourceEntryPath = await dependencies.fsJoin(sourcePath, entry.name);
-        const targetEntryPath = await dependencies.fsJoin(targetPath, entry.name);
-
-        if (entry.isDirectory) {
-            await copyDirectoryRecursive(sourceEntryPath, targetEntryPath, dependencies);
-            continue;
+    return withProjectDestination(targetPath, { ...options, sourcePath }, async (projectPath, check) => {
+        for (const entry of entries) {
+            const target = await fsJoin(projectPath, ...entry.relativePath.split('/'));
+            check();
+            if (entry.isDirectory) {
+                await fsMkdir(target, true);
+            } else {
+                const source = await fsJoin(sourcePath, ...entry.relativePath.split('/'));
+                const content = await fsReadBinaryFile(source);
+                check();
+                await fsWriteBinaryFileExclusive(target, content);
+            }
+            check();
         }
+        return { manifestPath: await fsJoin(projectPath, 'game.json'), projectPath };
+    });
+}
 
-        const content = await dependencies.fsReadBinaryFile(sourceEntryPath);
-        await dependencies.fsWriteBinaryFile(targetEntryPath, content);
+async function collectProjectEntries(
+    sourcePath: string,
+    options: ProjectDestinationOptions,
+    prefix = '',
+): Promise<Array<{ isDirectory: boolean; relativePath: string }>> {
+    const entries = await fsReadDirectory(await fsJoin(sourcePath, prefix));
+    assertProjectDestinationCurrent(options);
+    const result: Array<{ isDirectory: boolean; relativePath: string }> = [];
+    const names = new Set<string>();
+    for (const entry of entries) {
+        if (entry.isSymlink || (!entry.isDirectory && !entry.isFile)
+            || !entry.name || /[/\\]/u.test(entry.name) || entry.name.includes('\u0000') || ['.', '..', '.zerith-project-reservation'].includes(entry.name)
+            || names.has(entry.name.toLowerCase())) {
+            throw new Error(`Cannot safely copy source entry: ${prefix}${entry.name}`);
+        }
+        names.add(entry.name.toLowerCase());
+        const relativePath = `${prefix}${entry.name}`;
+        result.push({ isDirectory: entry.isDirectory, relativePath });
+        if (entry.isDirectory) result.push(...await collectProjectEntries(sourcePath, options, `${relativePath}/`));
     }
+    return result;
 }
-
-function normalizePath(path: string): string {
-    return path.replaceAll('\\', '/').replace(/\/+$/u, '').toLowerCase();
-}
-
-function pathsEqual(left: string, right: string): boolean {
-    return normalizePath(left) === normalizePath(right);
-}
-
-function pathsOverlap(sourcePath: string, targetPath: string): boolean {
-    const normalizedSource = normalizePath(sourcePath);
-    const normalizedTarget = normalizePath(targetPath);
-    return normalizedTarget.startsWith(`${normalizedSource}/`);
-}
-

@@ -14,3 +14,7 @@ test-results/
 # Game Assets
 games/test-game/assets/*
 /temp/
+
+# Generated desktop players
+packages/player/desktop-runtime/
+packages/player/desktop-shell/target/

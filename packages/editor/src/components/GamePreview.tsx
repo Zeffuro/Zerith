@@ -5,6 +5,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useEngineLifecycle } from '../hooks/useEngineLifecycle';
 import { useEngineMute } from '../hooks/useEngineMute';
 import { usePlaybackControl } from '../hooks/usePlaybackControl';
+import { usePlaytestPlayback } from '../hooks/usePlaytestPlayback';
+import { usePlaytestRunning } from '../hooks/usePlaytestRunning';
 import {
     localizeSceneMapForPreview,
     localizeScriptForPreview,
@@ -16,8 +18,9 @@ import { useEditorStore } from '../store/useEditorStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { editorTheme as t } from '../theme/editorTheme';
 import { createGamePreviewAccessibilityAttributes } from './gamePreviewAccessibility';
+import { StagePlacementOverlay } from './StagePlacementOverlay';
 
-export function GamePreview({ script }: { script: Script }) {
+export function GamePreview({ script, toolsHost }: { script: Script; toolsHost?: HTMLDivElement }) {
     // Manifest data
     const {
         activeFile,
@@ -49,7 +52,9 @@ export function GamePreview({ script }: { script: Script }) {
     const canvasReference = useRef<HTMLCanvasElement>(null);
     const containerReference = useRef<HTMLDivElement>(null);
     const [isFocused, setIsFocused] = useState(false);
-    const isStarted = playTrigger > stopTrigger;
+    const [isPlacing, setIsPlacing] = useState(false);
+    const isPlaytestRunning = usePlaytestRunning();
+    const isStarted = playTrigger > stopTrigger || isPlaytestRunning;
     const previewAccessibility = useMemo(
         () => createGamePreviewAccessibilityAttributes({ isFocused, isStarted }),
         [isFocused, isStarted],
@@ -85,7 +90,7 @@ export function GamePreview({ script }: { script: Script }) {
 
     const handleFocus = () => {
         setIsFocused(true);
-        engineReference.current?.setInputEnabled(true);
+        engineReference.current?.setInputEnabled(!isPlacing);
     };
 
     const handleBlur = () => {
@@ -125,6 +130,8 @@ export function GamePreview({ script }: { script: Script }) {
     });
 
     useEngineMute({ engineReferenceRef: engineReference, isMuted });
+    const previewSceneName = Object.keys(scenePaths).find(name => scenePaths[name] === activeFile);
+    usePlaytestPlayback(projectPath, previewSceneName ? { ...localizedScenes, [previewSceneName]: localizedScript } : localizedScenes);
 
     usePlaybackControl({
         containerReference,
@@ -149,7 +156,9 @@ export function GamePreview({ script }: { script: Script }) {
             style={{
                 backgroundColor: t.bg.preview,
                 border: isFocused ? `2px solid ${t.border.focus}` : '2px solid transparent',
+                flex: 1,
                 height: '100%',
+                minHeight: 0,
                 outline: 'none',
                 overflow: 'hidden',
                 position: 'relative',
@@ -158,7 +167,8 @@ export function GamePreview({ script }: { script: Script }) {
             }}
         >
             <canvas {...previewAccessibility.canvas} ref={canvasReference} />
-            {!isFocused && isStarted && (
+            <StagePlacementOverlay canvas={canvasReference} container={containerReference} onActiveChange={setIsPlacing} tools={toolsHost} />
+            {!isFocused && isStarted && !isPlacing && (
                 <div
                     {...previewAccessibility.focusHint}
                     style={{

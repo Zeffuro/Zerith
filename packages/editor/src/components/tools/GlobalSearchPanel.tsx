@@ -1,21 +1,20 @@
 import { Search, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import type { GlobalSearchMatch, GlobalSearchProjectData, GlobalSearchReplacementFile } from '../../services/globalSearch';
+import type { GlobalSearchMatch, GlobalSearchProjectData } from '../../services/globalSearch';
 
-import { fsWriteTextFile } from '../../services/fs';
-import { replaceProjectContent, searchProjectContent } from '../../services/globalSearch';
+import { searchProjectContent } from '../../services/globalSearch';
 import { openProjectEntry } from '../../services/openProjectEntry';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { GlobalSearchInputBar } from './GlobalSearchInputBar';
 import { cycleResultIndex, normalizeActiveResultIndex } from './globalSearchPanelModel';
 import { GlobalSearchResults } from './GlobalSearchResults';
-import { buildReplacePreviewMap, groupMatchesByFile } from './globalSearchResultsModel';
+import { buildReplacePreviewMap } from './globalSearchResultsModel';
+import { useSearchReplacement } from './useSearchReplacement';
 
 export function GlobalSearchContent({
     mode,
@@ -38,12 +37,8 @@ export function GlobalSearchContent({
     const [query, setQuery] = useState('');
     const [caseSensitive, setCaseSensitive] = useState(false);
     const [replaceText, setReplaceText] = useState('');
-    const [statusMessage, setStatusMessage] = useState<string | undefined>();
     const [useRegex, setUseRegex] = useState(false);
     const [activeResultIndex, setActiveResultIndex] = useState(-1);
-    const [pendingReplaceAllFiles, setPendingReplaceAllFiles] = useState<GlobalSearchReplacementFile[] | undefined>();
-    const [pendingReplaceAllMatchCount, setPendingReplaceAllMatchCount] = useState(0);
-    const [pendingReplaceAllGroupCount, setPendingReplaceAllGroupCount] = useState(0);
     const queryInputReference = useRef<HTMLInputElement>(null);
     const replaceInputReference = useRef<HTMLInputElement>(null);
     const resultButtonReferences = useRef<Record<number, HTMLButtonElement | null>>({});
@@ -75,7 +70,7 @@ export function GlobalSearchContent({
         () => searchProjectContent(query, projectData, { caseSensitive, regex: useRegex }),
         [caseSensitive, projectData, query, useRegex],
     );
-    const groupedResultCount = useMemo(() => groupMatchesByFile(results).length, [results]);
+    const replacement = useSearchReplacement({ matches: results, projectData, query, replacement: replaceText, textOptions: { caseSensitive, regex: useRegex } });
     const hasReplaceDraft = replaceText.length > 0;
     const replacePreview = useMemo(() => {
         if (regexError) return new Map<string, string>();
@@ -121,73 +116,16 @@ export function GlobalSearchContent({
         }
     };
     const replaceableResults = useMemo(() => results.filter((result) => result.replaceable), [results]);
-    const canReplace = hasReplaceDraft && trimmedQuery.length > 0 && !regexError;
-    const applyReplacementFiles = async (files: GlobalSearchReplacementFile[]): Promise<number> => {
-        let wroteCount = 0;
-        for (const file of files) {
-            try {
-                await fsWriteTextFile(file.filePath, file.content);
-                wroteCount += 1;
-            } catch (error) {
-                console.error('Failed to write replacement file:', file.filePath, error);
-            }
-        }
-        if (wroteCount === 0) return 0;
-        const workbench = useWorkbenchStore.getState();
-        const updatedPathSet = new Set(files.map((file) => file.filePath));
-        for (const tab of workbench.tabs) {
-            if (!updatedPathSet.has(tab.path)) continue;
-            const payload = files.find((file) => file.filePath === tab.path);
-            if (!payload) continue;
-            workbench.updateTabContent(tab.id, payload.content, { markDirty: false });
-        }
-        const project = useProjectStore.getState();
-        await project.loadManifest();
-        if (project.activeFile && updatedPathSet.has(project.activeFile)) {
-            const changed = files.find((file) => file.filePath === project.activeFile);
-            const options = changed && (changed.kind === 'macro' || changed.kind === 'scene') ? { forceView: 'timeline' as const } : undefined;
-            await openProjectEntry(project.activeFile, basename(project.activeFile), options);
-        }
-        return wroteCount;
-    };
-    const handleReplaceOne = async () => {
+    const canReplace = hasReplaceDraft && trimmedQuery.length > 0 && !regexError && !replacement.busy && !replacement.pending;
+    const handleReplaceOne = () => {
         if (!canReplace) return;
         const target = results[normalizedActiveResultIndex] ?? results[0];
         if (!target || !target.replaceable) return;
-        const files = replaceProjectContent(
-            query,
-            replaceText,
-            [target],
-            projectData,
-            { caseSensitive, regex: useRegex },
-        );
-        const wroteCount = await applyReplacementFiles(files);
-        setStatusMessage(wroteCount > 0 ? `Replaced 1 match in ${wroteCount} file(s).` : 'No changes were applied.');
-        setActiveResultIndex((previous) => cycleResultIndex(previous, results.length, 1));
+        void replacement.replaceOne(target);
     };
     const handleReplaceAll = () => {
         if (!canReplace || replaceableResults.length === 0) return;
-        const files = replaceProjectContent(
-            query,
-            replaceText,
-            replaceableResults,
-            projectData,
-            { caseSensitive, regex: useRegex },
-        );
-        setPendingReplaceAllFiles(files);
-        setPendingReplaceAllGroupCount(groupedResultCount);
-        setPendingReplaceAllMatchCount(replaceableResults.length);
-    };
-    const handleConfirmReplaceAll = async () => {
-        const files = pendingReplaceAllFiles;
-        if (!files || files.length === 0) {
-            setPendingReplaceAllFiles(undefined);
-            setStatusMessage('No changes were applied.');
-            return;
-        }
-        const wroteCount = await applyReplacementFiles(files);
-        setStatusMessage(wroteCount > 0 ? `Replaced ${pendingReplaceAllMatchCount} match(es) in ${wroteCount} file(s).` : 'No changes were applied.');
-        setPendingReplaceAllFiles(undefined);
+        void replacement.replaceAll();
     };
     return (
         <div
@@ -243,23 +181,23 @@ export function GlobalSearchContent({
                 replaceableResultCount={replaceableResults.length}
                 replaceInputReference={replaceInputReference}
                 replaceText={replaceText}
-                setCaseSensitive={setCaseSensitive}
-                setQuery={setQuery}
-                setReplaceText={setReplaceText}
-                setUseRegex={setUseRegex}
+                setCaseSensitive={value => { replacement.invalidate(); setCaseSensitive(value); }}
+                setQuery={value => { replacement.invalidate(); setQuery(value); }}
+                setReplaceText={value => { replacement.invalidate(); setReplaceText(value); }}
+                setUseRegex={value => { replacement.invalidate(); setUseRegex(value); }}
                 uiScale={uiScale}
                 useRegex={useRegex}
             />
             <ConfirmDialog
                 cancelText="Cancel"
                 confirmText="Replace All"
-                message={`Replace ${pendingReplaceAllMatchCount} match(es) across ${pendingReplaceAllGroupCount} file group(s)?`}
-                onCancel={() => setPendingReplaceAllFiles(undefined)}
-                onConfirm={() => void handleConfirmReplaceAll()}
-                open={Boolean(pendingReplaceAllFiles)}
+                message={`Replace matching content in ${replacement.pending?.files.length ?? 0} file(s)?`}
+                onCancel={replacement.cancel}
+                onConfirm={() => void replacement.confirm()}
+                open={Boolean(replacement.pending)}
                 title="Confirm Replace All"
             />
-            {statusMessage && <div style={{ color: t.text.faint, fontSize: `${11 * uiScale}px` }}>{statusMessage}</div>}
+            {replacement.status && <div role="status" style={{ color: t.text.faint, fontSize: `${11 * uiScale}px`, whiteSpace: 'pre-wrap' }}>{replacement.status}</div>}
             <div style={{ color: t.text.faint, fontSize: `${11 * uiScale}px` }}>
                 Replaceable hits: {replaceableResults.length} - Preview replacements: {hasReplaceDraft ? replacePreview.size : 0}
             </div>

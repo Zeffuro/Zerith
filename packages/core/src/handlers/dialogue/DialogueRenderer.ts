@@ -120,7 +120,7 @@ export class DialogueRenderer {
         this.messageMask = new Graphics()
             .rect(layout.messageX, layout.messageY, layout.messageWidth, layout.messageHeight)
             .fill(0xFF_FF_FF);
-        // Pixi's stencil mask needs to collect the Graphics geometry; includeInBuild hides it from normal rendering.
+        // Pixi's stencil mask collects the Graphics geometry. includeInBuild hides it from normal rendering.
         this.messageText.mask = this.messageMask;
 
         this.container.addChild(bg, this.nameText, this.messageText, this.messageMask);
@@ -148,6 +148,27 @@ export class DialogueRenderer {
     public setSpeaker(displayName: string, fill: number | string) {
         this.nameText.text = displayName;
         this.nameText.style.fill = fill;
+    }
+
+    public setTextSize(size: number): void {
+        const previousSize = Number.parseFloat(String(this.config.messageStyle?.fontSize ?? 28));
+        const previousNameSize = Number.parseFloat(String(this.config.nameStyle?.fontSize ?? Math.max(32, previousSize + 4)));
+        const nameSize = Number.isFinite(previousNameSize) && previousSize > 0
+            ? size * previousNameSize / previousSize
+            : size + 4;
+        this.config.messageStyle = { ...this.config.messageStyle, fontSize: size };
+        this.config.nameStyle = { ...this.config.nameStyle, fontSize: nameSize };
+        if (!this.container) return;
+        const layout = calculateDialogueLayout({
+            config: this.config,
+            displayHeight: this.display.height,
+            displayWidth: this.display.width,
+        });
+        this.messageText.style.fontSize = layout.messageFontSize;
+        this.messageText.position.set(layout.messageX, layout.messageY);
+        this.nameText.style.fontSize = layout.nameFontSize;
+        this.nameText.position.set(layout.nameX, layout.nameY);
+        this.messageMask.clear().rect(layout.messageX, layout.messageY, layout.messageWidth, layout.messageHeight).fill(0xFF_FF_FF);
     }
 
     public async showPortrait(portraitUrl: string, side: 'left' | 'right') {

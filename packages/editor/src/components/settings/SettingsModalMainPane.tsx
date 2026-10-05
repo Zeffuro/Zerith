@@ -9,6 +9,7 @@ import type { NonMacroEditorCommandType } from '../../plugins/types';
 import type { CodeEditorScreenReaderMode, CustomThemeEntry, DockLayoutPreset } from '../../store/settings/SettingsSchema';
 
 import { editorTheme as t } from '../../theme/editorTheme';
+import { RecoverySettings } from '../recovery/RecoverySettings';
 import { type SettingsControlId } from './settingsControlRegistry';
 import { SettingsDetailPanel } from './SettingsDetailPanel';
 import { SettingsKeymapPanel } from './SettingsKeymapPanel';
@@ -284,6 +285,8 @@ export function SettingsModalMainPane({
                     />
                 </div>
             ) : (
+                <>
+                {selectedPanelId === 'general' || selectedPanelId === 'general-autosave' ? <RecoverySettings /> : undefined}
                 <SettingsDetailPanel
                     activeDockLayoutPresetId={activeDockLayoutPresetId}
                     audiosheetShortcutTargetMode={audiosheetShortcutTargetMode}
@@ -335,6 +338,7 @@ export function SettingsModalMainPane({
                     toggleQuickCommandType={toggleQuickCommandType}
                     uiScale={uiScale}
                 />
+                </>
             )}
         </section>
     );

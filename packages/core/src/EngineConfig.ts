@@ -35,6 +35,7 @@ export interface EngineConfig {
     notifications?: NotificationConfig;
     onSceneNavigation?: (sceneName: string, commandType: SceneNavigationCommandType) => SceneNavigationAction;
     overlay?: OverlayConfig;
+    player?: PlayerConfig;
     preview?: {
         fontAssetUrl?: string;
         useDisplayConfig?: boolean;
@@ -46,6 +47,32 @@ export interface EngineConfig {
 }
 
 export type EngineConfigFile = z.infer<typeof EngineConfigSchema>;
+
+export interface PlayerConfig {
+    accentColor?: number | string;
+    actionLabels?: Partial<Record<PlayerMenuAction, string>>;
+    background?: string;
+    backgroundOpacity?: number;
+    buttonColor?: number | string;
+    buttonHeight?: number;
+    cornerStyle?: 'pill' | 'rounded' | 'square';
+    enabled?: boolean;
+    menuFont?: 'monospace' | 'serif' | 'system';
+    menuFontSize?: number;
+    menuWidth?: number;
+    panelColor?: number | string;
+    panelOpacity?: number;
+    pauseActions?: ('history' | 'load' | 'resume' | 'save' | 'settings' | 'title')[];
+    rememberSettings?: boolean;
+    saveSlots?: number;
+    subtitle?: string;
+    textColor?: number | string;
+    title?: string;
+    titleActions?: ('continue' | 'load' | 'new-game' | 'settings')[];
+    titleAlignment?: 'center' | 'left' | 'right';
+}
+
+export type PlayerMenuAction = 'continue' | 'history' | 'load' | 'new-game' | 'resume' | 'save' | 'settings' | 'title';
 
 export type SceneNavigationAction = 'execute' | 'skip';
 

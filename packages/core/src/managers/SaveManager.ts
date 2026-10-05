@@ -4,13 +4,17 @@ import type { ISaveManager } from '../interfaces/managers';
 import type { IStorageProvider } from '../interfaces/providers';
 import type { ContentSchemaVersion } from '../schemas/contentVersionSchemas';
 import type { Serializable, SystemState } from '../types';
+import type { FlowContinuation } from './flowContinuation';
 import type { HistoryEntry } from './HistoryManager';
 
 import { CURRENT_CONTENT_SCHEMA_VERSION, LEGACY_CONTENT_SCHEMA_VERSION } from '../schemas/contentVersionSchemas';
 import { createDefaultSystemState } from '../types';
 import { deepClone } from '../utils/deepClone';
+import { isCursor, parseFlowContinuation } from './flowContinuation';
+import { buildSavePreviewMeta, buildSaveThumbnailMeta } from './savePresentationMeta';
 
-export const CURRENT_SAVE_SCHEMA_VERSION = 1 as const;
+export { buildSavePreviewMeta, buildSaveThumbnailMeta, isSaveThumbnailDataUrl } from './savePresentationMeta';
+export const CURRENT_SAVE_SCHEMA_VERSION = 2 as const;
 export const LEGACY_SAVE_SCHEMA_VERSION = 0 as const;
 
 export interface SaveContext {
@@ -18,6 +22,7 @@ export interface SaveContext {
     getContentSchemaVersion?: () => ContentSchemaVersion;
     getCurrentChapterName?: () => string | undefined;
     getCurrentSceneName(): string;
+    getFlowContinuation?: () => FlowContinuation;
     getHistorySnapshot?: () => readonly HistoryEntry[];
     getLastSavePoint(): number;
     getStateSnapshot(): Record<string, Serializable>;
@@ -49,11 +54,12 @@ export interface SaveOptions {
     label?: string;
 }
 
-export type SaveSchemaVersion = typeof CURRENT_SAVE_SCHEMA_VERSION | typeof LEGACY_SAVE_SCHEMA_VERSION;
+export type SaveSchemaVersion = 1 | typeof CURRENT_SAVE_SCHEMA_VERSION | typeof LEGACY_SAVE_SCHEMA_VERSION;
 export type SaveSlotKind = 'bookmark' | 'chapter' | 'manual';
 
 export interface SaveState {
     contentSchemaVersion?: ContentSchemaVersion;
+    continuation?: FlowContinuation;
     index: number;
     meta: SaveMeta;
     saveSchemaVersion?: SaveSchemaVersion;
@@ -62,10 +68,7 @@ export interface SaveState {
     system: SystemState;
 }
 
-const SAVE_PREVIEW_MAX_LENGTH = 120;
 const SAVE_HISTORY_MAX_ENTRIES = 200;
-const SAVE_THUMBNAIL_MAX_LENGTH = 300_000;
-const SAVE_THUMBNAIL_PATTERN = /^data:image\/(?:png|jpe?g|webp);base64,[a-z0-9+/=]+$/i;
 
 const LEGACY_SYSTEM_KEYS = new Set([
     '__sys_background',
@@ -176,6 +179,10 @@ export class SaveManager implements ISaveManager {
 
     public save(slot: number = 1, labelOrOptions?: SaveOptions | string) {
         if (this.destroyed) return;
+        const index = this.context.getLastSavePoint();
+        if (!isCursor(index)) throw new Error('Cannot save an invalid scene cursor.');
+        const continuation = this.context.getFlowContinuation?.();
+        if (continuation !== undefined && !parseFlowContinuation(continuation)) throw new Error('Cannot save an invalid continuation.');
         const options = normalizeSaveOptions(labelOrOptions);
         const currentSceneName = this.context.getCurrentSceneName();
         const contentSchemaVersion = this.context.getContentSchemaVersion?.() ?? LEGACY_CONTENT_SCHEMA_VERSION;
@@ -202,8 +209,9 @@ export class SaveManager implements ISaveManager {
         };
 
         const saveData: SaveState = {
+            ...(continuation === undefined ? {} : { continuation: deepClone(continuation) }),
             contentSchemaVersion,
-            index: this.context.getLastSavePoint(),
+            index,
             meta,
             saveSchemaVersion: CURRENT_SAVE_SCHEMA_VERSION,
             sceneName: currentSceneName,
@@ -272,7 +280,7 @@ export class SaveManager implements ISaveManager {
     }
 
     private isSaveSchemaVersion(value: unknown): value is SaveSchemaVersion {
-        return value === LEGACY_SAVE_SCHEMA_VERSION || value === CURRENT_SAVE_SCHEMA_VERSION;
+        return typeof value === 'number' && [1, CURRENT_SAVE_SCHEMA_VERSION, LEGACY_SAVE_SCHEMA_VERSION].includes(value);
     }
 
     private isSaveSlotKind(value: unknown): value is SaveSlotKind {
@@ -309,9 +317,12 @@ export class SaveManager implements ISaveManager {
         try {
             const parsed: unknown = JSON.parse(json);
             if (!this.isRecord(parsed)) return undefined;
-            if (typeof parsed.index !== 'number') return undefined;
+            if (!isCursor(parsed.index)) return undefined;
             if (typeof parsed.sceneName !== 'string') return undefined;
             if (!this.isSerializableRecord(parsed.state)) return undefined;
+            if (parsed.saveSchemaVersion !== undefined && !this.isSaveSchemaVersion(parsed.saveSchemaVersion)) return undefined;
+            const continuation = parsed.continuation === undefined ? undefined : parseFlowContinuation(parsed.continuation);
+            if (parsed.continuation !== undefined && (!continuation || parsed.saveSchemaVersion !== CURRENT_SAVE_SCHEMA_VERSION)) return undefined;
 
             const meta = parsed.meta;
             if (meta !== undefined && !this.isSaveMeta(meta)) return undefined;
@@ -332,6 +343,7 @@ export class SaveManager implements ISaveManager {
             const parsedSystem = this.toSystemState(parsed.system);
 
             return {
+                ...(continuation === undefined ? {} : { continuation }),
                 contentSchemaVersion,
                 index: parsed.index,
                 meta: {
@@ -506,28 +518,6 @@ export class SaveManager implements ISaveManager {
     }
 }
 
-export function buildSavePreviewMeta(dialogue: SystemState['dialogue'] | undefined): Pick<SaveMeta, 'previewSpeaker' | 'previewText'> {
-    if (!dialogue) return {};
-
-    const previewSpeaker = normalizeSavePreviewValue(dialogue.speaker);
-    const previewText = truncateSavePreviewText(normalizeSavePreviewValue(stripRuntimeTextMarkup(dialogue.text)));
-
-    return {
-        ...(previewSpeaker ? { previewSpeaker } : {}),
-        ...(previewText ? { previewText } : {}),
-    };
-}
-
-export function buildSaveThumbnailMeta(thumbnailDataUrl: string | undefined): Pick<SaveMeta, 'thumbnailDataUrl'> {
-    return isSaveThumbnailDataUrl(thumbnailDataUrl) ? { thumbnailDataUrl } : {};
-}
-
-export function isSaveThumbnailDataUrl(value: unknown): value is string {
-    return typeof value === 'string'
-        && value.length <= SAVE_THUMBNAIL_MAX_LENGTH
-        && SAVE_THUMBNAIL_PATTERN.test(value);
-}
-
 function isSaveHistoryEntry(value: unknown): value is HistoryEntry {
     return typeof value === 'object'
         && value !== null
@@ -570,22 +560,6 @@ function normalizeSaveOptions(value: SaveOptions | string | undefined): SaveOpti
     return typeof value === 'string'
         ? { label: value }
         : (value ?? {});
-}
-
-function normalizeSavePreviewValue(value: string | undefined): string | undefined {
-    const normalized = value?.replaceAll(/\s+/g, ' ').trim();
-    return normalized && normalized.length > 0 ? normalized : undefined;
-}
-
-function stripRuntimeTextMarkup(value: string): string {
-    return value
-        .replaceAll(/{[^}]+}/g, '')
-        .replaceAll(/<[^>]+>/g, '');
-}
-
-function truncateSavePreviewText(value: string | undefined): string | undefined {
-    if (!value || value.length <= SAVE_PREVIEW_MAX_LENGTH) return value;
-    return `${value.slice(0, SAVE_PREVIEW_MAX_LENGTH - 3).trimEnd()}...`;
 }
 
 function withOptionalHistory(system: SystemState, history: HistoryEntry[]): SystemState {

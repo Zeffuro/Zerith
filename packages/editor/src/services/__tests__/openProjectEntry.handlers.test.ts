@@ -27,6 +27,17 @@ describe('openProjectEntry jsonCoordinator', () => {
         resetOpenProjectEntryMocks();
     });
 
+    it.each(['/other', '/project'])('does not apply a delayed scene after the project session changes to %s', async projectPath => {
+        let resolve!: (text: string) => void;
+        openProjectEntryMocks.fsReadTextFile.mockImplementationOnce(() => new Promise<string>(done => { resolve = done; }));
+        const pending = openJsonEntry('/project/scenes/intro.json');
+        setOpenProjectEntryState({ projectGeneration: 2, projectPath });
+        resolve('[{"type":"wait"}]');
+        await pending;
+        expect(openProjectEntryMocks.applyScriptFile).not.toHaveBeenCalled();
+        expect(openProjectEntryMocks.executeWorkbenchOpenAction).not.toHaveBeenCalled();
+    });
+
     it('prefers schema kind over manifest-derived kind when both are present', async () => {
         openProjectEntryMocks.fsReadTextFile.mockResolvedValueOnce('{"$schema":"zerith/items"}');
 

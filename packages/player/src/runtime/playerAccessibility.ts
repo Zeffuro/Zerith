@@ -30,6 +30,7 @@ export type PlayerAccessibilityShell = {
 };
 
 type PlayerAccessibilityShellOptions = {
+    alwaysCreateLiveRegion?: boolean;
     container?: unknown;
     document?: PlayerAccessibilityDocument;
     label?: string;
@@ -46,9 +47,9 @@ export function configurePlayerAccessibilityShell(
 
     const accessibility = config.accessibility;
     if (
-        !accessibility
-        || (accessibility.captions !== true && accessibility.selfVoicing !== true)
-        || typeof accessibility.announceDialogue === 'function'
+        (!options.alwaysCreateLiveRegion && (!accessibility
+        || (accessibility.captions !== true && accessibility.selfVoicing !== true)))
+        || typeof accessibility?.announceDialogue === 'function'
     ) {
         return { config, dispose: noop };
     }
@@ -63,16 +64,18 @@ export function configurePlayerAccessibilityShell(
         ?? toAppendTarget(canvas.parentElement)
         ?? toAppendTarget(documentReference.body);
     appendTarget?.append(liveRegion);
+    const announce = createPlayerDialogueAnnouncer(liveRegion);
 
     return {
         config: {
             ...config,
             accessibility: {
                 ...accessibility,
-                announceDialogue: createPlayerDialogueAnnouncer(liveRegion),
+                announceDialogue: announce,
             },
         },
         dispose: () => {
+            announce.dispose();
             liveRegion.remove?.();
         },
         liveRegion,
@@ -80,9 +83,20 @@ export function configurePlayerAccessibilityShell(
 }
 
 export function createPlayerDialogueAnnouncer(liveRegion: PlayerAccessibilityLiveRegion) {
-    return (announcement: DialogueAnnouncement): void => {
-        liveRegion.textContent = formatPlayerDialogueAnnouncement(announcement);
+    let speaking = false;
+    const stop = () => {
+        if (speaking) globalThis.speechSynthesis?.cancel();
+        speaking = false;
     };
+    const announce = (announcement: DialogueAnnouncement): void => {
+        liveRegion.textContent = formatPlayerDialogueAnnouncement(announcement);
+        stop();
+        if (announcement.selfVoicing && globalThis.speechSynthesis && typeof SpeechSynthesisUtterance !== 'undefined') {
+            speaking = true;
+            globalThis.speechSynthesis.speak(new SpeechSynthesisUtterance(liveRegion.textContent));
+        }
+    };
+    return Object.assign(announce, { dispose: stop });
 }
 
 export function formatPlayerDialogueAnnouncement(announcement: Pick<DialogueAnnouncement, 'speaker' | 'text'>): string {

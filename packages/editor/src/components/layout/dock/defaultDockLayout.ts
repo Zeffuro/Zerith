@@ -59,7 +59,9 @@ export const DEFAULT_DOCK_LAYOUT = {
                         children:[
                             { component: 'console', id: 'console', name: 'Console', type: 'tab' },
                             { component: 'project_validation', id: 'project_validation', name: 'Validation', type: 'tab' },
-                            { component: 'global_search', id: 'global_search', name: 'Search', type: 'tab' }
+                            { component: 'global_search', id: 'global_search', name: 'Search', type: 'tab' },
+                            { component: 'playtests', id: 'playtests', name: 'Playtests', type: 'tab' },
+                            { component: 'story_map', id: 'story_map', name: 'Story map', type: 'tab' },
                     ],
                     type: 'tabset',
                     weight: 25,

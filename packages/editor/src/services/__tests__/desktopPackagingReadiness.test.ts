@@ -3,18 +3,18 @@ import { describe, expect, it } from 'vitest';
 import { createDesktopPackagingReadinessReport } from '../desktopPackagingReadiness';
 
 describe('desktopPackagingReadiness', () => {
-    it('keeps packaged desktop game export blocked until shell and permission requirements exist', () => {
+    it('reports the standalone game shell and package command as available', () => {
         const report = createDesktopPackagingReadinessReport();
 
-        expect(report.status).toBe('blocked');
-        expect(report.ready).toBe(2);
-        expect(report.blocked).toBe(3);
+        expect(report.status).toBe('ready');
+        expect(report.ready).toBe(5);
+        expect(report.blocked).toBe(0);
         expect(report.requirements.map((requirement) => [requirement.id, requirement.status])).toEqual([
             ['exportArtifactContract', 'ready'],
             ['runtimeSmokeGate', 'ready'],
-            ['separatePlayerShell', 'blocked'],
-            ['scopedGamePermissions', 'blocked'],
-            ['packagingCommand', 'blocked'],
+            ['separatePlayerShell', 'ready'],
+            ['scopedGamePermissions', 'ready'],
+            ['packagingCommand', 'ready'],
         ]);
     });
 

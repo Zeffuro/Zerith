@@ -20,9 +20,9 @@ import { openLocalizationWorkbenchTab } from '../../services/localizationWorkben
 import { openProjectEntry } from '../../services/openProjectEntry';
 import { executeProjectValidationCommand } from '../../services/projectValidationCommand';
 import { isTauriRuntime } from '../../services/runtime/runtimeEnvironment';
-import { saveProjectAs } from '../../services/saveProjectAs';
 import { executeConsoleMessageAction } from '../../store/actions/consoleMessageActions';
-import { executeCloseProjectAction, executeOpenProjectInCurrentWindow } from '../../store/actions/projectOpenActions';
+import { saveAndOpenProjectAs } from '../../store/actions/projectDestinationActions';
+import { executeCloseProjectAction } from '../../store/actions/projectOpenActions';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -113,23 +113,16 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
         if (!projectPath) return;
 
         try {
-            markManualSave();
-            await saveAllDirtyFiles();
-
-            const result = await saveProjectAs(projectPath);
+            const result = await saveAndOpenProjectAs();
             if (!result) return;
 
-            const opened = await executeOpenProjectInCurrentWindow(result.manifestPath, {
-                allowNewWindow: false,
-                prompt: false,
-            });
-            if (opened.status !== 'opened-current') return;
             if (isTauriRuntime()) addRecentProject(result.manifestPath);
             await handleOpenInitialProjectEntry();
         } catch (error) {
             console.error('Save Project As from command palette failed:', error);
+            useEditorStore.getState().announceOperationStatus(error instanceof Error ? error.message : String(error), 'error');
         }
-    }, [addRecentProject, handleOpenInitialProjectEntry, markManualSave, projectPath, saveAllDirtyFiles]);
+    }, [addRecentProject, handleOpenInitialProjectEntry, projectPath]);
 
     const handleOpenProjectFolder = useCallback(async () => {
         if (!projectPath) return;

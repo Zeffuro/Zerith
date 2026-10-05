@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
     configurePlayerAccessibilityShell,
@@ -34,6 +34,22 @@ class FakeElement implements PlayerAccessibilityLiveRegion {
 }
 
 describe('playerAccessibility', () => {
+    afterEach(() => vi.unstubAllGlobals());
+    it('speaks only self-voiced lines and stops its speech on disposal', () => {
+        const speech = { cancel: vi.fn(), speak: vi.fn() };
+        vi.stubGlobal('speechSynthesis', speech);
+        vi.stubGlobal('SpeechSynthesisUtterance', class {
+            text: string;
+            constructor(text: string) { this.text = text; }
+        });
+        const announce = createPlayerDialogueAnnouncer(new FakeElement());
+        announce({ captions: true, selfVoicing: false, speaker: 'Ari', text: 'The last train.' });
+        expect(speech.speak).not.toHaveBeenCalled();
+        announce({ captions: false, selfVoicing: true, speaker: 'Ari', text: 'The last train.' });
+        expect(speech.speak).toHaveBeenCalledWith(expect.objectContaining({ text: 'Ari: The last train.' }));
+        announce.dispose();
+        expect(speech.cancel).toHaveBeenCalledOnce();
+    });
     it('marks the player canvas as a focusable application surface', () => {
         const canvas = new FakeElement() as FakeElement & PlayerAccessibilityCanvas;
         canvas.tabIndex = -1;

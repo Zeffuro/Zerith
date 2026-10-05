@@ -93,6 +93,32 @@ export const PreviewConfigSchema = z.strictObject({
     useDisplayConfig: z.boolean().optional(),
 });
 
+const PlayerColorSchema = z.union([z.int().min(0).max(0xFF_FF_FF), z.string().regex(/^#[\da-f]{6}$/iu)]);
+
+export const PlayerConfigSchema = z.strictObject({
+    accentColor: z.union([z.int().min(0).max(0xFF_FF_FF), z.string().regex(/^#[\da-f]{6}$/iu)]).optional(),
+    actionLabels: z.partialRecord(z.enum(['continue', 'history', 'load', 'new-game', 'resume', 'save', 'settings', 'title']), z.string().trim().min(1).max(80)).optional(),
+    background: z.string().trim().min(1).max(2048).optional(),
+    backgroundOpacity: z.float64().min(0).max(1).optional(),
+    buttonColor: PlayerColorSchema.optional(),
+    buttonHeight: z.int().min(44).max(80).optional(),
+    cornerStyle: z.enum(['rounded', 'square', 'pill']).optional(),
+    enabled: z.boolean().optional(),
+    menuFont: z.enum(['system', 'serif', 'monospace']).optional(),
+    menuFontSize: z.int().min(14).max(24).optional(),
+    menuWidth: z.int().min(220).max(600).optional(),
+    panelColor: PlayerColorSchema.optional(),
+    panelOpacity: z.float64().min(0).max(1).optional(),
+    pauseActions: z.array(z.enum(['history', 'load', 'resume', 'save', 'settings', 'title'])).max(6).optional(),
+    rememberSettings: z.boolean().optional(),
+    saveSlots: z.int().min(1).max(24).optional(),
+    subtitle: z.string().trim().min(1).max(240).optional(),
+    textColor: PlayerColorSchema.optional(),
+    title: z.string().trim().min(1).max(120).optional(),
+    titleActions: z.array(z.enum(['continue', 'load', 'new-game', 'settings'])).max(4).optional(),
+    titleAlignment: z.enum(['left', 'center', 'right']).optional(),
+});
+
 export const EngineConfigSchema = z.looseObject({
     $schema: z.literal('zerith/engine-config').optional(),
     accessibility: AccessibilityConfigSchema.optional(),
@@ -102,6 +128,7 @@ export const EngineConfigSchema = z.looseObject({
     input: InputConfigSchema.optional(),
     notifications: z.record(z.string(), z.unknown()).optional(),
     overlay: z.record(z.string(), z.unknown()).optional(),
+    player: PlayerConfigSchema.optional(),
     preview: PreviewConfigSchema.optional(),
     schemaVersion: ContentSchemaVersionSchema.optional(),
     startScreen: StartScreenConfigSchema.optional(),

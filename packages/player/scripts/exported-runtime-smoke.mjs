@@ -268,10 +268,16 @@ async function runRuntimeSmoke(url, expectedTexts) {
 
     try {
         await page.goto(url, { waitUntil: 'networkidle' });
-        await page.locator('canvas[role="application"][aria-label="Zerith visual novel player"]').waitFor({
+        await page.locator('canvas[role="application"]').waitFor({
             state: 'visible',
             timeout: 15_000,
         });
+
+        const newGame = page.locator('.zerith-player-shell').getByRole('button', { name: 'New Game', exact: true });
+        if (await newGame.isVisible()) {
+            await newGame.click();
+            await waitForStatusText(page, expectedTexts[0], 15_000);
+        }
 
         for (const expectedText of expectedTexts) {
             await pressUntilStatusText(page, expectedText);
@@ -295,6 +301,7 @@ async function pressUntilStatusText(page, expectedText) {
     let previousStatusTexts = await readStatusTexts(page);
 
     while (Date.now() < deadline) {
+        if (statusTextsInclude(await readStatusTexts(page), expectedText)) return;
         await page.keyboard.press('Enter');
         try {
             await waitForStatusText(page, expectedText, 1_500);

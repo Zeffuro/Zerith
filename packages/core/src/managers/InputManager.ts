@@ -81,72 +81,63 @@ export class InputManager {
         };
 
         this.boundOnKeyDown = (event: KeyboardEvent) => {
-            const isGameKey = [
-                ...this.config.navigateUpKeys,
-                ...this.config.navigateDownKeys,
-                ...this.config.navigateLeftKeys,
-                ...this.config.navigateRightKeys,
-                ...this.config.advanceKeys
-            ].includes(event.key);
+            if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey
+                || isFormTarget(event.target) || isFormTarget(globalThis.document?.activeElement)) return;
 
-            if (isGameKey) {
-                // event.preventDefault();
-            }
-
-            // Navigation
-            if (this.config.navigateUpKeys.includes(event.key)) {
-                this.events.emit('input:navigate', 'up');
-            }
-            if (this.config.navigateDownKeys.includes(event.key)) {
-                this.events.emit('input:navigate', 'down');
-            }
-            if (this.config.navigateLeftKeys.includes(event.key)) {
-                this.events.emit('input:navigate', 'left');
-            }
-            if (this.config.navigateRightKeys.includes(event.key)) {
-                this.events.emit('input:navigate', 'right');
-            }
-
-            // Confirm
-            if (this.config.confirmKeys.includes(event.key)) {
-                this.events.emit('input:confirm');
-            }
-
-            // Back / Menu
-            if (this.config.backKeys.includes(event.key)) {
+            const overlayOpen = this.context.isOverlayOpen();
+            const started = this.context.isStarted();
+            if ((overlayOpen && this.config.backKeys.includes(event.key)) || event.key === this.config.menuKey) {
                 event.preventDefault();
-                if (this.context.isOverlayOpen()) {
+                if (event.repeat) return;
+                if (overlayOpen) {
                     this.events.emit('input:back');
-                } else if (this.context.isStarted()) {
+                } else if (started && event.key === this.config.menuKey) {
                     this.events.emit('menu:toggle');
                 }
                 return;
             }
 
-            // Start screen
-            if (!this.context.isStarted()) {
+            if (!started) {
                 if (this.config.advanceKeys.includes(event.key)) {
                     event.preventDefault();
-                    this.events.emit('input:start');
+                    if (!event.repeat) this.events.emit('input:start');
                 }
                 return;
             }
 
-            // Advance dialogue
+            const directions = [
+                ['up', this.config.navigateUpKeys],
+                ['down', this.config.navigateDownKeys],
+                ['left', this.config.navigateLeftKeys],
+                ['right', this.config.navigateRightKeys],
+            ] as const;
+            const navigation = directions.find(([, keys]) => keys.includes(event.key));
+            if (navigation) {
+                event.preventDefault();
+                this.events.emit('input:navigate', navigation[0]);
+                if (overlayOpen) return;
+            }
+            if (this.config.confirmKeys.includes(event.key)) {
+                event.preventDefault();
+                this.events.emit('input:confirm');
+                if (overlayOpen) return;
+            }
+            if (overlayOpen) return;
+
             if (this.config.advanceKeys.includes(event.key)) {
                 event.preventDefault();
-                if (!this.context.isOverlayOpen()) {
-                    this.events.emit('input:skip');
-                    this.events.emit('input:next');
-                }
+                this.events.emit('input:skip');
+                this.events.emit('input:next');
                 return;
             }
 
-            // Save/Load Shortcuts
             const key = event.key.toLowerCase();
-            if (key === this.config.saveKey) {
+            if (event.repeat) return;
+            if (key === this.config.saveKey.toLowerCase()) {
+                event.preventDefault();
                 this.events.emit('input:save', 1);
-            } else if (key === this.config.loadKey) {
+            } else if (key === this.config.loadKey.toLowerCase()) {
+                event.preventDefault();
                 this.events.emit('input:load', 1);
             }
         };
@@ -176,6 +167,9 @@ export class InputManager {
 
     private startGamepadPolling() {
         this.stopGamepadPolling();
+        const gamepad = navigator.getGamepads()[0];
+        this.prevGamepadButtons = gamepad?.buttons.map(button => button.pressed) ?? [];
+        this.prevGamepadAxes = gamepad ? [...gamepad.axes] : [];
         this.isPolling = true;
 
         const poll = () => {
@@ -187,44 +181,38 @@ export class InputManager {
                 const axes = [...gamepad.axes];
 
                 const pressed = (button: number) => buttons[button] && !this.prevGamepadButtons[button];
+                const overlayOpen = this.context.isOverlayOpen();
+                const started = this.context.isStarted();
 
-                // D-pad buttons
-                if (pressed(this.config.gamepadUpButton)) this.events.emit('input:navigate', 'up');
-                if (pressed(this.config.gamepadDownButton)) this.events.emit('input:navigate', 'down');
-                if (pressed(this.config.gamepadLeftButton)) this.events.emit('input:navigate', 'left');
-                if (pressed(this.config.gamepadRightButton)) this.events.emit('input:navigate', 'right');
-
-                // Axes
                 const stickY = axes[1] ?? 0;
                 const previousStickY = this.prevGamepadAxes[1] ?? 0;
-                if (stickY < -0.5 && previousStickY >= -0.5) this.events.emit('input:navigate', 'up');
-                if (stickY > 0.5 && previousStickY <= 0.5) this.events.emit('input:navigate', 'down');
-
                 const stickX = axes[0] ?? 0;
                 const previousStickX = this.prevGamepadAxes[0] ?? 0;
-                if (stickX < -0.5 && previousStickX >= -0.5) this.events.emit('input:navigate', 'left');
-                if (stickX > 0.5 && previousStickX <= 0.5) this.events.emit('input:navigate', 'right');
-
-                // Buttons
-                if (pressed(this.config.gamepadConfirmButton)) this.events.emit('input:confirm');
-
-                if (pressed(this.config.gamepadBackButton)) {
-                    if (this.context.isOverlayOpen()) this.events.emit('input:back');
-                    else if (this.context.isStarted()) this.events.emit('menu:toggle');
-                }
-
-                if (pressed(this.config.gamepadAdvanceButton)) {
-                    if (this.context.isStarted() && !this.context.isOverlayOpen()) {
-                        this.events.emit('input:skip');
-                        this.events.emit('input:next');
-                    } else if (!this.context.isStarted()) {
-                        this.events.emit('input:start');
+                const menuPressed = pressed(this.config.gamepadBackButton) || pressed(this.config.gamepadMenuButton);
+                const navigation = [
+                    ['up', pressed(this.config.gamepadUpButton) || (stickY < -0.5 && previousStickY >= -0.5)],
+                    ['down', pressed(this.config.gamepadDownButton) || (stickY > 0.5 && previousStickY <= 0.5)],
+                    ['left', pressed(this.config.gamepadLeftButton) || (stickX < -0.5 && previousStickX >= -0.5)],
+                    ['right', pressed(this.config.gamepadRightButton) || (stickX > 0.5 && previousStickX <= 0.5)],
+                ] as const;
+                if (!isFormTarget(globalThis.document?.activeElement)) {
+                    if (menuPressed && (started || overlayOpen)) {
+                        this.events.emit(overlayOpen ? 'input:back' : 'menu:toggle');
+                    } else {
+                        const direction = navigation.find(([, active]) => active);
+                        if (direction) this.events.emit('input:navigate', direction[0]);
+                        if (!(direction && overlayOpen) && pressed(this.config.gamepadConfirmButton) && started) {
+                            this.events.emit('input:confirm');
+                        }
+                        if (pressed(this.config.gamepadAdvanceButton) && !overlayOpen) {
+                            if (started) {
+                                this.events.emit('input:skip');
+                                this.events.emit('input:next');
+                            } else {
+                                this.events.emit('input:start');
+                            }
+                        }
                     }
-                }
-
-                if (pressed(this.config.gamepadMenuButton) && this.context.isStarted()) {
-                    if (this.context.isOverlayOpen()) this.events.emit('input:back');
-                    else this.events.emit('menu:toggle');
                 }
 
                 this.prevGamepadButtons = buttons;
@@ -242,4 +230,10 @@ export class InputManager {
             this.gamepadPollId = undefined;
         }
     }
+}
+
+function isFormTarget(target: EventTarget | null | undefined): boolean {
+    if (!target || !('closest' in target) || typeof target.closest !== 'function') return false;
+    const element = target as Element;
+    return Boolean(element.closest('input, textarea, select, button, [contenteditable]:not([contenteditable="false"])'));
 }

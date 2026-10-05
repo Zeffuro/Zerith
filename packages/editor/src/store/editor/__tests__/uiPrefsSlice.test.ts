@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { EditorState } from '../types';
+import type { EditorState, UiPrefsSlice } from '../types';
 
 const settingsState = vi.hoisted(() => ({
     autosaveEnabled: true,
@@ -244,14 +244,18 @@ describe('createUiPrefsSlice', () => {
     });
 
     it('opens and closes new project modal through direct actions', () => {
-        const set = vi.fn();
+        const set = vi.fn<(update: (state: UiPrefsSlice) => Partial<UiPrefsSlice>) => void>();
         const slice = createUiPrefsSlice(set as never);
 
         slice.openNewProjectModal();
         slice.closeNewProjectModal();
 
-        expect(set).toHaveBeenNthCalledWith(1, { isNewProjectModalOpen: true });
-        expect(set).toHaveBeenNthCalledWith(2, { isNewProjectModalOpen: false });
+        const opened = set.mock.calls[0][0](slice);
+        const closed = set.mock.calls[1][0]({ ...slice, ...opened });
+        expect(opened).toEqual({ isNewProjectModalOpen: true, newProjectModalGeneration: 1 });
+        expect(closed).toEqual({ isNewProjectModalOpen: false, newProjectModalGeneration: 2 });
+        slice.openNewProjectModal();
+        expect(set.mock.calls[2][0]({ ...slice, ...closed }).newProjectModalGeneration).toBe(3);
     });
 
     it('opens and closes release notes modal through direct actions', () => {

@@ -4,6 +4,8 @@ import type { IAssetManager, IDisplayManager, IEventBus, IStateManager } from '.
 import type { SaveState } from '../managers/SaveManager';
 import type { BaseCommand, CommandHandler } from '../types';
 
+import { Logger } from '../utils/Logger';
+
 export interface BackgroundCommand extends BaseCommand {
     assetUrl: string;
     type: 'background';
@@ -13,8 +15,11 @@ export class BackgroundHandler implements CommandHandler<BackgroundCommand> {
     public autoNext = true;
     public type = 'background' as const;
     private readonly assets: IAssetManager;
+    private destroyed = false;
     private readonly display: IDisplayManager;
     private readonly events: IEventBus;
+    private loadSequence = 0;
+    private readonly logger = new Logger('[BackgroundHandler]');
     private sprite: Sprite | undefined;
     private readonly state: IStateManager;
 
@@ -32,14 +37,25 @@ export class BackgroundHandler implements CommandHandler<BackgroundCommand> {
     }
 
     public destroy() {
+        this.destroyed = true;
         this.events.off('state:loaded', this.handleStateLoaded);
         this.reset();
     }
 
     execute = async (command: BackgroundCommand) => {
-        const texture = await this.assets.load<Texture>(command.assetUrl);
+        if (this.destroyed) return;
+        const sequence = ++this.loadSequence;
+        const { assetUrl } = command;
+        let texture: Texture | undefined;
+        try {
+            texture = await this.assets.load<Texture>(assetUrl);
+        } catch (error) {
+            if (!this.isCurrent(sequence)) return;
+            throw error;
+        }
+        if (!this.isCurrent(sequence)) return;
         if (!texture) {
-            throw new Error(`Failed to load background texture: ${command.assetUrl}`);
+            throw new Error(`Failed to load background texture: ${assetUrl}`);
         }
 
         if (this.sprite) {
@@ -53,18 +69,27 @@ export class BackgroundHandler implements CommandHandler<BackgroundCommand> {
             this.display.getLayer('background').addChild(this.sprite);
         }
 
-        this.state.system.background = command.assetUrl;
+        this.state.system.background = assetUrl;
     };
 
     public reset(): void {
+        this.loadSequence += 1;
         this.sprite?.removeFromParent();
         this.sprite?.destroy();
         this.sprite = undefined;
     }
 
-    private readonly handleStateLoaded = (...arguments_: unknown[]) => {
-        const saveData = arguments_[0] as SaveState;
+    private readonly handleStateLoaded = (saveData: SaveState) => {
+        this.reset();
         if (!saveData.system.background) return;
-        void this.execute({ assetUrl: saveData.system.background, type: 'background' });
+        const loading = this.execute({ assetUrl: saveData.system.background, type: 'background' });
+        const sequence = this.loadSequence;
+        void loading.catch(error => {
+            if (this.isCurrent(sequence)) this.logger.error('Failed to restore background.', error);
+        });
     };
+
+    private isCurrent(sequence: number): boolean {
+        return !this.destroyed && sequence === this.loadSequence;
+    }
 }

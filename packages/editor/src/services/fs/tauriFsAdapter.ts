@@ -15,6 +15,7 @@ export const tauriFsAdapter: FsAdapter = {
         const pathApi = await getPathApi();
         return pathApi.dirname(path);
     },
+    finishProjectDestination: path => invoke('finish_project_destination', { path }),
     join: async (...parts) => {
         const pathApi = await getPathApi();
         return pathApi.join(...parts);
@@ -107,6 +108,7 @@ export const tauriFsAdapter: FsAdapter = {
         const fsApi = await getFsApi();
         await fsApi.rename(oldPath, newPath);
     },
+    reserveProjectDestination: (path, sourcePath) => invoke('reserve_project_destination', { path, sourcePath }),
     writeBinaryFile: (path, content) => invoke('write_binary_file_atomic', { content: [...content], createOnly: false, path }),
     writeBinaryFileExclusive: (path, content) => invoke('write_binary_file_atomic', { content: [...content], createOnly: true, path }),
     writeTextFile: (path, content, options) => invoke('write_text_file_atomic', { request: { content, path, ...options } }),

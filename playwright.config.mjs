@@ -36,10 +36,15 @@ export default defineConfig({
         },
     ],
     testDir: './packages/editor/visual-smoke',
-    webServer: {
+    webServer: [{
         command: 'npm run dev --workspace=zerith-editor -- --host 127.0.0.1 --port 1422 --mode visual-smoke',
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
         url: 'http://127.0.0.1:1422',
-    },
+    }, {
+        command: 'npm run dev --workspace=@zeffuro/zerith-player -- --host 127.0.0.1 --port 1423 --strictPort',
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+        url: 'http://127.0.0.1:1423',
+    }],
 });

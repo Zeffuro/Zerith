@@ -130,6 +130,7 @@ describe('bootstrapPlayer runtime config helpers', () => {
                 },
                 display: { width: 1920 },
             },
+            shell: false,
         });
 
         const bootstrapOptions = mocks.bootstrapEngine.mock.calls[0]?.[0];

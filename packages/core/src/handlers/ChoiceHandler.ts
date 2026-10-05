@@ -21,6 +21,7 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
     private activeResolve: (() => void) | undefined;
     private readonly events: IEventBus;
     private readonly flow: IFlowManager;
+    private onChoose: ((index: number) => void) | undefined;
     private onConfirm: (() => void) | undefined;
     private onNavigate: ((direction: NavigationDirection) => void) | undefined;
     private readonly renderer: ChoiceRenderer;
@@ -66,17 +67,24 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
                 this.renderer.setSelected(selectedIndex);
             };
 
+            let confirmed = false;
             const confirmSelection = () => {
+                if (confirmed) return;
+                confirmed = true;
                 this.clearChoiceBindings();
                 this.renderer.destroy();
 
                 const option = command.options[selectedIndex];
+                this.flow.completePresentation?.('choice');
+                this.events.emit('choice:selected', selectedIndex, option.label);
                 if (option.commands) {
                     this.flow.injectCommands(option.commands);
                 }
                 requestAnimationFrame(() => {
-                    this.flow.consumeSkip();
-                    this.activeResolve = undefined;
+                    if (this.activeResolve === resolve) {
+                        this.flow.consumeSkip();
+                        this.activeResolve = undefined;
+                    }
                     resolve();
                 });
             };
@@ -103,6 +111,13 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
 
             this.events.on('input:navigate', this.onNavigate);
             this.events.on('input:confirm', this.onConfirm);
+            this.onChoose = (index) => {
+                if (!Number.isInteger(index) || index < 0 || index >= command.options.length) return;
+                selectedIndex = index;
+                confirmSelection();
+            };
+            this.events.on('input:choose', this.onChoose);
+            this.events.emit('choice:shown', command.options.length);
         });
     };
 
@@ -116,6 +131,10 @@ export class ChoiceHandler implements CommandHandler<ChoiceCommand> {
     }
 
     private clearChoiceBindings(): void {
+        if (this.onChoose) {
+            this.events.off('input:choose', this.onChoose);
+            this.onChoose = undefined;
+        }
         if (this.onNavigate) {
             this.events.off('input:navigate', this.onNavigate);
             this.onNavigate = undefined;

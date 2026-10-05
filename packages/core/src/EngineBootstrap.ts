@@ -3,6 +3,7 @@ import type { EngineConfig } from './EngineConfig';
 import type { EvidenceItem } from './managers/EvidenceManager';
 import type { CharacterDefinition, GameManifest, Script } from './types';
 
+import { bindDefaultInputEvents } from './bootstrap/bindDefaultInputEvents';
 import { createManagers } from './bootstrap/createManagers';
 import { createPanels } from './bootstrap/createPanels';
 import { registerHandlers } from './bootstrap/registerHandlers';
@@ -115,38 +116,6 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
     state.loadPersistentState(saveManager.loadGlobalState());
 
     return engine;
-}
-
-function bindDefaultInputEvents(engine: Engine) {
-    const events = engine.events;
-    const flow = engine.flow;
-    const notifications = engine.notifications;
-    const saves = engine.saves;
-
-    events.on('input:skip', () => {
-        flow.requestSkip();
-    });
-
-    events.on('input:next', () => {
-        void flow.playNext();
-    });
-
-    events.on('input:save', (slot: number) => {
-        saves.save(slot);
-        notifications.show('Game Saved!');
-    });
-
-    events.on('input:load', (slot: number) => {
-        void saves.load(slot).then(async (saveData) => {
-            if (!saveData) {
-                notifications.show('Save not found');
-                return;
-            }
-
-            await engine.applySaveState(saveData);
-            notifications.show('Game Loaded!');
-        });
-    });
 }
 
 function resolveDefaultBlipUrl(config: EngineConfig, override: null | string | undefined): string | undefined {

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Zerith Game Player",
+  "version": "0.1.0",
+  "identifier": "com.zeffuro.zerith.player",
+  "build": { "frontendDist": "assets" },
+  "app": {
+    "windows": [],
+    "security": { "capabilities": [], "csp": null }
+  },
+  "bundle": { "active": false, "icon": ["icons/icon.ico"] }
+}

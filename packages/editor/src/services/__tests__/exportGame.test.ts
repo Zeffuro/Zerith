@@ -44,17 +44,18 @@ describe('exportGame profiles', () => {
         expect(resolveDesktopExportOutputPath('', 'dist/fallback')).toBe('dist/fallback');
     });
 
-    it('describes supported web export profiles and planned desktop packaging separately', () => {
+    it('includes a supported desktop game profile alongside the web profiles', () => {
         const catalog = getExportProfileCatalog();
 
         expect(catalog.filter((entry) => entry.selectable).map((entry) => entry.id)).toEqual([
             'itch-html5',
             'generic-web',
             'local-preview',
+            'desktop-tauri',
         ]);
         expect(catalog.find((entry) => entry.id === 'desktop-tauri')).toMatchObject({
-            selectable: false,
-            status: 'planned',
+            selectable: true,
+            status: 'supported',
             target: 'desktop',
         });
         expect(catalog.find((entry) => entry.id === 'github-pages-dual')).toMatchObject({
@@ -66,6 +67,12 @@ describe('exportGame profiles', () => {
             id: 'itch-html5',
             status: 'supported',
             target: 'web',
+        });
+    });
+
+    it('packages desktop games with relative assets and no separate ZIP even with stale web options', () => {
+        expect(resolveExportGameOptions({ base: '/stale-web/', profile: 'desktop-tauri', zip: true, zipFile: 'stale.zip' })).toMatchObject({
+            base: './', cachePolicy: 'hashed', profile: 'desktop-tauri', zip: false, zipFile: undefined,
         });
     });
 });

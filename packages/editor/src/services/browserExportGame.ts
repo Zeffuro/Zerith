@@ -2,6 +2,8 @@ import { zipSync } from 'fflate';
 
 import type { ExportGameOptions, ExportGameResult } from './exportGame';
 
+import { writeBrowserFolderExport } from './browserFolderExport';
+import { browserFsAdapter } from './fs/browserFsAdapter';
 import { prepareWebGameArtifacts } from './webGameArtifacts';
 
 export async function exportGameForBrowser(
@@ -9,6 +11,16 @@ export async function exportGameForBrowser(
     options: ExportGameOptions = {},
 ): Promise<ExportGameResult> {
     const { artifactManifest, files, playerFileCount, projectFiles } = await prepareWebGameArtifacts(gamePath, options);
+    if (options.browserFolder) {
+        const source = await browserFsAdapter.getDirectoryHandle(gamePath);
+        const outDirectory = await writeBrowserFolderExport(options.browserFolder, files, source);
+        return {
+            artifactManifest,
+            outDirectory,
+            stderr: '',
+            stdout: `Created browser folder export: ${outDirectory}\nIncluded ${projectFiles.length} project files and ${playerFileCount} player runtime files.`,
+        };
+    }
     const zipBytes = zipSync(files, { level: 9 });
     const zipBuffer = new ArrayBuffer(zipBytes.byteLength);
     new Uint8Array(zipBuffer).set(zipBytes);

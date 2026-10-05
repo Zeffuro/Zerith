@@ -1,3 +1,5 @@
+import type { Sound } from '@pixi/sound';
+
 import { sound } from '@pixi/sound';
 
 import type { CuePlaybackOptions } from '../interfaces/managers';
@@ -36,6 +38,8 @@ export class AudioManager {
 
     private _muted: boolean = false;
     private readonly audiosheets = new Map<string, AudiosheetRuntimeDescriptor>();
+    private destroyed = false;
+    private readonly pendingAudio = new Map<string, { cancel: () => void; promise: Promise<void> }>();
 
     constructor(config: AudioConfig = {}) {
         this.bgmVolume = config.bgmVolume ?? 1;
@@ -46,10 +50,14 @@ export class AudioManager {
     }
 
     public audioExists(url: string): boolean {
-        return sound.exists(url);
+        return !this.destroyed && sound.exists(url) && sound['find'](url).isLoaded;
     }
 
     public destroy() {
+        this.destroyed = true;
+        for (const pending of this.pendingAudio.values()) pending.cancel();
+        this.pendingAudio.clear();
+        this.audiosheets.clear();
         sound.stopAll();
         sound.removeAll();
         this.currentBgmUrl = undefined;
@@ -73,11 +81,12 @@ export class AudioManager {
     }
 
     public async loadAudiosheet(sheetName: string, descriptor: AudiosheetDescriptor): Promise<void> {
+        await this.preloadAudio(descriptor.source);
+        if (this.destroyed) throw new Error('Audio manager was destroyed while loading.');
         this.audiosheets.set(sheetName, {
             cues: descriptor.cues,
             source: descriptor.source,
         });
-        await this.preloadAudio(descriptor.source);
     }
 
 
@@ -164,16 +173,45 @@ export class AudioManager {
         await sound.play(url, { volume: 0.1 * this.voiceVolume });
     }
 
-    public async preloadAudio(url: string): Promise<void> {
-        if (this.audioExists(url)) return;
+    public preloadAudio(url: string): Promise<void> {
+        if (this.destroyed) return Promise.reject(new Error('Audio manager is destroyed.'));
+        const existing = this.pendingAudio.get(url);
+        if (existing) return existing.promise;
+        if (this.audioExists(url)) return Promise.resolve();
 
-        await new Promise<void>((resolve, reject) => {
-            sound.add(url, {
-                loaded: (error) => error ? reject(error) : resolve(),
+        let resolveLoad!: () => void;
+        let rejectLoad!: (error: unknown) => void;
+        let ownedSound: Sound | undefined;
+        const loaded = new Promise<void>((resolve, reject) => {
+            resolveLoad = resolve;
+            rejectLoad = reject;
+        });
+        const pending = {
+            cancel: () => rejectLoad(new Error('Audio manager was destroyed while loading.')),
+            promise: loaded.then(() => {
+                if (this.destroyed) throw new Error('Audio manager was destroyed while loading.');
+                if (!ownedSound || !sound.exists(url) || sound['find'](url) !== ownedSound || !ownedSound.isLoaded) {
+                    throw new Error(`Audio '${url}' was replaced before loading finished.`);
+                }
+            }).catch((error: unknown) => {
+                if (ownedSound && sound.exists(url) && sound['find'](url) === ownedSound) sound.remove(url);
+                throw error;
+            }).finally(() => {
+                if (this.pendingAudio.get(url) === pending) this.pendingAudio.delete(url);
+            }),
+        };
+        this.pendingAudio.set(url, pending);
+        try {
+            if (sound.exists(url)) sound.remove(url);
+            ownedSound = sound.add(url, {
+                loaded: (error) => error ? rejectLoad(error) : resolveLoad(),
                 preload: true,
                 url,
             });
-        });
+        } catch (error) {
+            rejectLoad(error);
+        }
+        return pending.promise;
     }
 
     public resumeBgm(): void {

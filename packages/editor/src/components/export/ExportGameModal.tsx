@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
+import type { BrowserFsGlobal } from '../../services/fs/browserFsAdapter';
+
 import { useBackdropDismissal } from '../../hooks/useBackdropDismissal';
 import { useDialogFocusTrap } from '../../hooks/useDialogFocusTrap';
+import { pickBrowserFolderExportTarget } from '../../services/browserFolderExport';
 import {
     type ExportCachePolicy,
     exportGame,
@@ -10,14 +13,12 @@ import {
     getExportProfileMetadata,
     resolveExportGameOptions,
 } from '../../services/exportGame';
-import { type BrowserDesktopExportSmokeRunReport, runBrowserDesktopExportSmoke } from '../../services/exportParityRunner';
+import { saveProjectBeforeExport } from '../../services/exportPreflight';
 import { isTauriRuntime } from '../../services/runtime/runtimeEnvironment';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { styles } from '../../theme/styleHelpers';
-import { DesktopPackagingReadinessPanel } from './DesktopPackagingReadinessPanel';
-import { GitHubPagesReadinessPanel } from './GitHubPagesReadinessPanel';
 
 export function ExportGameModal() {
     const closeExportGameModal = useEditorStore((state) => state.closeExportGameModal);
@@ -25,33 +26,34 @@ export function ExportGameModal() {
     const markManualSave = useEditorStore((state) => state.markManualSave);
     const uiScale = useEditorStore((state) => state.uiScale);
     const projectPath = useProjectStore((state) => state.projectPath);
-    const saveAllDirtyFiles = useProjectStore((state) => state.saveAllDirtyFiles);
     const dialogReference = useRef<HTMLDivElement | null>(null);
     const descriptionId = useId();
     const statusId = useId();
     const titleId = useId();
 
-    const profileCatalog = useMemo(() => getExportProfileCatalog(), []);
+    const isNativeEditor = isTauriRuntime();
+    const profileCatalog = useMemo(() => getExportProfileCatalog().filter(
+        (entry) => entry.selectable && (entry.target !== 'desktop' || isNativeEditor),
+    ), [isNativeEditor]);
     const [profile, setProfile] = useState<ExportProfile>('itch-html5');
     const [base, setBase] = useState('./');
     const [cachePolicy, setCachePolicy] = useState<ExportCachePolicy>('hashed');
     const [outDirectory, setOutDirectory] = useState('');
     const [zipEnabled, setZipEnabled] = useState(true);
     const [zipFile, setZipFile] = useState('');
+    const [browserOutput, setBrowserOutput] = useState<'folder' | 'zip'>('zip');
+    const [browserFolderName, setBrowserFolderName] = useState('game-export');
     const [isExporting, setIsExporting] = useState(false);
     const [statusMessage, setStatusMessage] = useState<string | undefined>();
     const activeProfileMetadata = useMemo(() => getExportProfileMetadata(profile), [profile]);
-    const plannedProfileMetadata = useMemo(
-        () => profileCatalog.filter((entry) => !entry.selectable),
-        [profileCatalog],
-    );
-
     const defaultOutDirectory = useMemo(() => {
         return projectPath ? buildDefaultOutputDirectory(projectPath) : 'dist/game';
     }, [projectPath]);
     const defaultZipFilePath = useMemo(() => {
-        return projectPath ? defaultZipPath(projectPath) : 'dist/game.zip';
-    }, [projectPath]);
+        return isNativeEditor
+            ? (projectPath ? defaultZipPath(projectPath) : 'dist/game.zip')
+            : `${projectPath ? basename(projectPath) : 'game'}.zip`;
+    }, [isNativeEditor, projectPath]);
     const applyProfileDefaults = useCallback((nextProfile: ExportProfile) => {
         const resolved = resolveExportGameOptions({ profile: nextProfile });
         if (resolved.base !== undefined) setBase(resolved.base);
@@ -68,13 +70,20 @@ export function ExportGameModal() {
         applyProfileDefaults('itch-html5');
         setOutDirectory(defaultOutDirectory);
         setZipFile(defaultZipFilePath);
+        setBrowserOutput('zip');
+        setBrowserFolderName(`${projectPath ? basename(projectPath) : 'game'}-export`);
         setStatusMessage(undefined);
-    }, [applyProfileDefaults, defaultOutDirectory, defaultZipFilePath, isOpen]);
+    }, [applyProfileDefaults, defaultOutDirectory, defaultZipFilePath, isOpen, projectPath]);
 
     useEffect(() => {
         applyProfileDefaults(profile);
+        setOutDirectory((current) => {
+            if (profile === 'desktop-tauri' && current === defaultOutDirectory) return `${defaultOutDirectory}-desktop`;
+            if (profile !== 'desktop-tauri' && current === `${defaultOutDirectory}-desktop`) return defaultOutDirectory;
+            return current;
+        });
         setZipFile((current) => profile === 'itch-html5' && !current.trim() ? defaultZipFilePath : current);
-    }, [applyProfileDefaults, defaultZipFilePath, profile]);
+    }, [applyProfileDefaults, defaultOutDirectory, defaultZipFilePath, profile]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -98,15 +107,15 @@ export function ExportGameModal() {
     }
 
     const canExport = !!projectPath && !isExporting;
-    const canRunParitySmoke = canExport && isTauriRuntime();
+    const isDesktopPackage = profile === 'desktop-tauri';
 
     const getCurrentExportOptions = () => ({
         base: base.trim() || undefined,
         cachePolicy,
-        outDir: outDirectory.trim() || undefined,
+        outDir: isNativeEditor ? (outDirectory.trim() || undefined) : undefined,
         profile,
-        zip: zipEnabled,
-        zipFile: zipEnabled ? (zipFile.trim() || undefined) : undefined,
+        zip: isNativeEditor ? zipEnabled : true,
+        zipFile: !isNativeEditor || zipEnabled ? (zipFile.trim() || undefined) : undefined,
     });
 
     const handleExport = async () => {
@@ -114,19 +123,31 @@ export function ExportGameModal() {
             return;
         }
 
+        const projectGeneration = useProjectStore.getState().projectGeneration;
         setIsExporting(true);
-        setStatusMessage('Export started. Details will stream to the Console panel.');
+        setStatusMessage(isDesktopPackage ? 'Packaging desktop game...' : 'Exporting game...');
 
         try {
+            const browserFolder = !isNativeEditor && browserOutput === 'folder'
+                ? await pickBrowserFolderExportTarget(browserFolderName)
+                : undefined;
+            if (!isNativeEditor && browserOutput === 'folder' && !browserFolder) {
+                setStatusMessage('Export cancelled.');
+                return;
+            }
+            const currentProject = useProjectStore.getState();
+            if (currentProject.projectPath !== projectPath || currentProject.projectGeneration !== projectGeneration) {
+                throw new Error('The project changed. Start export again.');
+            }
             markManualSave();
-            await saveAllDirtyFiles();
+            await saveProjectBeforeExport(projectPath, useProjectStore.getState);
 
             console.info('[Export Game] Running export with options:', {
                 ...getCurrentExportOptions(),
                 projectPath,
             });
 
-            const result = await exportGame(projectPath, getCurrentExportOptions());
+            const result = await exportGame(projectPath, { ...getCurrentExportOptions(), browserFolder });
             const stderr = typeof (result as { stderr?: unknown }).stderr === 'string'
                 ? (result as { stderr: string }).stderr
                 : '';
@@ -138,44 +159,12 @@ export function ExportGameModal() {
                 console.warn('[Export Game] Build warnings:\n' + stderr.trim());
             }
 
-            setStatusMessage('Export finished. Check Console panel for output paths and details.');
+            setStatusMessage(isNativeEditor || browserFolder
+                ? `Exported to ${result.executablePath ?? result.outDirectory ?? outDirectory}.`
+                : 'Export complete. Your browser download is ready.');
         } catch (error) {
             console.error('[Export Game] Export failed:', error);
             setStatusMessage(`Export failed: ${error instanceof Error ? error.message : String(error)}`);
-        } finally {
-            setIsExporting(false);
-        }
-    };
-
-    const handleParitySmoke = async () => {
-        if (!projectPath || isExporting) {
-            return;
-        }
-
-        setIsExporting(true);
-        setStatusMessage('Export parity smoke started. Details will stream to the Console panel.');
-
-        try {
-            markManualSave();
-            await saveAllDirtyFiles();
-
-            const options = {
-                ...getCurrentExportOptions(),
-                profile: 'local-preview' as const,
-                zip: false,
-                zipFile: undefined,
-            };
-            console.info('[Export Parity Smoke] Running browser/desktop export smoke with options:', {
-                ...options,
-                projectPath,
-            });
-
-            const report = await runBrowserDesktopExportSmoke(projectPath, options);
-            logParitySmokeReport(report);
-            setStatusMessage(formatParitySmokeStatus(report.comparison.status));
-        } catch (error) {
-            console.error('[Export Parity Smoke] Export parity smoke failed:', error);
-            setStatusMessage(`Export parity smoke failed: ${error instanceof Error ? error.message : String(error)}`);
         } finally {
             setIsExporting(false);
         }
@@ -206,24 +195,28 @@ export function ExportGameModal() {
                     border: `1px solid ${t.border.normal}`,
                     borderRadius: t.radius.lg,
                     boxShadow: t.shadow.popupStrong,
+                    boxSizing: 'border-box',
                     color: t.text.primary,
                     display: 'grid',
                     gap: `${10 * uiScale}px`,
-                    maxHeight: `min(92vh, ${900 * uiScale}px)`,
-                    maxWidth: `min(94vw, ${720 * uiScale}px)`,
-                    minWidth: `${560 * uiScale}px`,
+                    maxHeight: `min(92vh, ${720 * uiScale}px)`,
+                    maxWidth: `min(94vw, ${620 * uiScale}px)`,
+                    overflowWrap: 'anywhere',
                     overflowY: 'auto',
                     padding: `${16 * uiScale}px`,
+                    width: `min(94vw, ${560 * uiScale}px)`,
                 }}
                 tabIndex={-1}
             >
                 <div id={titleId} style={{ fontSize: `${15 * uiScale}px`, fontWeight: 700 }}>Export Game</div>
                 <div id={descriptionId} style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
-                    Configure export options without leaving the editor. Output logs are written to the Console panel.
+                    {isNativeEditor
+                        ? 'Choose where to share your game and where to save the export.'
+                        : (browserOutput === 'zip' ? 'Choose where to share your game. The export downloads as a ZIP archive.' : 'Choose a parent folder when you export. Your game is saved in a new subfolder.')}
                 </div>
 
                 <label style={{ display: 'grid', fontSize: `${12 * uiScale}px`, gap: `${4 * uiScale}px` }}>
-                    Export Profile
+                    Export for
                     <select
                         disabled={isExporting}
                         onChange={(event) => setProfile(event.target.value as ExportProfile)}
@@ -231,80 +224,103 @@ export function ExportGameModal() {
                         value={profile}
                     >
                         {profileCatalog.map((entry) => (
-                            <option disabled={!entry.selectable} key={entry.id} value={entry.id}>
-                                {entry.label}{entry.status === 'planned' ? ' (planned)' : ''}
+                            <option key={entry.id} value={entry.id}>
+                                {entry.label}
                             </option>
                         ))}
                     </select>
                 </label>
-                <div style={profileInfoStyle(uiScale)}>
-                    <span style={profileStatusPillStyle(uiScale)}>{activeProfileMetadata.target} | {activeProfileMetadata.status}</span>
-                    <span>{activeProfileMetadata.description}</span>
+                <div style={{ color: t.text.muted, fontSize: `${12 * uiScale}px` }}>
+                    {!isNativeEditor && browserOutput === 'folder' && profile === 'itch-html5' ? 'Playable game files. Create a ZIP before uploading to itch.io.' : activeProfileMetadata.description}
                 </div>
-                {plannedProfileMetadata.map((entry) => (
-                    <div key={entry.id} style={profileInfoStyle(uiScale)}>
-                        <span style={profileStatusPillStyle(uiScale)}>{entry.target} | {entry.status}</span>
-                        <span>{entry.description}</span>
-                    </div>
-                ))}
-                <DesktopPackagingReadinessPanel uiScale={uiScale} />
-                <GitHubPagesReadinessPanel uiScale={uiScale} />
+                {!isNativeEditor && (
+                    <label style={{ display: 'grid', fontSize: `${12 * uiScale}px`, gap: `${4 * uiScale}px` }}>
+                        Save export as
+                        <select aria-label="Save export as" disabled={isExporting} onChange={event => setBrowserOutput(event.target.value as 'folder' | 'zip')} style={styles.input(uiScale)} value={browserOutput}>
+                            <option value="zip">ZIP download</option>
+                            <option disabled={typeof (globalThis as BrowserFsGlobal).showDirectoryPicker !== 'function'} value="folder">Folder</option>
+                        </select>
+                    </label>
+                )}
+                {!isNativeEditor && browserOutput === 'folder' && (
+                    <label style={{ display: 'grid', fontSize: `${12 * uiScale}px`, gap: `${4 * uiScale}px` }}>
+                        Export folder name
+                        <input aria-label="Export folder name" disabled={isExporting} onChange={event => setBrowserFolderName(event.target.value)} style={styles.input(uiScale)} value={browserFolderName} />
+                        <span style={{ color: t.text.muted }}>Use a new folder outside your source project. Existing exports are kept.</span>
+                    </label>
+                )}
 
-                <label style={{ display: 'grid', fontSize: `${12 * uiScale}px`, gap: `${4 * uiScale}px` }}>
-                    Compiled Content Cache
-                    <select
-                        disabled={isExporting}
-                        onChange={(event) => setCachePolicy(event.target.value as ExportCachePolicy)}
-                        style={{ ...styles.input(uiScale), padding: `${6 * uiScale}px ${8 * uiScale}px` }}
-                        value={cachePolicy}
-                    >
-                        <option value="hashed">Hashed local files (recommended)</option>
-                        <option value="none">No cache manifest</option>
-                    </select>
-                </label>
+                {isNativeEditor && (
+                    <label style={{ display: 'grid', fontSize: `${12 * uiScale}px`, gap: `${4 * uiScale}px` }}>
+                        Output folder
+                        <input
+                            disabled={isExporting}
+                            onChange={(event) => setOutDirectory(event.target.value)}
+                            placeholder={defaultOutDirectory}
+                            style={styles.input(uiScale)}
+                            value={outDirectory}
+                        />
+                        <span style={{ color: t.text.muted }}>
+                            Use a new folder. Relative paths start from the project’s parent folder.
+                        </span>
+                    </label>
+                )}
 
-                <label style={{ display: 'grid', fontSize: `${12 * uiScale}px`, gap: `${4 * uiScale}px` }}>
-                    Build Base URL
-                    <input
-                        disabled={isExporting || profile === 'itch-html5'}
-                        onChange={(event) => setBase(event.target.value)}
-                        placeholder="./"
-                        style={styles.input(uiScale)}
-                        value={base}
-                    />
-                </label>
+                {isNativeEditor && !isDesktopPackage && (
+                    <label style={{ alignItems: 'center', display: 'flex', fontSize: `${12 * uiScale}px`, gap: `${8 * uiScale}px` }}>
+                        <input
+                            checked={zipEnabled}
+                            disabled={isExporting || profile === 'itch-html5'}
+                            onChange={(event) => setZipEnabled(event.target.checked)}
+                            type="checkbox"
+                        />
+                        Create ZIP archive
+                    </label>
+                )}
 
-                <label style={{ display: 'grid', fontSize: `${12 * uiScale}px`, gap: `${4 * uiScale}px` }}>
-                    Output Directory (new directory, relative to project parent or absolute)
-                    <input
-                        disabled={isExporting}
-                        onChange={(event) => setOutDirectory(event.target.value)}
-                        placeholder={defaultOutDirectory}
-                        style={styles.input(uiScale)}
-                        value={outDirectory}
-                    />
-                </label>
+                {(isNativeEditor ? zipEnabled : browserOutput === 'zip') && !isDesktopPackage && (
+                    <label style={{ display: 'grid', fontSize: `${12 * uiScale}px`, gap: `${4 * uiScale}px` }}>
+                        {isNativeEditor ? 'ZIP file path' : 'Download file name'}
+                        <input
+                            disabled={isExporting}
+                            onChange={(event) => setZipFile(event.target.value)}
+                            placeholder={defaultZipFilePath}
+                            style={styles.input(uiScale)}
+                            value={zipFile}
+                        />
+                        {isNativeEditor && <span style={{ color: t.text.muted }}>Use a new file. Existing exports are kept.</span>}
+                    </label>
+                )}
 
-                <label style={{ alignItems: 'center', display: 'flex', fontSize: `${12 * uiScale}px`, gap: `${8 * uiScale}px` }}>
-                    <input
-                        checked={zipEnabled}
-                        disabled={isExporting || profile === 'itch-html5'}
-                        onChange={(event) => setZipEnabled(event.target.checked)}
-                        type="checkbox"
-                    />
-                    Create zip archive
-                </label>
-
-                <label style={{ display: 'grid', fontSize: `${12 * uiScale}px`, gap: `${4 * uiScale}px`, opacity: zipEnabled ? 1 : 0.55 }}>
-                    Zip Output Path (new file, relative to project parent or absolute)
-                    <input
-                        disabled={!zipEnabled || isExporting}
-                        onChange={(event) => setZipFile(event.target.value)}
-                        placeholder={defaultZipFilePath}
-                        style={styles.input(uiScale)}
-                        value={zipFile}
-                    />
-                </label>
+                {!isDesktopPackage && (
+                    <details style={{ fontSize: `${12 * uiScale}px` }}>
+                        <summary style={{ color: t.text.muted, cursor: 'pointer' }}>Advanced</summary>
+                        <div style={{ display: 'grid', gap: `${10 * uiScale}px`, paddingTop: `${10 * uiScale}px` }}>
+                            <label style={{ display: 'grid', gap: `${4 * uiScale}px` }}>
+                                Compiled content cache
+                                <select
+                                    disabled={isExporting}
+                                    onChange={(event) => setCachePolicy(event.target.value as ExportCachePolicy)}
+                                    style={styles.input(uiScale)}
+                                    value={cachePolicy}
+                                >
+                                    <option value="hashed">Cache unchanged files</option>
+                                    <option value="none">No cache</option>
+                                </select>
+                            </label>
+                            <label style={{ display: 'grid', gap: `${4 * uiScale}px` }}>
+                                Base URL
+                                <input
+                                    disabled={isExporting || profile === 'itch-html5'}
+                                    onChange={(event) => setBase(event.target.value)}
+                                    placeholder="./"
+                                    style={styles.input(uiScale)}
+                                    value={base}
+                                />
+                            </label>
+                        </div>
+                    </details>
+                )}
 
                 <div
                     aria-live="polite"
@@ -312,7 +328,7 @@ export function ExportGameModal() {
                     role="status"
                     style={{ color: t.text.muted, fontSize: `${12 * uiScale}px`, minHeight: `${16 * uiScale}px` }}
                 >
-                    {statusMessage ?? (projectPath ? `Project: ${projectPath}` : 'Open a project first to export.')}
+                    {statusMessage ?? (projectPath ? '' : 'Open a project first to export.')}
                 </div>
 
                 <div style={{ display: 'flex', gap: `${8 * uiScale}px`, justifyContent: 'flex-end' }}>
@@ -339,21 +355,6 @@ export function ExportGameModal() {
                     >
                         {isExporting ? 'Exporting...' : 'Export'}
                     </button>
-                    <button
-                        disabled={!canRunParitySmoke}
-                        onClick={() => {
-                            void handleParitySmoke();
-                        }}
-                        style={{
-                            ...styles.buttonBase(uiScale),
-                            background: canRunParitySmoke ? t.accent.primary : t.bg.panelAlt,
-                            border: 'none',
-                            color: canRunParitySmoke ? '#fff' : t.text.muted,
-                        }}
-                        type="button"
-                    >
-                        {isExporting ? 'Running...' : 'Parity Smoke'}
-                    </button>
                 </div>
             </div>
         </div>
@@ -370,74 +371,4 @@ function buildDefaultOutputDirectory(projectPath: string): string {
 
 function defaultZipPath(projectPath: string): string {
     return `${buildDefaultOutputDirectory(projectPath)}.zip`;
-}
-
-function formatParitySmokeStatus(status: BrowserDesktopExportSmokeRunReport['comparison']['status']): string {
-    switch (status) {
-        case 'blocked': {
-            return 'Export parity smoke blocked. Check Console panel for missing artifact details.';
-        }
-        case 'matched': {
-            return 'Export parity smoke matched browser and desktop artifacts.';
-        }
-        case 'mismatched': {
-            return 'Export parity smoke found artifact differences. Check Console panel for details.';
-        }
-    }
-}
-
-function logParitySmokeReport(report: BrowserDesktopExportSmokeRunReport): void {
-    const { comparison } = report;
-
-    if (comparison.browserStdout.trim()) {
-        console.info('[Export Parity Smoke] Browser output:\n' + comparison.browserStdout.trim());
-    }
-    if (comparison.desktopStdout.trim()) {
-        console.info('[Export Parity Smoke] Desktop output:\n' + comparison.desktopStdout.trim());
-    }
-
-    if (comparison.status === 'blocked') {
-        console.warn('[Export Parity Smoke] Blocked:', comparison.reasons);
-        return;
-    }
-
-    const { summary } = comparison.artifactComparison;
-    console.info('[Export Parity Smoke] Artifact comparison:', {
-        matched: summary.matched,
-        mismatched: summary.mismatched,
-        missing: summary.missing,
-        status: comparison.status,
-    });
-
-    for (const check of comparison.artifactComparison.checks) {
-        console.info(`[Export Parity Smoke] ${check.id}: ${check.status}`, {
-            browser: check.browser,
-            desktop: check.desktop,
-            missingInBrowser: check.missingInBrowser,
-            missingInDesktop: check.missingInDesktop,
-            note: check.note,
-        });
-    }
-}
-
-function profileInfoStyle(uiScale: number) {
-    return {
-        alignItems: 'center',
-        color: t.text.muted,
-        display: 'flex',
-        fontSize: `${11 * uiScale}px`,
-        gap: `${6 * uiScale}px`,
-        minWidth: 0,
-    };
-}
-
-function profileStatusPillStyle(uiScale: number) {
-    return {
-        border: `1px solid ${t.border.subtle}`,
-        borderRadius: t.radius.sm,
-        color: t.text.normal,
-        flexShrink: 0,
-        padding: `${2 * uiScale}px ${5 * uiScale}px`,
-        textTransform: 'capitalize' as const,
-    };
 }

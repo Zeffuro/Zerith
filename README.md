@@ -42,6 +42,8 @@ npm run test:fixture-policy
 
 CI runs the fixture policy guard, lint, Vitest, CI-safe Playwright editor smoke, package builds, export parity smoke, and exported runtime smoke for the approved fixtures.
 
+Browser checks create isolated profiles in the system temporary directory and remove them after closing the browser, including failed checks. Set `ZERITH_TEST_PROFILE_DIR` to choose another location or `ZERITH_KEEP_TEST_PROFILES=1` to retain profiles for debugging. Logs and screenshots remain in the test output directory. `npm run test:visual:profiles` verifies profile cleanup.
+
 ## Export A Game
 
 ```bash

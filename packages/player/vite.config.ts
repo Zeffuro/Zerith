@@ -49,6 +49,7 @@ export default defineConfig(({ command }) => {
     );
 
     return {
+        appType: 'mpa',
         base: process.env.ZERITH_BASE ?? (command === 'build' ? './' : '/'),
         build: {
             emptyOutDir: true,

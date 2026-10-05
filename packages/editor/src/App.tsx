@@ -6,6 +6,7 @@ import { SpritesheetAutoSliceDialog } from './components/editors/SpritesheetAuto
 import { ExportGameModal } from './components/export/ExportGameModal';
 import { DockLayoutHost } from './components/layout/DockLayoutHost';
 import { NewProjectModal } from './components/project/NewProjectModal';
+import { RecoveryDialog } from './components/recovery/RecoveryDialog';
 import { ReleaseNotesModal } from './components/ReleaseNotesModal';
 import { SettingsModal } from './components/settings/SettingsModal';
 import './App.css';
@@ -20,6 +21,7 @@ import { useReferenceScanner } from './hooks/useReferenceScanner';
 import { useScriptDirtyTracking } from './hooks/useScriptDirtyTracking';
 import { useStartupEditorUpdateCheck } from './hooks/useStartupEditorUpdateCheck';
 import { useStartupProjectOpen } from './hooks/useStartupProjectOpen';
+import { useUnsavedWorkRecovery } from './hooks/useUnsavedWorkRecovery';
 import { useWindowStateRestore } from './hooks/useWindowStateRestore';
 import { setupConsoleInterceptor } from './services/consoleInterceptor';
 import { useScriptStore } from './store/storeBootstrap';
@@ -57,6 +59,7 @@ function App() {
     useProjectFileWatcher();
     useReferenceScanner();
     useScriptDirtyTracking();
+    useUnsavedWorkRecovery();
     useStartupEditorUpdateCheck();
     useStartupProjectOpen();
     useWindowStateRestore();
@@ -81,6 +84,7 @@ function App() {
             <SettingsModal />
             <ExportGameModal />
             <NewProjectModal />
+            <RecoveryDialog />
             <ReleaseNotesModal />
             <EditorLiveStatus uiScale={uiScale} />
             {editorDialogs}

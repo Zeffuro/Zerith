@@ -64,11 +64,11 @@ export function createBrowserEditorReadinessReport(
                 : 'Project access is blocked without browser picker support.',
         },
         {
-            detail: 'Browser export produces a playable zip from the mounted project, but cannot write arbitrary loose output folders.',
+            detail: 'Browser export produces a playable ZIP from the mounted project or writes a new folder through a user-granted directory handle.',
             id: 'browserExportZip',
             label: 'Browser export',
             status: 'limited',
-            summary: 'Browser export is available as a zip download.',
+            summary: 'Browser export offers a ZIP download or, with picker support, a new folder.',
         },
         {
             detail: 'Browser export remaps a prebuilt player shell while desktop export runs the canonical Vite player build.',
@@ -85,11 +85,11 @@ export function createBrowserEditorReadinessReport(
             summary: 'Native integrations stay disabled or limited in browser builds.',
         },
         {
-            detail: 'Loose output directories and explicit zip paths require desktop filesystem access or a future browser output policy.',
+            detail: 'Folder export requires a user-selected parent and a new subfolder outside the source project. Arbitrary filesystem paths are unavailable.',
             id: 'looseDirectoryExport',
             label: 'Loose directory export',
-            status: 'blocked',
-            summary: 'Browser builds cannot write arbitrary output folders.',
+            status: options.browserFileSystemAccess ? 'ready' : 'blocked',
+            summary: options.browserFileSystemAccess ? 'Browser exports can be saved in a new user-selected folder.' : 'Folder export requires browser picker support.',
         },
     ];
     const ready = requirements.filter((requirement) => requirement.status === 'ready').length;

@@ -1,6 +1,7 @@
 export {
     fsCopyFileExclusive,
     fsDirname,
+    fsFinishProjectDestination,
     fsJoin,
     fsMkdir,
     fsOpenPath,
@@ -13,6 +14,7 @@ export {
     fsReadTextFile,
     fsRemove,
     fsRename,
+    fsReserveProjectDestination,
     fsWriteBinaryFile,
     fsWriteBinaryFileExclusive,
     fsWriteTextFile,

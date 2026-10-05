@@ -1,23 +1,9 @@
 import { chromium, expect, test as baseTest } from '@playwright/test';
-import { mkdtemp } from 'node:fs/promises';
-import path from 'node:path';
+import { closeTestContext, createTestProfile, persistentContextFixture } from './testProfiles.mjs';
 
 const failures = new WeakMap();
 const test = baseTest.extend({
-    context: async ({ baseURL }, use, testInfo) => {
-        const profile = await mkdtemp(path.join(process.cwd(), 'temp', 'browser-recent-'));
-        const context = await chromium.launchPersistentContext(profile, {
-            args: ['--disable-audio-output'],
-            baseURL,
-            colorScheme: 'dark',
-            hasTouch: testInfo.project.use.hasTouch,
-            headless: true,
-            isMobile: testInfo.project.use.isMobile,
-            reducedMotion: 'reduce',
-            viewport: testInfo.project.use.viewport,
-        });
-        try { await use(context); } finally { await context.close(); }
-    },
+    context: [persistentContextFixture('browser-recent-'), { timeout: 45_000 }],
 });
 
 async function watch(page) {
@@ -68,6 +54,7 @@ async function state(page) {
 }
 
 async function openFromPalette(page, manifestPath) {
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await page.keyboard.press('Control+Shift+P');
     const input = page.getByRole('combobox', { name: 'Command palette search' });
     await input.fill(manifestPath);
@@ -95,10 +82,12 @@ test.describe('browser recent projects', () => {
             const root = manifestPath.slice(0, -'/game.json'.length);
             return { binary: [...await adapter.readBinaryFile(`${root}/audio.bin`)], text: await adapter.readTextFile(`${root}/notes.txt`) };
         }, first)).toEqual({ binary: [0, 128, 255, 5], text: 'Saved First' });
+        expect((await state(page)).dirty).toEqual([]);
         await page.evaluate(async () => {
             const { useProjectStore } = await import('/src/store/storeBootstrap.ts');
             useProjectStore.getState().setProject(undefined, []);
         });
+        await expect(page.getByRole('dialog', { name: 'Recover unsaved work', exact: true })).not.toBeVisible();
         await openFromPalette(page, second);
         await expect.poll(async () => (await state(page)).title).toBe('Second');
         expect((await state(page)).recents).toHaveLength(2);
@@ -372,11 +361,11 @@ test.describe('browser recent projects', () => {
 
     test('retains stored directory handles through a full browser process restart', async ({ baseURL }, testInfo) => {
         test.setTimeout(90_000);
-        const profile = await mkdtemp(path.join(process.cwd(), 'temp', 'browser-recent-'));
+        const profile = await createTestProfile('browser-recent-');
         let context;
         const pages = [];
         const launch = async () => {
-            context = await chromium.launchPersistentContext(profile, {
+            context = await chromium.launchPersistentContext(profile.directory, {
                 args: ['--disable-audio-output'],
                 headless: true,
                 viewport: testInfo.project.use.viewport,
@@ -404,7 +393,7 @@ test.describe('browser recent projects', () => {
                 return browserFsAdapter.readTextFile(`${manifestPath.slice(0, -'/game.json'.length)}/notes.txt`);
             }, first)).toBe('Saved First');
         } finally {
-            await context?.close();
+            await closeTestContext(context, profile);
             for (const page of pages) expect(failures.get(page)).toEqual([]);
         }
     });

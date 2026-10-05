@@ -8,14 +8,13 @@ import type { ScriptPath } from '../../utils/scriptPathUtilities';
 import { dispatchAudiosheetShortcut } from '../../services/audiosheetShortcuts';
 import { fsOpenPath } from '../../services/fs';
 import { isTauriRuntime } from '../../services/runtime/runtimeEnvironment';
-import { saveProjectAs } from '../../services/saveProjectAs';
 import { getThemeRegistry } from '../../theme/themeRegistry';
 import { isRecord } from '../../utils/typeGuards';
 import { useProjectStore, useScriptStore } from '../storeBootstrap';
 import { useEditorStore } from '../useEditorStore';
 import { useSettingsStore } from '../useSettingsStore';
 import { useWorkbenchStore } from '../useWorkbenchStore';
-import { executeOpenProjectInCurrentWindow } from './projectOpenActions';
+import { saveAndOpenProjectAs } from './projectDestinationActions';
 
 export type GlobalShortcutAction =
     | 'audiosheetSetLeftBoundary'
@@ -175,22 +174,14 @@ export async function executeGlobalShortcutAction(action: GlobalShortcutAction):
                 const project = useProjectStore.getState();
                 if (!project.projectPath) return false;
 
-                useEditorStore.getState().markManualSave();
-                await project.saveAllDirtyFiles();
-
-                const result = await saveProjectAs(project.projectPath);
+                const result = await saveAndOpenProjectAs();
                 if (!result) return false;
-
-                const opened = await executeOpenProjectInCurrentWindow(result.manifestPath, {
-                    allowNewWindow: false,
-                    prompt: false,
-                });
-                if (opened.status !== 'opened-current') return false;
 
                 if (isTauriRuntime()) useEditorStore.getState().addRecentProject(result.manifestPath);
                 return true;
             } catch (error) {
                 console.error('Save Project As shortcut failed:', error);
+                useEditorStore.getState().announceOperationStatus(String(error instanceof Error ? error.message : error), 'error');
                 return false;
             }
         }

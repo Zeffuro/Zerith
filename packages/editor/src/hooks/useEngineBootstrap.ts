@@ -6,10 +6,13 @@ import { useEffect, useRef } from 'react';
 
 import { fsJoin, fsReadTextFile } from '../services/fs';
 import { createGamePreviewLogger } from '../services/gamePreviewLoggerBridge';
+import { createPreviewFontOwner } from '../services/previewFont';
 import { createPreviewSceneNavigationHandler } from '../services/previewSceneNavigation';
-import { createProjectAssetResolver, releaseEditorAssetUrl, resolveProjectAssetUrl } from '../services/runtime/assetUrls';
+import { createProjectAssetResolver } from '../services/runtime/assetUrls';
+import { useProjectStore } from '../store/storeBootstrap';
 import { useEditorStore } from '../store/useEditorStore';
 import { useEngineBridgeStore } from '../store/useEngineBridgeStore';
+import { usePlaytestStore } from '../store/usePlaytestStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useDebugBridge } from './useDebugBridge';
 import { startPreviewPlayback } from './usePlaybackControl';
@@ -34,12 +37,10 @@ const PreviewDefaultEngineConfig: EngineConfig = {
     },
     theme: {
         boxColor: 0x00_00_33,
-        fontFamily: 'Courier New',
+        fontFamily: 'Arial',
         fontSize: 24,
     },
 };
-
-const loadedPreviewFonts = new Set<string>();
 
 export function useEngineBootstrap({
     activeFileReference,
@@ -67,14 +68,19 @@ export function useEngineBootstrap({
     setPreviewLogCaptureEnabled: (enabled: boolean) => void;
 }): WritableReference<Engine | undefined> {
     const detachFlowListenersReference = useRef<(() => void) | undefined>(undefined);
-    const disposeAssetResolverReference = useRef<(() => void) | undefined>(undefined);
     const engineReference = useRef<Engine | undefined>(undefined);
+    const projectGeneration = useProjectStore(state => state.projectGeneration);
     const { attachDebugBridge } = useDebugBridge();
 
     useEffect(() => {
         if (!canvasReference.current || !projectPath || !manifest) return;
 
         let destroyed = false;
+        const isCurrent = () => !destroyed
+            && useProjectStore.getState().projectPath === projectPath
+            && useProjectStore.getState().projectGeneration === projectGeneration;
+        const fontOwner = createPreviewFontOwner(projectPath, isCurrent);
+        let assetResolver: ReturnType<typeof createProjectAssetResolver> | undefined;
         const canvas = canvasReference.current;
         if (!canvas) return;
         const {
@@ -86,6 +92,7 @@ export function useEngineBootstrap({
 
         void (async () => {
             const loadedEngineConfig = await loadProjectEngineConfig(projectPath);
+            if (!isCurrent()) return;
             const useDisplayConfigInPreview = loadedEngineConfig?.preview?.useDisplayConfig !== false;
 
             const resolvedDisplayConfig = useDisplayConfigInPreview
@@ -101,8 +108,9 @@ export function useEngineBootstrap({
             };
 
             if (resolvedTheme.fontFamily && typeof loadedEngineConfig?.preview?.fontAssetUrl === 'string') {
-                await loadPreviewFont(resolvedTheme.fontFamily, loadedEngineConfig.preview.fontAssetUrl, projectPath);
+                await fontOwner.load(resolvedTheme.fontFamily, loadedEngineConfig.preview.fontAssetUrl);
             }
+            if (!isCurrent()) return;
 
             const effectiveConfig: EngineConfig = {
                 ...PreviewDefaultEngineConfig,
@@ -121,8 +129,7 @@ export function useEngineBootstrap({
                 },
             };
 
-            const assetResolver = createProjectAssetResolver(projectPath);
-            disposeAssetResolverReference.current = assetResolver.dispose;
+            assetResolver = createProjectAssetResolver(projectPath);
 
             const engine = await bootstrapEngine({
                 assetResolver: assetResolver.resolve,
@@ -135,7 +142,8 @@ export function useEngineBootstrap({
                 scenes: bootstrapScenes,
             });
 
-            if (destroyed) {
+            if (!isCurrent()) {
+                fontOwner.dispose();
                 engine.destroy();
                 assetResolver.dispose();
                 return;
@@ -149,6 +157,9 @@ export function useEngineBootstrap({
             engine.setInputEnabled(false);
 
             detachFlowListenersReference.current = attachDebugBridge(engine, activeFileReference);
+
+            const playtest = usePlaytestStore.getState().request;
+            if (playtest?.projectPath === projectPath && playtest.generation === useProjectStore.getState().projectGeneration) return;
 
             const playbackState = useEditorStore.getState();
             const shouldAutoplay = playbackState.playTrigger > playbackState.stopTrigger;
@@ -168,10 +179,15 @@ export function useEngineBootstrap({
             const sceneManager = engine.scenes;
             sceneManager.addScene('preview', scriptReference.current);
             void sceneManager.jumpToScene('preview');
-        })();
+        })().catch((caughtError: unknown) => {
+            assetResolver?.dispose();
+            fontOwner.dispose();
+            if (isCurrent()) console.warn('[preview] Failed to bootstrap preview:', caughtError);
+        });
 
         return () => {
             destroyed = true;
+            fontOwner.dispose();
             setPreviewLogCaptureEnabled(false);
             detachFlowListenersReference.current?.();
             detachFlowListenersReference.current = undefined;
@@ -179,8 +195,7 @@ export function useEngineBootstrap({
             useEditorStore.getState().setPlaybackPaused(false);
             engineReference.current?.destroy();
             engineReference.current = undefined;
-            disposeAssetResolverReference.current?.();
-            disposeAssetResolverReference.current = undefined;
+            assetResolver?.dispose();
             useEngineBridgeStore.getState().setEngine(undefined);
         };
     }, [
@@ -192,6 +207,7 @@ export function useEngineBootstrap({
         manifest,
         playbackRequestIdReference,
         projectDataReference,
+        projectGeneration,
         projectPath,
         reloadToken,
         scriptReference,
@@ -205,31 +221,6 @@ function isLikelyMissingFileError(caughtError: unknown): boolean {
     if (!(caughtError instanceof Error)) return false;
     const message = caughtError.message.toLowerCase();
     return message.includes('cannot find') || message.includes('no such file') || message.includes('not found');
-}
-
-async function loadPreviewFont(fontFamily: string, fontAssetUrl: string, projectPath: string): Promise<void> {
-    if (typeof FontFace !== 'function' || !globalThis.document?.fonts) return;
-
-    const normalizedFontAssetUrl = fontAssetUrl.trim();
-    if (!normalizedFontAssetUrl) return;
-
-    const cacheKey = `${fontFamily}::${normalizedFontAssetUrl}`;
-    if (loadedPreviewFonts.has(cacheKey)) return;
-
-    let resolvedAssetUrl: string | undefined;
-    try {
-        resolvedAssetUrl = await resolveProjectAssetUrl(normalizedFontAssetUrl, projectPath);
-        const fontFace = new FontFace(fontFamily, `url(${JSON.stringify(resolvedAssetUrl)})`);
-        const loadedFace = await fontFace.load();
-        globalThis.document.fonts.add(loadedFace);
-        loadedPreviewFonts.add(cacheKey);
-    } catch (caughtError: unknown) {
-        console.warn('[preview] Failed to load custom font asset:', caughtError);
-    } finally {
-        if (resolvedAssetUrl) {
-            releaseEditorAssetUrl(resolvedAssetUrl);
-        }
-    }
 }
 
 async function loadProjectEngineConfig(projectPath: string): Promise<EngineConfig | undefined> {

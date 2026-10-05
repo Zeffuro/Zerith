@@ -1,13 +1,14 @@
 import { CURRENT_CONTENT_SCHEMA_VERSION } from '@zeffuro/zerith-core/schemas';
 
 import { fsJoin, fsMkdir, fsWriteTextFile } from './fs';
+import { type ProjectDestinationOptions, withProjectDestination } from './projectDestination';
 
 export type NewProjectOptions = {
     author: string;
     directory: string;
     name: string;
     templateId?: string;
-};
+} & ProjectDestinationOptions;
 
 export type NewProjectScaffoldResult = {
     initialEntryPath: string;
@@ -135,12 +136,30 @@ export async function createNewProject(options: NewProjectOptions): Promise<NewP
         throw new TypeError('Project name is required.');
     }
 
-    if (template.id === 'classic-vn') {
-        await createClassicVnProject({
+    return withProjectDestination(projectPath, options, async (projectPath, check) => {
+        if (template.id === 'classic-vn') {
+            await createClassicVnProject({
+                check,
+                projectAuthor,
+                projectName,
+                projectPath,
+            });
+            return {
+                initialEntryPath: await resolveTemplateInitialEntryPath(projectPath, template),
+                manifestPath: await fsJoin(projectPath, 'game.json'),
+                onboardingChecks: template.onboardingChecks,
+                projectPath,
+                templateId: template.id,
+            };
+        }
+
+        await createBlankProject({
+            check,
             projectAuthor,
             projectName,
             projectPath,
         });
+
         return {
             initialEntryPath: await resolveTemplateInitialEntryPath(projectPath, template),
             manifestPath: await fsJoin(projectPath, 'game.json'),
@@ -148,21 +167,7 @@ export async function createNewProject(options: NewProjectOptions): Promise<NewP
             projectPath,
             templateId: template.id,
         };
-    }
-
-    await createBlankProject({
-        projectAuthor,
-        projectName,
-        projectPath,
     });
-
-    return {
-        initialEntryPath: await resolveTemplateInitialEntryPath(projectPath, template),
-        manifestPath: await fsJoin(projectPath, 'game.json'),
-        onboardingChecks: template.onboardingChecks,
-        projectPath,
-        templateId: template.id,
-    };
 }
 
 function applyManifestIdentity(rawManifest: string, projectName: string, projectAuthor: string): string {
@@ -179,18 +184,20 @@ function applyManifestIdentity(rawManifest: string, projectName: string, project
 }
 
 async function createBlankProject(options: {
+    check: () => void;
     projectAuthor: string;
     projectName: string;
     projectPath: string;
 }): Promise<void> {
-    const { projectAuthor, projectName, projectPath } = options;
+    const { check, projectAuthor, projectName, projectPath } = options;
     const scenesPath = await fsJoin(projectPath, 'scenes');
     const manifestPath = await fsJoin(projectPath, 'game.json');
     const introScenePath = await fsJoin(scenesPath, 'intro.json');
     const engineConfigPath = await fsJoin(projectPath, 'engine.config.json');
 
-    await fsMkdir(projectPath, true);
+    check();
     await fsMkdir(scenesPath, true);
+    check();
 
     const manifest = {
         $schema: 'zerith/manifest',
@@ -216,7 +223,7 @@ async function createBlankProject(options: {
         schemaVersion: CURRENT_CONTENT_SCHEMA_VERSION,
         theme: {
             boxColor: 51,
-            fontFamily: 'Comic',
+            fontFamily: 'Arial',
             fontSize: 24,
         },
     };
@@ -229,30 +236,35 @@ async function createBlankProject(options: {
         schemaVersion: CURRENT_CONTENT_SCHEMA_VERSION,
     };
 
-    await fsWriteTextFile(manifestPath, `${JSON.stringify(manifest, undefined, 4)}\n`);
-    await fsWriteTextFile(introScenePath, `${JSON.stringify(introScene, undefined, 4)}\n`);
-    await fsWriteTextFile(engineConfigPath, `${JSON.stringify(engineConfig, undefined, 4)}\n`);
+    check();
+    await fsWriteTextFile(manifestPath, `${JSON.stringify(manifest, undefined, 4)}\n`, { createOnly: true });
+    check();
+    await fsWriteTextFile(introScenePath, `${JSON.stringify(introScene, undefined, 4)}\n`, { createOnly: true });
+    check();
+    await fsWriteTextFile(engineConfigPath, `${JSON.stringify(engineConfig, undefined, 4)}\n`, { createOnly: true });
 }
 
 async function createClassicVnProject(options: {
+    check: () => void;
     projectAuthor: string;
     projectName: string;
     projectPath: string;
 }): Promise<void> {
-    const { projectAuthor, projectName, projectPath } = options;
+    const { check, projectAuthor, projectName, projectPath } = options;
     const templateEntries = getClassicVnStarterTemplateEntries();
 
     if (templateEntries.length === 0) {
         throw new Error('Classic VN starter template files are missing.');
     }
 
-    await fsMkdir(projectPath, true);
+    check();
 
     const createdDirectories = new Set<string>();
     for (const [relativePath, rawContents] of templateEntries) {
         const targetPath = await fsJoin(projectPath, ...relativePath.split('/'));
         const directoryPath = await getDirectoryPath(projectPath, relativePath);
 
+        check();
         if (!createdDirectories.has(directoryPath)) {
             await fsMkdir(directoryPath, true);
             createdDirectories.add(directoryPath);
@@ -261,7 +273,8 @@ async function createClassicVnProject(options: {
         const contents = relativePath === 'game.json'
             ? applyManifestIdentity(rawContents, projectName, projectAuthor)
             : normalizeTextFile(rawContents);
-        await fsWriteTextFile(targetPath, contents);
+        check();
+        await fsWriteTextFile(targetPath, contents, { createOnly: true });
     }
 }
 

@@ -42,13 +42,33 @@ jobs:
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: packages/editor/src-tauri -> target
+          workspaces: |
+            packages/editor/src-tauri -> target
+            packages/player/desktop-shell -> target
 
       - name: Install
         run: npm ci
 
       - name: Build editor resources
         run: npm run build --workspace=zerith-editor
+
+      - name: Build prebuilt game player
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/packages/player/desktop-shell/target
+        run: npm run build:player:desktop
+
+      - name: Game player formatting
+        run: cargo fmt --manifest-path packages/player/desktop-shell/Cargo.toml --all -- --check
+
+      - name: Game player lint
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/packages/player/desktop-shell/target
+        run: cargo clippy --manifest-path packages/player/desktop-shell/Cargo.toml --locked --all-targets -- -D warnings
+
+      - name: Game player regression tests
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/packages/player/desktop-shell/target
+        run: cargo test --manifest-path packages/player/desktop-shell/Cargo.toml --locked
 
       - name: Rust formatting
         run: cargo fmt --manifest-path packages/editor/src-tauri/Cargo.toml --all -- --check
@@ -97,6 +117,12 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Desktop package contract tests
+        run: npm run test:desktop-package
+
+      - name: Desktop player build contract tests
+        run: node --test packages/player/scripts/build-desktop-runtime.test.mjs
 
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium

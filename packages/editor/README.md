@@ -30,6 +30,8 @@ npm run tauri -- dev
 ## Boundaries
 
 - The editor shell has desktop filesystem/opener capabilities through Tauri; browser-only behavior stays explicitly limited.
+- New Project and Save Project As require a new or empty folder outside existing projects. Failed writes retain and report partial output; retries need another empty folder or manual inspection.
+- Browser export offers a ZIP download or, with File System Access support, a new folder under a chosen parent. Choose a destination outside the source project; existing exports are preserved.
 - Packaged desktop game export should use a dedicated player shell, not the editor shell.
 - Plugin loading remains explicit and local-first; remote marketplace discovery is still deferred.
 - Keep editor docs short. Prefer tests, pure model helpers, and package scripts as the durable explanation of behavior.

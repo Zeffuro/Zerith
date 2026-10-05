@@ -22,6 +22,7 @@ export interface SpriteCommand extends BaseCommand {
     xRatio?: number;
     y?: number;
     yRatio?: number;
+    zIndex?: number;
 }
 
 export interface SpriteState {
@@ -41,5 +42,6 @@ export interface SpriteState {
     xRatio?: number;
     y?: number;
     yRatio?: number;
+    zIndex?: number;
 }
 

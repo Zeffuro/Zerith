@@ -132,6 +132,7 @@ export interface UiPrefsSlice {
     isSettingsModalOpen: boolean;
     lastManualSaveAt: number;
     markManualSave: () => void;
+    newProjectModalGeneration: number;
     openCommandPalette: () => void;
     openExportGameModal: () => void;
     openGlobalSearchPopup: (mode?: GlobalSearchLaunchMode) => void;

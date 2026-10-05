@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useDismissiblePopup } from '../../../hooks/useDismissiblePopup';
+import { usePlaytestRunning } from '../../../hooks/usePlaytestRunning';
 import { useRecentProjects } from '../../../hooks/useRecentProjects';
 import {
     executeContentMigrationCommand,
@@ -19,7 +20,7 @@ import { openLocalizationWorkbenchTab } from '../../../services/localizationWork
 import { openProjectEntry } from '../../../services/openProjectEntry';
 import { isTauriRuntime } from '../../../services/runtime/runtimeEnvironment';
 import { closeEditorWindow, openExternalUrl } from '../../../services/runtime/windowControls';
-import { saveProjectAs } from '../../../services/saveProjectAs';
+import { saveAndOpenProjectAs } from '../../../store/actions/projectDestinationActions';
 import { executeCloseProjectAction, executeOpenProjectInCurrentWindow } from '../../../store/actions/projectOpenActions';
 import { useProjectStore } from '../../../store/storeBootstrap';
 import { useScriptStore } from '../../../store/storeBootstrap';
@@ -138,28 +139,20 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         if (!projectPath) return;
 
         try {
-            markManualSave();
-            await saveAllDirtyFiles();
-
-            const result = await saveProjectAs(projectPath);
+            const result = await saveAndOpenProjectAs();
             if (!result) return;
 
-            const opened = await executeOpenProjectInCurrentWindow(result.manifestPath, {
-                allowNewWindow: false,
-                prompt: false,
-            });
-            if (opened.status !== 'opened-current') return;
             if (supportsRecentProjects) addRecentProject(result.manifestPath);
             await handleOpenInitialProjectEntry();
         } catch (error) {
             console.error('Failed to save project as:', error);
+            announceOperationStatus(error instanceof Error ? error.message : String(error), 'error');
         }
     }, [
         addRecentProject,
+        announceOperationStatus,
         handleOpenInitialProjectEntry,
-        markManualSave,
         projectPath,
-        saveAllDirtyFiles,
         supportsRecentProjects,
     ]);
 
@@ -216,7 +209,8 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         }
     }, [announceOperationStatus]);
 
-    const isRunning = playTrigger > stopTrigger;
+    const isPlaytestRunning = usePlaytestRunning();
+    const isRunning = playTrigger > stopTrigger || isPlaytestRunning;
             const handleSaveLayoutPreset = useCallback(() => {
                 const layoutName = globalThis.prompt('Save current layout as preset', 'My Layout')?.trim();
                 if (!layoutName) return;
@@ -312,6 +306,8 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
             { label: 'Find and Replace in Project…', onClick: openGlobalSearchReplacePopup, shortcut: 'Ctrl+Shift+G' },
             { label: 'Command Palette…', onClick: openCommandPalette, shortcut: 'Ctrl+Shift+P' },
             { disabled: !projectPath, label: 'Localization', onClick: handleOpenLocalizationEditor },
+            { disabled: !projectPath, label: 'Playtests', onClick: () => globalThis.dispatchEvent(new CustomEvent('zerith:dock-select', { detail: 'playtests' })) },
+            { disabled: !projectPath, label: 'Story map', onClick: () => globalThis.dispatchEvent(new CustomEvent('zerith:dock-select', { detail: 'story_map' })) },
             { label: 'sep-3', separator: true },
             { label: 'Save Layout Preset…', onClick: handleSaveLayoutPreset },
             {

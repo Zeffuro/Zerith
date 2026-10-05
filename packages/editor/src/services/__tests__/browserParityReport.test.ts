@@ -20,8 +20,8 @@ describe('browserParityReport', () => {
         });
         expect(report.exportComparison.summary).toEqual({
             'browser-limited': 3,
-            'desktop-only': 1,
-            matched: 3,
+            'desktop-only': 0,
+            matched: 4,
         });
     });
 
@@ -47,11 +47,12 @@ describe('browserParityReport', () => {
         expect(report.exportComparison.features.find((feature) => feature.id === 'compiledContent')).toMatchObject({
             status: 'matched',
         });
+        expect(report.exportComparison.features.find((feature) => feature.id === 'baseUrl')).toMatchObject({ status: 'matched' });
         expect(report.exportComparison.features.find((feature) => feature.id === 'zipArchive')).toMatchObject({
             status: 'browser-limited',
         });
         expect(report.exportComparison.features.find((feature) => feature.id === 'looseOutput')).toMatchObject({
-            status: 'desktop-only',
+            status: 'browser-limited',
         });
     });
 

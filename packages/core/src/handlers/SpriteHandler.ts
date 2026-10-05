@@ -182,6 +182,11 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
         const sprite = this.sprites.get(command.id);
         if (!sprite) { this.logger.warn(`Sprite '${command.id}' not found for 'move'`); return; }
 
+        if (command.scaleX !== undefined || command.scaleY !== undefined) {
+            sprite.scale.set(command.scaleX ?? sprite.scale.x, command.scaleY ?? sprite.scale.y);
+        }
+        if (command.zIndex !== undefined) sprite.zIndex = command.zIndex;
+
         const targetX = resolveMoveAxisPosition(command.x, command.xRatio, this.display.width, sprite.x);
         const targetY = resolveMoveAxisPosition(command.y, command.yRatio, this.display.height, sprite.y);
         const duration = command.duration ?? 300;
@@ -191,14 +196,7 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             if (command.flip !== undefined) {
                 sprite.scale.x = command.flip ? -Math.abs(sprite.scale.x) : Math.abs(sprite.scale.x);
             }
-            this.serializer.saveMove(command.id, {
-                clearXRatio: command.x !== undefined,
-                clearYRatio: command.y !== undefined,
-                x: sprite.x,
-                xRatio: command.xRatio,
-                y: sprite.y,
-                yRatio: command.yRatio,
-            });
+            this.saveMove(sprite, command);
             return;
         }
 
@@ -223,13 +221,22 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             requestAnimationFrame(tick);
         });
 
+        this.saveMove(sprite, command);
+    }
+
+    private saveMove(sprite: Sprite, command: SpriteCommand): void {
         this.serializer.saveMove(command.id, {
+            clearRatioSize: command.scaleX !== undefined || command.scaleY !== undefined,
             clearXRatio: command.x !== undefined,
             clearYRatio: command.y !== undefined,
+            flip: sprite.scale.x < 0,
+            scaleX: sprite.scale.x,
+            scaleY: sprite.scale.y,
             x: sprite.x,
             xRatio: command.xRatio,
             y: sprite.y,
             yRatio: command.yRatio,
+            zIndex: sprite.zIndex,
         });
     }
 
@@ -252,8 +259,11 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             sprite.texture = texture;
         } else {
             sprite = new Sprite(texture);
+            sprite.label = `zerith-sprite:${command.id}`;
             this.sprites.set(command.id, sprite);
-            this.display.getLayer('sprites').addChild(sprite);
+            const layer = this.display.getLayer('sprites');
+            layer.sortableChildren = true;
+            layer.addChild(sprite);
         }
 
         const charData = this.textureResolver.findCharacter(command.id);
@@ -272,6 +282,7 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             placement.anchorY
         );
         sprite.position.set(placement.x, placement.y);
+        if (command.zIndex !== undefined) sprite.zIndex = command.zIndex;
 
         const sX = placement.scaleX;
         const sY = placement.scaleY;
@@ -313,6 +324,7 @@ export class SpriteHandler implements CommandHandler<SpriteCommand> {
             xRatio: command.xRatio ?? defaults?.xRatio,
             y: sprite.y,
             yRatio: command.yRatio ?? defaults?.yRatio,
+            zIndex: sprite.zIndex,
         });
     }
 }

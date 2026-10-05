@@ -23,9 +23,11 @@ jobs:
           - platform: macos-latest
             label: macos-arm64
             args: --target aarch64-apple-darwin
+            runtimeArgs: --target aarch64-apple-darwin
           - platform: macos-latest
             label: macos-x64
             args: --target x86_64-apple-darwin
+            runtimeArgs: --target x86_64-apple-darwin
 
     steps:
       - name: Checkout
@@ -51,10 +53,17 @@ jobs:
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: packages/editor/src-tauri -> target
+          workspaces: |
+            packages/editor/src-tauri -> target
+            packages/player/desktop-shell -> target
 
       - name: Install
         run: npm ci
+
+      - name: Build bundled game player
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/packages/player/desktop-shell/target
+        run: npm run build:player:desktop -- ${{ matrix.runtimeArgs }}
 
       - name: Public surface check
         run: npm run check:public

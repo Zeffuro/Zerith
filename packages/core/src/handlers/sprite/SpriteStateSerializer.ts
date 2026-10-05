@@ -13,6 +13,10 @@ export class SpriteStateSerializer {
         this.executeSpriteCommand = executeSpriteCommand;
     }
 
+    public getSprite(id: string): SpriteState | undefined {
+        return this.state.system.sprites[id];
+    }
+
     public readonly handleStateLoaded = (saveData: SaveState): void => {
         for (const [id, sprite] of Object.entries(saveData.system.sprites)) {
             void this.executeSpriteCommand({
@@ -34,6 +38,7 @@ export class SpriteStateSerializer {
                 xRatio: sprite.xRatio,
                 y: sprite.yRatio === undefined ? sprite.y : undefined,
                 yRatio: sprite.yRatio,
+                zIndex: sprite.zIndex,
             }).then(async () => {
                 if (!sprite.animation) {
                     return;
@@ -65,9 +70,10 @@ export class SpriteStateSerializer {
     public saveMove(
         id: string,
         position: {
+            clearRatioSize?: boolean;
             clearXRatio?: boolean;
             clearYRatio?: boolean;
-        } & Pick<SpriteState, 'x' | 'xRatio' | 'y' | 'yRatio'>,
+        } & Pick<SpriteState, 'flip' | 'scaleX' | 'scaleY' | 'x' | 'xRatio' | 'y' | 'yRatio' | 'zIndex'>,
     ): void {
         const sprite = this.state.system.sprites[id];
         if (!sprite) {
@@ -78,6 +84,15 @@ export class SpriteStateSerializer {
         sprite.y = position.y;
         sprite.xRatio = position.xRatio ?? (position.clearXRatio ? undefined : sprite.xRatio);
         sprite.yRatio = position.yRatio ?? (position.clearYRatio ? undefined : sprite.yRatio);
+        sprite.scaleX = position.scaleX ?? sprite.scaleX;
+        sprite.scaleY = position.scaleY ?? sprite.scaleY;
+        sprite.flip = position.flip ?? sprite.flip;
+        sprite.zIndex = position.zIndex ?? sprite.zIndex;
+        if (position.clearRatioSize) {
+            sprite.widthRatio = undefined;
+            sprite.heightRatio = undefined;
+            sprite.fit = undefined;
+        }
     }
 
     public savePose(id: string, command: Pick<SpriteCommand, 'assetUrl' | 'pose'>): void {

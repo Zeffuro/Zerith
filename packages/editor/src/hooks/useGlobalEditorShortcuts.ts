@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
 
 import { executeGlobalShortcutAction } from '../store/actions/globalShortcutActions';
+import { useProjectStore } from '../store/storeBootstrap';
 import { useEditorStore } from '../store/useEditorStore';
+import { usePlaytestStore } from '../store/usePlaytestStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { resolveGlobalShortcutAction } from './globalShortcutResolver';
 
@@ -17,7 +19,10 @@ export function useGlobalEditorShortcuts() {
 }
 
 async function handleGlobalShortcut(event: KeyboardEvent): Promise<void> {
-    const isPlaybackRunning = useEditorStore.getState().playTrigger > useEditorStore.getState().stopTrigger;
+    const project = useProjectStore.getState();
+    const playtest = usePlaytestStore.getState();
+    const isPlaytestRunning = playtest.request?.projectPath === project.projectPath && playtest.request?.generation === project.projectGeneration && (playtest.phase === 'starting' || playtest.phase === 'playing');
+    const isPlaybackRunning = useEditorStore.getState().playTrigger > useEditorStore.getState().stopTrigger || isPlaytestRunning;
     const keymapOverrides = useSettingsStore.getState().keymapOverrides;
     const resolved = resolveGlobalShortcutAction({
         event,

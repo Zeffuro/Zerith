@@ -30,7 +30,7 @@ describe('visual save metadata ownership', () => {
         const slice = createProjectIoSlice(() => state, { getRootScript: () => commands, setScript: vi.fn() });
         await slice.saveActiveFileFromCurrentScript();
         const expected = { commands, custom: { editor: dirty ? 'draft' : 'external' }, graph: { entry: dirty ? 'draft' : 'external' } };
-        expect(mocks.writeTextFile).toHaveBeenCalledWith('/intro.json', JSON.stringify(expected, undefined, 4));
+        expect(mocks.writeTextFile).toHaveBeenCalledWith('/intro.json', JSON.stringify(expected, undefined, 4), expect.any(Function));
         expect(mocks.updateTabContent).toHaveBeenCalledWith('intro', JSON.stringify(expected, undefined, 4), { markDirty: false });
         expect(clearFileDirty).toHaveBeenCalledWith('/intro.json');
     });

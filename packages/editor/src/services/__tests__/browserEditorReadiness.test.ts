@@ -10,16 +10,16 @@ describe('browserEditorReadiness', () => {
         });
 
         expect(report.status).toBe('blocked');
-        expect(report.ready).toBe(1);
+        expect(report.ready).toBe(2);
         expect(report.limited).toBe(3);
-        expect(report.blocked).toBe(2);
+        expect(report.blocked).toBe(1);
         expect(report.requirements.map((requirement) => [requirement.id, requirement.status])).toEqual([
             ['browserShell', 'ready'],
             ['browserProjectFilesystem', 'limited'],
             ['browserExportZip', 'limited'],
             ['playerBuildParity', 'limited'],
             ['desktopOnlyIntegrations', 'blocked'],
-            ['looseDirectoryExport', 'blocked'],
+            ['looseDirectoryExport', 'ready'],
         ]);
     });
 

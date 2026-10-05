@@ -1,0 +1,88 @@
+.zerith-player-shell {
+    --zerith-player-accent: #ffaaaa;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    padding: clamp(12px, 3vw, 40px);
+    background: #080b149c;
+    color: var(--zerith-player-text-color, #f2f0f8);
+    font: var(--zerith-player-font-size, 16px)/1.5 var(--zerith-player-font, system-ui, sans-serif);
+    isolation: isolate;
+}
+.zerith-player-shell[hidden] { display: none; }
+.zerith-player-shell[data-origin="title"] { background: radial-gradient(ellipse at 20% 15%, #25233d, #0d101b 70%); }
+.zerith-shell-background { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: var(--zerith-player-background-opacity, .45); z-index: -1; }
+.zerith-shell-panel {
+    width: min(760px, 100%);
+    max-height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--zerith-player-panel-color, #151923f5);
+    border: 1px solid #515669;
+    border-radius: var(--zerith-player-panel-radius, 18px);
+    padding: clamp(18px, 3vw, 36px);
+    box-shadow: 0 18px 80px #0006;
+}
+.zerith-player-shell[data-view="title"] .zerith-shell-panel {
+    width: min(880px, 100%);
+    border-color: #ffffff26;
+    padding: clamp(26px, 5vw, 64px);
+}
+.zerith-player-shell[data-view="pause"] .zerith-shell-panel { width: min(430px, 100%); }
+.zerith-shell-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 22px; }
+.zerith-shell-header h1 { font-size: clamp(25px, 4vw, 40px); line-height: 1.2; font-weight: 650; overflow-wrap: anywhere; }
+.zerith-player-shell[data-view="title"] h1 { font-size: clamp(32px, 6vw, 58px); }
+.zerith-shell-subtitle { color: #cbc5d9; font-size: 18px; margin-bottom: 26px; }
+.zerith-shell-menu { display: grid; gap: 10px; max-width: var(--zerith-player-menu-width, 350px); }
+.zerith-shell-button {
+    font: inherit;
+    color: inherit;
+    border: 1px solid #535a70;
+    border-radius: var(--zerith-player-button-radius, 9px);
+    background: var(--zerith-player-button-color, #232a3a);
+    padding: 11px 18px;
+    cursor: pointer;
+    min-height: var(--zerith-player-button-height, 44px);
+    text-align: left;
+}
+.zerith-shell-button:hover { background: #343d52; border-color: var(--zerith-player-accent); }
+.zerith-shell-button:focus-visible, .zerith-player-shell input:focus-visible { outline: 3px solid var(--zerith-player-accent); outline-offset: 3px; }
+.zerith-shell-menu .zerith-shell-button:first-child { background: var(--zerith-player-accent); color: #171521; border-color: var(--zerith-player-accent); font-weight: 650; }
+.zerith-shell-button:disabled { opacity: .45; cursor: default; }
+.zerith-shell-note { color: #b0b5c6; font-size: 13px; margin-top: 14px; }
+.zerith-shell-status { color: var(--zerith-player-accent); font-size: 14px; margin-top: 14px; overflow-wrap: anywhere; }
+.zerith-shell-status:empty { display: none; }
+.zerith-shell-settings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px; margin-bottom: 25px; }
+.zerith-shell-setting-group { min-width: 0; }
+.zerith-shell-setting-group h3 { font-size: 18px; margin-bottom: 14px; }
+.zerith-shell-setting { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 7px; margin-bottom: 15px; font-size: 14px; }
+.zerith-shell-setting input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: var(--zerith-player-accent); min-height: 24px; }
+.zerith-shell-setting output { color: #b0b5c6; font-variant-numeric: tabular-nums; }
+.zerith-shell-toggle { min-height: 30px; }
+.zerith-shell-toggle input { width: 20px; height: 20px; accent-color: var(--zerith-player-accent); cursor: pointer; }
+.zerith-shell-setting-group > .zerith-shell-button { margin-right: 8px; margin-bottom: 5px; }
+.zerith-shell-button[aria-pressed="true"] { border-color: var(--zerith-player-accent); background: #3b3547; }
+.zerith-shell-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.zerith-shell-slot { display: flex; flex-direction: column; gap: 6px; overflow-wrap: anywhere; }
+.zerith-shell-save-date { color: #b0b5c6; font-size: 12px; }
+.zerith-shell-save-preview { color: #d0d3e0; font-size: 14px; }
+.zerith-shell-history { border-bottom: 1px solid #3b4051; padding: 12px 0; }
+.zerith-shell-history h3 { font-size: 15px; color: var(--zerith-player-accent); }
+.zerith-shell-history p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.zerith-shell-confirmation { margin-bottom: 22px; }
+.zerith-player-shell[data-view="confirm"] .zerith-shell-button { margin-right: 10px; }
+@media (max-width: 560px) {
+    .zerith-shell-settings, .zerith-shell-slots { grid-template-columns: minmax(0, 1fr); }
+    .zerith-shell-menu { max-width: none; }
+    .zerith-shell-header h1 { font-size: 26px; }
+}
+
+
+.zerith-player-shell[data-view="title"][data-title-alignment="center"] .zerith-shell-header { justify-content: center; text-align: center; }
+.zerith-player-shell[data-view="title"][data-title-alignment="center"] .zerith-shell-subtitle { text-align: center; }
+.zerith-player-shell[data-view="title"][data-title-alignment="center"] .zerith-shell-menu { margin-inline: auto; }
+.zerith-player-shell[data-view="title"][data-title-alignment="right"] .zerith-shell-header { justify-content: flex-end; text-align: right; }
+.zerith-player-shell[data-view="title"][data-title-alignment="right"] .zerith-shell-subtitle { text-align: right; }
+.zerith-player-shell[data-view="title"][data-title-alignment="right"] .zerith-shell-menu { margin-left: auto; }

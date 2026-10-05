@@ -4,6 +4,7 @@ import type { AssetResolver } from '../Engine';
 import type { BackgroundCommand } from '../handlers/BackgroundHandler';
 import type { BgmCommand } from '../handlers/BgmHandler';
 import type { BlockCommand } from '../handlers/BlockHandler';
+import type { ChoiceCommand } from '../handlers/ChoiceHandler';
 import type { ForCommand } from '../handlers/ForHandler';
 import type { IfCommand } from '../handlers/IfHandler';
 import type { SfxCommand } from '../handlers/SfxHandler';
@@ -13,6 +14,7 @@ import type { IAudioManager } from '../interfaces/managers';
 import type { BaseCommand, CharacterDefinition, Script, SpritesheetConfig } from '../types';
 import type { SpritesheetManager } from './SpritesheetManager';
 
+import { parseAudiosheetDescriptor } from '../schemas';
 import { Logger } from '../utils/Logger';
 
 export class AssetManager {
@@ -29,7 +31,7 @@ export class AssetManager {
         this.resolver = resolver;
     }
 
-    public static extractAssetUrls(script: Script): { audio: Set<string>; textures: Set<string>; } {
+    public static extractAssetUrls(script: Script, includeAudioCues = false): { audio: Set<string>; textures: Set<string>; } {
         const textures = new Set<string>();
         const audio = new Set<string>();
 
@@ -41,11 +43,11 @@ export class AssetManager {
                 }
                 if (cmd.type === 'sfx') {
                     const sfxCmd = cmd as SfxCommand;
-                    if (sfxCmd.assetUrl && !isCueReference(sfxCmd.assetUrl)) audio.add(sfxCmd.assetUrl);
+                    if (sfxCmd.assetUrl && (includeAudioCues || !isCueReference(sfxCmd.assetUrl))) audio.add(sfxCmd.assetUrl);
                 }
                 if (cmd.type === 'bgm') {
                     const bgmCmd = cmd as BgmCommand;
-                    if (bgmCmd.assetUrl && !isCueReference(bgmCmd.assetUrl)) audio.add(bgmCmd.assetUrl);
+                    if (bgmCmd.assetUrl && (includeAudioCues || !isCueReference(bgmCmd.assetUrl))) audio.add(bgmCmd.assetUrl);
                 }
                 if (cmd.type === 'sprite') {
                     const spriteCmd = cmd as SpriteCommand;
@@ -56,6 +58,12 @@ export class AssetManager {
                     const blockCmd = cmd as BlockCommand;
                     if (Array.isArray(blockCmd.commands)) {
                         walk(blockCmd.commands);
+                    }
+                }
+                if (cmd.type === 'choice') {
+                    const choiceCmd = cmd as ChoiceCommand;
+                    for (const option of choiceCmd.options) {
+                        if (Array.isArray(option.commands)) walk(option.commands);
                     }
                 }
                 if (cmd.type === 'if') {
@@ -98,8 +106,8 @@ export class AssetManager {
         this.loadedUrls.clear();
     }
 
-    public extractAssetUrls(script: Script): { audio: Set<string>; textures: Set<string>; } {
-        return AssetManager.extractAssetUrls(script);
+    public extractAssetUrls(script: Script, includeAudioCues = false): { audio: Set<string>; textures: Set<string>; } {
+        return AssetManager.extractAssetUrls(script, includeAudioCues);
     }
 
     public async load<T = unknown>(url: string): Promise<T> {
@@ -130,11 +138,12 @@ export class AssetManager {
         await Promise.all(tasks);
     }
 
-    public async preloadSceneAssets(script: Script): Promise<void> {
-        const { audio, textures } = this.extractAssetUrls(script);
+    public async preloadSceneAssets(script: Script, options?: { strict?: boolean }): Promise<void> {
+        const strict = options?.strict ?? false;
+        const { audio, textures } = this.extractAssetUrls(script, strict);
 
-        const texturePromises = [...textures].map((url) => this.preloadTexture(url));
-        const audioPromises = [...audio].map((url) => this.preloadAudio(url));
+        const texturePromises = [...textures].map((url) => this.preloadTexture(url, strict));
+        const audioPromises = [...audio].map((url) => strict && isCueReference(url) ? this.preloadAudioCue(url) : this.preloadAudio(url, strict));
 
         await Promise.all([...texturePromises, ...audioPromises]);
         this.logger.info(`Preloaded ${textures.size} textures, ${audio.size} audio files.`);
@@ -148,7 +157,7 @@ export class AssetManager {
         this.resolver = resolver;
     }
 
-    private async preloadAudio(url: string): Promise<void> {
+    private async preloadAudio(url: string, strict = false): Promise<void> {
         const resolvedUrl = await this.resolve(url);
         const key = `audio:${resolvedUrl}`;
         if (this.loadedUrls.has(key) || this.audio.audioExists(resolvedUrl)) {
@@ -160,8 +169,23 @@ export class AssetManager {
             await this.audio.preloadAudio(resolvedUrl);
             this.loadedUrls.add(key);
         } catch (error) {
+            if (strict) throw error;
             this.logger.warn(`Failed to preload audio: ${url}`, error);
         }
+    }
+
+    private async preloadAudioCue(url: string): Promise<void> {
+        const separator = url.lastIndexOf(':');
+        if (separator <= 0 || separator === url.length - 1) throw new Error(`Invalid audio cue '${url}'.`);
+        const sheetUrl = url.slice(0, separator);
+        const cueName = url.slice(separator + 1);
+        const descriptor = parseAudiosheetDescriptor(await this.load<unknown>(sheetUrl));
+        if (!descriptor.success) throw new Error(`Invalid audiosheet '${sheetUrl}': ${descriptor.error}`);
+        if (!Object.hasOwn(descriptor.data.cues, cueName)) throw new Error(`Audio cue '${cueName}' is missing from '${sheetUrl}'.`);
+        const source = descriptor.data.source;
+        const directory = sheetUrl.slice(0, Math.max(0, sheetUrl.lastIndexOf('/') + 1));
+        const sourceUrl = source.startsWith('/') || /^[a-z][a-z+.-]*:\/\//i.test(source) ? source : `${directory}${source}`;
+        await this.audio.loadAudiosheet(sheetUrl, { ...descriptor.data, source: await this.resolve(sourceUrl) });
     }
 
     private async preloadSpritesheet(config: SpritesheetConfig): Promise<void> {
@@ -177,15 +201,17 @@ export class AssetManager {
         }
     }
 
-    private async preloadTexture(url: string): Promise<void> {
+    private async preloadTexture(url: string, strict = false): Promise<void> {
         const resolvedUrl = await this.resolve(url);
         const key = `texture:${resolvedUrl}`;
         if (this.loadedUrls.has(key)) return;
 
         try {
-            await Assets.load(resolvedUrl);
+            const texture = await Assets.load<unknown>(resolvedUrl);
+            if (strict && !texture) throw new Error(`Texture '${url}' could not be loaded.`);
             this.loadedUrls.add(key);
         } catch (error) {
+            if (strict) throw error;
             this.logger.warn(`Failed to preload texture: ${url}`, error);
         }
     }

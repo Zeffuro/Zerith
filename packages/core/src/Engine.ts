@@ -24,13 +24,10 @@ import type { BaseCommand, GameManifest, Serializable } from './types';
 import type {
     RegisteredRuntimePlugin,
     RuntimePlugin,
-    RuntimePluginActivationResult,
-    RuntimePluginCleanup,
-    RuntimePluginContext,
-    RuntimePluginManifest,
 } from './types/RuntimePlugin';
 
-import { CURRENT_RUNTIME_PLUGIN_API_VERSION } from './types/RuntimePlugin';
+import { restoreEngineSave } from './restoreEngineSave';
+import { RuntimePluginRegistry } from './RuntimePluginRegistry';
 import { Logger } from './utils/Logger';
 import { DefaultTheme, type Theme } from './utils/Theme';
 
@@ -53,12 +50,6 @@ export interface EngineDeps {
     spritesheets: ISpritesheetManager;
     startScreen: IStartScreenManager;
     state: IStateManager;
-}
-
-interface RuntimePluginRegistration {
-    cleanups: RuntimePluginCleanup[];
-    manifest: RuntimePluginManifest;
-    plugin: RuntimePlugin;
 }
 
 export class Engine {
@@ -131,7 +122,9 @@ export class Engine {
     }
 
     private _autoAdvanceDelay: number | undefined;
-    private readonly runtimePlugins = new Map<string, RuntimePluginRegistration>();
+    private destroyed = false;
+    private readonly runtimePlugins: RuntimePluginRegistry;
+    private saveLoadSequence = 0;
 
     constructor(config: EngineConfig = {}, deps: EngineDeps) {
         this.config = config;
@@ -155,26 +148,21 @@ export class Engine {
         this.spritesheets = deps.spritesheets;
         this.startScreen = deps.startScreen;
         this.stateManager = deps.state;
+        this.runtimePlugins = new RuntimePluginRegistry(this);
     }
 
     public async applySaveState(saveData: SaveState) {
-        this.clear();
-
-        this.stateManager.replaceState(saveData.state, saveData.system);
-        if (saveData.system.items.length > 0) {
-            this.items.deserialize(saveData.system.items);
-        }
-        this.history.deserialize(saveData.system.history ?? []);
-
-        this.events.emit('state:loaded', saveData);
-
-        await this.scenes.jumpToScene(saveData.sceneName, saveData.index);
-        if (this.isStarted) {
-            await this.playNext();
-        }
+        if (this.destroyed) throw new Error('The engine has been destroyed.');
+        let sequence = ++this.saveLoadSequence;
+        await restoreEngineSave(this, saveData, () => !this.destroyed && sequence === this.saveLoadSequence, () => {
+            this.clear();
+            sequence = this.saveLoadSequence;
+        });
     }
 
     public clear() {
+        this.saveLoadSequence += 1;
+        this.scenes.cancelSceneLoad?.();
         this.display.clearLayers?.();
         this.animations.clear();
         this.audio.stopAll();
@@ -190,26 +178,13 @@ export class Engine {
     }
 
     public async deactivatePlugin(pluginId: string): Promise<boolean> {
-        const id = normalizeRuntimePluginId(pluginId);
-        const registration = this.runtimePlugins.get(id);
-        if (!registration) {
-            return false;
-        }
-
-        this.runtimePlugins.delete(id);
-
-        const tasks: RuntimePluginCleanup[] = [];
-        if (registration.plugin.deactivate) {
-            tasks.push(() => registration.plugin.deactivate?.());
-        }
-        tasks.push(...registration.cleanups.toReversed());
-
-        await this.runRuntimePluginCleanupTasks(registration.manifest.id, tasks);
-        return true;
+        return await this.runtimePlugins.deactivate(pluginId);
     }
 
     public destroy() {
-        const pluginDeactivateTask = this.deactivateAllPlugins();
+        if (this.destroyed) return;
+        this.destroyed = true;
+        const pluginDeactivateTask = this.runtimePlugins.destroy();
         this.flow.stop();
         this.input.detach();
         this.clear();
@@ -265,9 +240,7 @@ export class Engine {
     }
 
     public getRegisteredPlugins(): RegisteredRuntimePlugin[] {
-        return [...this.runtimePlugins.values()]
-            .map((registration) => toRuntimePluginSnapshot(registration))
-            .toSorted((left, right) => left.manifest.id.localeCompare(right.manifest.id));
+        return this.runtimePlugins.getRegistered();
     }
 
     public getState<T = Serializable>(key: string): T | undefined {
@@ -307,36 +280,7 @@ export class Engine {
     }
 
     public async registerPlugin(plugin: RuntimePlugin): Promise<RegisteredRuntimePlugin> {
-        const manifest = normalizeRuntimePluginManifest(plugin.manifest);
-        assertRuntimePluginCompatibility(manifest);
-        if (this.runtimePlugins.has(manifest.id)) {
-            throw new TypeError(`Runtime plugin '${manifest.id}' is already registered.`);
-        }
-
-        const cleanups: RuntimePluginCleanup[] = [];
-        const context = this.createRuntimePluginContext(manifest, cleanups);
-
-        try {
-            const activationResult = await plugin.activate(context);
-            const activationCleanup = getRuntimePluginActivationCleanup(activationResult);
-            if (activationCleanup) {
-                cleanups.push(activationCleanup);
-            }
-
-            const registration: RuntimePluginRegistration = {
-                cleanups,
-                manifest,
-                plugin: {
-                    ...plugin,
-                    manifest,
-                },
-            };
-            this.runtimePlugins.set(manifest.id, registration);
-            return toRuntimePluginSnapshot(registration);
-        } catch (error) {
-            await this.runRuntimePluginCleanupTasks(manifest.id, cleanups.toReversed());
-            throw error;
-        }
+        return await this.runtimePlugins.register(plugin);
     }
 
     public requestSkip() {
@@ -391,156 +335,11 @@ export class Engine {
     }
 
     public stop() {
+        this.saveLoadSequence += 1;
+        this.scenes.cancelSceneLoad?.();
         this.flow.stop();
     }
 
     private _assetResolver: AssetResolver = (url) => url;
 
-    private createRuntimePluginContext(
-        manifest: RuntimePluginManifest,
-        cleanups: RuntimePluginCleanup[],
-    ): RuntimePluginContext {
-        return {
-            engine: this,
-            manifest: { ...manifest },
-            registerHandler: (handler) => {
-                const previousHandler = this.flow.getHandler(handler.type);
-                this.flow.registerHandler(handler);
-
-                let disposed = false;
-                const dispose = async () => {
-                    if (disposed) return;
-                    disposed = true;
-
-                    const currentHandler = this.flow.getHandler(handler.type);
-                    let destroyedByFlow = false;
-                    if (currentHandler === handler) {
-                        if (previousHandler) {
-                            this.flow.registerHandler(previousHandler);
-                        } else {
-                            this.flow.unregisterHandler(handler.type);
-                            destroyedByFlow = true;
-                        }
-                    }
-
-                    if (!destroyedByFlow) {
-                        await handler.destroy?.();
-                    }
-                };
-
-                cleanups.push(dispose);
-                return dispose;
-            },
-            registerPanel: (panel) => {
-                const existed = this.overlay.hasPanel(panel.id);
-                if (!existed) {
-                    this.overlay.registerPanel(panel);
-                }
-
-                let disposed = false;
-                const dispose = () => {
-                    if (disposed) return;
-                    disposed = true;
-                    if (!existed) {
-                        this.overlay.removePanel(panel.id);
-                    }
-                };
-
-                cleanups.push(dispose);
-                return dispose;
-            },
-        };
-    }
-
-    private async deactivateAllPlugins(): Promise<void> {
-        const pluginIds = [...this.runtimePlugins.keys()];
-        for (const pluginId of pluginIds) {
-            await this.deactivatePlugin(pluginId);
-        }
-    }
-
-    private async runRuntimePluginCleanupTasks(
-        pluginId: string,
-        tasks: RuntimePluginCleanup[],
-    ): Promise<void> {
-        for (const task of tasks) {
-            try {
-                await task();
-            } catch (error) {
-                this.logger.error(
-                    `Runtime plugin '${pluginId}' cleanup failed: ${String(error)}`
-                );
-            }
-        }
-    }
 }
-
-function assertRuntimePluginCompatibility(manifest: RuntimePluginManifest): void {
-    if (
-        manifest.pluginApiVersion !== undefined
-        && manifest.pluginApiVersion !== CURRENT_RUNTIME_PLUGIN_API_VERSION
-    ) {
-        throw new TypeError(
-            `Runtime plugin '${manifest.id}' targets plugin API v${manifest.pluginApiVersion}, `
-            + `but this runtime supports v${CURRENT_RUNTIME_PLUGIN_API_VERSION}.`
-        );
-    }
-}
-
-function getRuntimePluginActivationCleanup(
-    activationResult: RuntimePluginActivationResult,
-): RuntimePluginCleanup | undefined {
-    if (typeof activationResult === 'function') {
-        return activationResult;
-    }
-
-    if (!activationResult) {
-        return undefined;
-    }
-
-    return activationResult.cleanup ?? activationResult.dispose;
-}
-
-function normalizeRuntimePluginId(id: string): string {
-    const normalized = id.trim();
-    if (!normalized) {
-        throw new TypeError('Runtime plugin id cannot be empty.');
-    }
-    return normalized;
-}
-
-function normalizeRuntimePluginManifest(manifest: RuntimePluginManifest): RuntimePluginManifest {
-    const id = normalizeRuntimePluginId(manifest.id);
-    const name = manifest.name.trim();
-    const pluginApiVersion = manifest.pluginApiVersion;
-    const version = manifest.version.trim();
-
-    if (!name) {
-        throw new TypeError(`Runtime plugin '${id}' must declare a name.`);
-    }
-
-    if (!version) {
-        throw new TypeError(`Runtime plugin '${id}' must declare a version.`);
-    }
-
-    return {
-        ...manifest,
-        capabilities: [...new Set(manifest.capabilities)]
-            .toSorted((left, right) => left.localeCompare(right)),
-        id,
-        name,
-        ...(pluginApiVersion === undefined ? {} : { pluginApiVersion }),
-        version,
-    };
-}
-
-function toRuntimePluginSnapshot(
-    registration: RuntimePluginRegistration,
-): RegisteredRuntimePlugin {
-    return {
-        active: true,
-        capabilities: [...(registration.manifest.capabilities ?? [])],
-        manifest: { ...registration.manifest },
-    };
-}
-
