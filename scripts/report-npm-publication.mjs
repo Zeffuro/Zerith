@@ -1,6 +1,8 @@
 import { access, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 
+import { inspectPlayerPackage, playerPackageContentsDetail } from './player-package-contents.mjs';
+
 const root = process.cwd();
 const asJson = process.argv.includes('--json');
 
@@ -8,6 +10,7 @@ const rootManifest = await readJson('package.json');
 const coreManifest = await readJson('packages/core/package.json');
 const editorManifest = await readJson('packages/editor/package.json');
 const playerManifest = await readJson('packages/player/package.json');
+const playerContents = await inspectPlayerPackage(path.join(root, 'packages/player'));
 const workflowSources = await readWorkflowSources();
 
 const corePackageName = '@zeffuro/zerith-core';
@@ -39,20 +42,8 @@ const playerHasPublicManifest = playerManifest.private !== true
     && playerManifest.publishConfig?.access === 'public';
 const playerHasCliPackageContract = playerManifest.bin?.['zerith-player'] === 'scripts/build-game.mjs'
     && Array.isArray(playerManifest.files)
-    && [
-        'index.html',
-        'scripts/build-game.mjs',
-        'scripts/content-compiler.mjs',
-        'src/main.ts',
-        'src/runtime/bootstrapConfig.ts',
-        'src/runtime/bootstrapPlayer.ts',
-        'src/runtime/compiledContentPrefetch.ts',
-        'src/runtime/playerAccessibility.ts',
-        'vite.config.ts',
-        'README.md',
-        'LICENSE',
-    ]
-        .every((entry) => playerManifest.files.includes(entry));
+    && playerManifest.files.length > 0
+    && playerContents.ready;
 const playerDependsOnPublishedCoreRange = playerManifest.dependencies?.[corePackageName] === `^${coreManifest.version}`;
 const playerHasNoFileDependencies = Object.values(playerManifest.dependencies ?? {})
     .every((version) => typeof version === 'string' && !version.startsWith('file:'));
@@ -115,7 +106,7 @@ const checks = [
             : '@zeffuro/zerith-core has local file: dependencies that cannot publish as-is.',
     },
     {
-        detail: 'The player npm product is a CLI/static shell package. It should expose a bin, include only the shell/build inputs it needs, and keep the Tauri editor out of the tarball.',
+        detail: `The player npm product needs a bin and an explicit shell file allowlist. ${playerPackageContentsDetail(playerContents)}`,
         id: 'playerCliPackage',
         label: 'Player CLI package',
         status: playerHasPublicManifest && playerHasCliPackageContract ? 'ready' : 'blocked',
@@ -213,6 +204,8 @@ if (asJson) {
     }
     console.log(`Recommendation: ${report.recommendation}`);
 }
+
+process.exitCode = blocked > 0 ? 1 : 0;
 
 function countByStatus(checks_, status) {
     return checks_.filter((check) => check.status === status).length;

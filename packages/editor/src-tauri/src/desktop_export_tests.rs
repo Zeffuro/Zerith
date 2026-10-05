@@ -1,6 +1,11 @@
 use super::*;
 use std::io::Read;
 
+fn fixture_directory() -> tempfile::TempDir {
+    let parent = fs::canonicalize(std::env::temp_dir()).unwrap();
+    tempfile::tempdir_in(parent).unwrap()
+}
+
 fn fixture_runtime(directory: &Path, overrides: Value) -> PathBuf {
     let runtime = directory.join("runtime");
     fs::create_dir(&runtime).unwrap();
@@ -90,7 +95,7 @@ fn invalid_runtimes_fail_before_output_reservation() {
         json!({"executable":"../game-player"}),
         json!({"runtimeVersion":"other"}),
     ] {
-        let fixture = tempfile::tempdir().unwrap();
+        let fixture = fixture_directory();
         let runtime = fixture_runtime(fixture.path(), overrides);
         let (request, output) = fixture_request(fixture.path(), "output", Value::Null);
         let error = package_game(request, &runtime).err().unwrap();
@@ -98,7 +103,7 @@ fn invalid_runtimes_fail_before_output_reservation() {
         assert!(!error.contains("Rust"));
         assert!(!output.exists());
     }
-    let fixture = tempfile::tempdir().unwrap();
+    let fixture = fixture_directory();
     for runtime in [
         fixture.path().join("absent"),
         fixture_runtime(fixture.path(), json!({})),
@@ -117,7 +122,7 @@ fn invalid_runtimes_fail_before_output_reservation() {
 
 #[test]
 fn packages_copy_unchanged_binary_and_archive_current_artifacts() {
-    let fixture = tempfile::tempdir().unwrap();
+    let fixture = fixture_directory();
     let runtime = fixture_runtime(fixture.path(), json!({}));
     let (request, output) = fixture_request(fixture.path(), "output", Value::Null);
     let response = package_game(request, &runtime).unwrap();
@@ -158,7 +163,7 @@ fn reserved_metadata_and_duplicate_payloads_are_rejected_without_overwrite() {
         json!({"path":"assets/percent%20.txt", "bytes":b"preserve"}),
         json!({"path":"assets/fragment#name.txt", "bytes":b"preserve"}),
     ] {
-        let fixture = tempfile::tempdir().unwrap();
+        let fixture = fixture_directory();
         let runtime = fixture_runtime(fixture.path(), json!({}));
         let (request, output) = fixture_request(fixture.path(), "output", extra);
         assert!(package_game(request, &runtime).is_err());
@@ -170,7 +175,7 @@ fn reserved_metadata_and_duplicate_payloads_are_rejected_without_overwrite() {
 
 #[test]
 fn existing_desktop_output_and_project_overlap_preserve_files() {
-    let fixture = tempfile::tempdir().unwrap();
+    let fixture = fixture_directory();
     let runtime = fixture_runtime(fixture.path(), json!({}));
     let (request, output) = fixture_request(fixture.path(), "output", Value::Null);
     fs::create_dir(&output).unwrap();

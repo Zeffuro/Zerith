@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
+    workers: process.env.CI ? 1 : undefined,
     expect: {
         toHaveScreenshot: {
             maxDiffPixelRatio: 0.01,
@@ -12,6 +13,7 @@ export default defineConfig({
         baseURL: 'http://127.0.0.1:1422',
         // Keep UI checks independent of physical audio devices.
         launchOptions: { args: ['--disable-audio-output'] },
+        trace: 'retain-on-failure',
     },
     projects: [
         {

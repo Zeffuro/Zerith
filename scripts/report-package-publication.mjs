@@ -1,6 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { inspectPlayerPackage, playerPackageContentsDetail } from './player-package-contents.mjs';
+
 const root = process.cwd();
 const asJson = process.argv.includes('--json');
 
@@ -8,6 +10,7 @@ const rootManifest = await readJson('package.json');
 const coreManifest = await readJson('packages/core/package.json');
 const editorManifest = await readJson('packages/editor/package.json');
 const playerManifest = await readJson('packages/player/package.json');
+const playerContents = await inspectPlayerPackage(path.join(root, 'packages/player'));
 
 const expectedPackageNames = {
     core: '@zeffuro/zerith-core',
@@ -43,20 +46,8 @@ const playerHasNpmPackageLane = playerManifest.private !== true
     && playerManifest.publishConfig?.access === 'public'
     && playerManifest.bin?.['zerith-player'] === 'scripts/build-game.mjs'
     && Array.isArray(playerManifest.files)
-    && [
-        'index.html',
-        'scripts/build-game.mjs',
-        'scripts/content-compiler.mjs',
-        'src/main.ts',
-        'src/runtime/bootstrapConfig.ts',
-        'src/runtime/bootstrapPlayer.ts',
-        'src/runtime/compiledContentPrefetch.ts',
-        'src/runtime/playerAccessibility.ts',
-        'vite.config.ts',
-        'README.md',
-        'LICENSE',
-    ]
-        .every((entry) => playerManifest.files.includes(entry))
+    && playerManifest.files.length > 0
+    && playerContents.ready
     && playerUsesPublishableCoreDependency;
 const workspacePublicationPolicyReady = rootIsPrivate
     && editorPackageIsPrivate
@@ -92,7 +83,7 @@ const checks = [
             : 'The monorepo root is publishable.',
     },
     {
-        detail: 'The current editor release channel is GitHub artifacts. Npm package publishing is allowed only through explicit core/player lanes with package metadata, provenance, and CI smoke coverage.',
+        detail: `The current editor release channel is GitHub artifacts. Npm package publishing requires explicit core/player lanes. ${playerPackageContentsDetail(playerContents)}`,
         id: 'workspacePublicationGuard',
         label: 'Workspace publication guard',
         status: workspacePublicationPolicyReady ? 'ready' : 'blocked',
@@ -142,6 +133,8 @@ if (asJson) {
         console.log(`- ${check.label}: ${check.status} - ${check.summary}`);
     }
 }
+
+process.exitCode = blocked > 0 ? 1 : 0;
 
 function countByStatus(checks_, status) {
     return checks_.filter((check) => check.status === status).length;

@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 
 const node = process.execPath;
 const checks = [
+    ['npm', ['run', 'test:publication']],
     [node, ['scripts/report-version-policy.mjs', '--json']],
     [node, ['scripts/report-editor-updater.mjs', '--json']],
     [node, ['scripts/report-editor-distribution.mjs', '--json']],

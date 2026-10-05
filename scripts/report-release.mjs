@@ -164,6 +164,7 @@ function hasCiReleaseGate(workflow) {
         'npm run check:public',
         'node scripts/report-package-publication.mjs --json',
         'node scripts/report-npm-publication.mjs --json',
+        'npm run test:publication',
         'npm run test:npm-core',
         'npm run test:npm-player',
         'npm run lint',

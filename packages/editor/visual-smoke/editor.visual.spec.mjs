@@ -178,9 +178,9 @@ test.describe('editor visual smoke', () => {
         const consolePanel = page.locator('[data-console-panel="true"]');
         await expect(consolePanel).toBeVisible();
         await expect(consolePanel).toContainText('Editor runtime: browser');
-        await expect(consolePanel).toContainText('Export parity: matched=3, browser-limited=3, desktop-only=1');
+        await expect(consolePanel).toContainText('Export parity: matched=4, browser-limited=3, desktop-only=0');
         await expect(consolePanel).toContainText('projectFileSystem: desktop=supported');
-        await expect(consolePanel).toContainText('looseOutput: desktop-only');
+        await expect(consolePanel).toContainText('looseOutput: browser-limited');
     });
 
     test('covers command palette update diagnostics without invoking updater install', async ({ page }) => {
