@@ -5,6 +5,14 @@ import { dock, mountFixture, openFixture, readFixture, replaceJson, setup, test 
 
 test.beforeEach(async ({ page }) => { await setup(page); });
 
+async function readMacroPlacementFixture() {
+    const files = await readFixture('classic-vn-starter');
+    replaceJson(files, 'engine.config.json', config => ({ ...config,
+        accessibility: { ...config.accessibility, reducedMotion: true, typewriterSpeedMultiplier: 0 },
+    }));
+    return files;
+}
+
 async function placementFixture(page, maximizePreview = true, staticText = false) {
     const files = await readFixture('classic-vn-starter');
     if (staticText) replaceJson(files, 'engine.config.json', config => ({ ...config,
@@ -191,7 +199,7 @@ test('a queued nudge cannot retarget a reordered same-character command', async 
 });
 
 test('places a character shown by a macro without editing the shared macro', async ({ page }, info) => {
-    const root = await mountFixture(page, await readFixture('classic-vn-starter'));
+    const root = await mountFixture(page, await readMacroPlacementFixture());
     await openFixture(page, root);
     await page.evaluate(async root => {
         const { openProjectEntry } = await import('/src/services/openProjectEntry/index.ts');
@@ -250,7 +258,7 @@ test('places a character shown by a macro without editing the shared macro', asy
 });
 
 test('arranges both macro characters through repeated edits and undo and redo', async ({ page }) => {
-    const root = await mountFixture(page, await readFixture('classic-vn-starter'));
+    const root = await mountFixture(page, await readMacroPlacementFixture());
     await openFixture(page, root);
     await page.evaluate(async root => {
         const { openProjectEntry } = await import('/src/services/openProjectEntry/index.ts');
