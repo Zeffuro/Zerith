@@ -43,7 +43,7 @@
     "pretest": "npm run build --workspace=@zeffuro/zerith-core",
     "test": "vitest run",
     "test:fixture-policy": "node scripts/guard-safe-fixtures.mjs",
-    "test:publication": "node --test scripts/package-publication.test.mjs scripts/version-preview.test.mjs",
+    "test:publication": "node --test scripts/package-publication.test.mjs scripts/version-preview.test.mjs scripts/editor-updater-policy.test.mjs",
     "test:native-patches": "node scripts/check-native-patches.mjs",
     "test:npm-core": "node scripts/smoke-npm-package.mjs @zeffuro/zerith-core",
     "test:npm-player": "node scripts/smoke-npm-package.mjs @zeffuro/zerith-player",

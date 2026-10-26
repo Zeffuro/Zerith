@@ -46,6 +46,7 @@
   },
   "plugins": {
     "updater": {
+      "requireSignedVersion": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDlEMENEQzg1OTZEMUFFQUQKUldTdHJ0R1doZHdNblRmQ1hmY1Y4U3FydmQwSHFFb0t3d1drWkRLS3FGTFhhQ1JOdTIvVlp6dFgK",
       "endpoints": [
         "https://github.com/Zeffuro/Zerith/releases/latest/download/latest.json"

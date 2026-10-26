@@ -59,6 +59,15 @@ const releaseLatestJsonSummary = getReleaseLatestJsonSummary();
 
 const checks = [
     {
+        detail: 'Updater signatures must bind the announced version so older signed artifacts cannot be replayed through crafted metadata.',
+        id: 'signedUpdateVersion',
+        label: 'Signed update version',
+        status: updaterConfig?.requireSignedVersion === true ? 'ready' : 'blocked',
+        summary: updaterConfig?.requireSignedVersion === true
+            ? 'Updater rejects signatures without an authenticated version.'
+            : 'Set plugins.updater.requireSignedVersion to true before release.',
+    },
+    {
         detail: 'The updater needs both JavaScript guest bindings and the Rust updater plugin dependency before the editor can check or install updates.',
         id: 'updaterDependencies',
         label: 'Updater dependencies',
@@ -207,6 +216,8 @@ if (asJson) {
     }
     console.log(`Recommendation: ${report.recommendation}`);
 }
+
+process.exitCode = blocked > 0 ? 1 : 0;
 
 function countByStatus(checks_, status) {
     return checks_.filter((check) => check.status === status).length;
