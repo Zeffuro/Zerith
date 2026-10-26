@@ -141,12 +141,16 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
+      - name: Playwright placement regressions
+        id: placement-smoke
+        run: npx playwright test editor.stage-placement.spec.mjs
+
       - name: Playwright editor smoke
         id: browser-smoke
         run: npm run test:visual:ci
 
       - name: Browser failure diagnostics
-        if: ${{ failure() && steps.browser-smoke.outcome == 'failure' }}
+        if: ${{ failure() && (steps.placement-smoke.outcome == 'failure' || steps.browser-smoke.outcome == 'failure') }}
         uses: actions/upload-artifact@v7
         with:
           name: browser-failure-diagnostics
