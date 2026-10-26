@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
+    reporter: process.env.CI ? 'list' : undefined,
     workers: process.env.CI ? 1 : undefined,
     expect: {
         toHaveScreenshot: {

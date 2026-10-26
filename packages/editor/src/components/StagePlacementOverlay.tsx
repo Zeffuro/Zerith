@@ -4,11 +4,11 @@ import type { RefObject } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import type { StageTransform } from '../services/stagePlacement';
+import type { PlacementBoundary, StageTransform } from '../services/stagePlacement';
 import type { EditorNode } from '../types/EditorNode';
 import type { ScriptPath } from '../utils/scriptPathUtilities';
 
-import { findPlacementTarget, isPlacementCommand, ownsPlacementPath, placementFromCommand, placementInsertionIndex, snappedPosition } from '../services/stagePlacement';
+import { createPlacementBoundary, findPlacementTarget, isPlacementCommand, ownsPlacementPath, placementBoundaryIndex, placementFromCommand, placementInsertionIndex, retainPlacementBoundary, snappedPosition } from '../services/stagePlacement';
 import { useProjectStore, useScriptStore } from '../store/storeBootstrap';
 import { useEngineBridgeStore } from '../store/useEngineBridgeStore';
 import { StagePlacementControls } from './StagePlacementControls';
@@ -34,6 +34,11 @@ export function StagePlacementOverlay({ canvas, container, onActiveChange, tools
     const [grid, setGrid] = useState(16);
     const [showGuides, setGuides] = useState(false);
     const [message, setMessage] = useState('');
+    const boundary = useRef<PlacementBoundary | undefined>(undefined);
+    const boundaryOwner = useRef<{ index: number; scene: string; source: EditorNode[] } | undefined>(undefined);
+    const loadingSource = useRef<EditorNode[] | undefined>(undefined);
+    const previewOwner = useRef({ engine, sourceFile });
+    const tracked = useRef(new Map<string, Selection>());
     const drag = useRef<Drag | undefined>(undefined);
     const ownsSource = useCallback(() => {
         if (!engine || useEngineBridgeStore.getState().engine !== engine || engine.display.canvas !== canvas.current) return false;
@@ -52,6 +57,13 @@ export function StagePlacementOverlay({ canvas, container, onActiveChange, tools
 
     useEffect(() => {
         cancelDrag();
+        if (previewOwner.current.engine !== engine || previewOwner.current.sourceFile !== sourceFile) {
+            const source = useScriptStore.getState().rootScript;
+            boundary.current = engine ? createPlacementBoundary(source, engine.scenes.getLastOriginalIndex(engine.currentIndex - 1)) : undefined;
+            boundaryOwner.current = engine ? { index: engine.currentIndex, scene: engine.currentSceneName, source } : undefined;
+            previewOwner.current = { engine, sourceFile };
+        }
+        tracked.current.clear();
         setSelection(undefined);
         setBoxes([]);
         setEnabled(false);
@@ -73,11 +85,23 @@ export function StagePlacementOverlay({ canvas, container, onActiveChange, tools
     useEffect(() => {
         if (!engine) return;
         const update = () => setCanPlace(engine.isStarted && !engine.flow.isBusy && ownsSource());
+        const loading = () => { loadingSource.current = useScriptStore.getState().rootScript; };
+        const loaded = () => {
+            const source = useScriptStore.getState().rootScript;
+            boundary.current = !loadingSource.current || loadingSource.current === source ? createPlacementBoundary(source, engine.scenes.getLastOriginalIndex(engine.currentIndex - 1)) : undefined;
+            boundaryOwner.current = { index: engine.currentIndex, scene: engine.currentSceneName, source: loadingSource.current ?? source };
+            loadingSource.current = undefined;
+            tracked.current.clear();
+            setSelection(undefined);
+            setEnabled(false);
+            update();
+        };
         update();
         const timer = globalThis.setInterval(update, 100);
         engine.events.on('flow:command', update);
-        engine.events.on('scene:loaded', update);
-        return () => { globalThis.clearInterval(timer); engine.events.off('flow:command', update); engine.events.off('scene:loaded', update); };
+        engine.events.on('scene:loading', loading);
+        engine.events.on('scene:loaded', loaded);
+        return () => { globalThis.clearInterval(timer); engine.events.off('flow:command', update); engine.events.off('scene:loading', loading); engine.events.off('scene:loaded', loaded); };
     }, [activeFile, engine, ownsSource, sourceFile]);
 
     useEffect(() => {
@@ -100,46 +124,67 @@ export function StagePlacementOverlay({ canvas, container, onActiveChange, tools
     }, [canvas, container, enabled, engine]);
 
     useEffect(() => {
-        if (!enabled || !selection || !engine || drag.current || selection.sprite.destroyed || !ownsSource()) return;
-        const path = selection.path ?? selection.createdPath;
-        const command = path && useScriptStore.getState().getNodeAtPath(path);
-        if (command && !Array.isArray(command) && isPlacementCommand(command, selection.id)) {
-            if (selection.path && !ownsPlacementPath(selection.source, rootScript, selection.path)) {
-                setSelection(undefined);
-                setMessage('Select the character again after rearranging its commands.');
-                return;
+        if (!enabled || !engine || drag.current || !ownsSource()) return;
+        let changed = false;
+        const ownsBoundary = placementBoundaryIndex(boundary.current, rootScript) !== undefined;
+        for (const [id, candidate] of tracked.current) {
+            if (candidate.sprite.destroyed) { tracked.current.delete(id); continue; }
+            const path = candidate.path ?? candidate.createdPath;
+            const command = path && useScriptStore.getState().getNodeAtPath(path);
+            let next: Selection | undefined;
+            if (command && !Array.isArray(command) && isPlacementCommand(command, id)) {
+                if (candidate.path && !ownsPlacementPath(candidate.source, rootScript, candidate.path)) {
+                    tracked.current.delete(id);
+                    if (selection?.id === id) {
+                        setSelection(undefined);
+                        setMessage('Select the character again after rearranging its commands.');
+                    }
+                    continue;
+                }
+                if (candidate.source === rootScript) continue;
+                applyTransform(candidate.sprite, placementFromCommand(command, candidate.baseline, engine.display.width, engine.display.height, characters[id]?.displayDefaults?.flip));
+                next = { ...candidate, path, source: rootScript };
+            } else if (ownsBoundary && (candidate.createdPath || !candidate.path)) {
+                if (!candidate.path && candidate.source === rootScript) continue;
+                applyTransform(candidate.sprite, candidate.baseline);
+                next = { ...candidate, path: undefined, source: rootScript };
             }
-            if (selection.source === rootScript) return;
-            applyTransform(selection.sprite, placementFromCommand(command, selection.baseline, engine.display.width, engine.display.height, characters[selection.id]?.displayDefaults?.flip));
-            engine.display.render?.();
-            setSelection({ ...selection, path, source: rootScript });
-        } else if (selection.createdPath || !selection.path) {
-            applyTransform(selection.sprite, selection.baseline);
-            engine.display.render?.();
-            if (selection.path || selection.source !== rootScript) setSelection({ ...selection, path: undefined, source: rootScript });
-        } else setSelection(undefined);
+            if (next) { tracked.current.set(id, next); changed = true; }
+            else tracked.current.delete(id);
+            if (selection?.id === id) setSelection(next);
+        }
+        if (changed) engine.display.render?.();
     }, [characters, enabled, engine, ownsSource, rootScript, selection]);
 
     const select = (id: string): Selection | undefined => {
         if (!engine || !ownsSource()) return;
         const store = useScriptStore.getState();
-        const index = engine.scenes.getLastOriginalIndex(engine.currentIndex - 1);
         const explicit = store.selectedNodePath && store.getNodeAtPath(store.selectedNodePath);
-        if (['call', 'choice'].includes(store.rootScript[index]?.type)
-            && (!explicit || Array.isArray(explicit) || !isPlacementCommand(explicit, id))) {
+        const explicitPath = explicit && !Array.isArray(explicit) && isPlacementCommand(explicit, id) ? store.selectedNodePath : undefined;
+        const owner = boundaryOwner.current;
+        const index = owner?.index === engine.currentIndex && owner.scene === engine.currentSceneName ? placementBoundaryIndex(boundary.current, store.rootScript) : undefined;
+        if (!explicitPath && index === undefined) {
+            setSelection(undefined);
+            setMessage('Play the scene again after changing its commands.');
+            return;
+        }
+        if (!explicitPath && index !== undefined && ['call', 'choice'].includes(store.rootScript[index]?.type)) {
             setSelection(undefined);
             setMessage('Select this character’s command in the current branch or macro to edit its position.');
             return;
         }
-        const path = findPlacementTarget(store.rootScript, id, index, store.selectedNodePath);
-        if (!path && store.rootScript[index]?.type !== 'dialogue') {
+        const path = explicitPath ?? findPlacementTarget(store.rootScript, id, index ?? 0);
+        if (!path && (index === undefined || store.rootScript[index]?.type !== 'dialogue')) {
             setMessage('Place this character when the scene reaches a dialogue line.');
             return;
         }
         const sprite = engine.display.getLayer('sprites').children.find(child => child.label === `zerith-sprite:${id}`);
         if (!sprite) return;
-        const same = selection?.id === id && selection.sprite === sprite && JSON.stringify(selection.path) === JSON.stringify(path);
-        const selected = same ? selection : { baseline: readTransform(sprite), id, insertion: placementInsertionIndex(store.rootScript, index), path, source: store.rootScript, sprite };
+        const previous = tracked.current.get(id);
+        const same = previous?.sprite === sprite && JSON.stringify(previous.path) === JSON.stringify(path);
+        const insertion = path ? 0 : placementInsertionIndex(store.rootScript, index!);
+        const selected = same ? { ...previous, insertion } : { baseline: readTransform(sprite), id, insertion, path, source: store.rootScript, sprite };
+        tracked.current.set(id, selected);
         setSelection(selected);
         if (path) store.setSelectedNodePath(path);
         setMessage(path ? '' : 'Moving this character adds a position command to this scene. Shared macros stay unchanged.');
@@ -149,20 +194,25 @@ export function StagePlacementOverlay({ canvas, container, onActiveChange, tools
     const commit = (selected: Selection, patch: Record<string, unknown>) => {
         if (!engine || !ownsSource() || selected.sprite.destroyed) return;
         const store = useScriptStore.getState();
+        const before = store.rootScript;
         if (selected.path) {
             if (!ownsPlacementPath(selected.source, store.rootScript, selected.path)) { setSelection(undefined); setMessage('Select the character again after rearranging its commands.'); return; }
             const command = store.getNodeAtPath(selected.path);
             if (!command || Array.isArray(command) || !isPlacementCommand(command, selected.id)) { setMessage('Select the character again after changing its command.'); return; }
             store.updateNodeAtPath(selected.path, patch);
+            retainPlacementBoundary(boundary.current, before, useScriptStore.getState().rootScript);
         } else {
             if (selected.source !== store.rootScript) { setMessage('Select the character again after changing the scene.'); return; }
             const command = { action: 'move', duration: 0, id: selected.id, type: 'sprite', ...patch } as EditorNode;
             store.addNodeAtPath([], command, selected.insertion);
+            retainPlacementBoundary(boundary.current, before, useScriptStore.getState().rootScript, selected.insertion);
             const path = [selected.insertion];
             store.setSelectedNodePath(path);
             applyTransform(selected.sprite, placementFromCommand(command as Parameters<typeof placementFromCommand>[0], selected.baseline, engine.display.width, engine.display.height));
             engine.display.render?.();
-            setSelection({ ...selected, createdPath: path, path, source: useScriptStore.getState().rootScript });
+            const next = { ...selected, createdPath: path, path, source: useScriptStore.getState().rootScript };
+            tracked.current.set(selected.id, next);
+            setSelection(next);
         }
     };
 
@@ -208,6 +258,16 @@ export function StagePlacementOverlay({ canvas, container, onActiveChange, tools
             if (!enabled && (!engine.isStarted || engine.flow.isBusy || !ownsSource())) return;
             cancelDrag();
             if (enabled) setSelection(undefined);
+            else {
+                const source = useScriptStore.getState().rootScript;
+                const owner = boundaryOwner.current;
+                const cursorChanged = owner && (owner.index !== engine.currentIndex || owner.scene !== engine.currentSceneName);
+                if (!owner || (cursorChanged && owner.source === source)) {
+                    boundary.current = createPlacementBoundary(source, engine.scenes.getLastOriginalIndex(engine.currentIndex - 1));
+                    boundaryOwner.current = { index: engine.currentIndex, scene: engine.currentSceneName, source };
+                }
+                if (cursorChanged) tracked.current.clear();
+            }
             setEnabled(!enabled);
         }} selectedId={selection?.id} setGrid={setGrid} setGuides={setGuides} showGuides={showGuides} transform={selection && !selection.sprite.destroyed ? readTransform(selection.sprite) : undefined} /></div>, tools)}
         {enabled && <div className="zerith-placement-stage" onFocus={event => { event.stopPropagation(); engine.setInputEnabled(false); }} style={viewport}>

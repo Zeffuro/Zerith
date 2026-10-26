@@ -5,7 +5,13 @@ import type { ScriptPath } from '../utils/scriptPathUtilities';
 
 import { getAtPath } from '../utils/scriptPathUtilities';
 
+export type PlacementBoundary = { node: EditorNode; snapshots: WeakMap<EditorNode[], number> };
 export type StageTransform = { scaleX: number; scaleY: number; x: number; y: number; zIndex: number };
+
+export function createPlacementBoundary(script: EditorNode[], index: number): PlacementBoundary | undefined {
+    const node = script[index];
+    return node ? { node, snapshots: new WeakMap([[script, index]]) } : undefined;
+}
 
 export function findPlacementTarget(script: EditorNode[], id: string, lastIndex: number, selected?: ScriptPath): ScriptPath | undefined {
     if (selected) {
@@ -31,6 +37,11 @@ export function ownsPlacementPath(before: EditorNode[], after: EditorNode[], pat
     return !containsReference(after, original) && !containsReference(before, current);
 }
 
+export function placementBoundaryIndex(boundary: PlacementBoundary | undefined, script: EditorNode[]): number | undefined {
+    const index = boundary?.snapshots.get(script);
+    return index !== undefined && script[index] === boundary?.node ? index : undefined;
+}
+
 export function placementFromCommand(command: SpriteCommand, baseline: StageTransform, width: number, height: number, defaultFlip = false): StageTransform {
     let scaleX = command.scaleX ?? baseline.scaleX;
     const flip = command.flip ?? (command.action === 'show' ? defaultFlip : undefined);
@@ -49,6 +60,13 @@ export function placementInsertionIndex(script: EditorNode[], lastIndex: number)
     const index = Math.max(0, Math.min(lastIndex, script.length - 1));
     const command = script[index];
     return command?.type === 'dialogue' || command?.type === 'choice' ? index : Math.min(script.length, index + 1);
+}
+
+export function retainPlacementBoundary(boundary: PlacementBoundary | undefined, before: EditorNode[], after: EditorNode[], insertedAt?: number): void {
+    const index = placementBoundaryIndex(boundary, before);
+    if (!boundary || index === undefined) return;
+    const next = index + (insertedAt !== undefined && insertedAt <= index ? 1 : 0);
+    if (after[next] === boundary.node) boundary.snapshots.set(after, next);
 }
 
 export function snappedPosition(x: number, y: number, width: number, height: number, grid: number): { x: number; y: number } {

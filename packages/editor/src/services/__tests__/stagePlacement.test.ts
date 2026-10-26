@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { EditorNode } from '../../types/EditorNode';
 
 import { moveNode } from '../../utils/scriptPathUtilities';
-import { findPlacementTarget, ownsPlacementPath, placementFromCommand, placementInsertionIndex, snappedPosition } from '../stagePlacement';
+import { createPlacementBoundary, findPlacementTarget, ownsPlacementPath, placementBoundaryIndex, placementFromCommand, placementInsertionIndex, retainPlacementBoundary, snappedPosition } from '../stagePlacement';
 
 const baseline = { scaleX: -1, scaleY: 1, x: 640, y: 720, zIndex: 0 };
 
@@ -43,6 +43,49 @@ describe('character placement', () => {
         expect(placementInsertionIndex(script, 0)).toBe(1);
         expect(placementInsertionIndex(script, 1)).toBe(1);
         expect(placementInsertionIndex([], 0)).toBe(0);
+    });
+
+    it('retains the dialogue boundary through both character insertions, edits and history snapshots', () => {
+        const original: EditorNode[] = [{ name: 'show_cast', type: 'call' }, { text: 'The train is late.', type: 'dialogue' }];
+        const boundary = createPlacementBoundary(original, 1);
+        const aria = { action: 'move', id: 'aria', type: 'sprite', x: 400 } as EditorNode;
+        const afterAria = [original[0], aria, original[1]];
+        retainPlacementBoundary(boundary, original, afterAria, 1);
+        expect(placementBoundaryIndex(boundary, afterAria)).toBe(2);
+        expect(findPlacementTarget(afterAria, 'cove', placementBoundaryIndex(boundary, afterAria)!)).toBeUndefined();
+        expect(placementInsertionIndex(afterAria, placementBoundaryIndex(boundary, afterAria)!)).toBe(2);
+
+        const cove = { action: 'move', id: 'cove', type: 'sprite', x: 800 } as EditorNode;
+        const afterCove = [original[0], aria, cove, original[1]];
+        retainPlacementBoundary(boundary, afterAria, afterCove, 2);
+        expect(placementBoundaryIndex(boundary, afterCove)).toBe(3);
+        expect(findPlacementTarget(afterCove, 'aria', 3)).toEqual([1]);
+        expect(findPlacementTarget(afterCove, 'cove', 3)).toEqual([2]);
+
+        const edited = [original[0], { ...aria, x: 410 }, cove, original[1]];
+        retainPlacementBoundary(boundary, afterCove, edited);
+        for (const [snapshot, index] of [[original, 1], [afterAria, 2], [afterCove, 3], [edited, 3]] as const) {
+            expect(placementBoundaryIndex(boundary, snapshot)).toBe(index);
+        }
+    });
+
+    it('rejects unowned structural snapshots and cannot adopt their successors', () => {
+        const original: EditorNode[] = [{ name: 'show_cast', type: 'call' }, { text: 'The train is late.', type: 'dialogue' }];
+        const boundary = createPlacementBoundary(original, 1);
+        const inserted = [{ text: 'A different line.', type: 'dialogue' }, ...original] as EditorNode[];
+        const reordered = [original[1], original[0]];
+        const copied = [...original];
+        for (const snapshot of [inserted, reordered, copied]) {
+            expect(placementBoundaryIndex(boundary, snapshot)).toBeUndefined();
+            const successor = [...snapshot];
+            retainPlacementBoundary(boundary, snapshot, successor);
+            expect(placementBoundaryIndex(boundary, successor)).toBeUndefined();
+        }
+        const replacement = [original[0], { ...original[1] }];
+        retainPlacementBoundary(boundary, original, replacement);
+        expect(placementBoundaryIndex(boundary, replacement)).toBeUndefined();
+        expect(placementBoundaryIndex(boundary, original)).toBe(1);
+        expect(createPlacementBoundary([], 0)).toBeUndefined();
     });
 
     it('snaps engine coordinates and keeps anchors within the stage', () => {

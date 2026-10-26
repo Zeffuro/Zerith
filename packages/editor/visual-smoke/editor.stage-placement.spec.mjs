@@ -166,6 +166,30 @@ test('a new command selection for the same character writes to that command', as
     expect(commands[3].x).toBe(401);
 });
 
+test('a queued nudge cannot retarget a reordered same-character command', async ({ page }) => {
+    await placementFixture(page);
+    await page.evaluate(async () => {
+        const { useScriptStore } = await import('/src/store/storeBootstrap.ts');
+        const store = useScriptStore.getState();
+        store.setScript([...store.rootScript, { action: 'move', duration: 0, id: 'aria', type: 'sprite', x: 800 }]);
+        useScriptStore.getState().setSelectedNodePath([0]);
+    });
+    await page.getByRole('button', { name: 'Place aria', exact: true }).click();
+    await page.evaluate(async () => {
+        const { useScriptStore } = await import('/src/store/storeBootstrap.ts');
+        useScriptStore.getState().moveNodeByPath([3], [], 0);
+        document.querySelector('button[aria-label="Place aria"]').dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowRight' }));
+    });
+    const result = await page.evaluate(async () => {
+        const { useScriptStore } = await import('/src/store/storeBootstrap.ts');
+        return useScriptStore.getState().rootScript;
+    });
+    expect(result[0]).toMatchObject({ action: 'move', id: 'aria', x: 800 });
+    expect(result[1]).toMatchObject({ action: 'show', id: 'aria', x: 400 });
+    expect((await source(page)).live.x).toBe(400);
+    await expect(page.locator('.zerith-placement-announcement')).toHaveText('Select the character again after rearranging its commands.');
+});
+
 test('places a character shown by a macro without editing the shared macro', async ({ page }, info) => {
     const root = await mountFixture(page, await readFixture('classic-vn-starter'));
     await openFixture(page, root);
@@ -176,11 +200,11 @@ test('places a character shown by a macro without editing the shared macro', asy
         useEditorStore.getState().triggerPlay();
     }, root);
     await dock(page, 'preview');
+    await page.getByRole('button', { name: 'Place characters', exact: true }).click();
     await expect.poll(() => page.evaluate(async () => {
         const { useEngineBridgeStore } = await import('/src/store/useEngineBridgeStore.ts');
         return useEngineBridgeStore.getState().engine?.display.getLayer('sprites').children.filter(child => child.label.startsWith('zerith-sprite:')).length;
     })).toBe(2);
-    await page.getByRole('button', { name: 'Place characters', exact: true }).click();
     const box = page.getByRole('button', { name: 'Place aria', exact: true });
     await box.focus();
     await page.keyboard.press('ArrowRight');
@@ -223,6 +247,90 @@ test('places a character shown by a macro without editing the shared macro', asy
     })).toMatchObject({ command: { scaleY: 1.2, x: 600 }, x: 600 });
     await page.getByRole('button', { name: 'Close placement options', exact: true }).click();
     await page.screenshot({ path: info.outputPath('macro-placement.png') });
+});
+
+test('arranges both macro characters through repeated edits and undo and redo', async ({ page }) => {
+    const root = await mountFixture(page, await readFixture('classic-vn-starter'));
+    await openFixture(page, root);
+    await page.evaluate(async root => {
+        const { openProjectEntry } = await import('/src/services/openProjectEntry/index.ts');
+        const { useEditorStore } = await import('/src/store/useEditorStore.ts');
+        await openProjectEntry(`${root}/scenes/intro.json`, 'intro.json');
+        useEditorStore.getState().triggerPlay();
+    }, root);
+    await dock(page, 'preview');
+    await page.getByRole('button', { name: 'Place characters', exact: true }).click();
+    await expect.poll(() => page.evaluate(async () => {
+        const { useEngineBridgeStore } = await import('/src/store/useEngineBridgeStore.ts');
+        return useEngineBridgeStore.getState().engine?.display.getLayer('sprites').children.filter(child => child.label.startsWith('zerith-sprite:')).length;
+    })).toBe(2);
+    const state = () => page.evaluate(async () => {
+        const { useScriptStore } = await import('/src/store/storeBootstrap.ts');
+        const { useEngineBridgeStore } = await import('/src/store/useEngineBridgeStore.ts');
+        const sprites = useEngineBridgeStore.getState().engine.display.getLayer('sprites').children;
+        return {
+            live: Object.fromEntries(['aria', 'cove'].map(id => [id, sprites.find(sprite => sprite.label === `zerith-sprite:${id}`).x])),
+            moves: useScriptStore.getState().rootScript.filter(command => command.type === 'sprite').map(command => [command.id, command.x]),
+        };
+    });
+    const macros = () => page.evaluate(async root => {
+        const { browserFsAdapter } = await import('/src/services/fs/browserFsAdapter.ts');
+        return browserFsAdapter.readTextFile(`${root}/data/macros.json`);
+    }, root);
+    const originalMacros = await macros();
+    const baseline = await state();
+    const ariaX = Math.round(baseline.live.aria + 1);
+    const coveX = Math.round(baseline.live.cove + 1);
+    const nudge = async (id, x) => {
+        await page.getByRole('button', { name: `Place ${id}`, exact: true }).focus();
+        await page.keyboard.press('ArrowRight');
+        await expect.poll(async () => (await state()).live[id]).toBe(x);
+    };
+    await nudge('aria', ariaX);
+    await nudge('cove', coveX);
+    await nudge('aria', ariaX + 1);
+    await nudge('cove', coveX + 1);
+    await expect.poll(state).toEqual({ live: { aria: ariaX + 1, cove: coveX + 1 }, moves: [['aria', ariaX + 1], ['cove', coveX + 1]] });
+    await page.getByRole('button', { name: 'Options', exact: true }).click();
+    await page.getByRole('button', { name: 'Done', exact: true }).click();
+    await page.getByRole('button', { name: 'Place characters', exact: true }).click();
+    const history = async (action, aria, cove, moves) => {
+        await page.evaluate(async action => {
+            const { useScriptStore } = await import('/src/store/storeBootstrap.ts');
+            useScriptStore.getState()[action]();
+        }, action);
+        await expect.poll(state).toEqual({ live: { aria, cove }, moves });
+    };
+    await history('undo', ariaX + 1, coveX, [['aria', ariaX + 1], ['cove', coveX]]);
+    await history('undo', ariaX, coveX, [['aria', ariaX], ['cove', coveX]]);
+    await history('undo', ariaX, baseline.live.cove, [['aria', ariaX]]);
+    await history('undo', baseline.live.aria, baseline.live.cove, []);
+    await history('redo', ariaX, baseline.live.cove, [['aria', ariaX]]);
+    await history('redo', ariaX, coveX, [['aria', ariaX], ['cove', coveX]]);
+    await history('redo', ariaX + 1, coveX, [['aria', ariaX + 1], ['cove', coveX]]);
+    await history('redo', ariaX + 1, coveX + 1, [['aria', ariaX + 1], ['cove', coveX + 1]]);
+    await nudge('aria', ariaX + 2);
+    await history('undo', ariaX + 1, coveX + 1, [['aria', ariaX + 1], ['cove', coveX + 1]]);
+    expect(await macros()).toBe(originalMacros);
+
+    await page.evaluate(async () => {
+        const { useScriptStore } = await import('/src/store/storeBootstrap.ts');
+        const store = useScriptStore.getState();
+        store.setScript([{ text: 'An inserted line.', type: 'dialogue' }, ...store.rootScript]);
+    });
+    const beforeRejectedEdit = await state();
+    await page.getByRole('button', { name: 'Place cove', exact: true }).focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('.zerith-placement-announcement')).toHaveText('Play the scene again after changing its commands.');
+    expect(await state()).toEqual(beforeRejectedEdit);
+    await page.getByRole('button', { name: 'Options', exact: true }).click();
+    await page.getByRole('button', { name: 'Done', exact: true }).click();
+    await page.getByRole('button', { name: 'Place characters', exact: true }).click();
+    await page.getByRole('button', { name: 'Place cove', exact: true }).focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('.zerith-placement-announcement')).toHaveText('Play the scene again after changing its commands.');
+    expect(await state()).toEqual(beforeRejectedEdit);
+    expect(await macros()).toBe(originalMacros);
 });
 
 test('placement options keep the full docked preview canvas', async ({ page }, info) => {
