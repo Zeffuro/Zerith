@@ -1,6 +1,8 @@
 import type { BrowserFolderExportTarget } from './browserFolderExport';
 import type { BrowserDesktopExportArtifactManifest } from './browserParityReport';
+import type { ExportOwnership } from './exportOwnership';
 
+import { assertExportCurrent } from './exportOwnership';
 import { isTauriRuntime } from './runtime/runtimeEnvironment';
 
 export type ExportCachePolicy = 'hashed' | 'none';
@@ -48,7 +50,8 @@ type ExportGameRequest = {
     zipFile?: string;
 };
 
-export async function exportGame(gamePath: string, options: ExportGameOptions = {}): Promise<ExportGameResult> {
+export async function exportGame(gamePath: string, options: ExportGameOptions = {}, isCurrent: ExportOwnership = () => true): Promise<ExportGameResult> {
+    assertExportCurrent(isCurrent);
     const resolvedOptions = resolveExportGameOptions(options);
 
     if (!isTauriRuntime()) {
@@ -56,11 +59,14 @@ export async function exportGame(gamePath: string, options: ExportGameOptions = 
             throw new Error('Desktop game packaging is available in the desktop editor. Use the desktop package command from a source checkout.');
         }
         const { exportGameForBrowser } = await import('./browserExportGame');
-        return exportGameForBrowser(gamePath, resolvedOptions);
+        assertExportCurrent(isCurrent);
+        return exportGameForBrowser(gamePath, resolvedOptions, isCurrent);
     }
 
     const { prepareWebGameArtifacts } = await import('./webGameArtifacts');
+    assertExportCurrent(isCurrent);
     const { artifactManifest, files, nativeFiles } = await prepareWebGameArtifacts(gamePath, resolvedOptions, { nativeProjectFiles: true });
+    assertExportCurrent(isCurrent);
     const request: ExportGameRequest = {
         base: resolvedOptions.base,
         cachePolicy: resolvedOptions.cachePolicy,
@@ -73,7 +79,9 @@ export async function exportGame(gamePath: string, options: ExportGameOptions = 
 
     const { invoke } = await import('@tauri-apps/api/core');
     const command = resolvedOptions.profile === 'desktop-tauri' ? 'export_desktop_game' : 'export_game';
+    assertExportCurrent(isCurrent);
     const result = await invoke<ExportGameResult>(command, { request });
+    assertExportCurrent(isCurrent);
     return { ...result, artifactManifest };
 }
 

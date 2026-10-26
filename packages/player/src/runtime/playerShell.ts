@@ -65,6 +65,7 @@ export function createDefaultPlayerShell(context: PlayerShellContext): PlayerShe
     let origin: 'pause' | 'title' = 'title';
     let preferences = { ...context.preferences };
     let warning = context.warning ?? '';
+    let releaseRenderSuspension: (() => void) | undefined;
     let releaseSuspension: (() => void) | undefined;
     let disposeView: (() => void) | undefined;
     let busy = false;
@@ -79,6 +80,11 @@ export function createDefaultPlayerShell(context: PlayerShellContext): PlayerShe
     };
     apply();
 
+    const releaseRendering = () => {
+        const release = releaseRenderSuspension;
+        releaseRenderSuspension = undefined;
+        release?.();
+    };
     const close = () => {
         if (disposed) return;
         disposeView?.();
@@ -88,6 +94,7 @@ export function createDefaultPlayerShell(context: PlayerShellContext): PlayerShe
         engine.overlay.close();
         releaseSuspension?.();
         releaseSuspension = undefined;
+        releaseRendering();
         engine.setInputEnabled(true);
         canvas.focus();
     };
@@ -95,6 +102,7 @@ export function createDefaultPlayerShell(context: PlayerShellContext): PlayerShe
         if (disposed) return;
         if (root.hidden) {
             releaseSuspension = engine.flow.acquireSuspension?.();
+            releaseRenderSuspension = engine.display.acquireRenderSuspension?.();
             engine.setInputEnabled(false);
             engine.overlay.close();
             globalThis.speechSynthesis?.cancel();
@@ -294,6 +302,7 @@ export function createDefaultPlayerShell(context: PlayerShellContext): PlayerShe
             disposeInput();
             engine.events.off('menu:toggle', onMenuToggle);
             releaseSuspension?.();
+            releaseRendering();
             canvas.inert = false;
             root.remove();
             resolveStart?.();

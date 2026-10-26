@@ -3,17 +3,16 @@ import { type MouseEvent, type PointerEvent, useCallback, useEffect, useMemo, us
 
 import type { WorkbenchTab } from '../../store/workbench/types';
 
-import { saveAudioRegionWavToProject } from '../../services/audioRegionExport';
+import { useAudioExport } from '../../hooks/useAudioExport';
+import { saveAudioCueBatch } from '../../services/audioExportActions';
 import { type AudiosheetShortcutAction, audiosheetShortcutEventName } from '../../services/audiosheetShortcuts';
-import { refreshProjectTree } from '../../services/explorerFileActions';
-import { refreshReferenceScannerState } from '../../services/referenceScanner';
 import { saveWorkbenchTextFile as fsWriteTextFile } from '../../services/saveWorkbenchFile';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { computeAudioPeaks } from '../../utils/audio';
-import { type AudioRegionBatchNamePreset, iterateAudioBufferRegionsToWavFiles, projectAudioRegionsToViewport } from '../../utils/audioRegions';
+import { type AudioRegionBatchNamePreset, projectAudioRegionsToViewport } from '../../utils/audioRegions';
 import { clamp } from '../../utils/math';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { createCueOperations } from './audiosheetCueCrud';
@@ -54,8 +53,6 @@ export function AudiosheetEditorPanel({ tab }: AudiosheetEditorPanelProperties) 
     const [root, setRoot] = useState<Record<string, unknown>>({});
     const [descriptorError, setDescriptorError] = useState<string>();
     const [saveError, setSaveError] = useState<string>();
-    const [batchExportMessage, setBatchExportMessage] = useState<string>();
-    const [isExportingCues, setIsExportingCues] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [audioBuffer, setAudioBuffer] = useState<AudioBuffer>();
     const [audioPath, setAudioPath] = useState<string>();
@@ -83,6 +80,7 @@ export function AudiosheetEditorPanel({ tab }: AudiosheetEditorPanelProperties) 
     }), [audioBuffer?.duration, cueEntries]);
     const overlapIssues = useMemo(() => validateCueOverlaps(descriptor?.cues ?? {}), [descriptor?.cues]);
     const descriptorSource = descriptor?.source;
+    const { isExporting: isExportingCues, message: batchExportMessage, runExport } = useAudioExport(`${tab.path}:${descriptorSource ?? ''}`, { tabId: tab.id });
 
     const totalDuration = audioBuffer?.duration ?? 0;
     const visibleDuration = totalDuration <= 0 ? 0 : clamp(totalDuration / waveformZoom, 0.1, totalDuration);
@@ -189,38 +187,10 @@ export function AudiosheetEditorPanel({ tab }: AudiosheetEditorPanelProperties) 
     const handleSaveAllCues = useCallback(async () => {
         if (!projectPath || !audioBuffer || cueMarkers.length === 0) return;
 
-        setIsExportingCues(true);
-        setBatchExportMessage(undefined);
-        try {
-            const sourcePath = audioPath ?? descriptorSource ?? tab.path;
-            const exports = iterateAudioBufferRegionsToWavFiles(audioBuffer, sourcePath, cueMarkers, {
-                namePreset: batchExportNamePreset,
-            });
-            let savedCount = 0;
-            for (const cueExport of exports) {
-                await saveAudioRegionWavToProject(projectPath, {
-                    namePreset: batchExportNamePreset,
-                    region: {
-                        end: cueExport.region.end,
-                        ...(cueExport.regionName === undefined ? {} : { name: cueExport.regionName }),
-                        start: cueExport.region.start,
-                    },
-                    sourcePath,
-                    targetFolder: batchExportTargetFolder,
-                    wavBytes: cueExport.wavBytes,
-                });
-                savedCount += 1;
-            }
-
-            await refreshProjectTree();
-            await refreshReferenceScannerState();
-            setBatchExportMessage(`Saved ${savedCount} cue WAV${savedCount === 1 ? '' : 's'} to ${batchExportTargetFolder.trim() || 'assets/audio-regions'}.`);
-        } catch (error) {
-            setBatchExportMessage(error instanceof Error ? error.message : 'Failed to save cue WAV exports.');
-        } finally {
-            setIsExportingCues(false);
-        }
-    }, [audioBuffer, audioPath, batchExportNamePreset, batchExportTargetFolder, cueMarkers, descriptorSource, projectPath, tab.path]);
+        await runExport('cues', (path, isCurrent) => saveAudioCueBatch(path, audioBuffer,
+            audioPath ?? descriptorSource ?? tab.path, cueMarkers,
+            { namePreset: batchExportNamePreset, targetFolder: batchExportTargetFolder }, isCurrent));
+    }, [audioBuffer, audioPath, batchExportNamePreset, batchExportTargetFolder, cueMarkers, descriptorSource, projectPath, runExport, tab.path]);
 
     const updateCue = useCallback((name: string, changes: Partial<AudiosheetDescriptor['cues'][string]>) => {
         if (!descriptor?.cues[name]) return;

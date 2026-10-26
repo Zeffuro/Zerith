@@ -115,7 +115,7 @@ export function GamePreview({ script, toolsHost }: { script: Script; toolsHost?:
         activeFileReference.current = activeFile;
     }, [activeFile]);
 
-    const engineReference = useEngineLifecycle({
+    const { canvasKey, engineReference } = useEngineLifecycle({
         activeFileReference,
         canvasReference,
         containerReference,
@@ -166,7 +166,7 @@ export function GamePreview({ script, toolsHost }: { script: Script; toolsHost?:
                 width: '100%',
             }}
         >
-            <canvas {...previewAccessibility.canvas} ref={canvasReference} />
+            <canvas {...previewAccessibility.canvas} key={canvasKey} ref={canvasReference} />
             <StagePlacementOverlay canvas={canvasReference} container={containerReference} onActiveChange={setIsPlacing} tools={toolsHost} />
             {!isFocused && isStarted && !isPlacing && (
                 <div

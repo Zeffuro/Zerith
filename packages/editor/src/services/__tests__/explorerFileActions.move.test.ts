@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { AssetLibraryMetadataSnapshot } from '../assetLibraryMetadata';
 import type { ReferenceScannerResult } from '../referenceScanner';
 
 const mocks = vi.hoisted(() => {
@@ -41,10 +42,12 @@ const mocks = vi.hoisted(() => {
         fsRemove: vi.fn(() => Promise.resolve()),
         fsRename: vi.fn(() => Promise.resolve()),
         fsWriteTextFile: vi.fn(() => Promise.resolve()),
+        loadAssetMetadata: vi.fn<() => Promise<AssetLibraryMetadataSnapshot>>(),
         projectState,
         referenceResult,
         refreshReferenceScannerState: vi.fn(() => Promise.resolve()),
         renameTabPath: vi.fn(),
+        saveAssetMetadata: vi.fn<(...arguments_: unknown[]) => Promise<void>>(),
         setTabSavedContent: vi.fn(),
         updateTabContent: vi.fn(),
         workbenchTabs: [] as Array<{
@@ -101,10 +104,10 @@ vi.mock('../projectOpeners', () => ({
     applyScriptFile: mocks.applyScriptFile,
 }));
 
-vi.mock('../assetLibraryMetadata', () => ({
-    loadAssetLibraryMetadata: () => Promise.resolve({ assets: {} }),
-    moveAssetLibraryMetadataScope: (metadata: unknown) => metadata,
-    saveAssetLibraryMetadata: () => Promise.resolve(),
+vi.mock('../assetLibraryMetadata', async importOriginal => ({
+    ...await importOriginal<typeof import('../assetLibraryMetadata')>(),
+    loadAssetLibraryMetadataSnapshot: mocks.loadAssetMetadata,
+    saveAssetLibraryMetadata: mocks.saveAssetMetadata,
 }));
 
 vi.mock('../fs', () => ({
@@ -144,7 +147,7 @@ vi.mock('../referenceScanner/assets', () => ({
     },
 }));
 
-import { deletePath, deletePaths, moveAssetDirectoryPathToDirectory, moveAssetPathToDirectory, renamePath } from '../explorerFileActions';
+import { deletePath, deletePaths, moveAssetDirectoryPathToDirectory, moveAssetPathToDirectory, refreshProjectTree, renamePath } from '../explorerFileActions';
 
 describe('explorerFileActions moveAssetPathToDirectory', () => {
     beforeEach(() => {
@@ -170,6 +173,10 @@ describe('explorerFileActions moveAssetPathToDirectory', () => {
         });
         mocks.fsWriteTextFile.mockReset();
         mocks.fsWriteTextFile.mockResolvedValue();
+        mocks.loadAssetMetadata.mockReset();
+        mocks.loadAssetMetadata.mockResolvedValue({ metadata: { assets: {}, schemaVersion: 1, type: 'zerith.assetLibrary' } });
+        mocks.saveAssetMetadata.mockReset();
+        mocks.saveAssetMetadata.mockResolvedValue();
         mocks.updateTabContent.mockClear();
         mocks.setTabSavedContent.mockClear();
         mocks.projectState.activeFile = '/project/assets/bg/office.png';
@@ -374,6 +381,50 @@ describe('explorerFileActions moveAssetPathToDirectory', () => {
         expect(mocks.projectState.loadManifest).toHaveBeenCalledTimes(1);
         expect(mocks.refreshReferenceScannerState).toHaveBeenCalledTimes(1);
         expect(mocks.consoleMessage).toHaveBeenCalledWith('editor', 'error', 'Path moved to /project/assets/sprites/office.png, but project refresh failed:', expect.stringContaining('directory unreadable'));
+    });
+
+    it('does not refresh a retired caller before reading the successor tree', async () => {
+        await refreshProjectTree(() => false);
+        expect(mocks.fsReadDirectory).not.toHaveBeenCalled();
+        expect(mocks.executeProjectTreeRefreshAction).not.toHaveBeenCalled();
+    });
+
+    it('drops a tree completion retired during its directory read', async () => {
+        let current = true;
+        let release!: () => void;
+        mocks.fsReadDirectory.mockImplementationOnce(() => new Promise(resolve => { release = () => resolve([]); }));
+        const run = refreshProjectTree(() => current);
+        current = false;
+        release(); await run;
+        expect(mocks.executeProjectTreeRefreshAction).not.toHaveBeenCalled();
+    });
+
+    it('preserves the original metadata snapshot and queued session guard after moving assets', async () => {
+        const snapshot: AssetLibraryMetadataSnapshot = {
+            metadata: { assets: { '/assets/bg/office.png': { collections: ['Keep'], tags: ['tag'] } }, schemaVersion: 1, type: 'zerith.assetLibrary' },
+            text: 'original exact bytes',
+        };
+        mocks.loadAssetMetadata.mockResolvedValueOnce(snapshot);
+        await moveAssetPathToDirectory('/project/assets/bg/office.png', '/project/assets/sprites');
+        expect(mocks.saveAssetMetadata).toHaveBeenCalledWith('/project', {
+            assets: { '/assets/sprites/office.png': { collections: ['Keep'], tags: ['tag'] } }, schemaVersion: 1, type: 'zerith.assetLibrary',
+        }, snapshot, undefined, expect.any(Function));
+        const guard = mocks.saveAssetMetadata.mock.calls[0][4] as () => boolean;
+        expect(guard()).toBe(true);
+        mocks.projectState.projectGeneration++;
+        expect(guard()).toBe(false);
+    });
+
+    it('does not write metadata after the move snapshot returns to a replaced project', async () => {
+        let resolve!: (value: AssetLibraryMetadataSnapshot) => void;
+        const pending = new Promise<AssetLibraryMetadataSnapshot>(yes => { resolve = yes; });
+        mocks.loadAssetMetadata.mockReturnValueOnce(pending);
+        const moving = moveAssetPathToDirectory('/project/assets/bg/office.png', '/project/assets/sprites');
+        await vi.waitFor(() => expect(mocks.loadAssetMetadata).toHaveBeenCalledOnce());
+        mocks.projectState.projectGeneration++;
+        resolve({ metadata: { assets: { '/assets/bg/office.png': { collections: ['Keep'], tags: ['tag'] } }, schemaVersion: 1, type: 'zerith.assetLibrary' }, text: 'old' });
+        await moving;
+        expect(mocks.saveAssetMetadata).not.toHaveBeenCalled();
     });
 
     it('refreshes partial browser copies without remapping dirty source tabs', async () => {

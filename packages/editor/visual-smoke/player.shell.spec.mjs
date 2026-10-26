@@ -41,6 +41,32 @@ async function start(page) {
     await expect(dialogue(page)).toHaveCount(1);
 }
 
+test('menus suspend the render loop through Back and resume the same scene on close', async ({ page }) => {
+    await page.route('**/src/main.ts', async route => {
+        const response = await route.fetch();
+        const body = await response.text();
+        expect(body).toContain('await bootstrapPlayer({');
+        await route.fulfill({ response, body: body.replace('await bootstrapPlayer({', 'globalThis.renderEngine = await bootstrapPlayer({') });
+    });
+    const state = () => page.evaluate(() => ({
+        index: globalThis.renderEngine?.currentIndex,
+        running: globalThis.renderEngine?.display.app.ticker.started,
+        scene: globalThis.renderEngine?.currentSceneName,
+    }));
+    await setup(page);
+    await start(page);
+    await expect.poll(async () => (await state()).running).toBe(true);
+    const playing = await state();
+    await page.keyboard.press('Escape');
+    await expect.poll(async () => (await state()).running).toBe(false);
+    await shell(page).getByRole('button', { name: 'History', exact: true }).click();
+    await shell(page).getByRole('button', { name: 'Back', exact: true }).click();
+    expect(await state()).toEqual({ ...playing, running: false });
+    await shell(page).getByRole('button', { name: 'Resume', exact: true }).click();
+    await expect.poll(state).toEqual(playing);
+    await expect(dialogue(page)).toHaveCount(1);
+});
+
 test('default menus save, continue, load and return to title without advancing on resume', async ({ page }, testInfo) => {
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));

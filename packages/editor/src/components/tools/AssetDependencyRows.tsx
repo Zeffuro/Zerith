@@ -41,6 +41,7 @@ export function AssetMetadataChips({
 export function EntryBlock({
     locations,
     metadata,
+    metadataDisabled = false,
     moveDisabled = false,
     moving = false,
     name,
@@ -52,6 +53,7 @@ export function EntryBlock({
 }: {
     locations: ReferenceLocation[];
     metadata: AssetLibraryAssetMetadata;
+    metadataDisabled?: boolean;
     moveDisabled?: boolean;
     moving?: boolean;
     name: string;
@@ -73,8 +75,9 @@ export function EntryBlock({
                 </button>
                 <button
                     className="toolbar-btn"
+                    disabled={metadataDisabled}
                     onClick={() => onEditMetadata(name)}
-                    style={miniButtonStyle(uiScale, false)}
+                    style={miniButtonStyle(uiScale, metadataDisabled)}
                     title={`Organize ${name}`}
                     type="button"
                 >

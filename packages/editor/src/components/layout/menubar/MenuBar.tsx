@@ -3,11 +3,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { useDismissiblePopup } from '../../../hooks/useDismissiblePopup';
 import { usePlaytestRunning } from '../../../hooks/usePlaytestRunning';
 import { useRecentProjects } from '../../../hooks/useRecentProjects';
-import {
-    executeContentMigrationCommand,
-    formatContentMigrationCommandStatus,
-    getContentMigrationCommandStatusTone,
-} from '../../../services/contentMigrationCommand';
+import { runSavedContentMigration } from '../../../services/contentMigrationRun';
 import { confirmEditorAction } from '../../../services/editorDialogs';
 import {
     createEditorUpdateInstallPrompt,
@@ -75,6 +71,7 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
     const {
         activeFile,
         dirtyFiles,
+        projectGeneration,
         projectPath,
         saveActiveFileFromCurrentScript,
         saveAllDirtyFiles,
@@ -156,27 +153,9 @@ export function MenuBar({ uiScale }: { uiScale: number }) {
         supportsRecentProjects,
     ]);
 
-    const handleMigrateProjectContent = useCallback(async () => {
-        if (!projectPath) return;
-
-        try {
-            announceOperationStatus('Content migration started. The editor remains usable while files are checked.');
-            markManualSave();
-            await saveAllDirtyFiles();
-
-            const result = await executeContentMigrationCommand(projectPath);
-            announceOperationStatus(
-                formatContentMigrationCommandStatus(result),
-                getContentMigrationCommandStatusTone(result),
-            );
-            if (result.status === 'applied' || result.status === 'conflicted') {
-                await useProjectStore.getState().loadManifest();
-            }
-        } catch (error) {
-            console.error('Content migration from menu failed:', error);
-            announceOperationStatus(`Content migration failed: ${error instanceof Error ? error.message : String(error)}`, 'error');
-        }
-    }, [announceOperationStatus, markManualSave, projectPath, saveAllDirtyFiles]);
+    const handleMigrateProjectContent = useCallback(() => {
+        void runSavedContentMigration({ projectGeneration, projectPath });
+    }, [projectGeneration, projectPath]);
 
     const handleExit = useCallback(() => {
         void closeEditorWindow();

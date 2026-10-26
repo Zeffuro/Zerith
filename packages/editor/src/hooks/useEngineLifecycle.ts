@@ -1,15 +1,13 @@
-import type { CharacterDefinition, Engine, GameManifest, ItemManifestEntry, SceneMap, Script } from '@zeffuro/zerith-core';
+import type { GameManifest, Script } from '@zeffuro/zerith-core';
 import type { RefObject } from 'react';
 
+import { useMemo } from 'react';
+
+import type { EngineLifecycleProjectData } from './useEngineBootstrap';
+
+import { useProjectStore } from '../store/storeBootstrap';
 import { useEngineBootstrap } from './useEngineBootstrap';
 import { useSceneHotReload } from './useSceneHotReload';
-
-export type EngineLifecycleProjectData = {
-    characters: Record<string, CharacterDefinition>;
-    items: Record<string, ItemManifestEntry>;
-    macros: Record<string, Script>;
-    scenes: SceneMap;
-};
 
 type WritableReference<T> = { current: T };
 
@@ -37,11 +35,15 @@ export function useEngineLifecycle({
     scriptReference: WritableReference<Script>;
     setPreviewLogCaptureEnabled: (enabled: boolean) => void;
     treeRevision: number;
-}): WritableReference<Engine | undefined> {
+}) {
     const reloadToken = useSceneHotReload({ manifest, projectPath, treeRevision });
+    const projectGeneration = useProjectStore(state => state.projectGeneration);
+    const { key: canvasKey } = useMemo(() => ({ key: crypto.randomUUID(), localizationReloadKey, manifest, projectGeneration, projectPath, reloadToken }),
+        [localizationReloadKey, manifest, projectGeneration, projectPath, reloadToken]);
 
-    return useEngineBootstrap({
+    const engineReference = useEngineBootstrap({
         activeFileReference,
+        canvasKey,
         canvasReference,
         containerReference,
         localizationReloadKey,
@@ -53,5 +55,6 @@ export function useEngineLifecycle({
         scriptReference,
         setPreviewLogCaptureEnabled,
     });
+    return { canvasKey, engineReference };
 }
 

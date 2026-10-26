@@ -1,12 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { AudioBufferLike } from '../../utils/audioRegions';
 
+import { encodeAudioBufferRegionToWav } from '../../utils/audioRegions';
 import {
     createAudiosheetCueExportRegions,
     exportAssetAudioCuesToProject,
     resolveAudiosheetAudioPath,
 } from '../assetAudioCueExport';
+import { saveAudioRegionWavToProject } from '../audioRegionExport';
+import { createBrowserFsAdapter } from '../fs/browserFsAdapter';
+import { createPickerGlobal, MemoryDirectoryHandle } from './browserFsAdapter.test-utilities';
 
 function createAudioBuffer(duration = 1): AudioBufferLike {
     const sampleRate = 10;
@@ -109,5 +113,35 @@ describe('assetAudioCueExport', () => {
             })),
             saveRegion: () => Promise.reject(new Error('should not save')),
         })).rejects.toThrow('not an audiosheet');
+    });
+
+    it('retains completed WAV bytes and stops following cues after a later write failure', async () => {
+        const root = new MemoryDirectoryHandle('Audio');
+        const adapter = createBrowserFsAdapter(createPickerGlobal(root));
+        const projectPath = adapter.mountDirectory(root);
+        const audio = createAudioBuffer();
+        const error = { code: 'io', message: 'permission denied' };
+        const write = vi.fn().mockImplementationOnce(adapter.writeBinaryFileExclusive!).mockRejectedValue(error);
+        await expect(exportAssetAudioCuesToProject(projectPath, {
+            descriptorAssetUrl: '/assets/cues.json',
+        }, {
+            decodeAudioSource: () => Promise.resolve(audio),
+            dirname: adapter.dirname,
+            join: adapter.join,
+            readTextFile: () => Promise.resolve(JSON.stringify({
+                cues: { a: { duration: 0.2, start: 0 }, b: { duration: 0.2, start: 0.2 }, c: { duration: 0.2, start: 0.4 } },
+                source: 'audio.wav',
+            })),
+            saveRegion: (path, input) => saveAudioRegionWavToProject(path, input, {
+                join: adapter.join, mkdir: adapter.mkdir, readDirectory: adapter.readDirectory,
+                writeBinaryFileExclusive: write,
+            }),
+        })).rejects.toBe(error);
+        expect(write).toHaveBeenCalledTimes(2);
+        const directory = `${projectPath}/assets/audio-regions`;
+        await expect(adapter.readDirectory(directory)).resolves.toMatchObject([{ name: 'a-0p00s-0p20s.wav' }]);
+        await expect(adapter.readBinaryFile(`${directory}/a-0p00s-0p20s.wav`)).resolves.toEqual(
+            encodeAudioBufferRegionToWav(audio, { end: 0.2, start: 0 }),
+        );
     });
 });

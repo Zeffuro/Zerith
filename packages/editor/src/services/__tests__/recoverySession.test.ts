@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ read: vi.fn<(path: string) => Promise<string>>(), write: vi.fn() }));
-vi.mock('../fs', () => ({ fsReadTextFile: mocks.read, fsWriteTextFile: mocks.write }));
+vi.mock('../fs', () => ({ fsJoin: vi.fn(), fsMkdir: vi.fn(), fsReadDirectory: vi.fn(), fsReadTextFile: mocks.read, fsWriteTextFile: mocks.write }));
 vi.mock('@zeffuro/zerith-core', () => ({ deepClone: structuredClone, WEATHER_PRESET_DEFAULTS: {} }));
 
 import { useProjectStore } from '../../store/storeBootstrap';

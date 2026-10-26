@@ -3,7 +3,7 @@ export type FsAdapter = {
     dirname: (path: string) => Promise<string>;
     finishProjectDestination?: (path: string) => Promise<void>;
     join: (...parts: string[]) => Promise<string>;
-    mkdir: (path: string, recursive?: boolean) => Promise<void>;
+    mkdir: (path: string, recursive?: boolean, isCurrent?: () => boolean) => Promise<void>;
     openPath: (path: string) => Promise<void>;
     pickBinaryFiles: (options?: FsFilePickerOptions) => Promise<FsPickedFile[]>;
     pickDirectory: (title?: string) => Promise<string | undefined>;
@@ -16,7 +16,7 @@ export type FsAdapter = {
     rename: (oldPath: string, newPath: string) => Promise<void>;
     reserveProjectDestination?: (path: string, sourcePath?: string) => Promise<string>;
     writeBinaryFile: (path: string, content: Uint8Array) => Promise<void>;
-    writeBinaryFileExclusive?: (path: string, content: Uint8Array) => Promise<void>;
+    writeBinaryFileExclusive?: (path: string, content: Uint8Array, isCurrent?: () => boolean) => Promise<void>;
     writeTextFile: (path: string, content: string, options?: FsTextWriteOptions) => Promise<void>;
 };
 

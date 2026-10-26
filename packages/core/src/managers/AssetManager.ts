@@ -89,20 +89,7 @@ export class AssetManager {
     }
 
     public destroy() {
-        for (const key of this.loadedUrls) {
-            const separatorIndex = key.indexOf(':');
-            if (separatorIndex === -1) continue;
-
-            const kind = key.slice(0, separatorIndex);
-            const rawUrl = key.slice(separatorIndex + 1);
-
-            if (kind === 'texture' || kind === 'sheet') {
-                void Assets.unload(rawUrl).catch(() => {
-                    // Ignore cache eviction races/duplicates during teardown.
-                });
-            }
-        }
-
+        // Assets is shared across engines; this manager cannot evict another engine's textures.
         this.loadedUrls.clear();
     }
 

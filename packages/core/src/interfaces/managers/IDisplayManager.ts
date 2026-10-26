@@ -15,12 +15,14 @@ export type BuiltInDisplayLayerName = typeof BUILT_IN_DISPLAY_LAYERS[number];
 export type DisplayLayerName = ({} & string) | BuiltInDisplayLayerName;
 
 export interface IDisplayManager extends IBaseManager {
+    acquireRenderSuspension?(): () => void;
     canvas: HTMLCanvasElement | undefined;
     captureThumbnailDataUrl?(): string | undefined;
     clearLayers?(): void;
     getLayer(name: DisplayLayerName): Container;
     readonly height: number;
     init(canvas: HTMLCanvasElement): Promise<void>;
+    render?(): void;
     readonly width: number;
 }
 

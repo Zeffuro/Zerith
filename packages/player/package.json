@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "fflate": "^0.8.3",
-    "vite": "^8.3.2",
+    "vite": "^8.3.5",
     "@zeffuro/zerith-core": "^0.1.0"
   },
   "devDependencies": {

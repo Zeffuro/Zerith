@@ -2,9 +2,8 @@ import { Download, Pause, Play, Save, X } from 'lucide-react';
 import { type PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAssetOptions } from '../../hooks/useAssetOptions';
-import { saveAudioRegionWavToProject } from '../../services/audioRegionExport';
-import { refreshProjectTree } from '../../services/explorerFileActions';
-import { refreshReferenceScannerState } from '../../services/referenceScanner';
+import { useAudioExport } from '../../hooks/useAudioExport';
+import { saveAudioSelection } from '../../services/audioExportActions';
 import { releaseEditorAssetUrl, resolveEditorAssetUrl } from '../../services/runtime/assetUrls';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
@@ -35,19 +34,17 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
     const [value, setValue] = useState('');
     const [audioBuffer, setAudioBuffer] = useState<AudioBuffer>();
     const [audioError, setAudioError] = useState<string>();
-    const [audioExportMessage, setAudioExportMessage] = useState<string>();
     const [audioIsPlaying, setAudioIsPlaying] = useState(false);
     const [audioLoading, setAudioLoading] = useState(false);
-    const [audioSavingSelection, setAudioSavingSelection] = useState(false);
     const [audioSelectionRegion, setAudioSelectionRegion] = useState<NormalizedAudioRegion>();
     const [audioScrub, setAudioScrub] = useState(0);
     const [imageSize, setImageSize] = useState<{ height: number; width: number }>();
     const [resolvedSource, setResolvedSource] = useState('');
+    const { isExporting: audioSavingSelection, message: audioExportMessage, retire: retireAudioExport, runExport } = useAudioExport(value, { watchSelectedAsset: true });
 
     useEffect(() => {
         if (!selectedAssetPath) return;
         const frame = requestAnimationFrame(() => {
-            setAudioExportMessage(undefined);
             setValue(selectedAssetPath);
         });
         return () => cancelAnimationFrame(frame);
@@ -68,7 +65,6 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
         setAudioError(undefined);
         setAudioIsPlaying(false);
         setAudioLoading(false);
-        setAudioSavingSelection(false);
         setAudioSelectionRegion(undefined);
         setAudioScrub(0);
         audioRegionAnchorReference.current = undefined;
@@ -182,26 +178,11 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
     const handleSaveAudioSelectionToProject = () => {
         if (!audioBuffer || !audioSelectionRegion || !projectPath) return;
 
-        void (async () => {
-            try {
-                setAudioSavingSelection(true);
-                setAudioExportMessage(undefined);
-                const wavBytes = encodeAudioBufferRegionToWav(audioBuffer, audioSelectionRegion);
-                const result = await saveAudioRegionWavToProject(projectPath, {
+        void runExport('selection', (path, isCurrent) => saveAudioSelection(path, {
                     region: audioSelectionRegion,
                     sourcePath: value,
-                    wavBytes,
-                });
-                await refreshProjectTree();
-                await refreshReferenceScannerState();
-                setValue(result.assetUrl);
-                setAudioExportMessage(`Saved ${result.assetUrl}${result.collisionResolved ? ' (renamed)' : ''}.`);
-            } catch (error) {
-                setAudioExportMessage(error instanceof Error ? error.message : String(error));
-            } finally {
-                setAudioSavingSelection(false);
-            }
-        })();
+                    wavBytes: encodeAudioBufferRegionToWav(audioBuffer, audioSelectionRegion),
+                }, isCurrent), result => setValue(result.assetUrl));
     };
 
     const handleWaveformPointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
@@ -261,7 +242,7 @@ export function AssetPreviewPanel({ uiScale }: { uiScale: number }) {
             <input
                 list="asset-preview-options"
                 onChange={(event) => {
-                    setAudioExportMessage(undefined);
+                    retireAudioExport();
                     setValue(event.target.value);
                 }}
                 placeholder="/assets/..."

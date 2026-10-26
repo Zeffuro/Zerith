@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
+import type { PlaytestDraft, PlaytestDraftLease } from '../../services/playtests/playtestDraft';
 import type { PlaytestScenario } from '../../services/playtests/playtestModel';
 
+import { usePlaytestDraft } from '../../hooks/usePlaytestDraft';
 import { usePlaytestLibrary } from '../../hooks/usePlaytestLibrary';
 import { openProjectEntry } from '../../services/openProjectEntry';
 import { checkPlaytestResult, parsePlaytestScenario, parsePlaytestState } from '../../services/playtests/playtestModel';
@@ -13,23 +15,22 @@ import { usePlaytestStore } from '../../store/usePlaytestStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import './PlaytestPanel.css';
 
-type Draft = { choices: string; expectedScene: string; expectedState: string; id: string; index: number; inventory: string[]; locale: string; name: string; scene: string; state: string };
-const blank: Draft = { choices: '[]', expectedScene: '', expectedState: '{}', id: '', index: 1, inventory: [], locale: '', name: '', scene: '', state: '{}' };
-
 export function PlaytestPanel() {
     const { activeFile, items, locales, projectGeneration, projectPath, scenePaths, scenes } = useProjectStore();
     const engine = useEngineBridgeStore(state => state.engine);
     const playback = usePlaytestStore();
     const library = usePlaytestLibrary(projectPath);
-    const [draft, setDraft] = useState<Draft>(blank);
+    const drafts = usePlaytestDraft(projectPath, projectGeneration);
+    const { draft } = drafts;
+    const libraryMessageLease = useRef<PlaytestDraftLease | undefined>(undefined);
     const [message, setMessage] = useState('');
     const [launching, setLaunching] = useState(false);
     const [replay, setReplay] = useState(false);
     const sceneNames = Object.keys(scenes).toSorted();
-    const update = <K extends keyof Draft>(key: K, value: Draft[K]) => { setDraft(current => ({ ...current, [key]: value })); setMessage(''); };
+    const update = <K extends keyof PlaytestDraft>(key: K, value: PlaytestDraft[K]) => { drafts.edit({ [key]: value }); setMessage(''); };
 
     useEffect(() => {
-        setDraft(blank);
+        libraryMessageLease.current = undefined;
         setMessage('');
         setLaunching(false);
         usePlaytestStore.getState().reset();
@@ -49,22 +50,32 @@ export function PlaytestPanel() {
     });
 
     const load = (value: PlaytestScenario) => {
-        setDraft({ choices: JSON.stringify(value.choices), expectedScene: value.expectedScene ?? '', expectedState: JSON.stringify(value.expectedState, undefined, 2), id: value.id, index: value.index + 1, inventory: value.inventory, locale: value.locale ?? '', name: value.name, scene: value.scene, state: JSON.stringify(value.state, undefined, 2) });
+        drafts.select(value);
         setMessage('');
     };
 
     const attempt = (action: () => Promise<void> | void) => {
-        void Promise.resolve().then(action).catch((error: unknown) => { if (library.isCurrent()) setMessage(error instanceof Error ? error.message : String(error)); });
+        const lease = drafts.capture();
+        void Promise.resolve().then(() => { if (drafts.owns(lease)) return action(); }).catch((error: unknown) => { if (drafts.owns(lease)) setMessage(error instanceof Error ? error.message : String(error)); });
     };
 
     const save = async () => {
         const value = scenario();
+        const lease = drafts.capture();
+        libraryMessageLease.current = lease;
         const next = [...library.scenarios.filter(candidate => candidate.id !== value.id), value];
-        if (await library.save(next)) load(value);
+        if (await library.save(next)) drafts.completeSave(lease, value);
+    };
+
+    const remove = async () => {
+        const lease = drafts.capture();
+        libraryMessageLease.current = lease;
+        if (await library.save(library.scenarios.filter(value => value.id !== draft.id))) drafts.completeDelete(lease);
     };
 
     const launch = async () => {
         if (!projectPath || launching) return;
+        const lease = drafts.capture();
         const value = scenario();
         validatePlaytestTarget(value, scenes, Object.keys(items), Object.keys(locales));
         const path = scenePaths[value.scene];
@@ -74,19 +85,19 @@ export function PlaytestPanel() {
             useEditorStore.getState().triggerStop();
             usePlaytestStore.getState().reset();
             await openProjectEntry(path, path.split(/[\\/]/u).at(-1) ?? path);
-            if (!library.isCurrent()) return;
+            if (!drafts.isActive(lease)) return;
             const current = useProjectStore.getState();
             if (current.projectPath !== projectPath || current.activeFile !== path) throw new Error('The requested scene could not be opened.');
             useEditorStore.getState().setPreviewLocale(value.locale);
             usePlaytestStore.getState().launch(projectPath, value, replay, projectGeneration);
             focusPreview();
-        } finally { if (library.isCurrent()) setLaunching(false); }
+        } finally { if (drafts.isActive(lease)) setLaunching(false); }
     };
 
     const capture = () => {
         if (!engine) return;
         const scene = Object.keys(scenePaths).find(name => scenePaths[name] === activeFile);
-        setDraft(current => ({ ...current, index: (useScriptStore.getState().selectedNodePath?.[0] as number | undefined ?? 0) + 1, inventory: engine.items.serialize(), locale: useEditorStore.getState().previewLocale ?? '', scene: scene ?? current.scene, state: JSON.stringify(engine.stateManager.state, undefined, 2) }));
+        drafts.edit({ index: (useScriptStore.getState().selectedNodePath?.[0] as number | undefined ?? 0) + 1, inventory: engine.items.serialize(), locale: useEditorStore.getState().previewLocale ?? '', scene: scene ?? draft.scene, state: JSON.stringify(engine.stateManager.state, undefined, 2) });
         setMessage('Captured variables and inventory from the preview.');
     };
 
@@ -101,7 +112,7 @@ export function PlaytestPanel() {
     return <div className="zerith-playtests" style={{ color: t.text.primary, display: 'flex', flexDirection: 'column', gap: 10, height: '100%', minWidth: 0, overflow: 'auto', padding: 12 }}>
         <strong>Playtests</strong>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            <button className="toolbar-btn" disabled={disabled} onClick={() => { setDraft(blank); setMessage(''); }}>New playtest</button>
+            <button className="toolbar-btn" disabled={disabled} onClick={() => { drafts.clear(); setMessage(''); }}>New playtest</button>
             {library.scenarios.map(value => <button className="toolbar-btn" key={value.id} onClick={() => load(value)}>{value.name}</button>)}
         </div>
         <label>Name<input aria-label="Playtest name" onChange={event => update('name', event.target.value)} placeholder="Evening shift" value={draft.name} /></label>
@@ -123,9 +134,9 @@ export function PlaytestPanel() {
             <button className="toolbar-btn" disabled={disabled} onClick={() => attempt(launch)}>Launch playtest</button>
             <button className="toolbar-btn" disabled={!engine} onClick={capture}>Capture preview state</button>
             <button className="toolbar-btn" disabled={!engine || !playback.request} onClick={() => attempt(check)}>Check results</button>
-            <button className="toolbar-btn" disabled={disabled || !draft.id} onClick={() => attempt(async () => { if (await library.save(library.scenarios.filter(value => value.id !== draft.id))) setDraft(blank); })}>Delete playtest</button>
+            <button className="toolbar-btn" disabled={disabled || !draft.id} onClick={() => attempt(remove)}>Delete playtest</button>
         </div>
-        <div aria-live="polite" role="status">{message || library.message || playback.message}</div>
+        <div aria-live="polite" role="status">{message || ((!libraryMessageLease.current || drafts.owns(libraryMessageLease.current)) ? library.message : '') || playback.message}</div>
         {playback.visited.length > 0 && <div>Visited scenes: {playback.visited.join(', ')}</div>}
     </div>;
 }

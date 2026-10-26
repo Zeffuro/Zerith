@@ -3,18 +3,20 @@ import { create } from 'zustand';
 import type {
     AssetDependencyGraph,
     ReferenceScannerResult,
-} from '../services/referenceScanner';
+} from '../services/referenceScanner/types';
 
-import { createAssetDependencyGraph, toProjectAssetUrl } from '../services/referenceScanner';
+import { createAssetDependencyGraph, toProjectAssetUrl } from '../services/referenceScanner/assets';
 
 export type ReferenceStoreState = {
     assetInventory: string[];
+    clearSnapshot: () => void;
     getAssetDependencyGraph: () => AssetDependencyGraph;
     getAssetReferenceCountForFilePath: (filePath: string, projectPath: string | undefined) => number;
     isAssetFileReferenced: (filePath: string, projectPath: string | undefined) => boolean;
     result: ReferenceScannerResult;
     setAssetInventory: (assetInventory: string[]) => void;
     setResult: (result: ReferenceScannerResult) => void;
+    setSnapshot: (snapshot: { assetInventory: string[]; result: ReferenceScannerResult }) => void;
 };
 
 const EMPTY_RESULT: ReferenceScannerResult = {
@@ -27,6 +29,7 @@ const EMPTY_RESULT: ReferenceScannerResult = {
 
 export const useReferenceStore = create<ReferenceStoreState>((set, get) => ({
     assetInventory: [],
+    clearSnapshot: () => set({ assetInventory: [], result: EMPTY_RESULT }),
     getAssetDependencyGraph: () => {
         const { assetInventory, result } = get();
         return createAssetDependencyGraph(result.assetFiles, assetInventory);
@@ -44,5 +47,6 @@ export const useReferenceStore = create<ReferenceStoreState>((set, get) => ({
     result: EMPTY_RESULT,
     setAssetInventory: (assetInventory) => set({ assetInventory }),
     setResult: (result) => set({ result }),
+    setSnapshot: (snapshot) => set(snapshot),
 }));
 

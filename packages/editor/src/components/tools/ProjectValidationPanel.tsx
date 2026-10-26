@@ -3,17 +3,16 @@ import type { CSSProperties } from 'react';
 import { AlertTriangle, CheckCircle2, ExternalLink, Languages, RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
-import type { ProjectValidationReport } from '../../services/projectValidationReport';
+import type { ValidationRunState } from '../../hooks/useProjectValidation';
 import type { ScriptPath } from '../../utils/scriptPathUtilities';
 import type {
     ProjectValidationPanelRow,
     ProjectValidationPanelSource,
 } from './projectValidationPanelModel';
 
+import { useProjectValidation } from '../../hooks/useProjectValidation';
 import { openLocalizationWorkbenchTab } from '../../services/localizationWorkbench';
 import { openProjectEntry } from '../../services/openProjectEntry';
-import { executeProjectValidationCommand } from '../../services/projectValidationCommand';
-import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { DOCK_PANELS } from '../layout/dock/dockPanelIds';
@@ -22,26 +21,15 @@ import {
     summarizeProjectValidationPanelReport,
 } from './projectValidationPanelModel';
 
-type ValidationRunState = 'error' | 'idle' | 'issues' | 'ok' | 'running';
-
 export function ProjectValidationPanel() {
-    const projectPath = useProjectStore((state) => state.projectPath);
-    const dirtyFiles = useProjectStore((state) => state.dirtyFiles);
-    const saveAllDirtyFiles = useProjectStore((state) => state.saveAllDirtyFiles);
-    const markManualSave = useEditorStore((state) => state.markManualSave);
+    const { errorMessage, projectGeneration, projectPath, report, runState, runValidation } = useProjectValidation();
     const uiScale = useEditorStore((state) => state.uiScale);
 
-    const [errorMessage, setErrorMessage] = useState<string | undefined>();
     const [query, setQuery] = useState('');
-    const [report, setReport] = useState<ProjectValidationReport>();
-    const [runState, setRunState] = useState<ValidationRunState>('idle');
 
     useEffect(() => {
-        setErrorMessage(undefined);
         setQuery('');
-        setReport(undefined);
-        setRunState('idle');
-    }, [projectPath]);
+    }, [projectGeneration, projectPath]);
 
     const rows = useMemo(
         () => report ? buildProjectValidationPanelRows(report) : [],
@@ -66,44 +54,6 @@ export function ProjectValidationPanel() {
         }),
         [errorMessage, filteredRows.length, query, rows.length, runState, summary],
     );
-
-    const runValidation = async () => {
-        if (!projectPath || runState === 'running') return;
-
-        setErrorMessage(undefined);
-        setRunState('running');
-
-        try {
-            if (dirtyFiles.size > 0) {
-                markManualSave();
-                const saveResult = await saveAllDirtyFiles();
-                const remainingDirtyCount = useProjectStore.getState().dirtyFiles.size;
-                if (saveResult.failed.length > 0 || remainingDirtyCount > 0) {
-                    setRunState('error');
-                    setErrorMessage('Validation cancelled because not all dirty files could be saved.');
-                    return;
-                }
-            }
-
-            const result = await executeProjectValidationCommand(projectPath);
-            if (result.status === 'failed') {
-                setRunState('error');
-                setErrorMessage(result.error instanceof Error ? result.error.message : String(result.error));
-                return;
-            }
-
-            if (result.status === 'no-project') {
-                setRunState('idle');
-                return;
-            }
-
-            setReport(result.report);
-            setRunState(result.status);
-        } catch (error) {
-            setRunState('error');
-            setErrorMessage(error instanceof Error ? error.message : String(error));
-        }
-    };
 
     if (!projectPath) {
         return <EmptyPanelMessage message="Open a project to validate content." uiScale={uiScale} />;

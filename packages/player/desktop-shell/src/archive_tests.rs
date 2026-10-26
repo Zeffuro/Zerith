@@ -104,6 +104,16 @@ fn archive_rejects_symbolic_links() {
 }
 
 #[test]
+fn archive_accepts_unicode_entry_names() {
+    assert!(open(&packed(&[
+        ("zerith.desktop.json", &metadata()),
+        ("index.html", b"html"),
+        ("images/水.png", b"image")
+    ]))
+    .is_ok());
+}
+
+#[test]
 fn metadata_rejects_invalid_identity_dimensions_and_title() {
     let valid: Metadata = serde_json::from_slice(&metadata()).unwrap();
     for game_id in [

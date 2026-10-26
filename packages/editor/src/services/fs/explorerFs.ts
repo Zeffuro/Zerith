@@ -1,6 +1,7 @@
 import type { FsAdapter, FsDirectoryEntry, FsFilePickerOptions, FsImportFile, FsPickedFile, FsProjectPickerResult, FsTextWriteOptions } from './types';
 
 import { canonicalPathForComparison } from '../../utils/pathComparison';
+import { assertAudioExportCurrent, runAudioExportStep } from '../audioExportOwnership';
 import { isTauriRuntime } from '../runtime/runtimeEnvironment';
 import { browserFsAdapter } from './browserFsAdapter';
 import { tauriFsAdapter } from './tauriFsAdapter';
@@ -29,8 +30,8 @@ export async function fsJoin(...parts: string[]): Promise<string> {
     return getFsAdapter().join(...parts);
 }
 
-export async function fsMkdir(path: string, recursive = true): Promise<void> {
-    await getFsAdapter().mkdir(path, recursive);
+export async function fsMkdir(path: string, recursive = true, isCurrent: () => boolean = () => true): Promise<void> {
+    await runAudioExportStep(isCurrent, () => getFsAdapter().mkdir(path, recursive, isCurrent));
 }
 
 export async function fsOpenPath(path: string): Promise<void> {
@@ -84,18 +85,20 @@ export async function fsWriteBinaryFile(path: string, content: Uint8Array): Prom
     await getFsAdapter().writeBinaryFile(path, content);
 }
 
-export async function fsWriteBinaryFileExclusive(path: string, content: Uint8Array): Promise<void> {
+export async function fsWriteBinaryFileExclusive(path: string, content: Uint8Array, isCurrent: () => boolean = () => true): Promise<void> {
+    assertAudioExportCurrent(isCurrent);
     const adapter = getFsAdapter();
     if (adapter.writeBinaryFileExclusive) {
-        await adapter.writeBinaryFileExclusive(path, content);
+        await runAudioExportStep(isCurrent, () => adapter.writeBinaryFileExclusive!(path, content, isCurrent));
         return;
     }
-    const entries = await adapter.readDirectory(await adapter.dirname(path));
+    const parent = await runAudioExportStep(isCurrent, () => adapter.dirname(path));
+    const entries = await runAudioExportStep(isCurrent, () => adapter.readDirectory(parent));
     const name = path.split(/[\\/]/u).at(-1)?.toLowerCase();
     if (entries.some((entry) => entry.name.toLowerCase() === name)) {
         throw Object.assign(new Error('Destination already exists.'), { code: 'alreadyExists' });
     }
-    await adapter.writeBinaryFile(path, content);
+    await runAudioExportStep(isCurrent, () => adapter.writeBinaryFile(path, content));
 }
 
 export async function fsWriteTextFile(path: string, content: string, options?: FsTextWriteOptions, isCurrent?: () => boolean): Promise<void> {

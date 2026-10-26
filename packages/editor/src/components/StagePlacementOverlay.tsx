@@ -36,16 +36,19 @@ export function StagePlacementOverlay({ canvas, container, onActiveChange, tools
     const [message, setMessage] = useState('');
     const drag = useRef<Drag | undefined>(undefined);
     const ownsSource = useCallback(() => {
-        if (!engine || useEngineBridgeStore.getState().engine !== engine) return false;
+        if (!engine || useEngineBridgeStore.getState().engine !== engine || engine.display.canvas !== canvas.current) return false;
         const project = useProjectStore.getState();
         const path = engine.currentSceneName === 'preview' ? useEngineBridgeStore.getState().previewSourceFile : project.scenePaths[engine.currentSceneName];
         return !!path && path.replaceAll('\\', '/') === project.activeFile?.replaceAll('\\', '/');
-    }, [engine]);
+    }, [canvas, engine]);
     const cancelDrag = useCallback(() => {
         const gesture = drag.current;
         drag.current = undefined;
-        if (gesture && !gesture.selected.sprite.destroyed) applyTransform(gesture.selected.sprite, gesture.start);
-    }, []);
+        if (gesture && !gesture.selected.sprite.destroyed) {
+            applyTransform(gesture.selected.sprite, gesture.start);
+            engine?.display.render?.();
+        }
+    }, [engine]);
 
     useEffect(() => {
         cancelDrag();
@@ -60,9 +63,11 @@ export function StagePlacementOverlay({ canvas, container, onActiveChange, tools
         onActiveChange(enabled);
         if (!engine || !enabled) return;
         const release = engine.flow.acquireSuspension?.();
+        const releaseRender = engine.display.acquireRenderSuspension?.();
         engine.pause();
         engine.setInputEnabled(false);
-        return () => { cancelDrag(); release?.(); };
+        engine.display.render?.();
+        return () => { cancelDrag(); releaseRender?.(); release?.(); };
     }, [cancelDrag, enabled, engine, onActiveChange]);
 
     useEffect(() => {
@@ -78,7 +83,7 @@ export function StagePlacementOverlay({ canvas, container, onActiveChange, tools
     useEffect(() => {
         if (!engine || !enabled) return;
         const update = () => {
-            if (!canvas.current || !container.current) return;
+            if (!canvas.current || !container.current || engine.display.canvas !== canvas.current || useEngineBridgeStore.getState().engine !== engine) return;
             const rect = canvas.current.getBoundingClientRect();
             const parent = container.current.getBoundingClientRect();
             const scaleX = rect.width / engine.display.width;
@@ -106,9 +111,11 @@ export function StagePlacementOverlay({ canvas, container, onActiveChange, tools
             }
             if (selection.source === rootScript) return;
             applyTransform(selection.sprite, placementFromCommand(command, selection.baseline, engine.display.width, engine.display.height, characters[selection.id]?.displayDefaults?.flip));
+            engine.display.render?.();
             setSelection({ ...selection, path, source: rootScript });
         } else if (selection.createdPath || !selection.path) {
             applyTransform(selection.sprite, selection.baseline);
+            engine.display.render?.();
             if (selection.path || selection.source !== rootScript) setSelection({ ...selection, path: undefined, source: rootScript });
         } else setSelection(undefined);
     }, [characters, enabled, engine, ownsSource, rootScript, selection]);
@@ -154,6 +161,7 @@ export function StagePlacementOverlay({ canvas, container, onActiveChange, tools
             const path = [selected.insertion];
             store.setSelectedNodePath(path);
             applyTransform(selected.sprite, placementFromCommand(command as Parameters<typeof placementFromCommand>[0], selected.baseline, engine.display.width, engine.display.height));
+            engine.display.render?.();
             setSelection({ ...selected, createdPath: path, path, source: useScriptStore.getState().rootScript });
         }
     };
@@ -174,6 +182,7 @@ export function StagePlacementOverlay({ canvas, container, onActiveChange, tools
         if (rect.width === 0 || rect.height === 0) return;
         const position = snappedPosition(gesture.start.x + (event.clientX - gesture.clientX) * engine.display.width / rect.width, gesture.start.y + (event.clientY - gesture.clientY) * engine.display.height / rect.height, engine.display.width, engine.display.height, grid);
         gesture.selected.sprite.position.set(position.x, position.y);
+        engine.display.render?.();
     };
     const finish = (event: React.PointerEvent<HTMLButtonElement>, cancelled = false) => {
         const gesture = drag.current;
@@ -192,7 +201,7 @@ export function StagePlacementOverlay({ canvas, container, onActiveChange, tools
     if (!engine || !tools) return;
     return <>
         {createPortal(<div onFocus={() => engine.setInputEnabled(false)}><StagePlacementControls canPlace={canPlace} characters={boxes.map(box => ({ id: box.id, label: characters[box.id]?.name ?? box.id }))} enabled={enabled} grid={grid} message={message} onCenter={() => position('x', engine.display.width / 2)} onLayer={direction => {
-            if (selection) commit(selection, { zIndex: direction > 0 ? Math.max(...engine.display.getLayer('sprites').children.map(sprite => sprite.zIndex)) + 1 : Math.min(...engine.display.getLayer('sprites').children.map(sprite => sprite.zIndex)) - 1 });
+            if (selection && ownsSource()) commit(selection, { zIndex: direction > 0 ? Math.max(...engine.display.getLayer('sprites').children.map(sprite => sprite.zIndex)) + 1 : Math.min(...engine.display.getLayer('sprites').children.map(sprite => sprite.zIndex)) - 1 });
         }} onPosition={position} onScale={value => {
             if (selection) commit(selection, { heightRatio: undefined, scaleX: value * Math.sign(selection.sprite.scale.x || 1), scaleY: value * Math.sign(selection.sprite.scale.y || 1), widthRatio: undefined });
         }} onSelect={select} onToggle={() => {

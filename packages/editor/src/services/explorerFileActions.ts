@@ -6,7 +6,7 @@ import { useWorkbenchStore } from '../store/useWorkbenchStore';
 import { sanitizeFileName } from '../utils/sanitizeFileName';
 import { isRecord } from '../utils/typeGuards';
 import {
-    loadAssetLibraryMetadata,
+    loadAssetLibraryMetadataSnapshot,
     moveAssetLibraryMetadataScope,
     saveAssetLibraryMetadata,
 } from './assetLibraryMetadata';
@@ -307,14 +307,15 @@ export async function moveAssetPathWithPicker(oldPath: string) {
     }
 }
 
-export async function refreshProjectTree() {
+export async function refreshProjectTree(isCurrent: () => boolean = () => true) {
+    if (!isCurrent()) return;
     const { projectGeneration } = useProjectStore.getState();
     const projectPath = getCurrentProjectPath();
     if (!projectPath) return;
 
     const entries = await fsReadDirectory(projectPath);
     const current = useProjectStore.getState();
-    if (current.projectPath !== projectPath || current.projectGeneration !== projectGeneration) return;
+    if (!isCurrent() || current.projectPath !== projectPath || current.projectGeneration !== projectGeneration) return;
     executeProjectTreeRefreshAction(projectPath, entries);
 }
 
@@ -369,9 +370,12 @@ export async function revealPathInSystem(path: string) {
     }
 }
 
-async function applyAssetLibraryMetadataMove(assetPathChange: ProjectAssetPathChange): Promise<void> {
+async function applyAssetLibraryMetadataMove(assetPathChange: ProjectAssetPathChange, ownsProject: () => boolean): Promise<void> {
     try {
-        const metadata = await loadAssetLibraryMetadata(assetPathChange.projectPath);
+        if (!ownsProject()) return;
+        const snapshot = await loadAssetLibraryMetadataSnapshot(assetPathChange.projectPath);
+        if (!ownsProject()) return;
+        const metadata = snapshot.metadata;
         const nextMetadata = moveAssetLibraryMetadataScope(
             metadata,
             assetPathChange.oldAssetUrl,
@@ -382,8 +386,9 @@ async function applyAssetLibraryMetadataMove(assetPathChange: ProjectAssetPathCh
             return;
         }
 
-        await saveAssetLibraryMetadata(assetPathChange.projectPath, nextMetadata);
+        await saveAssetLibraryMetadata(assetPathChange.projectPath, nextMetadata, snapshot, undefined, ownsProject);
     } catch (error) {
+        if (!ownsProject()) return;
         console.warn('Asset library metadata move update failed:', error);
         executeConsoleMessageAction('editor', 'warn', 'Asset library metadata was not updated after move:', String(error));
     }
@@ -428,7 +433,7 @@ async function applyPathChange(
 
     let failed = false;
     try {
-        if (assetPathChange) await applyAssetLibraryMetadataMove(assetPathChange);
+        if (assetPathChange) await applyAssetLibraryMetadataMove(assetPathChange, ownsProject);
         if (plan?.files.length) {
             try {
                 await applyAssetReferenceRewritePlan(plan);

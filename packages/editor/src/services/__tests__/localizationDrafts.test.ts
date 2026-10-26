@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
     read: vi.fn<(path: string) => Promise<string>>(),
     write: vi.fn<(path: string, text: string, options?: { createOnly?: boolean; expectedContent?: string }, isCurrent?: () => boolean) => Promise<void>>(),
 }));
-vi.mock('../fs', () => ({ fsMkdir: mocks.mkdir, fsReadTextFile: mocks.read, fsWriteTextFile: mocks.write }));
+vi.mock('../fs', () => ({ fsJoin: vi.fn(), fsMkdir: mocks.mkdir, fsReadDirectory: vi.fn(), fsReadTextFile: mocks.read, fsWriteTextFile: mocks.write }));
 vi.mock('@zeffuro/zerith-core', () => ({ deepClone: structuredClone, WEATHER_PRESET_DEFAULTS: {} }));
 
 import { useProjectStore } from '../../store/storeBootstrap';

@@ -4,6 +4,8 @@ import { invoke } from '@tauri-apps/api/core';
 
 import type { FsAdapter, FsDirectoryEntry, FsFilePickerFilter } from './types';
 
+import { runAudioExportStep } from '../audioExportOwnership';
+
 let pathApiPromise: Promise<typeof import('@tauri-apps/api/path')> | undefined;
 let dialogApiPromise: Promise<typeof import('@tauri-apps/plugin-dialog')> | undefined;
 let fsApiPromise: Promise<typeof import('@tauri-apps/plugin-fs')> | undefined;
@@ -20,9 +22,9 @@ export const tauriFsAdapter: FsAdapter = {
         const pathApi = await getPathApi();
         return pathApi.join(...parts);
     },
-    mkdir: async (path, recursive = true) => {
-        const fsApi = await getFsApi();
-        await fsApi.mkdir(path, { recursive });
+    mkdir: async (path, recursive = true, isCurrent = () => true) => {
+        const fsApi = await runAudioExportStep(isCurrent, getFsApi);
+        await runAudioExportStep(isCurrent, () => fsApi.mkdir(path, { recursive }));
     },
     openPath: async (path) => {
         const openerApi = await getOpenerApi();
@@ -110,7 +112,9 @@ export const tauriFsAdapter: FsAdapter = {
     },
     reserveProjectDestination: (path, sourcePath) => invoke('reserve_project_destination', { path, sourcePath }),
     writeBinaryFile: (path, content) => invoke('write_binary_file_atomic', { content: [...content], createOnly: false, path }),
-    writeBinaryFileExclusive: (path, content) => invoke('write_binary_file_atomic', { content: [...content], createOnly: true, path }),
+    writeBinaryFileExclusive: (path, content, isCurrent = () => true) => {
+        return runAudioExportStep(isCurrent, () => invoke('write_binary_file_atomic', { content: [...content], createOnly: true, path }));
+    },
     writeTextFile: (path, content, options) => invoke('write_text_file_atomic', { request: { content, path, ...options } }),
 };
 

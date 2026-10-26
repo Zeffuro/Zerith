@@ -23,6 +23,7 @@ type Properties = {
     assetLibraryMetadata: AssetLibraryMetadata;
     assetUrls: string[];
     isFilteringAssets: boolean;
+    metadataDisabled?: boolean;
     movingAssetUrl?: string;
     onClearVisible: () => void;
     onEditMetadata: (assetUrl: string) => void;
@@ -43,6 +44,7 @@ export function AssetUnusedSection({
     assetLibraryMetadata,
     assetUrls,
     isFilteringAssets,
+    metadataDisabled = false,
     movingAssetUrl,
     onClearVisible,
     onEditMetadata,
@@ -86,9 +88,9 @@ export function AssetUnusedSection({
                     </button>
                     <button
                         className="toolbar-btn"
-                        disabled={selectedCount === 0 || Boolean(savingMetadataAssetUrl)}
+                        disabled={selectedCount === 0 || metadataDisabled}
                         onClick={onOrganizeSelected}
-                        style={miniButtonStyle(uiScale, selectedCount === 0 || Boolean(savingMetadataAssetUrl))}
+                        style={miniButtonStyle(uiScale, selectedCount === 0 || metadataDisabled)}
                         title="Apply metadata labels to selected unused assets"
                         type="button"
                     >
@@ -144,9 +146,9 @@ export function AssetUnusedSection({
                         </label>
                         <button
                             className="toolbar-btn"
-                            disabled={savingMetadataAssetUrl === assetUrl}
+                            disabled={metadataDisabled}
                             onClick={() => onEditMetadata(assetUrl)}
-                            style={miniButtonStyle(uiScale, savingMetadataAssetUrl === assetUrl)}
+                            style={miniButtonStyle(uiScale, metadataDisabled)}
                             title={`Organize ${assetUrl}`}
                             type="button"
                         >

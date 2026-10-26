@@ -44,6 +44,25 @@ function createReport(overrides: Partial<ProjectValidationReport> = {}): Project
 }
 
 describe('projectValidationCommand', () => {
+    it('does not start or log a retired command', async () => {
+        const log = vi.fn();
+        const buildReport = vi.fn(() => Promise.resolve(createReport()));
+        expect(await executeProjectValidationCommand('/project', { buildReport, log }, () => false)).toEqual({ status: 'retired' });
+        expect(buildReport).not.toHaveBeenCalled();
+        expect(log).not.toHaveBeenCalled();
+    });
+
+    it.each(['success', 'failure'] as const)('does not log late %s', async outcome => {
+        const log = vi.fn();
+        let current = true;
+        const buildReport = vi.fn(() => {
+            current = false;
+            return outcome === 'success' ? Promise.resolve(createReport()) : Promise.reject(new Error('retired'));
+        });
+        expect(await executeProjectValidationCommand('/project', { buildReport, log }, () => current)).toEqual({ status: 'retired' });
+        expect(log).not.toHaveBeenCalled();
+    });
+
     it('warns when no project is open', async () => {
         const log = vi.fn();
 

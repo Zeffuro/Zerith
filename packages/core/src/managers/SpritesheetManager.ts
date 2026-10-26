@@ -7,8 +7,12 @@ import type { SpritesheetConfig } from '../types';
 
 import { applyChromaKey } from '../utils/ChromaKey';
 
+type PendingSheet = { abort: AbortController; cancel: () => void; promise: Promise<Spritesheet> };
+
 export class SpritesheetManager {
-    private loading: Map<string, Promise<Spritesheet>> = new Map();
+    private destroyed = false;
+    private loading = new Map<string, PendingSheet>();
+    private readonly ownedSheets = new Set<Spritesheet>();
     private sheets: Map<string, Spritesheet> = new Map();
 
     public clear() {
@@ -16,6 +20,14 @@ export class SpritesheetManager {
     }
 
     public destroy() {
+        if (this.destroyed) return;
+        this.destroyed = true;
+        for (const pending of this.loading.values()) {
+            pending.cancel();
+            pending.abort.abort();
+        }
+        for (const sheet of this.ownedSheets) sheet.destroy(true);
+        this.ownedSheets.clear();
         this.clear();
         this.loading.clear();
     }
@@ -38,38 +50,57 @@ export class SpritesheetManager {
         return this.sheets.has(atlasUrl);
     }
 
-    public async load(config: SpritesheetConfig): Promise<Spritesheet> {
+    public load(config: SpritesheetConfig): Promise<Spritesheet> {
+        if (this.destroyed) return Promise.reject(new Error('Spritesheet manager is destroyed.'));
         const key = config.atlasUrl;
 
         const existing = this.sheets.get(key);
-        if (existing) return existing;
+        if (existing) return Promise.resolve(existing);
 
         const pending = this.loading.get(key);
-        if (pending) return pending;
+        if (pending) return pending.promise;
 
-        const promise = this.doLoad(config);
-        this.loading.set(key, promise);
-
-        try {
-            const sheet = await promise;
+        let resolveLoad!: (sheet: Spritesheet) => void;
+        let rejectLoad!: (error: unknown) => void;
+        const load = {
+            abort: new AbortController(),
+            cancel: () => rejectLoad(new Error('Spritesheet manager was destroyed while loading.')),
+            promise: new Promise<Spritesheet>((resolve, reject) => { resolveLoad = resolve; rejectLoad = reject; }),
+        };
+        this.loading.set(key, load);
+        const completion = this.doLoad(config, load.abort.signal).then(sheet => {
+            if (this.destroyed) {
+                sheet.destroy(true);
+                throw new Error('Spritesheet manager was destroyed while loading.');
+            }
+            this.ownedSheets.add(sheet);
             this.sheets.set(key, sheet);
             return sheet;
-        } finally {
-            this.loading.delete(key);
-        }
+        }).finally(() => {
+            if (this.loading.get(key) === load) this.loading.delete(key);
+        });
+        void completion.then(resolveLoad, rejectLoad);
+        return load.promise;
     }
 
     public setResolver(resolver: AssetResolver) {
         this.resolver = resolver;
     }
 
-    private async doLoad(config: SpritesheetConfig): Promise<Spritesheet> {
+    private assertActive(signal: AbortSignal) {
+        if (this.destroyed || signal.aborted) throw new Error('Spritesheet manager was destroyed while loading.');
+    }
+
+    private async doLoad(config: SpritesheetConfig, signal: AbortSignal): Promise<Spritesheet> {
         const resolvedAtlasUrl = await this.resolve(config.atlasUrl);
-        const response = await fetch(resolvedAtlasUrl);
+        this.assertActive(signal);
+        const response = await fetch(resolvedAtlasUrl, { signal });
+        this.assertActive(signal);
         if (!response.ok) {
             throw new Error(`Failed to fetch spritesheet atlas: ${config.atlasUrl} (${response.status})`);
         }
         const atlasData = this.toPixiAtlasData(await response.json());
+        this.assertActive(signal);
 
         const atlasDirectory = config.atlasUrl.slice(0, Math.max(0, config.atlasUrl.lastIndexOf('/') + 1));
         const imageName = this.resolveImageName(atlasData);
@@ -78,23 +109,28 @@ export class SpritesheetManager {
         }
         const imagePath = this.isAbsoluteImagePath(imageName) ? imageName : atlasDirectory + imageName;
 
-        const img = await this.loadImage(await this.resolve(imagePath));
-
-        let texture: Texture;
-
-        if (config.chromaKey) {
-            const canvas = applyChromaKey(img, config.chromaKey, config.chromaTolerance ?? 30);
-            const source = new ImageSource({ resource: canvas });
+        const imageUrl = await this.resolve(imagePath);
+        this.assertActive(signal);
+        const img = await this.loadImage(imageUrl, signal);
+        this.assertActive(signal);
+        let source: ImageSource | undefined;
+        let texture: Texture | undefined;
+        let sheet: Spritesheet | undefined;
+        try {
+            const resource = config.chromaKey ? applyChromaKey(img, config.chromaKey, config.chromaTolerance ?? 30) : img;
+            source = new ImageSource({ resource });
             texture = new Texture({ source });
-        } else {
-            const source = new ImageSource({ resource: img });
-            texture = new Texture({ source });
+            sheet = new Spritesheet(texture, atlasData);
+            // Pixi's parse batches still need their textures until the promise settles.
+            await sheet.parse();
+            this.assertActive(signal);
+            return sheet;
+        } catch (error) {
+            if (sheet) sheet.destroy(true);
+            else if (texture) texture.destroy(true);
+            else source?.destroy();
+            throw error;
         }
-
-        const sheet = new Spritesheet(texture, atlasData);
-        await sheet.parse();
-
-        return sheet;
     }
 
     private isAbsoluteImagePath(path: string): boolean {
@@ -103,12 +139,26 @@ export class SpritesheetManager {
             || /^[a-zA-Z]:[\\/]/.test(path);
     }
 
-    private loadImage(url: string): Promise<HTMLImageElement> {
+    private loadImage(url: string, signal: AbortSignal): Promise<HTMLImageElement> {
         return new Promise((resolve, reject) => {
             const img = new Image();
             img.crossOrigin = 'anonymous';
-            img.addEventListener('load', () => resolve(img));
-            img.addEventListener('error', () => reject(new Error(`Failed to load image: ${url}`)));
+            const cleanup = () => {
+                img.removeEventListener('load', onLoad);
+                img.removeEventListener('error', onError);
+                signal.removeEventListener('abort', onAbort);
+            };
+            const onLoad = () => { cleanup(); resolve(img); };
+            const onError = () => { cleanup(); reject(new Error(`Failed to load image: ${url}`)); };
+            const onAbort = () => {
+                cleanup();
+                img.src = '';
+                reject(new Error('Spritesheet manager was destroyed while loading.'));
+            };
+            img.addEventListener('load', onLoad);
+            img.addEventListener('error', onError);
+            signal.addEventListener('abort', onAbort, { once: true });
+            if (signal.aborted) { onAbort(); return; }
             img.src = url;
         });
     }
@@ -143,29 +193,34 @@ export class SpritesheetManager {
 
         const frames = rawData.frames;
         if (!isRecord(frames)) {
-            return rawData as unknown as SpritesheetData;
+            throw new Error('Spritesheet frames must be a JSON object.');
+        }
+        if (rawData.animations !== undefined && (!isRecord(rawData.animations)
+            || Object.entries(rawData.animations).some(([name, animation]) => name === '__proto__'
+                || !Array.isArray(animation)
+                || animation.some(frameName => typeof frameName !== 'string' || frameName === '__proto__')))) {
+            throw new Error('Spritesheet animations must contain safe names and string frame arrays.');
         }
 
         const normalizedFrames: Record<string, unknown> = {};
         let requiresNormalization = false;
 
         for (const [frameName, frameValue] of Object.entries(frames)) {
+            if (frameName === '__proto__') throw new Error('Spritesheet frame names must not contain __proto__.');
             if (!isRecord(frameValue)) {
+                throw new Error(`Spritesheet frame '${frameName}' must be a JSON object.`);
+            }
+
+            const nestedFrame = frameValue.frame;
+            validateFrameBounds(frameName, 'frame', nestedFrame === undefined ? frameValue : nestedFrame, ['x', 'y', 'w', 'h']);
+            if (frameValue.sourceSize !== undefined) validateFrameBounds(frameName, 'sourceSize', frameValue.sourceSize, ['w', 'h']);
+            if (frameValue.spriteSourceSize !== undefined) validateFrameBounds(frameName, 'spriteSourceSize', frameValue.spriteSourceSize, ['x', 'y', 'w', 'h']);
+            if (nestedFrame !== undefined) {
                 normalizedFrames[frameName] = frameValue;
                 continue;
             }
 
             // Canonical descriptors store atlas frames as {x,y,w,h}; Pixi expects nested `frame` bounds.
-            const hasRect = typeof frameValue.x === 'number'
-                && typeof frameValue.y === 'number'
-                && typeof frameValue.w === 'number'
-                && typeof frameValue.h === 'number';
-
-            if (!hasRect || isRecord(frameValue.frame)) {
-                normalizedFrames[frameName] = frameValue;
-                continue;
-            }
-
             requiresNormalization = true;
             normalizedFrames[frameName] = {
                 anchor: buildAnchor(frameValue),
@@ -217,4 +272,10 @@ function buildAnchor(frame: Record<string, unknown>): { x?: number; y?: number }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null;
+}
+
+function validateFrameBounds(frameName: string, field: string, value: unknown, dimensions: string[]) {
+    if (!isRecord(value) || dimensions.some(dimension => typeof value[dimension] !== 'number' || !Number.isFinite(value[dimension]))) {
+        throw new Error(`Spritesheet frame '${frameName}' ${field} must contain finite numeric bounds.`);
+    }
 }

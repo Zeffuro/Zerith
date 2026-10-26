@@ -68,6 +68,7 @@ export function AssetReferenceSection({
                     key={`${title}-${entry.assetUrl}`}
                     locations={entry.references}
                     metadata={getAssetLibraryAssetMetadata(assetLibraryMetadata, entry.assetUrl)}
+                    metadataDisabled={bulkDisabled}
                     moveDisabled={Boolean(movingAssetUrl)}
                     moving={movingAssetUrl === entry.assetUrl}
                     name={entry.assetUrl}

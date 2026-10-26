@@ -45,10 +45,13 @@ export async function moveBrowserEntry(
     }
 }
 
-export async function writeBrowserFile(file: BrowserFileHandle, content: ArrayBuffer | Blob | string | Uint8Array): Promise<void> {
+export async function writeBrowserFile(file: BrowserFileHandle, content: ArrayBuffer | Blob | string | Uint8Array, check: () => void = () => {}): Promise<void> {
+    check();
     const writable = await file.createWritable();
     try {
+        check();
         await writable.write(content);
+        check();
         await writable.close();
     } catch (error) {
         try {

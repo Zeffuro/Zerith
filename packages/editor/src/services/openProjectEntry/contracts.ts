@@ -8,6 +8,7 @@ export type JsonResourceKind = 'characters' | 'engineConfig' | 'items' | 'manife
 
 export type OpenProjectEntryOptions = {
 	forceView?: ForceView;
+	jsonHintKind?: 'macros' | 'script';
 	jsonSelectionPath?: ScriptPath;
 	openInSpritesheetEditor?: boolean;
 };

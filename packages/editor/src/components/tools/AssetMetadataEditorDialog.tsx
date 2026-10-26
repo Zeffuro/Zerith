@@ -1,5 +1,5 @@
 import { Save, X } from 'lucide-react';
-import { type FormEvent, useEffect, useId, useRef, useState } from 'react';
+import { type FormEvent, useId, useRef, useState } from 'react';
 
 import type { AssetLibraryAssetMetadata } from '../../services/assetLibraryMetadata';
 
@@ -17,9 +17,12 @@ type Properties = {
     assetUrl?: string;
     busy: boolean;
     emptyPreviewText?: string;
+    error?: string;
     metadata: AssetLibraryAssetMetadata;
     onCancel: () => void;
+    onRetry?: () => void;
     onSave: (assetMetadata: AssetLibraryAssetMetadata) => void;
+    saveDisabled?: boolean;
     saveText?: string;
     subject?: string;
     title?: string;
@@ -30,26 +33,23 @@ export function AssetMetadataEditorDialog({
     assetUrl,
     busy,
     emptyPreviewText = 'No metadata labels',
+    error,
     metadata,
     onCancel,
+    onRetry,
     onSave,
+    saveDisabled = false,
     saveText = 'Save metadata',
     subject,
     title = 'Organize Asset',
     uiScale,
 }: Properties) {
-    const [collectionsInput, setCollectionsInput] = useState('');
-    const [tagsInput, setTagsInput] = useState('');
+    const [collectionsInput, setCollectionsInput] = useState(() => formatAssetMetadataEditorDraft(metadata).collectionsInput);
+    const [tagsInput, setTagsInput] = useState(() => formatAssetMetadataEditorDraft(metadata).tagsInput);
     const dialogReference = useRef<HTMLFormElement | null>(null);
     const subjectId = useId();
     const titleId = useId();
     const backdropDismissal = useBackdropDismissal(onCancel, { disabled: busy });
-    const draft = formatAssetMetadataEditorDraft(metadata);
-
-    useEffect(() => {
-        setCollectionsInput(draft.collectionsInput);
-        setTagsInput(draft.tagsInput);
-    }, [assetUrl, draft.collectionsInput, draft.tagsInput, subject]);
     useDialogFocusTrap({ active: Boolean(assetUrl ?? subject), containerReference: dialogReference });
 
     const displaySubject = subject ?? assetUrl;
@@ -58,7 +58,7 @@ export function AssetMetadataEditorDialog({
     const parsedMetadata = parseAssetMetadataEditorDraft({ collectionsInput, tagsInput });
     const submit = (event: FormEvent) => {
         event.preventDefault();
-        if (busy) return;
+        if (busy || saveDisabled) return;
         onSave(parsedMetadata);
     };
 
@@ -124,6 +124,11 @@ export function AssetMetadataEditorDialog({
                     ) : undefined}
                 </div>
 
+                {error ? <div aria-live="polite">
+                    {error}
+                    {onRetry ? <button disabled={busy} onClick={onRetry} type="button">Retry metadata load</button> : undefined}
+                </div> : undefined}
+
                 <div style={footerStyle(uiScale)}>
                     <button
                         className="toolbar-btn"
@@ -136,8 +141,8 @@ export function AssetMetadataEditorDialog({
                     </button>
                     <button
                         className="toolbar-btn"
-                        disabled={busy}
-                        style={saveButtonStyle(uiScale, busy)}
+                        disabled={busy || saveDisabled}
+                        style={saveButtonStyle(uiScale, busy || saveDisabled)}
                         type="submit"
                     >
                         <Save size={14 * uiScale} />

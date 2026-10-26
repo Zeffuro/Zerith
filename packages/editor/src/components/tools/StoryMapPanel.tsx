@@ -4,12 +4,13 @@ import type { StoryMapNode } from '../../services/storyMap/storyMapModel';
 
 import { filterStoryMap, layoutStoryMap } from '../../services/storyMap/storyMapModel';
 import { openStoryMapSource } from '../../services/storyMap/storyMapNavigation';
-import { storyMapFromProject, storyMapVisited, storyMapVisitedEdges } from '../../services/storyMap/storyMapProject';
+import { storyMapVisited, storyMapVisitedEdges } from '../../services/storyMap/storyMapProject';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { usePlaytestStore } from '../../store/usePlaytestStore';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import { editorTheme as t } from '../../theme/editorTheme';
 import { StoryMapCanvas } from './storyMap/StoryMapCanvas';
+import { useStoryMap } from './storyMap/useStoryMap';
 import { useStoryMapPreferences } from './storyMap/useStoryMapPreferences';
 
 export function StoryMapPanel() {
@@ -20,7 +21,7 @@ export function StoryMapPanel() {
     const { preferences, update, warning } = useStoryMapPreferences(project.projectPath);
     const [selectedId, setSelectedId] = useState<string>();
     const [message, setMessage] = useState('');
-    const map = useMemo(() => storyMapFromProject(project, tabs), [project, tabs]);
+    const map = useStoryMap(project, tabs);
     const filtered = useMemo(() => filterStoryMap(map, preferences.filter, preferences.query, preferences.showMacros), [map, preferences.filter, preferences.query, preferences.showMacros]);
     const layout = useMemo(() => layoutStoryMap(map), [map]);
     const positions = useMemo(() => ({ ...layout, ...preferences.positions }), [layout, preferences.positions]);

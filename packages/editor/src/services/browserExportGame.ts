@@ -1,19 +1,26 @@
 import { zipSync } from 'fflate';
 
 import type { ExportGameOptions, ExportGameResult } from './exportGame';
+import type { ExportOwnership } from './exportOwnership';
 
 import { writeBrowserFolderExport } from './browserFolderExport';
+import { assertExportCurrent } from './exportOwnership';
 import { browserFsAdapter } from './fs/browserFsAdapter';
 import { prepareWebGameArtifacts } from './webGameArtifacts';
 
 export async function exportGameForBrowser(
     gamePath: string,
     options: ExportGameOptions = {},
+    isCurrent: ExportOwnership = () => true,
 ): Promise<ExportGameResult> {
+    assertExportCurrent(isCurrent);
     const { artifactManifest, files, playerFileCount, projectFiles } = await prepareWebGameArtifacts(gamePath, options);
+    assertExportCurrent(isCurrent);
     if (options.browserFolder) {
         const source = await browserFsAdapter.getDirectoryHandle(gamePath);
-        const outDirectory = await writeBrowserFolderExport(options.browserFolder, files, source);
+        assertExportCurrent(isCurrent);
+        const outDirectory = await writeBrowserFolderExport(options.browserFolder, files, source, isCurrent);
+        assertExportCurrent(isCurrent);
         return {
             artifactManifest,
             outDirectory,
@@ -27,6 +34,7 @@ export async function exportGameForBrowser(
     const downloadName = toDownloadFileName(options.zipFile, gamePath);
 
     if (options.download !== false) {
+        assertExportCurrent(isCurrent);
         downloadBlob(new Blob([zipBuffer], { type: 'application/zip' }), downloadName);
     }
 

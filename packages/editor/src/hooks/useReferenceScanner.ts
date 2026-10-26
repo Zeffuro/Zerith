@@ -1,40 +1,38 @@
-import { useEffect } from 'react';
+import { useLayoutEffect } from 'react';
 
-import { buildReferenceScannerState } from '../services/referenceScanner';
+import { refreshReferenceScannerState } from '../services/referenceScanner';
+import { referenceScannerInputsChanged } from '../services/referenceScanner/ownership';
+import { executeConsoleMessageAction } from '../store/actions/consoleMessageActions';
 import { useProjectStore } from '../store/storeBootstrap';
-import { useReferenceStore } from '../store/useReferenceStore';
 
 export function useReferenceScanner() {
-    const projectPath = useProjectStore((state) => state.projectPath);
-    const scenes = useProjectStore((state) => state.scenes);
-    const macros = useProjectStore((state) => state.macros);
-    const characters = useProjectStore((state) => state.characters);
-    const treeRevision = useProjectStore((state) => state.treeRevision);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        const timeout = globalThis.setTimeout(() => {
-            void (async () => {
-                if (!projectPath) {
-                    if (cancelled) return;
-                    useReferenceStore.getState().setAssetInventory([]);
-                    useReferenceStore.getState().setResult({ assetFiles: {}, assets: {}, characters: {}, items: {}, variables: {} });
-                    return;
-                }
-
-                const nextState = await buildReferenceScannerState(useProjectStore.getState());
-
-                if (cancelled) return;
-                useReferenceStore.getState().setResult(nextState.result);
-                useReferenceStore.getState().setAssetInventory(nextState.assetInventory);
-            })();
-        }, 500);
-
+    useLayoutEffect(() => {
+        let active = true;
+        let sequence = 0;
+        let timeout: ReturnType<typeof setTimeout> | undefined;
+        const schedule = () => {
+            globalThis.clearTimeout(timeout);
+            const request = ++sequence;
+            const project = useProjectStore.getState();
+            if (!project.projectPath) return;
+            const isCurrent = () => active && request === sequence
+                && !referenceScannerInputsChanged(useProjectStore.getState(), project);
+            timeout = globalThis.setTimeout(() => {
+                void refreshReferenceScannerState(isCurrent, error => {
+                    executeConsoleMessageAction('editor', 'error', 'Reference scan failed:', String(error));
+                }).catch(() => {});
+            }, 500);
+        };
+        const unsubscribe = useProjectStore.subscribe((current, previous) => {
+            if (referenceScannerInputsChanged(current, previous)) schedule();
+        });
+        schedule();
         return () => {
-            cancelled = true;
+            active = false;
+            sequence++;
+            unsubscribe();
             globalThis.clearTimeout(timeout);
         };
-    }, [characters, macros, projectPath, scenes, treeRevision]);
+    }, []);
 }
 

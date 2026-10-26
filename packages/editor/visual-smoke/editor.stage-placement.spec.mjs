@@ -5,8 +5,11 @@ import { dock, mountFixture, openFixture, readFixture, replaceJson, setup, test 
 
 test.beforeEach(async ({ page }) => { await setup(page); });
 
-async function placementFixture(page, maximizePreview = true) {
+async function placementFixture(page, maximizePreview = true, staticText = false) {
     const files = await readFixture('classic-vn-starter');
+    if (staticText) replaceJson(files, 'engine.config.json', config => ({ ...config,
+        accessibility: { ...config.accessibility, reducedMotion: true, typewriterSpeedMultiplier: 0 },
+    }));
     replaceJson(files, 'scenes/intro.json', scene => ({ ...scene, commands: [
         { action: 'show', id: 'aria', pose: 'normal', scaleX: 1, scaleY: 1, type: 'sprite', x: 400, y: 700 },
         { action: 'show', id: 'cove', pose: 'normal', scaleX: 1, scaleY: 1, type: 'sprite', x: 900, y: 700 },
@@ -109,6 +112,41 @@ test('Escape restores a drag and another scene cannot take ownership of old spri
     await expect(page.getByRole('button', { name: 'Place aria', exact: true })).toHaveCount(0);
     expect((await source(page)).command.x).toBe(200);
     expect((await source(page)).live.x).toBe(400);
+});
+
+test('placement redraws while suspended and reopened previews retire their render loop', async ({ page }, info) => {
+    const root = await placementFixture(page, true, true);
+    const state = () => page.evaluate(async () => {
+        const { useEngineBridgeStore } = await import('/src/store/useEngineBridgeStore.ts');
+        return useEngineBridgeStore.getState().engine.display.app.ticker.started;
+    });
+    await expect.poll(state).toBe(false);
+    const canvas = page.getByRole('application', { name: 'Game preview playback', exact: true }).locator('canvas');
+    const bounds = await canvas.boundingBox();
+    const clip = { height: bounds.height - 4, width: bounds.width - 4, x: bounds.x + 2, y: bounds.y + 2 };
+    const pixels = name => page.screenshot({ clip, path: info.outputPath(`${name}.png`), style: '.zerith-placement-stage { visibility: hidden !important; }' });
+    const before = await pixels('before');
+    await page.getByRole('button', { name: 'Place aria', exact: true }).focus();
+    await page.keyboard.press('Shift+ArrowRight');
+    await expect.poll(async () => (await source(page)).live.x).toBe(410);
+    expect(before.equals(await pixels('moved'))).toBe(false);
+    await page.evaluate(async () => { const { useScriptStore } = await import('/src/store/storeBootstrap.ts'); useScriptStore.getState().undo(); });
+    await expect.poll(async () => (await source(page)).live.x).toBe(400);
+    expect(before.equals(await pixels('undo'))).toBe(true);
+    await page.getByRole('button', { name: 'Options', exact: true }).click();
+    await page.getByRole('button', { name: 'Done', exact: true }).click();
+    await expect.poll(state).toBe(true);
+    await page.evaluate(async () => {
+        const { useEngineBridgeStore } = await import('/src/store/useEngineBridgeStore.ts');
+        globalThis.retiredPreview = useEngineBridgeStore.getState().engine;
+    });
+    await openFixture(page, root);
+    await expect.poll(() => page.evaluate(async () => {
+        const { useEngineBridgeStore } = await import('/src/store/useEngineBridgeStore.ts');
+        const current = useEngineBridgeStore.getState().engine;
+        return !!current && current !== globalThis.retiredPreview && current.display.app.ticker.started;
+    })).toBe(true);
+    expect(await page.evaluate(() => globalThis.retiredPreview.display.app.ticker)).toBeNull();
 });
 
 test('a new command selection for the same character writes to that command', async ({ page }) => {

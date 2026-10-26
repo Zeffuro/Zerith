@@ -44,6 +44,7 @@ const PreviewDefaultEngineConfig: EngineConfig = {
 
 export function useEngineBootstrap({
     activeFileReference,
+    canvasKey,
     canvasReference,
     containerReference,
     localizationReloadKey,
@@ -56,6 +57,7 @@ export function useEngineBootstrap({
     setPreviewLogCaptureEnabled,
 }: {
     activeFileReference: RefObject<string | undefined>;
+    canvasKey: string;
     canvasReference: RefObject<HTMLCanvasElement | null>;
     containerReference: RefObject<HTMLDivElement | null>;
     localizationReloadKey: string;
@@ -67,7 +69,6 @@ export function useEngineBootstrap({
     scriptReference: WritableReference<Script>;
     setPreviewLogCaptureEnabled: (enabled: boolean) => void;
 }): WritableReference<Engine | undefined> {
-    const detachFlowListenersReference = useRef<(() => void) | undefined>(undefined);
     const engineReference = useRef<Engine | undefined>(undefined);
     const projectGeneration = useProjectStore(state => state.projectGeneration);
     const { attachDebugBridge } = useDebugBridge();
@@ -76,13 +77,17 @@ export function useEngineBootstrap({
         if (!canvasReference.current || !projectPath || !manifest) return;
 
         let destroyed = false;
+        const controller = new AbortController();
+        const canvas = canvasReference.current;
+        let ownedEngine: Engine | undefined;
+        let detachFlowListeners: (() => void) | undefined;
         const isCurrent = () => !destroyed
+            && !controller.signal.aborted
+            && canvasReference.current === canvas
             && useProjectStore.getState().projectPath === projectPath
             && useProjectStore.getState().projectGeneration === projectGeneration;
         const fontOwner = createPreviewFontOwner(projectPath, isCurrent);
         let assetResolver: ReturnType<typeof createProjectAssetResolver> | undefined;
-        const canvas = canvasReference.current;
-        if (!canvas) return;
         const {
             characters: bootstrapCharacters,
             items: bootstrapItems,
@@ -131,7 +136,7 @@ export function useEngineBootstrap({
 
             assetResolver = createProjectAssetResolver(projectPath);
 
-            const engine = await bootstrapEngine({
+            const engine = ownedEngine = await bootstrapEngine({
                 assetResolver: assetResolver.resolve,
                 canvas,
                 characters: bootstrapCharacters,
@@ -140,6 +145,7 @@ export function useEngineBootstrap({
                 macros: bootstrapMacros,
                 manifest,
                 scenes: bootstrapScenes,
+                signal: controller.signal,
             });
 
             if (!isCurrent()) {
@@ -156,7 +162,7 @@ export function useEngineBootstrap({
             useEngineBridgeStore.getState().setEngine(engine);
             engine.setInputEnabled(false);
 
-            detachFlowListenersReference.current = attachDebugBridge(engine, activeFileReference);
+            detachFlowListeners = attachDebugBridge(engine, activeFileReference);
 
             const playtest = usePlaytestStore.getState().request;
             if (playtest?.projectPath === projectPath && playtest.generation === useProjectStore.getState().projectGeneration) return;
@@ -180,27 +186,33 @@ export function useEngineBootstrap({
             sceneManager.addScene('preview', scriptReference.current);
             void sceneManager.jumpToScene('preview');
         })().catch((caughtError: unknown) => {
+            detachFlowListeners?.();
+            ownedEngine?.destroy();
+            if (isCurrent()) setPreviewLogCaptureEnabled(false);
+            if (engineReference.current === ownedEngine) engineReference.current = undefined;
+            if (ownedEngine && useEngineBridgeStore.getState().engine === ownedEngine) useEngineBridgeStore.getState().setEngine(undefined);
             assetResolver?.dispose();
             fontOwner.dispose();
-            if (isCurrent()) console.warn('[preview] Failed to bootstrap preview:', caughtError);
+            if (isCurrent() || caughtError instanceof AggregateError) console.warn('[preview] Failed to bootstrap preview:', caughtError);
         });
 
         return () => {
             destroyed = true;
             fontOwner.dispose();
+            controller.abort();
             setPreviewLogCaptureEnabled(false);
-            detachFlowListenersReference.current?.();
-            detachFlowListenersReference.current = undefined;
+            detachFlowListeners?.();
             useEditorStore.getState().clearActiveExecutionPath();
             useEditorStore.getState().setPlaybackPaused(false);
-            engineReference.current?.destroy();
-            engineReference.current = undefined;
+            ownedEngine?.destroy();
+            if (engineReference.current === ownedEngine) engineReference.current = undefined;
             assetResolver?.dispose();
-            useEngineBridgeStore.getState().setEngine(undefined);
+            if (useEngineBridgeStore.getState().engine === ownedEngine) useEngineBridgeStore.getState().setEngine(undefined);
         };
     }, [
         activeFileReference,
         attachDebugBridge,
+        canvasKey,
         canvasReference,
         containerReference,
         localizationReloadKey,

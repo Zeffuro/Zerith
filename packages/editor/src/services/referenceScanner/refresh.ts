@@ -5,6 +5,7 @@ import { useProjectStore } from '../../store/storeBootstrap';
 import { useReferenceStore } from '../../store/useReferenceStore';
 import { collectDataAssetReferences, listProjectAssetFiles } from './assets';
 import { scanProjectScriptBranches } from './coordinator';
+import { referenceScanOwnership } from './ownership';
 import { scanReferenceTree } from './treeScan';
 
 export type ReferenceScannerStateDependencies = {
@@ -45,10 +46,24 @@ export async function buildReferenceScannerState(
     };
 }
 
-export async function refreshReferenceScannerState(): Promise<ReferenceScannerStateSnapshot> {
-    const nextState = await buildReferenceScannerState(useProjectStore.getState());
-    useReferenceStore.getState().setResult(nextState.result);
-    useReferenceStore.getState().setAssetInventory(nextState.assetInventory);
+export async function refreshReferenceScannerState(
+    isCurrent: () => boolean = () => true,
+    onError?: (error: unknown) => void,
+): Promise<ReferenceScannerStateSnapshot> {
+    if (!isCurrent()) throw new Error('Reference refresh cancelled.');
+    const project = useProjectStore.getState();
+    const ownsRequest = referenceScanOwnership.begin(project, useProjectStore.getState, isCurrent);
+    let nextState: ReferenceScannerStateSnapshot;
+    try {
+        nextState = await buildReferenceScannerState(project);
+    } catch (error) {
+        if (ownsRequest()) {
+            if (!onError) throw error;
+            onError(error);
+        }
+        return { assetInventory: [], result: createEmptyReferenceScannerResult() };
+    }
+    if (ownsRequest()) useReferenceStore.getState().setSnapshot(nextState);
     return nextState;
 }
 

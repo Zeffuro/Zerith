@@ -7,6 +7,7 @@ import {
     getPreferredManifestView,
 } from '../../store/actions/workbenchOpenActions';
 import { makeTabId } from '../../store/useWorkbenchStore';
+import { isRecord } from '../../utils/typeGuards';
 import { applyMacrosFile, applyScriptFile, looksLikeSceneFile } from '../projectOpeners';
 import { basenameFromPath } from './pathHelpers';
 import { openMacrosTab, openScriptTab } from './tabOpeners';
@@ -70,7 +71,8 @@ export function handleJsonRoute(options: HandleJsonRouteOptions): void {
     }
 
     if (route.kind === 'macros') {
-        if (!isMacrosObject(data)) {
+        const emptyMacros = route.requiresObjectShape && isRecord(data) && Object.keys(data).every(key => key.startsWith('$'));
+        if (!isMacrosObject(data) && !emptyMacros) {
             throw new TypeError('Macros file must be a JSON object of command arrays.');
         }
         applyMacrosFile(fullPath, data as Record<string, unknown>);

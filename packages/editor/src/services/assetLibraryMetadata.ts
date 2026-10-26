@@ -1,5 +1,5 @@
 import { isRecord } from '../utils/typeGuards';
-import { fsJoin, fsMkdir, fsReadTextFile, fsWriteTextFile } from './fs';
+import { type FsDirectoryEntry, fsJoin, fsMkdir, fsReadDirectory, fsReadTextFile, type FsTextWriteOptions, fsWriteTextFile } from './fs';
 
 export const ASSET_LIBRARY_METADATA_FILE_NAME = '.zerith-library.json';
 export const ASSET_LIBRARY_METADATA_TYPE = 'zerith.assetLibrary';
@@ -19,13 +19,20 @@ export type AssetLibraryMetadata = {
 export type AssetLibraryMetadataDependencies = {
     join: (...parts: string[]) => Promise<string>;
     mkdir: (path: string, recursive?: boolean) => Promise<void>;
+    readDirectory: (path: string) => Promise<FsDirectoryEntry[]>;
     readTextFile: (path: string) => Promise<string>;
-    writeTextFile: (path: string, content: string) => Promise<void>;
+    writeTextFile: (path: string, content: string, options?: FsTextWriteOptions, isCurrent?: () => boolean) => Promise<void>;
+};
+
+export type AssetLibraryMetadataSnapshot = {
+    metadata: AssetLibraryMetadata;
+    text?: string;
 };
 
 const defaultDependencies: AssetLibraryMetadataDependencies = {
     join: fsJoin,
     mkdir: fsMkdir,
+    readDirectory: fsReadDirectory,
     readTextFile: fsReadTextFile,
     writeTextFile: fsWriteTextFile,
 };
@@ -78,13 +85,35 @@ export async function loadAssetLibraryMetadata(
     projectPath: string,
     dependencies: AssetLibraryMetadataDependencies = defaultDependencies,
 ): Promise<AssetLibraryMetadata> {
+    const snapshot = await loadAssetLibraryMetadataSnapshot(projectPath, dependencies);
+    return snapshot.metadata;
+}
+
+export async function loadAssetLibraryMetadataSnapshot(
+    projectPath: string,
+    dependencies: AssetLibraryMetadataDependencies = defaultDependencies,
+): Promise<AssetLibraryMetadataSnapshot> {
     const metadataPath = await assetLibraryMetadataPath(projectPath, dependencies);
 
     let raw: string;
     try {
         raw = await dependencies.readTextFile(metadataPath);
-    } catch {
-        return createEmptyAssetLibraryMetadata();
+    } catch (error) {
+        const assetsPath = await dependencies.join(projectPath, 'assets');
+        let entries: FsDirectoryEntry[];
+        try {
+            entries = await dependencies.readDirectory(assetsPath);
+        } catch {
+            const projectEntries = await dependencies.readDirectory(projectPath);
+            if (!projectEntries.some(entry => entry.name.toLowerCase() === 'assets')) {
+                return { metadata: createEmptyAssetLibraryMetadata() };
+            }
+            throw error;
+        }
+        if (!entries.some(entry => entry.name.toLowerCase() === ASSET_LIBRARY_METADATA_FILE_NAME)) {
+            return { metadata: createEmptyAssetLibraryMetadata() };
+        }
+        throw error;
     }
 
     let parsed: unknown;
@@ -96,7 +125,15 @@ export async function loadAssetLibraryMetadata(
         });
     }
 
-    return normalizeAssetLibraryMetadata(parsed);
+    if (!isRecord(parsed) || !isRecord(parsed.assets)
+        || (parsed.type !== undefined && parsed.type !== ASSET_LIBRARY_METADATA_TYPE)
+        || (parsed.schemaVersion !== undefined && parsed.schemaVersion !== ASSET_LIBRARY_METADATA_SCHEMA_VERSION)
+        || Object.values(parsed.assets).some(entry => !isRecord(entry)
+            || [entry.collections, entry.tags].some(labels => labels !== undefined
+                && (!Array.isArray(labels) || labels.some(label => typeof label !== 'string'))))) {
+        throw new Error('Asset library metadata has an invalid format.');
+    }
+    return { metadata: normalizeAssetLibraryMetadata(parsed), text: raw };
 }
 
 export function moveAssetLibraryMetadataScope(
@@ -229,12 +266,22 @@ export function renameAssetLibraryCollection(
 export async function saveAssetLibraryMetadata(
     projectPath: string,
     metadata: AssetLibraryMetadata,
+    snapshot: AssetLibraryMetadataSnapshot,
     dependencies: AssetLibraryMetadataDependencies = defaultDependencies,
+    isCurrent: () => boolean = () => true,
 ): Promise<void> {
+    if (!snapshot) throw new Error('Load asset library metadata before saving.');
+    if (!isCurrent()) throw new Error('Project changed while saving asset metadata.');
     const assetsPath = await dependencies.join(projectPath, 'assets');
     await dependencies.mkdir(assetsPath, true);
     const metadataPath = await dependencies.join(assetsPath, ASSET_LIBRARY_METADATA_FILE_NAME);
-    await dependencies.writeTextFile(metadataPath, `${JSON.stringify(normalizeAssetLibraryMetadata(metadata), undefined, 4)}\n`);
+    if (!isCurrent()) throw new Error('Project changed while saving asset metadata.');
+    await dependencies.writeTextFile(metadataPath, serializeAssetLibraryMetadata(metadata),
+        snapshot.text === undefined ? { createOnly: true } : { expectedContent: snapshot.text }, isCurrent);
+}
+
+export function serializeAssetLibraryMetadata(metadata: AssetLibraryMetadata): string {
+    return `${JSON.stringify(normalizeAssetLibraryMetadata(metadata), undefined, 4)}\n`;
 }
 
 export function setAssetLibraryAssetMetadata(

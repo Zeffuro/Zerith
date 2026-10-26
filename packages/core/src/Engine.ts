@@ -184,17 +184,15 @@ export class Engine {
     public destroy() {
         if (this.destroyed) return;
         this.destroyed = true;
-        const pluginDeactivateTask = this.runtimePlugins.destroy();
-        this.flow.stop();
-        this.input.detach();
-        this.clear();
-        this.flow.destroyHandlers();
-
         const destroyTasks: Array<{
             name: string;
             run: () => Promise<void> | void;
         }> = [
-            { name: 'runtimePlugins', run: () => pluginDeactivateTask },
+            { name: 'runtimePlugins', run: () => this.runtimePlugins.destroy() },
+            { name: 'flow.stop', run: () => this.flow.stop() },
+            { name: 'input.detach', run: () => this.input.detach() },
+            { name: 'clear', run: () => this.clear() },
+            { name: 'handlers', run: () => this.flow.destroyHandlers() },
             { name: 'animations', run: () => this.animations.destroy?.() },
             { name: 'overlay', run: () => this.overlay.destroy?.() },
             { name: 'startScreen', run: () => this.startScreen.destroy?.() },
@@ -248,8 +246,11 @@ export class Engine {
     }
 
     public async init(canvasElement: HTMLCanvasElement) {
+        if (this.destroyed) throw new Error('The engine has been destroyed.');
         await this.display.init(canvasElement);
+        if (this.destroyed) throw new Error('The engine has been destroyed.');
         await this.audio.init?.();
+        if (this.destroyed) throw new Error('The engine has been destroyed.');
         this.input.attach(canvasElement);
     }
 

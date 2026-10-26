@@ -1,5 +1,7 @@
+import type { ExportOwnership } from './exportOwnership';
 import type { BrowserDirectoryHandle, BrowserFsGlobal } from './fs/browserFsAdapter';
 
+import { assertExportCurrent } from './exportOwnership';
 import { writeBrowserFile } from './fs/browserDirectoryTransfer';
 
 export type BrowserFolderExportTarget = {
@@ -24,23 +26,32 @@ export async function writeBrowserFolderExport(
     target: BrowserFolderExportTarget,
     files: Record<string, Uint8Array>,
     source: BrowserDirectoryHandle,
+    isCurrent: ExportOwnership = () => true,
 ): Promise<string> {
+    const check = () => { assertExportCurrent(isCurrent); };
+    check();
     const folderName = validateComponent(target.folderName.trim());
     const artifacts = validateArtifacts(files);
     if (!source.resolve) throw new Error('Cannot verify the export folder is outside the project. Choose a browser with folder ancestry support.');
-    if (await source.resolve(target.parent) !== null) {
+    const ancestry = await source.resolve(target.parent);
+    check();
+    if (ancestry !== null) {
         throw new Error('Choose an export parent folder outside the source project folder.');
     }
     await rejectExistingEntry(target.parent, folderName);
+    check();
 
     const location = `${target.parent.name}/${folderName}`;
     let reserved = false;
     try {
         const output = await target.parent.getDirectoryHandle(folderName, { create: true });
         reserved = true;
+        check();
         await requireEmptyDirectory(output);
+        check();
         const directories = new Map<string, BrowserDirectoryHandle>([['', output]]);
         for (const { bytes, segments } of artifacts) {
+            check();
             let parent = output;
             for (let index = 0; index < segments.length - 1; index++) {
                 const name = segments[index];
@@ -48,17 +59,23 @@ export async function writeBrowserFolderExport(
                 let directory = directories.get(path);
                 if (!directory) {
                     await rejectExistingEntry(parent, name);
+                    check();
                     directory = await parent.getDirectoryHandle(name, { create: true });
+                    check();
                     await requireEmptyDirectory(directory);
+                    check();
                     directories.set(path, directory);
                 }
                 parent = directory;
             }
             const filename = segments.at(-1)!;
             await rejectExistingEntry(parent, filename);
+            check();
             const file = await parent.getFileHandle(filename, { create: true });
-            await writeBrowserFile(file, bytes);
+            check();
+            await writeBrowserFile(file, bytes, check);
         }
+        check();
         return location;
     } catch (error) {
         if (!reserved) throw error;

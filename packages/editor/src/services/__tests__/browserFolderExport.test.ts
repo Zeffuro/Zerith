@@ -67,6 +67,60 @@ describe('browser folder export picker', () => {
 });
 
 describe('browser folder export writer', () => {
+    it('does not reserve a destination after ownership ends during ancestry validation', async () => {
+        const { files, parent, source, target } = fixture();
+        let current = true;
+        const resolve = source.resolve.bind(source);
+        vi.spyOn(source, 'resolve').mockImplementation(async handle => {
+            const ancestry = await resolve(handle);
+            current = false;
+            return ancestry;
+        });
+        await expect(writeBrowserFolderExport(target, files, source, () => current)).rejects.toThrow('cancelled');
+        expect(parent.directories.size).toBe(0);
+    });
+
+    it('retains a committed file and stops the batch after ownership ends', async () => {
+        const { parent, source, target } = fixture();
+        let current = true;
+        const first = new MemoryFileHandle('first.txt', '');
+        first.afterClose = () => { current = false; return Promise.resolve(); };
+        const output = new MemoryDirectoryHandle(target.folderName);
+        const original = output.getFileHandle.bind(output);
+        const create = vi.spyOn(output, 'getFileHandle').mockImplementation((name, options) => {
+            if (name !== first.name) return original(name, options);
+            output.files.set(name, first);
+            return Promise.resolve(first);
+        });
+        vi.spyOn(parent, 'getDirectoryHandle').mockResolvedValue(output);
+        const files = { 'first.txt': new Uint8Array([1, 2, 3]), 'second.txt': new Uint8Array([4, 5, 6]) };
+        await expect(writeBrowserFolderExport(target, files, source, () => current)).rejects.toThrow('Partial export remains');
+        expect(create).toHaveBeenCalledTimes(1);
+        expect(await readBytes(first)).toEqual(files['first.txt']);
+        expect(first.abortCount).toBe(0);
+    });
+
+    it.each(['create', 'write'] as const)('aborts a writable retired during %s before committing it', async phase => {
+        const { files, parent, source, target } = fixture();
+        let current = true;
+        const file = new MemoryFileHandle('index.html', '');
+        const original = file.createWritable.bind(file);
+        vi.spyOn(file, 'createWritable').mockImplementation(async () => {
+            const stream = await original();
+            if (phase === 'create') current = false;
+            const write = stream.write.bind(stream);
+            stream.write = async data => { await write(data); current = false; };
+            return stream;
+        });
+        const output = new MemoryDirectoryHandle(target.folderName);
+        vi.spyOn(parent, 'getDirectoryHandle').mockResolvedValue(output);
+        vi.spyOn(output, 'getFileHandle').mockImplementation(name => { output.files.set(name, file); return Promise.resolve(file); });
+        await expect(writeBrowserFolderExport(target, files, source, () => current)).rejects.toThrow('Partial export remains');
+        expect(await readBytes(file)).toEqual(new Uint8Array());
+        expect(file.abortCount).toBe(1);
+        expect(await readText(source.files.get('game.json')!)).toBe('original project');
+    });
+
     it('writes exact nested artifact bytes and preserves the project', async () => {
         const { parent, source, target } = fixture();
         const files = {

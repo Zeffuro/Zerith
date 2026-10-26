@@ -2,11 +2,7 @@ import { type KeyboardEventHandler, useCallback, useEffect, useRef, useState } f
 
 import { useRecentProjects } from '../../hooks/useRecentProjects';
 import { createBrowserParityReport } from '../../services/browserParityReport';
-import {
-    executeContentMigrationCommand,
-    formatContentMigrationCommandStatus,
-    getContentMigrationCommandStatusTone,
-} from '../../services/contentMigrationCommand';
+import { runSavedContentMigration } from '../../services/contentMigrationRun';
 import { confirmEditorAction } from '../../services/editorDialogs';
 import {
     createEditorUpdateInstallPrompt,
@@ -18,7 +14,7 @@ import { createEditorUpdateDiagnosticsReport } from '../../services/editorUpdate
 import { fsOpenPath } from '../../services/fs';
 import { openLocalizationWorkbenchTab } from '../../services/localizationWorkbench';
 import { openProjectEntry } from '../../services/openProjectEntry';
-import { executeProjectValidationCommand } from '../../services/projectValidationCommand';
+import { runSavedProjectValidation } from '../../services/projectValidationRun';
 import { isTauriRuntime } from '../../services/runtime/runtimeEnvironment';
 import { executeConsoleMessageAction } from '../../store/actions/consoleMessageActions';
 import { saveAndOpenProjectAs } from '../../store/actions/projectDestinationActions';
@@ -62,6 +58,7 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
 
     const activeFile = useProjectStore((state) => state.activeFile);
     const projectPath = useProjectStore((state) => state.projectPath);
+    const projectGeneration = useProjectStore((state) => state.projectGeneration);
     const saveActiveFileFromCurrentScript = useProjectStore((state) => state.saveActiveFileFromCurrentScript);
     const saveAllDirtyFiles = useProjectStore((state) => state.saveAllDirtyFiles);
 
@@ -134,39 +131,15 @@ export function CommandPalette({ onRequestClose, uiScale }: Properties) {
         }
     }, [projectPath]);
 
-    const handleMigrateProjectContent = useCallback(async () => {
-        if (!projectPath) return;
+    const handleMigrateProjectContent = useCallback(() => {
+        void runSavedContentMigration({ projectGeneration, projectPath });
+        return Promise.resolve();
+    }, [projectGeneration, projectPath]);
 
-        try {
-            announceOperationStatus('Content migration started. The editor remains usable while files are checked.');
-            markManualSave();
-            await saveAllDirtyFiles();
-
-            const result = await executeContentMigrationCommand(projectPath);
-            announceOperationStatus(
-                formatContentMigrationCommandStatus(result),
-                getContentMigrationCommandStatusTone(result),
-            );
-            if (result.status === 'applied' || result.status === 'conflicted') {
-                await useProjectStore.getState().loadManifest();
-            }
-        } catch (error) {
-            console.error('Content migration from command palette failed:', error);
-            announceOperationStatus(`Content migration failed: ${error instanceof Error ? error.message : String(error)}`, 'error');
-        }
-    }, [announceOperationStatus, markManualSave, projectPath, saveAllDirtyFiles]);
-
-    const handleValidateProjectContent = useCallback(async () => {
-        if (!projectPath) return;
-
-        try {
-            markManualSave();
-            await saveAllDirtyFiles();
-            await executeProjectValidationCommand(projectPath);
-        } catch (error) {
-            console.error('Project validation from command palette failed:', error);
-        }
-    }, [markManualSave, projectPath, saveAllDirtyFiles]);
+    const handleValidateProjectContent = useCallback(() => {
+        void runSavedProjectValidation({ projectGeneration, projectPath });
+        return Promise.resolve();
+    }, [projectGeneration, projectPath]);
 
     const handleOpenLocalizationEditor = useCallback(() => {
         openLocalizationWorkbenchTab({ query: '' });

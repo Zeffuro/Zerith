@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import {
-    type AssetLibraryMetadata,
-    createEmptyAssetLibraryMetadata,
-    loadAssetLibraryMetadata,
+    addAssetLibraryCollectionToAssets,
+    addAssetLibraryMetadataToAssets,
+    removeAssetLibraryCollection,
+    renameAssetLibraryCollection,
+    setAssetLibraryAssetMetadata,
 } from '../../services/assetLibraryMetadata';
 import { createAssetDependencyGraph } from '../../services/referenceScanner';
-import { executeConsoleMessageAction } from '../../store/actions/consoleMessageActions';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useReferenceStore } from '../../store/useReferenceStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -15,6 +16,7 @@ import { ConfirmDialog } from '../ConfirmDialog';
 import { AssetAudioCueReviewPanel } from './AssetAudioCueReviewPanel';
 import { AssetAudioReviewPanel } from './AssetAudioReviewPanel';
 import {
+    applyAssetAudioRoleMetadataToLibrary,
     type AssetLibraryAudioRoleFilter,
     collectAssetAudioRoleAssetGroups,
     createAssetAudioRoleSummary,
@@ -22,18 +24,12 @@ import {
 } from './assetAudioRoleModel';
 import { AssetDependencyActionBar } from './AssetDependencyActionBar';
 import {
-    handleAddAssetMetadataToAssets,
-    handleAddVisibleAssetCollection,
-    handleApplyAssetAudioRoleMetadata,
     handleDeleteSelectedUnusedAssets,
     handleImportAssets,
     handleMoveAsset,
     handleOpenAssetUrl,
     handleOpenLocation,
     handlePreviewAssetUrl,
-    handleRemoveAssetCollection,
-    handleRenameAssetCollection,
-    handleSaveAssetMetadata,
 } from './assetDependencyPanelActions';
 import {
     type BulkMetadataRequest,
@@ -65,12 +61,24 @@ import { AssetMetadataEditorDialog } from './AssetMetadataEditorDialog';
 import { AssetReferenceSection } from './AssetReferenceSection';
 import { AssetStatusFilterPanel } from './AssetStatusFilterPanel';
 import { AssetUnusedSection } from './AssetUnusedSection';
+import { useAssetLibraryMetadata } from './useAssetLibraryMetadata';
 
 export function AssetDependencyPanel() {
+    const projectPath = useProjectStore(state => state.projectPath);
+    const generation = useProjectStore(state => state.projectGeneration);
+    return <AssetDependencyPanelSession key={`${generation}:${projectPath}`} />;
+}
+
+function AssetDependencyPanelSession() {
     const uiScale = useSettingsStore((state) => state.uiScale);
     const projectPath = useProjectStore((state) => state.projectPath);
     const result = useReferenceStore((state) => state.result);
     const assetInventory = useReferenceStore((state) => state.assetInventory);
+    const generation = useProjectStore(state => state.projectGeneration);
+    const library = useAssetLibraryMetadata(projectPath, generation, assetInventory);
+    const assetLibraryMetadata = library.metadata;
+    const isLoadingAssetMetadata = library.loading;
+    const isSavingAssetOrganization = library.saving;
 
     const [isDeletingUnused, setIsDeletingUnused] = useState(false);
     const [isImportingAssets, setIsImportingAssets] = useState(false);
@@ -78,17 +86,17 @@ export function AssetDependencyPanel() {
     const [assetKindFilter, setAssetKindFilter] = useState<AssetLibraryKindFilter>('all');
     const [bulkMetadataRequest, setBulkMetadataRequest] = useState<BulkMetadataRequest>();
     const [assetCollectionPendingRemoval, setAssetCollectionPendingRemoval] = useState<string>();
-    const [assetLibraryMetadata, setAssetLibraryMetadata] = useState<AssetLibraryMetadata>(createEmptyAssetLibraryMetadata);
     const [metadataEditorAssetUrl, setMetadataEditorAssetUrl] = useState<string>();
+    const savingMetadataAssetUrl = library.saving ? metadataEditorAssetUrl : undefined;
     const [assetOrganizationFilter, setAssetOrganizationFilter] = useState<AssetLibraryOrganizationFilter>({ kind: 'all' });
     const [assetSearchQuery, setAssetSearchQuery] = useState('');
     const [assetStatusFilter, setAssetStatusFilter] = useState<AssetLibraryStatusFilter>('all');
-    const [isLoadingAssetMetadata, setIsLoadingAssetMetadata] = useState(false);
-    const [isSavingAssetOrganization, setIsSavingAssetOrganization] = useState(false);
     const [movingAssetUrl, setMovingAssetUrl] = useState<string>();
-    const [savingMetadataAssetUrl, setSavingMetadataAssetUrl] = useState<string>();
     const [selectedUnusedAssets, setSelectedUnusedAssets] = useState<string[]>([]);
     const [showDeleteUnusedDialog, setShowDeleteUnusedDialog] = useState(false);
+    const openBulkMetadata = (request: BulkMetadataRequest) => {
+        if (!library.disabled && !library.coordinator.getState().saving) setBulkMetadataRequest(request);
+    };
 
     const dependencyGraph = useMemo(
         () => createAssetDependencyGraph(result.assetFiles, assetInventory),
@@ -204,37 +212,6 @@ export function AssetDependencyPanel() {
         setSelectedUnusedAssets((current) => reconcileUnusedAssetSelection(current, dependencyGraph.unused));
     }, [dependencyGraph.unused]);
 
-    useEffect(() => {
-        let cancelled = false;
-        if (!projectPath) {
-            setAssetLibraryMetadata(createEmptyAssetLibraryMetadata());
-            return;
-        }
-
-        setIsLoadingAssetMetadata(true);
-        void loadAssetLibraryMetadata(projectPath)
-            .then((metadata) => {
-                if (!cancelled) {
-                    setAssetLibraryMetadata(metadata);
-                }
-            })
-            .catch((error) => {
-                console.error('Asset library metadata load failed:', error);
-                executeConsoleMessageAction('editor', 'error', 'Asset library metadata load failed:', String(error));
-                if (!cancelled) {
-                    setAssetLibraryMetadata(createEmptyAssetLibraryMetadata());
-                }
-            })
-            .finally(() => {
-                if (!cancelled) {
-                    setIsLoadingAssetMetadata(false);
-                }
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [assetInventory, projectPath]);
 
     if (!projectPath) {
         return <div style={{ color: t.text.faint, fontStyle: 'italic', padding: `${12 * uiScale}px` }}>Open a project to analyze assets.</div>;
@@ -261,6 +238,13 @@ export function AssetDependencyPanel() {
                 {statusMessage}
             </div>
 
+            {library.error ? (
+                <div role="alert">
+                    Asset metadata could not be loaded or saved. {library.error}
+                    <button disabled={library.loading || library.saving} onClick={() => { void library.coordinator.load(); }} type="button">Retry metadata load</button>
+                </div>
+            ) : undefined}
+
             <AssetKindFilterPanel
                 filter={assetKindFilter}
                 onFilterChange={(filter) => {
@@ -276,14 +260,11 @@ export function AssetDependencyPanel() {
 
             <AssetAudioReviewPanel
                 filter={assetAudioRoleFilter}
-                isApplyingRoleLabels={isSavingAssetOrganization}
+                isApplyingRoleLabels={library.disabled}
                 onApplyRoleLabels={() => {
-                    void handleApplyAssetAudioRoleMetadata(
-                        projectPath,
-                        visibleAudioRoleGroups,
-                        assetLibraryMetadata,
-                        setAssetLibraryMetadata,
-                        setIsSavingAssetOrganization,
+                    void library.coordinator.mutate(
+                        metadata => applyAssetAudioRoleMetadataToLibrary(metadata, visibleAudioRoleGroups).metadata,
+                        `Applied audio role labels to ${visibleAudioRoleAssetCount} visible audio assets.`,
                     );
                 }}
                 onFilterChange={(filter) => {
@@ -299,29 +280,21 @@ export function AssetDependencyPanel() {
             />
 
             <AssetLibraryOrganizationPanel
-                busy={isSavingAssetOrganization}
+                busy={library.disabled}
                 filter={assetOrganizationFilter}
                 isLoading={isLoadingAssetMetadata}
                 onAddCollectionToVisible={(collection) => {
-                    void handleAddVisibleAssetCollection(
-                        projectPath,
-                        visibleAssetUrls,
-                        collection,
-                        assetLibraryMetadata,
-                        setAssetLibraryMetadata,
-                        setIsSavingAssetOrganization,
+                    return library.coordinator.mutate(
+                        metadata => addAssetLibraryCollectionToAssets(metadata, visibleAssetUrls, collection),
+                        `Added ${visibleAssetUrls.length} visible assets to collection "${collection.trim()}".`,
                     );
                 }}
                 onFilterChange={setAssetOrganizationFilter}
                 onRemoveCollection={setAssetCollectionPendingRemoval}
                 onRenameCollection={(oldCollection, newCollection) => {
-                    void handleRenameAssetCollection(
-                        projectPath,
-                        oldCollection,
-                        newCollection,
-                        assetLibraryMetadata,
-                        setAssetLibraryMetadata,
-                        setIsSavingAssetOrganization,
+                    return library.coordinator.mutate(
+                        metadata => renameAssetLibraryCollection(metadata, oldCollection, newCollection),
+                        `Renamed asset collection "${oldCollection}" to "${newCollection.trim()}".`,
                     );
                 }}
                 summary={assetOrganizationSummary}
@@ -345,7 +318,7 @@ export function AssetDependencyPanel() {
                 onOpenSourceAsset={(assetUrl) => {
                     void handlePreviewAssetUrl(projectPath, assetUrl);
                 }}
-                onOrganizeCueAssets={(assetUrls) => setBulkMetadataRequest(createBulkMetadataRequest(
+                onOrganizeCueAssets={library.disabled ? undefined : (assetUrls) => openBulkMetadata(createBulkMetadataRequest(
                     assetUrls,
                     'cue-linked asset',
                     'cue-linked',
@@ -360,7 +333,7 @@ export function AssetDependencyPanel() {
                 isDeletingUnused={isDeletingUnused}
                 isFilteringAssets={isFilteringAssets}
                 isImportingAssets={isImportingAssets}
-                isOrganizingVisible={isSavingAssetOrganization}
+                isOrganizingVisible={library.disabled}
                 onClearFilters={() => {
                     setAssetSearchQuery('');
                     setAssetAudioRoleFilter('all');
@@ -372,7 +345,7 @@ export function AssetDependencyPanel() {
                 onImportAssets={() => {
                     void handleImportAssets(projectPath, setIsImportingAssets);
                 }}
-                onOrganizeVisible={() => setBulkMetadataRequest(createBulkMetadataRequest(
+                onOrganizeVisible={() => openBulkMetadata(createBulkMetadataRequest(
                     visibleAssetUrls,
                     'visible asset',
                     'visible',
@@ -387,16 +360,16 @@ export function AssetDependencyPanel() {
             {showUsedAssets ? (
                 <AssetReferenceSection
                     assetLibraryMetadata={assetLibraryMetadata}
-                    bulkDisabled={isSavingAssetOrganization}
+                    bulkDisabled={library.disabled}
                     emptyMessage={isFilteringAssets ? 'No used assets match the current filter.' : 'No asset references found in scripts/macros.'}
                     entries={filteredDependencyGraph.used}
                     movingAssetUrl={movingAssetUrl}
-                    onEditMetadata={setMetadataEditorAssetUrl}
+                    onEditMetadata={(assetUrl) => { if (!library.disabled) setMetadataEditorAssetUrl(assetUrl); }}
                     onMoveAsset={(assetUrl) => {
                         void handleMoveAsset(projectPath, assetUrl, setMovingAssetUrl);
                     }}
                     onOpenLocation={handleOpenLocation}
-                    onOrganizeVisible={() => setBulkMetadataRequest(createBulkMetadataRequest(
+                    onOrganizeVisible={() => openBulkMetadata(createBulkMetadataRequest(
                         visibleUsedAssetUrls,
                         'visible used asset',
                         'used',
@@ -414,13 +387,14 @@ export function AssetDependencyPanel() {
                     assetLibraryMetadata={assetLibraryMetadata}
                     assetUrls={filteredDependencyGraph.unused}
                     isFilteringAssets={isFilteringAssets}
+                    metadataDisabled={library.disabled}
                     movingAssetUrl={movingAssetUrl}
                     onClearVisible={() => setSelectedUnusedAssets((current) => removeUnusedAssetScope(current, filteredDependencyGraph.unused))}
-                    onEditMetadata={setMetadataEditorAssetUrl}
+                    onEditMetadata={(assetUrl) => { if (!library.disabled) setMetadataEditorAssetUrl(assetUrl); }}
                     onMoveAsset={(assetUrl) => {
                         void handleMoveAsset(projectPath, assetUrl, setMovingAssetUrl);
                     }}
-                    onOrganizeSelected={() => setBulkMetadataRequest(createBulkMetadataRequest(
+                    onOrganizeSelected={() => openBulkMetadata(createBulkMetadataRequest(
                         selectedUnusedAssetUrls,
                         'selected unused asset',
                         'selected unused',
@@ -442,12 +416,12 @@ export function AssetDependencyPanel() {
             {showMissingAssets ? (
                 <AssetReferenceSection
                     assetLibraryMetadata={assetLibraryMetadata}
-                    bulkDisabled={isSavingAssetOrganization}
+                    bulkDisabled={library.disabled}
                     emptyMessage={isFilteringAssets ? 'No missing assets match the current filter.' : 'No missing assets referenced.'}
                     entries={filteredDependencyGraph.missing}
-                    onEditMetadata={setMetadataEditorAssetUrl}
+                    onEditMetadata={(assetUrl) => { if (!library.disabled) setMetadataEditorAssetUrl(assetUrl); }}
                     onOpenLocation={handleOpenLocation}
-                    onOrganizeVisible={() => setBulkMetadataRequest(createBulkMetadataRequest(
+                    onOrganizeVisible={() => openBulkMetadata(createBulkMetadataRequest(
                         visibleMissingAssetUrls,
                         'visible missing asset',
                         'missing',
@@ -459,57 +433,58 @@ export function AssetDependencyPanel() {
                 />
             ) : undefined}
 
-            <AssetMetadataEditorDialog
+            {metadataEditorAssetUrl ? <AssetMetadataEditorDialog
                 assetUrl={metadataEditorAssetUrl}
-                busy={Boolean(savingMetadataAssetUrl)}
+                busy={library.saving || library.loading}
+                error={library.error}
+                key={metadataEditorAssetUrl}
                 metadata={metadataEditorMetadata}
                 onCancel={() => {
                     if (savingMetadataAssetUrl) return;
                     setMetadataEditorAssetUrl(undefined);
                 }}
+                onRetry={() => { void library.coordinator.load(); }}
                 onSave={(assetMetadata) => {
                     if (!metadataEditorAssetUrl) return;
-                    void handleSaveAssetMetadata(
-                        projectPath,
-                        metadataEditorAssetUrl,
-                        assetMetadata,
-                        assetLibraryMetadata,
-                        setAssetLibraryMetadata,
-                        setSavingMetadataAssetUrl,
-                    )
-                        .then(() => setMetadataEditorAssetUrl(undefined))
-                        .catch(() => {});
+                    const assetUrl = metadataEditorAssetUrl;
+                    void library.coordinator.mutate(
+                        metadata => setAssetLibraryAssetMetadata(metadata, assetUrl, assetMetadata),
+                        `Updated asset organization for ${assetUrl}.`,
+                    ).then(saved => {
+                        if (saved && library.coordinator.ownsSession()) setMetadataEditorAssetUrl(current => current === assetUrl ? undefined : current);
+                    });
                 }}
+                saveDisabled={!library.ready}
                 uiScale={uiScale}
-            />
+            /> : undefined}
 
-            <AssetMetadataEditorDialog
-                busy={isSavingAssetOrganization}
+            {bulkMetadataRequest ? <AssetMetadataEditorDialog
+                busy={library.saving || library.loading}
                 emptyPreviewText="No labels to apply"
+                error={library.error}
+                key={bulkMetadataRequest.subject}
                 metadata={{ collections: [], tags: [] }}
                 onCancel={() => {
                     if (isSavingAssetOrganization) return;
                     setBulkMetadataRequest(undefined);
                 }}
+                onRetry={() => { void library.coordinator.load(); }}
                 onSave={(assetMetadata) => {
                     if (!bulkMetadataRequest) return;
-                    void handleAddAssetMetadataToAssets(
-                        projectPath,
-                        bulkMetadataRequest.assetUrls,
-                        assetMetadata,
-                        assetLibraryMetadata,
-                        setAssetLibraryMetadata,
-                        setIsSavingAssetOrganization,
-                        bulkMetadataRequest.scopeLabel,
-                    )
-                        .then(() => setBulkMetadataRequest(undefined))
-                        .catch(() => {});
+                    const request = bulkMetadataRequest;
+                    void library.coordinator.mutate(
+                        metadata => addAssetLibraryMetadataToAssets(metadata, request.assetUrls, assetMetadata),
+                        `Updated metadata for ${request.assetUrls.length} ${request.scopeLabel}s.`,
+                    ).then(saved => {
+                        if (saved && library.coordinator.ownsSession()) setBulkMetadataRequest(current => current === request ? undefined : current);
+                    });
                 }}
+                saveDisabled={!library.ready}
                 saveText="Apply labels"
                 subject={bulkMetadataRequest?.subject}
                 title={bulkMetadataRequest?.title ?? 'Organize Assets'}
                 uiScale={uiScale}
-            />
+            /> : undefined}
 
             <ConfirmDialog
                 cancelText="Cancel"
@@ -544,14 +519,13 @@ export function AssetDependencyPanel() {
                 }}
                 onConfirm={() => {
                     if (!assetCollectionPendingRemoval) return;
-                    void handleRemoveAssetCollection(
-                        projectPath,
-                        assetCollectionPendingRemoval,
-                        assetLibraryMetadata,
-                        setAssetLibraryMetadata,
-                        setIsSavingAssetOrganization,
-                        setAssetCollectionPendingRemoval,
-                    );
+                    const collection = assetCollectionPendingRemoval;
+                    void library.coordinator.mutate(
+                        metadata => removeAssetLibraryCollection(metadata, collection),
+                        `Removed asset collection "${collection}".`,
+                    ).then(saved => {
+                        if (saved && library.coordinator.ownsSession()) setAssetCollectionPendingRemoval(current => current === collection ? undefined : current);
+                    });
                 }}
                 open={Boolean(assetCollectionPendingRemoval)}
                 title="Remove asset collection?"

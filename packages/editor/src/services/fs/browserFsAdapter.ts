@@ -1,5 +1,6 @@
 import type { FsAdapter, FsDirectoryEntry, FsFilePickerFilter } from './types';
 
+import { assertAudioExportCurrent, runAudioExportStep } from '../audioExportOwnership';
 import { moveBrowserEntry, writeBrowserFile as writeFile } from './browserDirectoryTransfer';
 import { createBrowserProjectDestination } from './browserProjectDestination';
 import { createBrowserProjectHandleStorage } from './browserProjectHandleStorage';
@@ -85,7 +86,8 @@ export function createBrowserFsAdapter(browserGlobal: BrowserFsGlobal = globalTh
         getDirectoryHandle: path => resolveDirectory(path, roots),
         isSupported: () => typeof browserGlobal.showDirectoryPicker === 'function',
         join: (...parts) => Promise.resolve(join(...parts)),
-        mkdir: async (path, recursive = true) => {
+        mkdir: async (path, recursive = true, isCurrent = () => true) => {
+            assertAudioExportCurrent(isCurrent);
             const normalizedPath = normalizeVirtualPath(path);
             const segments = pathSegments(normalizedPath);
             if (segments.length === 0) return;
@@ -93,7 +95,7 @@ export function createBrowserFsAdapter(browserGlobal: BrowserFsGlobal = globalTh
             const root = getMountedRoot(segments[0], roots);
             let current = root;
             for (const segment of segments.slice(1)) {
-                current = await current.getDirectoryHandle(segment, { create: recursive });
+                current = await runAudioExportStep(isCurrent, () => current.getDirectoryHandle(segment, { create: recursive }));
             }
         },
         mountDirectory: (handle) => mountDirectory(handle, roots),

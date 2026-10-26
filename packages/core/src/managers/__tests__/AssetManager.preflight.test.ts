@@ -128,7 +128,7 @@ describe('strict scene asset preflight', () => {
         await assets.preloadSceneAssets([{ assetUrl: 'assets/sfx/sound.sheet.json:click', type: 'sfx' }], { strict: true });
         expect(load).toHaveBeenCalledWith('resolved:assets/sfx/sound.sheet.json');
         expect(loadSheet).toHaveBeenCalledExactlyOnceWith('assets/sfx/sound.sheet.json', { cues: { click: { start: 0 } }, source: `resolved:${expected}` });
-        expect(mockedSound.add).toHaveBeenCalledWith(`resolved:${expected}`, expect.anything());
+        expect(mockedSound.add).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ url: `resolved:${expected}` }));
         expect(mockedSound.play).not.toHaveBeenCalled();
     });
 

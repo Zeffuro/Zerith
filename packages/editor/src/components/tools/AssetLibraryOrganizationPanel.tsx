@@ -19,10 +19,10 @@ type Properties = {
     busy: boolean;
     filter: AssetLibraryOrganizationFilter;
     isLoading: boolean;
-    onAddCollectionToVisible: (collection: string) => void;
+    onAddCollectionToVisible: (collection: string) => Promise<boolean>;
     onFilterChange: (filter: AssetLibraryOrganizationFilter) => void;
     onRemoveCollection: (collection: string) => void;
-    onRenameCollection: (oldCollection: string, newCollection: string) => void;
+    onRenameCollection: (oldCollection: string, newCollection: string) => Promise<boolean>;
     summary: AssetLibraryOrganizationSummary;
     uiScale: number;
     visibleAssetCount: number;
@@ -50,8 +50,9 @@ export function AssetLibraryOrganizationPanel({
         event.preventDefault();
         const collection = draftCollection.trim();
         if (!collection || busy || visibleAssetCount === 0) return;
-        onAddCollectionToVisible(collection);
-        setDraftCollection('');
+        void onAddCollectionToVisible(collection).then(saved => {
+            if (saved) setDraftCollection(current => current.trim() === collection ? '' : current);
+        });
     };
 
     const startRename = (collection: string) => {
@@ -62,9 +63,11 @@ export function AssetLibraryOrganizationPanel({
     const submitRename = (oldCollection: string) => {
         const newCollection = editingDraft.trim();
         if (!newCollection || busy) return;
-        onRenameCollection(oldCollection, newCollection);
-        setEditingCollection(undefined);
-        setEditingDraft('');
+        void onRenameCollection(oldCollection, newCollection).then(saved => {
+            if (!saved) return;
+            setEditingCollection(current => current === oldCollection ? undefined : current);
+            setEditingDraft(current => current.trim() === newCollection ? '' : current);
+        });
     };
 
     return (

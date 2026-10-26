@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const root = process.cwd();
-const dryRun = process.argv.includes('--dry-run');
+const dryRun = process.argv.includes('--dry-run') || process.env.npm_config_dry_run === 'true';
 const requested = process.argv.slice(2).find((argument) => !argument.startsWith('--'));
 
 if (!requested) {

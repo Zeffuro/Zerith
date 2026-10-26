@@ -1,6 +1,8 @@
-import { Application, Container } from 'pixi.js';
+import { Container } from 'pixi.js';
 
 import type { DisplayLayerName } from '../interfaces/managers';
+
+import { OwnedApplication } from './display/OwnedApplication';
 
 export interface DisplayConfig {
     backgroundColor: number;
@@ -38,23 +40,37 @@ export class DisplayManager {
     public canvas: HTMLCanvasElement | undefined;
     public get height(): number { return this.config.height; }
     public get width(): number { return this.config.width; }
-    private readonly app: Application;
+    private readonly app: OwnedApplication;
     private boundApplyScale: (() => void) | undefined;
 
     private config: DisplayConfig;
+    private destroyed = false;
+    private initialized = false;
     private readonly layerDefinitions = new Map<string, number>();
     private readonly layers = new Map<string, Container>();
+    private readonly renderSuspensions = new Set<symbol>();
 
     private resizeObserver: ResizeObserver | undefined;
 
     constructor(config: Partial<DisplayConfig> = {}) {
-        this.app = new Application();
+        this.app = new OwnedApplication();
         this.config = { ...DefaultDisplayConfig, ...config };
         this.configureLayers(this.config.layers);
     }
 
+    public acquireRenderSuspension(): () => void {
+        if (this.destroyed) return () => {};
+        const token = Symbol();
+        this.renderSuspensions.add(token);
+        if (this.initialized && this.renderSuspensions.size === 1) this.app.stop();
+        return () => {
+            if (!this.renderSuspensions.delete(token)) return;
+            if (this.initialized && !this.destroyed && this.renderSuspensions.size === 0) this.app.start();
+        };
+    }
+
     public captureThumbnailDataUrl(): string | undefined {
-        if (!this.canvas) return undefined;
+        if (!this.canvas || !this.initialized || this.destroyed) return undefined;
 
         const overlayLayer = this.layers.get('overlay');
         const previousOverlayVisible = overlayLayer?.visible;
@@ -86,12 +102,25 @@ export class DisplayManager {
     }
 
     public destroy() {
+        if (this.destroyed) return;
+        this.destroyed = true;
+        this.initialized = false;
+        this.renderSuspensions.clear();
         if (this.boundApplyScale) {
             window.removeEventListener('resize', this.boundApplyScale);
         }
         this.resizeObserver?.disconnect();
         this.resizeObserver = undefined;
         this.boundApplyScale = undefined;
+        const errors: unknown[] = [];
+        try { this.app.destroy(); } catch (error) { errors.push(error); }
+        for (const layer of this.layers.values()) {
+            if (layer.destroyed) continue;
+            try { layer.destroy({ children: true, texture: false, textureSource: false }); } catch (error) { errors.push(error); }
+        }
+        this.layers.clear();
+        this.canvas = undefined;
+        if (errors.length > 0) throw new AggregateError(errors, 'Display cleanup failed');
     }
 
     public getLayer(name: DisplayLayerName): Container {
@@ -111,16 +140,20 @@ export class DisplayManager {
     }
 
     public async init(canvas: HTMLCanvasElement) {
+        if (this.destroyed) throw new Error('Display manager is destroyed');
         this.canvas = canvas;
 
         await this.app.init({
             autoDensity: true,
+            autoStart: false,
             backgroundColor: this.config.backgroundColor,
             canvas,
             height: this.config.height,
             resolution: window.devicePixelRatio || 1,
             width: this.config.width
         });
+        if (this.destroyed) throw new Error('Display manager is destroyed');
+        this.initialized = true;
 
         for (const id of this.getOrderedLayerIds()) {
             this.app.stage.addChild(this.getLayer(id));
@@ -134,6 +167,11 @@ export class DisplayManager {
             this.resizeObserver.observe(canvas.parentElement || document.body);
             window.addEventListener('resize', this.boundApplyScale);
         }
+        if (this.renderSuspensions.size === 0) this.app.start();
+    }
+
+    public render(): void {
+        if (this.initialized && !this.destroyed) this.app.render();
     }
 
     private applyScale() {

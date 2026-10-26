@@ -3,16 +3,17 @@ import type { Engine } from '@zeffuro/zerith-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-    bootstrap: vi.fn<() => Promise<Engine>>(),
+    bootstrap: vi.fn<(options: { canvas: HTMLCanvasElement; signal?: AbortSignal }) => Promise<Engine>>(),
     config: vi.fn<() => Promise<string>>(),
     effect: undefined as (() => (() => void) | undefined) | undefined,
     fontLoad: vi.fn<(face: FontFace) => Promise<FontFace>>(),
     generation: 1,
     path: '/A',
+    published: undefined as Engine | undefined,
     release: vi.fn(),
     resolve: vi.fn<() => Promise<string>>(),
     resolvers: [] as { dispose: ReturnType<typeof vi.fn>; resolve: ReturnType<typeof vi.fn> }[],
-    setEngine: vi.fn(),
+    setEngine: vi.fn<(value: Engine | undefined) => void>(),
 }));
 vi.mock('react', () => ({ useEffect: (effect: () => () => void) => { mocks.effect = effect; }, useRef: (value: unknown) => ({ current: value }) }));
 vi.mock('pixi.js', () => ({ CanvasTextMetrics: { clearMetrics: vi.fn() } }));
@@ -33,7 +34,7 @@ vi.mock('../../store/storeBootstrap', () => {
     return { useProjectStore: Object.assign((selector: (value: ReturnType<typeof projectState>) => unknown) => selector(projectState()), { getState: projectState }) };
 });
 vi.mock('../../store/useEditorStore', () => ({ useEditorStore: { getState: () => ({ clearActiveExecutionPath: vi.fn(), playTrigger: 0, setPlaybackPaused: vi.fn(), stopTrigger: 0 }) } }));
-vi.mock('../../store/useEngineBridgeStore', () => ({ useEngineBridgeStore: { getState: () => ({ setEngine: mocks.setEngine }) } }));
+vi.mock('../../store/useEngineBridgeStore', () => ({ useEngineBridgeStore: { getState: () => ({ engine: mocks.published, setEngine: mocks.setEngine }) } }));
 vi.mock('../../store/usePlaytestStore', () => ({ usePlaytestStore: { getState: () => ({ request: undefined }) } }));
 vi.mock('../../store/useSettingsStore', () => ({ useSettingsStore: { getState: () => ({ isMuted: false }) } }));
 vi.mock('../useDebugBridge', () => ({ useDebugBridge: () => ({ attachDebugBridge: vi.fn() }) }));
@@ -50,9 +51,9 @@ function deferred<T>() {
 function engine() {
     return { destroy: vi.fn(), scenes: { addScene: vi.fn(), jumpToScene: vi.fn() }, setInputEnabled: vi.fn(), stateManager: { setPersistent: vi.fn() } };
 }
-function PreviewBootstrap() {
+function PreviewBootstrap(reference?: { current: HTMLCanvasElement }) {
     useEngineBootstrap({
-        activeFileReference: { current: undefined }, canvasReference: { current: {} as HTMLCanvasElement },
+        activeFileReference: { current: undefined }, canvasKey: 'test-canvas', canvasReference: reference ?? { current: {} as HTMLCanvasElement },
         containerReference: { current: {} as HTMLDivElement }, localizationReloadKey: '', manifest: {},
         playbackRequestIdReference: { current: 0 }, projectDataReference: { current: { characters: {}, items: {}, macros: {}, scenes: {} } },
         projectPath: mocks.path, reloadToken: 0, scriptReference: { current: [] }, setPreviewLogCaptureEnabled: vi.fn(),
@@ -68,6 +69,8 @@ describe('preview bootstrap lifetime', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         mocks.path = '/A'; mocks.generation = 1;
+        mocks.published = undefined;
+        mocks.setEngine.mockImplementation(value => { mocks.published = value; });
         mocks.resolvers.length = 0; fonts.clear(); faces.length = 0;
         vi.stubGlobal('document', { fonts });
         vi.stubGlobal('FontFace', class {
@@ -125,10 +128,14 @@ describe('preview bootstrap lifetime', () => {
         mocks.bootstrap.mockReturnValueOnce(pending.promise);
         const cleanup = PreviewBootstrap();
         await vi.waitFor(() => expect(mocks.bootstrap).toHaveBeenCalledOnce());
+        const oldSignal = mocks.bootstrap.mock.calls[0][0].signal;
+        expect(oldSignal?.aborted).toBe(false);
         cleanup();
+        expect(oldSignal?.aborted).toBe(true);
         const nextCleanup = PreviewBootstrap();
         await vi.waitFor(() => expect(mocks.bootstrap).toHaveBeenCalledTimes(2));
         await vi.waitFor(() => expect(mocks.setEngine).toHaveBeenCalledWith(expect.any(Object)));
+        const replacement = mocks.published;
         const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const oldEngine = engine();
         if (outcome === 'success') pending.resolve(oldEngine as unknown as Engine);
@@ -136,8 +143,44 @@ describe('preview bootstrap lifetime', () => {
         await vi.waitFor(() => expect(mocks.resolvers[0].dispose).toHaveBeenCalledTimes(2));
         expect(mocks.resolvers[1].dispose).not.toHaveBeenCalled();
         expect(fonts.size).toBe(1);
+        expect(mocks.published).toBe(replacement);
         expect(warning).not.toHaveBeenCalled();
         if (outcome === 'success') expect(oldEngine.destroy).toHaveBeenCalledOnce();
+        nextCleanup();
+        expect(mocks.published).toBeUndefined();
+    });
+
+    it('rejects a result belonging to a replaced canvas before effect cleanup', async () => {
+        const pending = deferred<Engine>();
+        mocks.bootstrap.mockReturnValueOnce(pending.promise);
+        const canvasReference = { current: {} as HTMLCanvasElement };
+        const firstCanvas = canvasReference.current;
+        const cleanup = PreviewBootstrap(canvasReference);
+        await vi.waitFor(() => expect(mocks.bootstrap).toHaveBeenCalledOnce());
+        expect(mocks.bootstrap.mock.calls[0][0].canvas).toBe(firstCanvas);
+        canvasReference.current = {} as HTMLCanvasElement;
+        const stale = engine();
+        pending.resolve(stale as unknown as Engine);
+        await vi.waitFor(() => expect(stale.destroy).toHaveBeenCalledOnce());
+        expect(mocks.setEngine).not.toHaveBeenCalled();
+        expect(fonts.size).toBe(0);
+        cleanup();
+    });
+
+    it('reports deferred cleanup errors from a stale renderer without clearing the replacement', async () => {
+        const pending = deferred<Engine>();
+        mocks.bootstrap.mockReturnValueOnce(pending.promise);
+        const cleanup = PreviewBootstrap();
+        await vi.waitFor(() => expect(mocks.bootstrap).toHaveBeenCalledOnce());
+        cleanup();
+        const nextCleanup = PreviewBootstrap();
+        await vi.waitFor(() => expect(mocks.published).toBeDefined());
+        const replacement = mocks.published;
+        const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        pending.reject(new AggregateError([new Error('renderer cleanup failed')], 'Application cleanup failed'));
+        await vi.waitFor(() => expect(warning).toHaveBeenCalledOnce());
+        expect(mocks.published).toBe(replacement);
+        expect(fonts.size).toBe(1);
         nextCleanup();
     });
 

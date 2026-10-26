@@ -20,6 +20,7 @@ export interface EngineBootstrapOptions {
     manifest?: GameManifest;
     preloadAssets?: boolean;
     scenes?: Record<string, Script>;
+    signal?: AbortSignal;
 }
 
 export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<Engine> {
@@ -34,7 +35,10 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
         manifest = {},
         preloadAssets = false,
         scenes = {},
+        signal,
     } = options;
+
+    signal?.throwIfAborted();
 
     const {
         deps,
@@ -48,74 +52,85 @@ export async function bootstrapEngine(options: EngineBootstrapOptions): Promise<
         state,
         theme,
     } = createManagers({ config, contentSchemaVersion: manifest.schemaVersion });
-    const manifestData = { ...manifest, characters };
-    const effectiveDefaultBlipUrl = resolveDefaultBlipUrl(config, defaultBlipUrl);
-    const { dialogueHandler } = registerHandlers({
-        accessibility: config.accessibility,
-        animations: deps.animations,
-        assets: deps.assets,
-        audio: deps.audio,
-        characters,
-        defaultBlipUrl: effectiveDefaultBlipUrl,
-        display: deps.display,
-        events: deps.events,
-        evidence,
-        flow,
-        history,
-        logger,
-        manifestData,
-        sceneManager,
-        spritesheets: deps.spritesheets,
-        state,
-        text: config.text,
-        theme,
-    });
-
     const engine = new Engine(config, deps);
-    engine.theme = theme;
-    engine.logger = logger;
+    const cancel = () => engine.destroy();
+    signal?.addEventListener('abort', cancel, { once: true });
+    try {
+        signal?.throwIfAborted();
+        const manifestData = { ...manifest, characters };
+        const effectiveDefaultBlipUrl = resolveDefaultBlipUrl(config, defaultBlipUrl);
+        const { dialogueHandler } = registerHandlers({
+            accessibility: config.accessibility,
+            animations: deps.animations,
+            assets: deps.assets,
+            audio: deps.audio,
+            characters,
+            defaultBlipUrl: effectiveDefaultBlipUrl,
+            display: deps.display,
+            events: deps.events,
+            evidence,
+            flow,
+            history,
+            logger,
+            manifestData,
+            sceneManager,
+            spritesheets: deps.spritesheets,
+            state,
+            text: config.text,
+            theme,
+        });
 
-    if (assetResolver) {
-        engine.assetResolver = assetResolver;
-    }
+        engine.theme = theme;
+        engine.logger = logger;
 
-    engine.setManifest(manifestData);
-
-    if (preloadAssets) {
-        await deps.assets.preloadCharacterAssets(characters);
-    }
-
-    if (Object.keys(items).length > 0) {
-        engine.items.loadDefinitions(items);
-    }
-
-    engine.registerDefaultPanels(createPanels({
-        assets: deps.assets,
-        dialogueHandler,
-        engine,
-        evidence,
-        history,
-        notifications: deps.notifications,
-        overlay,
-        saveManager,
-    }));
-
-    if (Object.keys(macros).length > 0) {
-        for (const [name, script] of Object.entries(macros)) {
-            sceneManager.registerTemplate(name, script);
+        if (assetResolver) {
+            engine.assetResolver = assetResolver;
         }
+
+        engine.setManifest(manifestData);
+
+        if (preloadAssets) {
+            await deps.assets.preloadCharacterAssets(characters);
+            signal?.throwIfAborted();
+        }
+
+        if (Object.keys(items).length > 0) {
+            engine.items.loadDefinitions(items);
+        }
+
+        engine.registerDefaultPanels(createPanels({
+            assets: deps.assets,
+            dialogueHandler,
+            engine,
+            evidence,
+            history,
+            notifications: deps.notifications,
+            overlay,
+            saveManager,
+        }));
+
+        if (Object.keys(macros).length > 0) {
+            for (const [name, script] of Object.entries(macros)) {
+                sceneManager.registerTemplate(name, script);
+            }
+        }
+
+        if (Object.keys(scenes).length > 0) {
+            sceneManager.loadScenes(scenes);
+        }
+
+        await engine.init(canvas);
+        signal?.throwIfAborted();
+        bindDefaultInputEvents(engine);
+        state.loadPersistentState(saveManager.loadGlobalState());
+
+        return engine;
+    } catch (error) {
+        engine.destroy();
+        throw error;
+    } finally {
+        signal?.removeEventListener('abort', cancel);
     }
-
-    if (Object.keys(scenes).length > 0) {
-        sceneManager.loadScenes(scenes);
-    }
-
-
-    await engine.init(canvas);
-    bindDefaultInputEvents(engine);
-    state.loadPersistentState(saveManager.loadGlobalState());
-
-    return engine;
 }
 
 function resolveDefaultBlipUrl(config: EngineConfig, override: null | string | undefined): string | undefined {

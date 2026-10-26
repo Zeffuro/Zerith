@@ -4,16 +4,14 @@ import type { BrowserFsGlobal } from '../../services/fs/browserFsAdapter';
 
 import { useBackdropDismissal } from '../../hooks/useBackdropDismissal';
 import { useDialogFocusTrap } from '../../hooks/useDialogFocusTrap';
-import { pickBrowserFolderExportTarget } from '../../services/browserFolderExport';
+import { useGameExport } from '../../hooks/useGameExport';
 import {
     type ExportCachePolicy,
-    exportGame,
     type ExportProfile,
     getExportProfileCatalog,
     getExportProfileMetadata,
     resolveExportGameOptions,
 } from '../../services/exportGame';
-import { saveProjectBeforeExport } from '../../services/exportPreflight';
 import { isTauriRuntime } from '../../services/runtime/runtimeEnvironment';
 import { useProjectStore } from '../../store/storeBootstrap';
 import { useEditorStore } from '../../store/useEditorStore';
@@ -23,9 +21,10 @@ import { styles } from '../../theme/styleHelpers';
 export function ExportGameModal() {
     const closeExportGameModal = useEditorStore((state) => state.closeExportGameModal);
     const isOpen = useEditorStore((state) => state.isExportGameModalOpen);
-    const markManualSave = useEditorStore((state) => state.markManualSave);
     const uiScale = useEditorStore((state) => state.uiScale);
     const projectPath = useProjectStore((state) => state.projectPath);
+    const projectGeneration = useProjectStore((state) => state.projectGeneration);
+    const { isExporting, runExport, statusMessage } = useGameExport();
     const dialogReference = useRef<HTMLDivElement | null>(null);
     const descriptionId = useId();
     const statusId = useId();
@@ -43,8 +42,6 @@ export function ExportGameModal() {
     const [zipFile, setZipFile] = useState('');
     const [browserOutput, setBrowserOutput] = useState<'folder' | 'zip'>('zip');
     const [browserFolderName, setBrowserFolderName] = useState('game-export');
-    const [isExporting, setIsExporting] = useState(false);
-    const [statusMessage, setStatusMessage] = useState<string | undefined>();
     const activeProfileMetadata = useMemo(() => getExportProfileMetadata(profile), [profile]);
     const defaultOutDirectory = useMemo(() => {
         return projectPath ? buildDefaultOutputDirectory(projectPath) : 'dist/game';
@@ -72,8 +69,7 @@ export function ExportGameModal() {
         setZipFile(defaultZipFilePath);
         setBrowserOutput('zip');
         setBrowserFolderName(`${projectPath ? basename(projectPath) : 'game'}-export`);
-        setStatusMessage(undefined);
-    }, [applyProfileDefaults, defaultOutDirectory, defaultZipFilePath, isOpen, projectPath]);
+    }, [applyProfileDefaults, defaultOutDirectory, defaultZipFilePath, isOpen, projectGeneration, projectPath]);
 
     useEffect(() => {
         applyProfileDefaults(profile);
@@ -123,51 +119,7 @@ export function ExportGameModal() {
             return;
         }
 
-        const projectGeneration = useProjectStore.getState().projectGeneration;
-        setIsExporting(true);
-        setStatusMessage(isDesktopPackage ? 'Packaging desktop game...' : 'Exporting game...');
-
-        try {
-            const browserFolder = !isNativeEditor && browserOutput === 'folder'
-                ? await pickBrowserFolderExportTarget(browserFolderName)
-                : undefined;
-            if (!isNativeEditor && browserOutput === 'folder' && !browserFolder) {
-                setStatusMessage('Export cancelled.');
-                return;
-            }
-            const currentProject = useProjectStore.getState();
-            if (currentProject.projectPath !== projectPath || currentProject.projectGeneration !== projectGeneration) {
-                throw new Error('The project changed. Start export again.');
-            }
-            markManualSave();
-            await saveProjectBeforeExport(projectPath, useProjectStore.getState);
-
-            console.info('[Export Game] Running export with options:', {
-                ...getCurrentExportOptions(),
-                projectPath,
-            });
-
-            const result = await exportGame(projectPath, { ...getCurrentExportOptions(), browserFolder });
-            const stderr = typeof (result as { stderr?: unknown }).stderr === 'string'
-                ? (result as { stderr: string }).stderr
-                : '';
-
-            if (result.stdout.trim().length > 0) {
-                console.info('[Export Game] Build output:\n' + result.stdout.trim());
-            }
-            if (stderr.trim().length > 0) {
-                console.warn('[Export Game] Build warnings:\n' + stderr.trim());
-            }
-
-            setStatusMessage(isNativeEditor || browserFolder
-                ? `Exported to ${result.executablePath ?? result.outDirectory ?? outDirectory}.`
-                : 'Export complete. Your browser download is ready.');
-        } catch (error) {
-            console.error('[Export Game] Export failed:', error);
-            setStatusMessage(`Export failed: ${error instanceof Error ? error.message : String(error)}`);
-        } finally {
-            setIsExporting(false);
-        }
+        await runExport(getCurrentExportOptions(), !isNativeEditor && browserOutput === 'folder' ? browserFolderName : undefined);
     };
 
     return (

@@ -12,7 +12,7 @@ export type ProjectValidationCommandDependencies = {
 export type ProjectValidationCommandResult =
     | { error: unknown; status: 'failed' }
     | { report: ProjectValidationReport; status: 'issues' | 'ok' }
-    | { status: 'no-project' };
+    | { status: 'no-project' | 'retired' };
 
 const defaultDependencies: ProjectValidationCommandDependencies = {
     buildReport: createProjectValidationReport,
@@ -22,7 +22,9 @@ const defaultDependencies: ProjectValidationCommandDependencies = {
 export async function executeProjectValidationCommand(
     projectPath: string | undefined,
     dependencies: ProjectValidationCommandDependencies = defaultDependencies,
+    isCurrent: () => boolean = () => true,
 ): Promise<ProjectValidationCommandResult> {
+    if (!isCurrent()) return { status: 'retired' };
     if (!projectPath) {
         dependencies.log('editor', 'warn', 'Project validation requires an open project.');
         return { status: 'no-project' };
@@ -30,12 +32,14 @@ export async function executeProjectValidationCommand(
 
     try {
         const report = await dependencies.buildReport(projectPath);
+        if (!isCurrent()) return { status: 'retired' };
         const summary = summarizeProjectValidationReport(report);
         const status = summary.hasIssues ? 'issues' : 'ok';
 
         dependencies.log('editor', status === 'issues' ? 'warn' : 'info', formatProjectValidationReport(report));
         return { report, status };
     } catch (error) {
+        if (!isCurrent()) return { status: 'retired' };
         dependencies.log('editor', 'error', 'Project validation failed:', error);
         return { error, status: 'failed' };
     }

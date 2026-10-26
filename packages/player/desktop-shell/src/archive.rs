@@ -91,7 +91,10 @@ fn inspect<R: Read + Seek>(
     let mut total = 0u64;
     for index in 0..archive.len() {
         let file = archive.by_index(index).map_err(|e| e.to_string())?;
-        let path = file.name().strip_suffix('/').unwrap_or(file.name());
+        let name = file
+            .name()
+            .map_err(|error| format!("Game package entry name is invalid: {error}"))?;
+        let path = name.strip_suffix('/').unwrap_or(name.as_ref());
         let kind = file.unix_mode().unwrap_or(0) & 0o170000;
         if !safe_path(path)
             || !names.insert(path.to_lowercase())

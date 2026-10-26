@@ -6,7 +6,7 @@ import type {
     AssetAudioCueReviewFilter,
 } from '../../services/assetAudioCueReview';
 
-import { exportAssetAudioCuesToProject } from '../../services/assetAudioCueExport';
+import { useAudioExport } from '../../hooks/useAudioExport';
 import {
     collectAssetAudioCueOrganizationAssetUrls,
     createAssetAudioCueExportReadiness,
@@ -16,8 +16,7 @@ import {
     loadAssetAudioCueReview,
     searchAssetAudioCueReviewEntries,
 } from '../../services/assetAudioCueReview';
-import { refreshProjectTree } from '../../services/explorerFileActions';
-import { refreshReferenceScannerState } from '../../services/referenceScanner';
+import { exportAudioCueSheets } from '../../services/audioExportActions';
 import { editorTheme as t } from '../../theme/editorTheme';
 import {
     kindSummaryChipStyle,
@@ -49,8 +48,7 @@ export function AssetAudioCueReviewPanel({
     uiScale,
 }: Properties) {
     const [review, setReview] = useState<AssetAudioCueReview>({ entries: [], issueCount: 0, totalCues: 0 });
-    const [exportMessage, setExportMessage] = useState<string>();
-    const [exportingTarget, setExportingTarget] = useState<string>();
+    const { exportingTarget, message: exportMessage, runExport } = useAudioExport(projectPath);
     const [cueSearchQuery, setCueSearchQuery] = useState('');
     const [reviewFilter, setReviewFilter] = useState<AssetAudioCueReviewFilter>('all');
     const [loading, setLoading] = useState(false);
@@ -70,68 +68,11 @@ export function AssetAudioCueReviewPanel({
         };
     }, [assetInventory, assetUrls, projectPath]);
 
-    const exportCueSheet = async (descriptorAssetUrl: string, refreshAfterExport: boolean): Promise<number> => {
-        const result = await exportAssetAudioCuesToProject(projectPath, {
-            descriptorAssetUrl,
-            namePreset: 'region-name-time',
-            targetFolder: 'assets/audio-regions',
-        });
-        if (refreshAfterExport && result.exportedCount > 0) {
-            await refreshProjectTree();
-            await refreshReferenceScannerState();
-        }
-        return result.exportedCount;
-    };
+    const exportOne = (descriptorAssetUrl: string) => runExport(descriptorAssetUrl,
+        (path, isCurrent) => exportAudioCueSheets(path, [descriptorAssetUrl], false, isCurrent));
 
-    const exportOne = async (descriptorAssetUrl: string) => {
-        setExportingTarget(descriptorAssetUrl);
-        setExportMessage(undefined);
-        try {
-            const exportedCount = await exportCueSheet(descriptorAssetUrl, true);
-            setExportMessage(`Saved ${exportedCount} cue WAV${exportedCount === 1 ? '' : 's'} to assets/audio-regions.`);
-        } catch (error) {
-            setExportMessage(error instanceof Error ? error.message : 'Failed to export cues.');
-        } finally {
-            setExportingTarget(undefined);
-        }
-    };
-
-    const exportVisible = async () => {
-        const exportableEntries = visibleEntries.filter(isAssetAudioCueReviewEntryExportable);
-        if (exportableEntries.length === 0) {
-            setExportMessage('No visible cue sheets can be exported.');
-            return;
-        }
-
-        setExportingTarget('visible');
-        setExportMessage(undefined);
-        let exportedCount = 0;
-        let failedCount = 0;
-
-        try {
-            for (const entry of exportableEntries) {
-                try {
-                    exportedCount += await exportCueSheet(entry.descriptorAssetUrl, false);
-                } catch (error) {
-                    console.error('Failed to export audiosheet cues:', entry.descriptorAssetUrl, error);
-                    failedCount += 1;
-                }
-            }
-
-            if (exportedCount > 0) {
-                await refreshProjectTree();
-                await refreshReferenceScannerState();
-            }
-            setExportMessage([
-                `Saved ${exportedCount} cue WAV${exportedCount === 1 ? '' : 's'} from ${exportableEntries.length - failedCount} sheet${exportableEntries.length - failedCount === 1 ? '' : 's'}.`,
-                failedCount > 0 ? `${failedCount} sheet${failedCount === 1 ? '' : 's'} failed.` : undefined,
-            ].filter(Boolean).join(' '));
-        } catch (error) {
-            setExportMessage(error instanceof Error ? error.message : 'Failed to export visible cue sheets.');
-        } finally {
-            setExportingTarget(undefined);
-        }
-    };
+    const exportVisible = () => runExport('visible', (path, isCurrent) => exportAudioCueSheets(path,
+        visibleEntries.filter(isAssetAudioCueReviewEntryExportable).map(entry => entry.descriptorAssetUrl), true, isCurrent));
 
     if (!loading && review.entries.length === 0) return;
 

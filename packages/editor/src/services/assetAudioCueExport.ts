@@ -8,6 +8,7 @@ import type { SaveAudioRegionInput, SaveAudioRegionResult } from './audioRegionE
 import { detectDescriptorType } from '../utils/assetDescriptorUtilities';
 import { closeAudioContext, decodeAudioSource } from '../utils/audio';
 import { iterateAudioBufferRegionsToWavFiles } from '../utils/audioRegions';
+import { assertAudioExportCurrent, runAudioExportStep } from './audioExportOwnership';
 import { saveAudioRegionWavToProject } from './audioRegionExport';
 import { fsDirname, fsJoin, fsReadTextFile } from './fs';
 
@@ -19,6 +20,7 @@ export type AssetAudioCueExportDependencies = {
     saveRegion: (
         projectPath: string,
         input: SaveAudioRegionInput,
+        isCurrent?: () => boolean,
     ) => Promise<SaveAudioRegionResult>;
 };
 
@@ -59,12 +61,15 @@ export async function exportAssetAudioCuesToProject(
     projectPath: string,
     options: AssetAudioCueExportOptions,
     dependencies: Partial<AssetAudioCueExportDependencies> = {},
+    isCurrent: () => boolean = () => true,
 ): Promise<AssetAudioCueExportResult> {
-    const deps = createDependencies(dependencies);
-    const descriptorPath = await resolveProjectAssetPath(projectPath, options.descriptorAssetUrl, deps);
-    const descriptor = await readAudiosheetDescriptor(descriptorPath, deps);
-    const sourcePath = await resolveAudiosheetAudioPath(descriptorPath, descriptor.source, deps);
+    assertAudioExportCurrent(isCurrent);
+    const deps = createDependencies(dependencies, isCurrent);
+    const descriptorPath = await runAudioExportStep(isCurrent, () => resolveProjectAssetPath(projectPath, options.descriptorAssetUrl, deps));
+    const descriptor = await runAudioExportStep(isCurrent, () => readAudiosheetDescriptor(descriptorPath, deps));
+    const sourcePath = await runAudioExportStep(isCurrent, () => resolveAudiosheetAudioPath(descriptorPath, descriptor.source, deps));
     const audioBuffer = await deps.decodeAudioSource(sourcePath);
+    assertAudioExportCurrent(isCurrent);
     const regions = createAudiosheetCueExportRegions(descriptor, audioBuffer.duration);
     const targetFolder = options.targetFolder ?? DEFAULT_TARGET_FOLDER;
 
@@ -84,6 +89,7 @@ export async function exportAssetAudioCuesToProject(
     const saved: SaveAudioRegionResult[] = [];
 
     for (const entry of encoded) {
+        assertAudioExportCurrent(isCurrent);
         const region: AudioRegion = {
             end: entry.region.end,
             ...(entry.regionName === undefined ? {} : { name: entry.regionName }),
@@ -95,7 +101,7 @@ export async function exportAssetAudioCuesToProject(
             sourcePath,
             targetFolder,
             wavBytes: entry.wavBytes,
-        });
+        }, isCurrent);
         saved.push(result);
     }
 
@@ -122,13 +128,16 @@ export async function resolveAudiosheetAudioPath(
 
 function createDependencies(
     dependencies: Partial<AssetAudioCueExportDependencies>,
+    isCurrent: () => boolean,
 ): AssetAudioCueExportDependencies {
     return {
-        decodeAudioSource: dependencies.decodeAudioSource ?? decodeWithTemporaryContext,
-        dirname: dependencies.dirname ?? fsDirname,
-        join: dependencies.join ?? fsJoin,
-        readTextFile: dependencies.readTextFile ?? fsReadTextFile,
-        saveRegion: dependencies.saveRegion ?? saveAudioRegionWavToProject,
+        decodeAudioSource: path => runAudioExportStep(isCurrent, () => (dependencies.decodeAudioSource ?? decodeWithTemporaryContext)(path)),
+        dirname: path => runAudioExportStep(isCurrent, () => (dependencies.dirname ?? fsDirname)(path)),
+        join: (...parts) => runAudioExportStep(isCurrent, () => (dependencies.join ?? fsJoin)(...parts)),
+        readTextFile: path => runAudioExportStep(isCurrent, () => (dependencies.readTextFile ?? fsReadTextFile)(path)),
+        saveRegion: (path, input) => runAudioExportStep(isCurrent, () => dependencies.saveRegion
+            ? dependencies.saveRegion(path, input, isCurrent)
+            : saveAudioRegionWavToProject(path, input, undefined, isCurrent)),
     };
 }
 

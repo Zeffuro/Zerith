@@ -197,7 +197,7 @@ describe('project open failure feedback ownership', () => {
             vi.stubGlobal('alert', alert);
             const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
             try {
-                const opening = executeOpenProjectInCurrentWindow('/current/game.json');
+                const opening = executeOpenProjectInCurrentWindow('/next/game.json');
                 await vi.waitFor(() => expect(serviceMocks.executeContentMigrationCommand).toHaveBeenCalledTimes(1));
                 const retained = takeOver(mode);
                 migration.reject(new Error('Migration unavailable'));
@@ -213,23 +213,35 @@ describe('project open failure feedback ownership', () => {
             }
         });
 
-        it('reports a current migration failure and continues the refresh', async () => {
+        it('reports a current migration failure and continues opening the new project', async () => {
             serviceMocks.isTauriRuntime.mockReturnValue(desktop);
-            const retained = retainSession();
+            retainSession();
+            storeMocks.projectState.dirtyFiles = new Set();
             serviceMocks.executeContentMigrationCommand.mockRejectedValueOnce(new Error('Migration unavailable'));
             const alert = vi.fn();
             vi.stubGlobal('alert', alert);
             const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
             try {
-                expect(await executeOpenProjectInCurrentWindow('/current/game.json')).toEqual({ status: 'opened-current' });
+                expect(await executeOpenProjectInCurrentWindow('/next/game.json')).toEqual({ status: 'opened-current' });
 
-                expectSession(retained);
+                expect(storeMocks.projectState.projectPath).toBe('/next');
                 expect(alert).toHaveBeenCalledExactlyOnceWith('Project migration check failed. Opening will continue.\n\nMigration unavailable');
                 expect(consoleError).toHaveBeenCalledTimes(1);
-                expect(storeMocks.projectState.loadManifest).toHaveBeenCalledTimes(1);
+                expect(serviceMocks.stageProject).toHaveBeenCalledTimes(2);
+                expect(storeMocks.projectState.openProjectFromManifest).toHaveBeenCalledOnce();
             } finally {
                 consoleError.mockRestore();
             }
+        });
+
+        it('skips automatic migration during safe active-project refresh and preserves drafts', async () => {
+            serviceMocks.isTauriRuntime.mockReturnValue(desktop);
+            const retained = retainSession();
+            expect(await executeOpenProjectInCurrentWindow('/current/game.json')).toEqual({ status: 'opened-current' });
+            expectSession(retained);
+            expect(serviceMocks.executeContentMigrationCommand).not.toHaveBeenCalled();
+            expect(storeMocks.projectState.saveAllDirtyFiles).not.toHaveBeenCalled();
+            expect(storeMocks.projectState.loadManifest).toHaveBeenCalledOnce();
         });
     });
 

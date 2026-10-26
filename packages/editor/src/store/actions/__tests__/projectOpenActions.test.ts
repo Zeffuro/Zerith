@@ -24,7 +24,7 @@ describe('projectOpenActions', () => {
         expect(serviceMocks.confirmEditorAction).toHaveBeenCalledTimes(1);
         expect(storeMocks.editorState.markManualSave).toHaveBeenCalledTimes(1);
         expect(storeMocks.projectState.saveAllDirtyFiles).toHaveBeenCalledTimes(1);
-        expect(serviceMocks.executeContentMigrationCommand).toHaveBeenCalledWith('/next');
+        expect(serviceMocks.executeContentMigrationCommand).toHaveBeenCalledWith('/next', undefined, expect.any(Function));
         expect(storeMocks.workbenchState.clearTabs).toHaveBeenCalledTimes(1);
         expect(storeMocks.projectState.openProjectFromManifest).toHaveBeenCalledWith('/next/game.json', expect.anything());
         expect(serviceMocks.prepareProject).toHaveBeenCalledWith('/next/game.json');
@@ -54,7 +54,7 @@ describe('projectOpenActions', () => {
 
         expect(opened).toEqual({ status: 'opened-current' });
         expect(serviceMocks.confirmEditorAction).not.toHaveBeenCalled();
-        expect(serviceMocks.executeContentMigrationCommand).toHaveBeenCalledWith('/copy');
+        expect(serviceMocks.executeContentMigrationCommand).toHaveBeenCalledWith('/copy', undefined, expect.any(Function));
         expect(storeMocks.workbenchState.clearTabs).toHaveBeenCalledTimes(1);
         expect(storeMocks.projectState.openProjectFromManifest).toHaveBeenCalledWith('/copy/game.json', expect.anything());
         expect(serviceMocks.rememberProject).toHaveBeenCalledWith('/copy/game.json');

@@ -18,11 +18,11 @@ export async function openJsonEntry(fullPath: string, options?: OpenProjectEntry
     if (current.projectPath !== projectPath || current.projectGeneration !== projectGeneration) return;
     const existingTab = useWorkbenchStore.getState().tabs.find(tab => tab.path === fullPath);
     const kindFromManifest = resolveJsonKindFromManifest(fullPath, manifest, projectPath);
-    const contents = normalizeBlankJsonContents(existingTab?.dirty ? existingTab.textContent ?? rawContents : rawContents, kindFromManifest);
+    const contents = normalizeBlankJsonContents(existingTab?.dirty ? existingTab.textContent ?? rawContents : rawContents, options?.jsonHintKind ?? kindFromManifest);
     const data: unknown = JSON.parse(contents);
 
     const kindFromSchema = resolveJsonKindFromSchema(data);
-    const hintedKind = kindFromSchema ?? kindFromManifest;
+    const hintedKind = options?.jsonHintKind ?? kindFromSchema ?? kindFromManifest;
     const route = routeJsonEntry({
         data,
         filePath: fullPath,

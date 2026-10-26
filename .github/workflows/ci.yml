@@ -26,7 +26,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf dbus
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -52,13 +52,24 @@ jobs:
       - name: Build editor resources
         run: npm run build --workspace=zerith-editor
 
+      - name: Native dependency patch integrity
+        run: npm run test:native-patches
+
+      - name: Optimized GLib security regression
+        if: runner.os == 'Linux'
+        run: cargo test --manifest-path vendor/glib/tests/security/Cargo.toml --locked --release
+
+      - name: Private DBus protocol regressions
+        if: runner.os == 'Linux'
+        run: cargo test --manifest-path vendor/tauri-plugin-opener/tests/dbus/Cargo.toml --locked
+
       - name: Build prebuilt game player
         env:
           CARGO_TARGET_DIR: ${{ github.workspace }}/packages/player/desktop-shell/target
         run: npm run build:player:desktop
 
       - name: Game player formatting
-        run: cargo fmt --manifest-path packages/player/desktop-shell/Cargo.toml --all -- --check
+        run: cargo fmt --manifest-path packages/player/desktop-shell/Cargo.toml -- --check
 
       - name: Game player lint
         env:
@@ -71,7 +82,7 @@ jobs:
         run: cargo test --manifest-path packages/player/desktop-shell/Cargo.toml --locked
 
       - name: Rust formatting
-        run: cargo fmt --manifest-path packages/editor/src-tauri/Cargo.toml --all -- --check
+        run: cargo fmt --manifest-path packages/editor/src-tauri/Cargo.toml -- --check
 
       - name: Rust lint
         run: cargo clippy --manifest-path packages/editor/src-tauri/Cargo.toml --locked --all-targets -- -D warnings

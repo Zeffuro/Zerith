@@ -21,9 +21,8 @@
   "overrides": {
     "brace-expansion": "5.0.12",
     "flatted": "3.4.2",
-    "monaco-editor": {
-      "dompurify": "3.4.16"
-    }
+    "handlebars": "4.7.10",
+    "dompurify": "3.4.17"
   },
   "scripts": {
     "dev:player": "npm run dev --workspace=@zeffuro/zerith-player",
@@ -44,7 +43,8 @@
     "pretest": "npm run build --workspace=@zeffuro/zerith-core",
     "test": "vitest run",
     "test:fixture-policy": "node scripts/guard-safe-fixtures.mjs",
-    "test:publication": "node --test scripts/package-publication.test.mjs",
+    "test:publication": "node --test scripts/package-publication.test.mjs scripts/version-preview.test.mjs",
+    "test:native-patches": "node scripts/check-native-patches.mjs",
     "test:npm-core": "node scripts/smoke-npm-package.mjs @zeffuro/zerith-core",
     "test:npm-player": "node scripts/smoke-npm-package.mjs @zeffuro/zerith-player",
     "test:runtime-smoke": "npm run test:runtime-smoke --workspace=@zeffuro/zerith-player --",
@@ -72,6 +72,6 @@
     "globals": "^17.13.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.71.0",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.12"
   }
 }

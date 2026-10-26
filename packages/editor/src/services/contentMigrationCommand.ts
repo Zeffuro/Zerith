@@ -20,12 +20,13 @@ export type ContentMigrationCommandResult =
     | {
         application: ApplyContentMigrationPreviewResult;
         preview: ContentMigrationPreviewResult;
-        status: 'applied' | 'conflicted';
+        status: 'applied' | 'conflicted' | 'failed';
     }
+    | { application?: ApplyContentMigrationPreviewResult; status: 'retired' }
     | { preview: ContentMigrationPreviewResult; status: 'cancelled' | 'no-changes' }
     | { status: 'no-project' };
 
-export type ContentMigrationCommandStatusTone = 'info' | 'success' | 'warning';
+export type ContentMigrationCommandStatusTone = 'error' | 'info' | 'success' | 'warning';
 
 const defaultDependencies: ContentMigrationCommandDependencies = {
     applyPreview: applyContentMigrationPreview,
@@ -42,13 +43,22 @@ const defaultDependencies: ContentMigrationCommandDependencies = {
 export async function executeContentMigrationCommand(
     projectPath: string | undefined,
     dependencies: ContentMigrationCommandDependencies = defaultDependencies,
+    isCurrent: () => boolean = () => true,
 ): Promise<ContentMigrationCommandResult> {
+    if (!isCurrent()) return { status: 'retired' };
     if (!projectPath) {
         dependencies.log('editor', 'warn', 'Content migration requires an open project.');
         return { status: 'no-project' };
     }
 
-    const preview = await dependencies.preview(projectPath);
+    let preview: ContentMigrationPreviewResult;
+    try {
+        preview = await dependencies.preview(projectPath);
+    } catch (error) {
+        if (!isCurrent()) return { status: 'retired' };
+        throw error;
+    }
+    if (!isCurrent()) return { status: 'retired' };
     if (preview.changes.length === 0) {
         dependencies.log('editor', 'info', 'Content migration preview found no changes.');
         return { preview, status: 'no-changes' };
@@ -61,13 +71,32 @@ export async function executeContentMigrationCommand(
         ...preview.changes.map((change) => change.path),
     );
 
-    const accepted = await dependencies.confirm(toConfirmationMessage(preview));
+    let accepted: boolean;
+    try {
+        accepted = await dependencies.confirm(toConfirmationMessage(preview));
+    } catch (error) {
+        if (!isCurrent()) return { status: 'retired' };
+        throw error;
+    }
+    if (!isCurrent()) return { status: 'retired' };
     if (!accepted) {
         dependencies.log('editor', 'info', 'Content migration cancelled.');
         return { preview, status: 'cancelled' };
     }
 
-    const application = await dependencies.applyPreview(preview);
+    let application: ApplyContentMigrationPreviewResult;
+    try {
+        application = await dependencies.applyPreview(preview, { isCurrent });
+    } catch (error) {
+        if (!isCurrent()) return { status: 'retired' };
+        throw error;
+    }
+    if (!isCurrent() || application.retired) return { application, status: 'retired' };
+    if (application.failures?.length) {
+        const result = { application, preview, status: 'failed' as const };
+        dependencies.log('editor', 'error', formatContentMigrationCommandStatus(result), ...application.failures.map(failure => `${failure.change.path}: ${failure.message}`));
+        return result;
+    }
     if (application.conflicts.length > 0) {
         dependencies.log(
             'editor',
@@ -93,11 +122,17 @@ export function formatContentMigrationCommandStatus(result: ContentMigrationComm
         case 'conflicted': {
             return `Content migration wrote ${result.application.written.length} file(s), but ${result.application.conflicts.length} file(s) changed after preview.`;
         }
+        case 'failed': {
+            return `Content migration stopped after writing ${result.application.written.length} file(s): ${result.application.failures?.[0]?.message ?? 'a file could not be migrated'}.`;
+        }
         case 'no-changes': {
             return 'Content migration checked the project and found no changes.';
         }
         case 'no-project': {
             return 'Content migration requires an open project.';
+        }
+        case 'retired': {
+            return 'Content migration stopped because the project or request changed.';
         }
     }
 }
@@ -114,6 +149,12 @@ export function getContentMigrationCommandStatusTone(result: ContentMigrationCom
         }
         case 'conflicted': {
             return 'warning';
+        }
+        case 'failed': {
+            return 'error';
+        }
+        case 'retired': {
+            return 'info';
         }
     }
 }

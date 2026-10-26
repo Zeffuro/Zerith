@@ -2,7 +2,7 @@ import type { Command } from '@zeffuro/zerith-core';
 
 import type { MacroEntry } from '../project/types';
 
-import { executeContentMigrationCommand } from '../../services/contentMigrationCommand';
+import { runProjectOpenContentMigration } from '../../services/contentMigrationRun';
 import { chooseProjectOpenTarget, confirmEditorAction } from '../../services/editorDialogs';
 import { browserFsAdapter } from '../../services/fs/browserFsAdapter';
 import { isTauriRuntime } from '../../services/runtime/runtimeEnvironment';
@@ -125,10 +125,10 @@ export async function executeOpenProjectInCurrentWindow(
     };
     if ((!currentProjectPath || switchingProject) && !await prepare()) return { status: 'cancelled' };
 
-    if (options.checkMigration !== false) {
+    if (options.checkMigration !== false && (!currentProjectPath || switchingProject)) {
         const changed = await checkProjectContentMigration(nextProjectPath, ownsSession);
-        if (!ownsSession()) return { status: 'cancelled' };
-        if (changed && prepared && !await prepare()) return { status: 'cancelled' };
+        if (!ownsSession() || changed === 'cancelled') return { status: 'cancelled' };
+        if (changed === 'changed' && prepared && !await prepare()) return { status: 'cancelled' };
     }
 
     if (switchingProject && useProjectStore.getState().dirtyFiles.size > 0) {
@@ -205,15 +205,16 @@ export function executeProjectOpenAction(options: ExecuteProjectOpenActionOption
     project.setActiveFile(options.path, []);
 }
 
-async function checkProjectContentMigration(projectPath: string, ownsSession: () => boolean): Promise<boolean> {
+async function checkProjectContentMigration(projectPath: string, ownsSession: () => boolean): Promise<'cancelled' | 'changed' | 'unchanged'> {
     try {
-        const result = await executeContentMigrationCommand(projectPath);
-        return (result.status === 'applied' || result.status === 'conflicted') && result.application.written.length > 0;
+        const result = await runProjectOpenContentMigration(projectPath, ownsSession);
+        if (result.status === 'retired' || result.status === 'save-cancelled') return 'cancelled';
+        return 'application' in result && result.application && result.application.written.length > 0 ? 'changed' : 'unchanged';
     } catch (error) {
-        if (!ownsSession()) return false;
+        if (!ownsSession()) return 'cancelled';
         console.error('Project migration check failed:', error);
         globalThis.alert?.(`Project migration check failed. Opening will continue.\n\n${formatError(error)}`);
-        return true;
+        return 'changed';
     }
 }
 

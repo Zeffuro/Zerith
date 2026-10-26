@@ -9,6 +9,7 @@ vi.mock('@pixi/sound', async () => {
 
 import { sound } from '@pixi/sound';
 
+import { createMockSound } from '../../test-utils/pixiSoundMock';
 import { AudioManager } from '../AudioManager';
 
 type SoundMock = {
@@ -23,17 +24,18 @@ type SoundMock = {
 
 describe('AudioManager.playSfx', () => {
     const soundMock = sound as unknown as SoundMock;
+    const aliasFor = (url: string): string => soundMock.add.mock.calls.find(([, options]) => (options as { url: string }).url === url)![0] as string;
 
     beforeEach(() => {
         soundMock.add.mockClear();
         soundMock.exists.mockReset();
-        const aliases = new Map<string, { isLoaded: boolean }>();
+        const aliases = new Map<string, ReturnType<typeof createMockSound>>();
         soundMock.exists.mockImplementation((url: string) => aliases.has(url));
         soundMock.find.mockImplementation((url: string) => aliases.get(url));
-        soundMock.remove.mockImplementation((url: string) => aliases.delete(url));
+        soundMock.remove.mockImplementation((url: string) => { aliases.get(url)?.destroy(); aliases.delete(url); });
         soundMock.removeAll.mockImplementation(() => aliases.clear());
         soundMock.add.mockImplementation((url: string, options: { loaded?: (error?: Error) => void }) => {
-            const loadedSound = { isLoaded: true };
+            const loadedSound = createMockSound();
             aliases.set(url, loadedSound);
             options.loaded?.();
             return loadedSound;
@@ -51,7 +53,7 @@ describe('AudioManager.playSfx', () => {
             start: 1.5,
         });
 
-        expect(soundMock.play).toHaveBeenCalledWith('assets/sfx/ui.wav', {
+        expect(soundMock.play).toHaveBeenCalledWith(aliasFor('assets/sfx/ui.wav'), {
             end: 1.75,
             loop: true,
             start: 1.5,
@@ -64,7 +66,7 @@ describe('AudioManager.playSfx', () => {
 
         await manager.playSfx('assets/sfx/hit.wav', 0.6);
 
-        expect(soundMock.play).toHaveBeenCalledWith('assets/sfx/hit.wav', {
+        expect(soundMock.play).toHaveBeenCalledWith(aliasFor('assets/sfx/hit.wav'), {
             end: undefined,
             loop: false,
             start: undefined,
@@ -83,7 +85,7 @@ describe('AudioManager.playSfx', () => {
         });
         await manager.playCue('assets/sfx/ui.sheet.json', 'click', { volume: 0.8 });
 
-        expect(soundMock.play).toHaveBeenCalledWith('assets/sfx/ui.wav', {
+        expect(soundMock.play).toHaveBeenCalledWith(aliasFor('assets/sfx/ui.wav'), {
             end: 1.75,
             loop: false,
             start: 1.5,
@@ -105,7 +107,7 @@ describe('AudioManager.playSfx', () => {
             volume: 0.8,
         });
 
-        expect(soundMock.play).toHaveBeenCalledWith('assets/bgm/court.mp3', {
+        expect(soundMock.play).toHaveBeenCalledWith(aliasFor('assets/bgm/court.mp3'), {
             end: 18,
             loop: true,
             singleInstance: true,
@@ -117,7 +119,7 @@ describe('AudioManager.playSfx', () => {
 
     it('stops previous BGM source when cue playback switches tracks', async () => {
         const manager = new AudioManager();
-        manager.currentBgmUrl = 'assets/bgm/old.mp3';
+        await manager.playBgm('assets/bgm/old.mp3', true);
 
         await manager.loadAudiosheet('assets/bgm/new.sheet.json', {
             cues: {
@@ -127,7 +129,7 @@ describe('AudioManager.playSfx', () => {
         });
         await manager.playCue('assets/bgm/new.sheet.json', 'intro', { channel: 'bgm' });
 
-        expect(soundMock.stop).toHaveBeenCalledWith('assets/bgm/old.mp3');
+        expect(soundMock.stop).toHaveBeenCalledWith(aliasFor('assets/bgm/old.mp3'));
     });
 
     it('deduplicates loading aliases, rejects every waiter on failure and retries cleanly', async () => {
@@ -153,7 +155,7 @@ describe('AudioManager.playSfx', () => {
         const failures = Promise.all([expect(first).rejects.toThrow('Load failed'), expect(second).rejects.toThrow('Load failed')]);
         finish(new Error('Load failed'));
         await failures;
-        expect(aliases.has('pending.wav')).toBe(false);
+        expect(aliases.size).toBe(0);
         const retry = manager.preloadAudio('pending.wav');
         finish();
         await retry;
@@ -164,21 +166,26 @@ describe('AudioManager.playSfx', () => {
     it('does not remove a replacement alias when an older load fails', async () => {
         const manager = new AudioManager();
         let finish!: (error?: Error) => void;
-        let alias = { isLoaded: false };
-        soundMock.exists.mockReturnValue(true);
+        const owned = createMockSound(false);
+        let alias = owned;
+        let aliasKey: string | undefined;
+        soundMock.exists.mockImplementation((url: string) => url === aliasKey);
         soundMock.find.mockImplementation(() => alias);
-        soundMock.add.mockImplementation((_url: string, options: { loaded: (error?: Error) => void }) => {
+        soundMock.add.mockImplementation((url: string, options: { loaded: (error?: Error) => void }) => {
+            aliasKey = url;
             finish = options.loaded;
             return alias;
         });
         const pending = manager.preloadAudio('replaced.wav');
         soundMock.remove.mockClear();
-        alias = { isLoaded: true };
+        alias = createMockSound();
         const failure = expect(pending).rejects.toThrow('Old load failed');
         finish(new Error('Old load failed'));
         await failure;
         expect(soundMock.remove).not.toHaveBeenCalled();
-        expect(manager.audioExists('replaced.wav')).toBe(true);
+        expect(owned.destroy).toHaveBeenCalledExactlyOnceWith();
+        expect(alias.destroy).not.toHaveBeenCalled();
+        expect(manager.audioExists('replaced.wav')).toBe(false);
     });
 
     it('rejects destroyed pending sheets and cannot publish them after late completion', async () => {
@@ -186,7 +193,7 @@ describe('AudioManager.playSfx', () => {
         let finish!: () => void;
         soundMock.add.mockImplementation((_url: string, options: { loaded: () => void }) => {
             finish = options.loaded;
-            return { isLoaded: false };
+            return createMockSound(false);
         });
         const pending = manager.loadAudiosheet('sheet.json', { cues: { cue: { start: 0 } }, source: 'pending.wav' });
         const failure = expect(pending).rejects.toThrow('destroyed');

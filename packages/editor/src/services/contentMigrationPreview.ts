@@ -10,15 +10,18 @@ import { fsReadTextFile, fsWriteTextFile } from './fs';
 
 export type ApplyContentMigrationPreviewDependencies = {
     readTextFile: (path: string) => Promise<string>;
-    writeTextFile: (path: string, content: string) => Promise<void>;
+    writeTextFile: typeof fsWriteTextFile;
 };
 
 export type ApplyContentMigrationPreviewOptions = {
     acceptedPaths?: string[];
+    isCurrent?: () => boolean;
 };
 
 export type ApplyContentMigrationPreviewResult = {
     conflicts: ContentMigrationPreviewChange[];
+    failures?: { change: ContentMigrationPreviewChange; message: string }[];
+    retired?: boolean;
     skipped: ContentMigrationPreviewChange[];
     written: ContentMigrationPreviewChange[];
 };
@@ -75,28 +78,53 @@ export async function applyContentMigrationPreview(
     const conflicts: ContentMigrationPreviewChange[] = [];
     const skipped: ContentMigrationPreviewChange[] = [];
     const written: ContentMigrationPreviewChange[] = [];
+    const failures: NonNullable<ApplyContentMigrationPreviewResult['failures']> = [];
+    const isCurrent = options.isCurrent ?? (() => true);
+    const result = (): ApplyContentMigrationPreviewResult => ({
+        conflicts, skipped, written,
+        ...(failures.length > 0 ? { failures } : {}),
+        ...(isCurrent() ? {} : { retired: true }),
+    });
 
-    for (const change of preview.changes) {
+    for (const [index, change] of preview.changes.entries()) {
+        if (!isCurrent()) {
+            skipped.push(...preview.changes.slice(index));
+            break;
+        }
         if (acceptedPaths && !acceptedPaths.has(normalizeSlashes(change.path))) {
             skipped.push(change);
             continue;
         }
 
-        const currentText = await dependencies.readTextFile(change.path);
-        if (currentText !== change.before) {
-            conflicts.push(change);
-            continue;
+        try {
+            const currentText = await dependencies.readTextFile(change.path);
+            if (!isCurrent()) {
+                skipped.push(...preview.changes.slice(index));
+                break;
+            }
+            if (currentText !== change.before) {
+                conflicts.push(change);
+                continue;
+            }
+            await dependencies.writeTextFile(change.path, change.after, { expectedContent: change.before }, isCurrent);
+            written.push(change);
+        } catch (error) {
+            if (!isCurrent()) {
+                skipped.push(...preview.changes.slice(index));
+                break;
+            }
+            const message = formatMigrationError(error);
+            if ((isRecord(error) && error.code === 'stale') || message.includes('File changed on disk')) {
+                conflicts.push(change);
+                continue;
+            }
+            failures.push({ change, message });
+            skipped.push(...preview.changes.slice(index + 1));
+            break;
         }
-
-        await dependencies.writeTextFile(change.path, change.after);
-        written.push(change);
     }
 
-    return {
-        conflicts,
-        skipped,
-        written,
-    };
+    return result();
 }
 
 export async function previewContentMigration(
@@ -169,6 +197,12 @@ export async function runContentMigration(
 
 function formatJson(value: unknown): string {
     return `${JSON.stringify(value, undefined, 4)}\n`;
+}
+
+function formatMigrationError(error: unknown): string {
+    if (error instanceof Error) return error.message;
+    if (isRecord(error) && typeof error.message === 'string') return error.message;
+    return String(error);
 }
 
 function normalizeJsonText(text: string): string {

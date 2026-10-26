@@ -1,5 +1,6 @@
 import type { BrowserDirectoryHandle, BrowserEntryHandle } from './browserFsAdapter';
 
+import { assertAudioExportCurrent, runAudioExportStep } from '../audioExportOwnership';
 import { writeBrowserFile } from './browserDirectoryTransfer';
 
 const RESERVATION = '.zerith-project-reservation';
@@ -65,20 +66,20 @@ export function createBrowserProjectDestination(roots: Map<string, BrowserDirect
                 throw new Error(`Project reservation failed. Partial output may remain at "${target.path}". ${message}`, { cause: error });
             }
         }),
-        writeExclusive: (path: string, content: string | Uint8Array) => locked(async () => {
+        writeExclusive: (path: string, content: string | Uint8Array, isCurrent: () => boolean = () => true) => locked(() => runAudioExportStep(isCurrent, async () => {
             const normalized = normalizePath(path);
             const split = normalized.lastIndexOf('/');
-            const parent = await locateDirectory(normalized.slice(0, split), roots, false);
+            const parent = await locateDirectory(normalized.slice(0, split), roots, false, isCurrent);
             const name = normalized.slice(split + 1);
-            await assertAbsent(parent.handle!, name);
-            const file = await parent.handle!.getFileHandle(name, { create: true });
-            await writeBrowserFile(file, content);
-        }),
+            await assertAbsent(parent.handle!, name, isCurrent);
+            const file = await runAudioExportStep(isCurrent, () => parent.handle!.getFileHandle(name, { create: true }));
+            await writeBrowserFile(file, content, () => assertAudioExportCurrent(isCurrent));
+        })),
     };
 }
 
-async function assertAbsent(handle: BrowserDirectoryHandle, name: string): Promise<void> {
-    if (await findEntry(handle, name)) {
+async function assertAbsent(handle: BrowserDirectoryHandle, name: string, isCurrent: () => boolean = () => true): Promise<void> {
+    if (await runAudioExportStep(isCurrent, () => findEntry(handle, name, isCurrent))) {
         throw Object.assign(new Error('Destination already exists.'), { code: 'alreadyExists' });
     }
 }
@@ -89,17 +90,21 @@ async function assertEmpty(handle: BrowserDirectoryHandle, allowedName?: string)
     }
 }
 
-async function findEntry(handle: BrowserDirectoryHandle, name: string): Promise<[string, BrowserEntryHandle] | undefined> {
+async function findEntry(handle: BrowserDirectoryHandle, name: string, isCurrent: () => boolean = () => true): Promise<[string, BrowserEntryHandle] | undefined> {
+    assertAudioExportCurrent(isCurrent);
     let match: [string, BrowserEntryHandle] | undefined;
     for await (const entry of handle.entries()) {
+        assertAudioExportCurrent(isCurrent);
         if (entry[0].toLowerCase() !== name.toLowerCase()) continue;
         if (match) throw new Error('Browser folder contains ambiguous entry names.');
         match = entry;
     }
+    assertAudioExportCurrent(isCurrent);
     return match;
 }
 
-async function locateDirectory(path: string, roots: Map<string, BrowserDirectoryHandle>, allowMissing: boolean): Promise<LocatedDirectory> {
+async function locateDirectory(path: string, roots: Map<string, BrowserDirectoryHandle>, allowMissing: boolean, isCurrent: () => boolean = () => true): Promise<LocatedDirectory> {
+    assertAudioExportCurrent(isCurrent);
     const segments = normalizePath(path).slice(1).split('/');
     const mounted = [...roots].filter(([name]) => name.toLowerCase() === segments[0].toLowerCase());
     if (mounted.length !== 1) throw new Error('Browser project destination requires an unambiguous mounted folder.');
@@ -109,7 +114,7 @@ async function locateDirectory(path: string, roots: Map<string, BrowserDirectory
     let current = root;
     for (let index = 1; index < segments.length; index += 1) {
         const name = segments[index];
-        const entry = await findEntry(current, name);
+        const entry = await runAudioExportStep(isCurrent, () => findEntry(current, name, isCurrent));
         if (!entry) {
             if (!allowMissing || index !== segments.length - 1) throw new Error('Project destination parent folder must already exist.');
             return { name, parent: current, path: `/${[...canonical, name].join('/')}`, visible };
